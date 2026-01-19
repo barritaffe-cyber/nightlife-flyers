@@ -2559,8 +2559,7 @@ return (
       )`,
     }}
   />
-  </>
-)}
+  </div>
 
 
     {/* Cinematic color grade (soft-light, under text) */}
