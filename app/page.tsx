@@ -396,8 +396,8 @@ function Stepper({
 }
 
 
-function Chip({ active, onClick, children, small, disabled, title }: {
-  active?: boolean; onClick?: () => void; children: React.ReactNode; small?: boolean; disabled?: boolean; title?: string
+function Chip({ active, onClick, children, small, disabled, title, className }: {
+  active?: boolean; onClick?: () => void; children: React.ReactNode; small?: boolean; disabled?: boolean; title?: string; className?: string
 }) {
   // Use a div with role="button" to avoid <button> nesting issues.
   const handleKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -426,7 +426,8 @@ function Chip({ active, onClick, children, small, disabled, title }: {
           ? 'opacity-40 cursor-not-allowed bg-neutral-900/40 border-neutral-700 text-neutral-400'
           : active
           ? 'cursor-pointer bg-indigo-600 border-indigo-300 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.15)_inset,0_8px_16px_rgba(0,0,0,.35)]'
-          : 'cursor-pointer bg-neutral-900/70 border-neutral-700 hover:bg-neutral-800 text-neutral-200'
+          : 'cursor-pointer bg-neutral-900/70 border-neutral-700 hover:bg-neutral-800 text-neutral-200',
+        className
       )}
     >
       {children}
