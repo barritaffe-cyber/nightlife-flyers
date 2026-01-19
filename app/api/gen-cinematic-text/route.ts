@@ -34,11 +34,10 @@ const compositeWrapTextureOverRender = async (baseDataUrl: string, renderUrl: st
     .png()
     .toBuffer();
 
+  const compositeLayers = [{ input: renderPng, blend: "screen" as const }];
   const composed = await base
     .resize(width, height, { fit: "fill" })
-    .composite([
-      { input: renderPng, blend: "screen" },
-    ])
+    .composite(compositeLayers)
     .png()
     .toBuffer();
 
