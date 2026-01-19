@@ -14861,7 +14861,224 @@ style={{ top: STICKY_TOP }}
 
 
 
- </aside>
+ 
+    </>
+  )}
+
+{uiMode === "finish" && (
+  <>
+{/* UI: CINEMATIC OVERLAYS (BEGIN) */}
+<div
+  className={
+    selectedPanel === "cinema"
+      ? "relative rounded-xl border border-blue-400 transition"
+      : "relative rounded-xl border border-neutral-700 transition"
+  }
+>
+  <Collapsible
+    title="Cinematic Overlays"
+    storageKey="p:cinema"
+    isOpen={selectedPanel === "cinema"}
+    onToggle={() =>
+      useFlyerState
+        .getState()
+        .setSelectedPanel(selectedPanel === "cinema" ? null : "cinema")
+    }
+    titleClassName={
+      selectedPanel === "cinema"
+        ? "text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]"
+        : ""
+    }
+  >
+    {/* Row 1: Texture & Grade */}
+    <div className="grid grid-cols-2 gap-3 mt-2">
+      <Stepper
+        label="Texture Intensity"
+        value={textureOpacity}
+        setValue={setTextureOpacity}
+        min={0}
+        max={1}
+        step={0.05}
+        digits={2}
+      />
+      <Stepper
+        label="Color Grade"
+        value={grade}
+        setValue={setGrade}
+        min={0}
+        max={2}
+        step={0.05}
+        digits={2}
+      />
+    </div>
+
+    {/* Row 2: Leaks & Vignette */}
+    <div className="grid grid-cols-2 gap-3 mt-2">
+      <Stepper
+        label="Light Leaks"
+        value={leak}
+        setValue={setLeak}
+        min={0}
+        max={1}
+        step={0.05}
+        digits={2}
+      />
+      <Stepper
+        label="Vignette"
+        value={vignetteStrength}
+        setValue={setVignetteStrength}
+        min={0}
+        max={1}
+        step={0.05}
+        digits={2}
+      />
+    </div>
+
+    <div className="text-[11px] text-neutral-400 mt-2">
+      <b>Pro Tip:</b> Keep Texture around 0.30–0.40 for that &quot;printed flyer&quot; look.
+    </div>
+  </Collapsible>
+</div>
+{/* UI: CINEMATIC OVERLAYS (END) */}
+
+
+
+
+{/* UI: MASTER COLOR GRADE (BEGIN) */}
+<div
+  className={
+    selectedPanel === "mastergrade"
+      ? "relative rounded-xl border border-blue-400 transition"
+      : "relative rounded-xl border border-neutral-700 transition"
+  }
+>
+  <Collapsible
+    title="Master Color Grade"
+    storageKey="p:mastergrade"
+    isOpen={selectedPanel === "mastergrade"}
+    onToggle={() =>
+      useFlyerState
+        .getState()
+        .setSelectedPanel(selectedPanel === "mastergrade" ? null : "mastergrade")
+    }
+    titleClassName={
+      selectedPanel === "mastergrade"
+        ? "text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]"
+        : ""
+    }
+    right={
+  <Chip
+    small
+    onClick={() => {
+      setExp(1);
+      setContrast(1.08);
+      setSaturation(1.10);
+      setWarmth(0.10);
+      setTint(0);
+      setGamma(1);
+      setGrain(0.15);
+      setFilmGrade(0.6);
+      setVibrance(0.15);
+    }}
+  >
+    Reset
+  </Chip>
+}
+
+  >
+    {/* 🔥 NEW: ONE-CLICK VIBE PRESETS */}
+    <div className="grid grid-cols-3 gap-2 mb-4">
+      {[
+        {
+          label: "Cyber",
+          set: { exp: 1.05, con: 1.15, sat: 1.25, warm: 0.0, tint: -0.5, grain: 0.15, gamma: 1.0, film: 0.55, vib: 0.25 },
+        },
+        {
+          label: "Gold",
+          set: { exp: 1.02, con: 1.10, sat: 1.05, warm: 0.35, tint: 0.1, grain: 0.10, gamma: 0.95, film: 0.5, vib: 0.1 },
+        },
+        {
+          label: "Noir",
+          set: { exp: 1.1, con: 1.25, sat: 0.0, warm: 0.1, tint: 0.0, grain: 0.35, gamma: 1.1, film: 0.65, vib: 0.0 },
+        },
+        {
+          label: "Film",
+          set: { exp: 0.95, con: 0.95, sat: 0.9, warm: 0.15, tint: 0.2, grain: 0.25, gamma: 0.9, film: 0.7, vib: 0.1 },
+        },
+        {
+          label: "M31",
+          set: { exp: 1.02, con: 1.22, sat: 1.2, warm: 0.12, tint: -0.25, grain: 0.18, gamma: 0.95, film: 0.75, vib: 0.3 },
+        },
+        {
+          label: "Berlin",
+          set: { exp: 1.0, con: 1.1, sat: 1.12, warm: 0.08, tint: -0.1, grain: 0.12, gamma: 1.0, film: 0.5, vib: 0.25 },
+        },
+        {
+          label: "We’ll See",
+          set: { exp: 1.02, con: 1.05, sat: 1.05, warm: 0.18, tint: -0.05, grain: 0.12, gamma: 1.0, film: 0.55, vib: 0.2 },
+        },
+        {
+          label: "Matte Anchor",
+          set: { exp: 0.98, con: 0.92, sat: 0.85, warm: 0.12, tint: 0.05, grain: 0.3, gamma: 0.9, film: 0.8, vib: 0.05 },
+        },
+        {
+          label: "Urban Dark",
+          set: { exp: 0.95, con: 1.2, sat: 0.95, warm: 0.1, tint: -0.25, grain: 0.25, gamma: 0.95, film: 0.7, vib: 0.12 },
+        },
+      ].map((mode) => (
+        <button
+          key={mode.label}
+          type="button"
+          className="text-[10px] font-bold py-1.5 rounded bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/30 transition-colors"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            setExp(mode.set.exp);
+            setContrast(mode.set.con);
+            setSaturation(mode.set.sat);
+            setWarmth(mode.set.warm);
+            setTint(mode.set.tint);
+            setGrain(mode.set.grain);
+            setGamma(mode.set.gamma);
+            setFilmGrade(mode.set.film);
+            setVibrance(mode.set.vib);
+          }}
+        >
+          {mode.label}
+        </button>
+      ))}
+    </div>
+
+    <div className="grid grid-cols-3 gap-3">
+      <Stepper label="Exposure"   value={exp}        setValue={setExp}        min={0.7} max={1.4} step={0.02} digits={2} />
+      <Stepper label="Contrast"   value={contrast}   setValue={setContrast}   min={0.7} max={1.5} step={0.02} digits={2} />
+      <Stepper label="Saturation" value={saturation} setValue={setSaturation} min={0.0} max={1.6} step={0.02} digits={2} />
+    </div>
+
+    <div className="grid grid-cols-3 gap-3 mt-2">
+      <Stepper label="Warmth" value={warmth} setValue={setWarmth} min={0}   max={1}   step={0.02} digits={2} />
+      <Stepper label="Tint"   value={tint}   setValue={setTint}   min={-1}  max={1}   step={0.02} digits={2} />
+      <Stepper label="Gamma"  value={gamma}  setValue={setGamma}  min={0.7} max={1.5} step={0.02} digits={2} />
+    </div>
+    <div className="grid grid-cols-3 gap-3 mt-2">
+      <Stepper label="Vibrance" value={vibrance} setValue={setVibrance} min={0} max={1} step={0.02} digits={2} />
+      <Stepper label="Grain" value={grain} setValue={setGrain} min={0} max={1} step={0.05} digits={2} />
+      <Stepper label="Film Curve" value={filmGrade} setValue={setFilmGrade} min={0} max={1} step={0.05} digits={2} />
+    </div>
+
+
+    <div className="text-[11px] text-neutral-400 mt-2">
+      <b>Tip:</b> Click a preset above, then tweak the sliders to refine.
+    </div>
+  </Collapsible>
+</div>
+{/* UI: MASTER COLOR GRADE (END) */}
+
+  </>
+)}
+
+</aside>
 
   {/* ---------- Center: Artboard & Guides ---------- */}
   <section
@@ -17578,223 +17795,6 @@ titleClassName={
   </Collapsible>
 </div>
 {/* UI: LOGO — MIRROR OF PORTRAIT LOGIC (END) */}
-
-    </>
-  )}
-
-{uiMode === "finish" && (
-  <>
-{/* UI: CINEMATIC OVERLAYS (BEGIN) */}
-<div
-  className={
-    selectedPanel === "cinema"
-      ? "relative rounded-xl border border-blue-400 transition"
-      : "relative rounded-xl border border-neutral-700 transition"
-  }
->
-  <Collapsible
-    title="Cinematic Overlays"
-    storageKey="p:cinema"
-    isOpen={selectedPanel === "cinema"}
-    onToggle={() =>
-      useFlyerState
-        .getState()
-        .setSelectedPanel(selectedPanel === "cinema" ? null : "cinema")
-    }
-    titleClassName={
-      selectedPanel === "cinema"
-        ? "text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]"
-        : ""
-    }
-  >
-    {/* Row 1: Texture & Grade */}
-    <div className="grid grid-cols-2 gap-3 mt-2">
-      <Stepper
-        label="Texture Intensity"
-        value={textureOpacity}
-        setValue={setTextureOpacity}
-        min={0}
-        max={1}
-        step={0.05}
-        digits={2}
-      />
-      <Stepper
-        label="Color Grade"
-        value={grade}
-        setValue={setGrade}
-        min={0}
-        max={2}
-        step={0.05}
-        digits={2}
-      />
-    </div>
-
-    {/* Row 2: Leaks & Vignette */}
-    <div className="grid grid-cols-2 gap-3 mt-2">
-      <Stepper
-        label="Light Leaks"
-        value={leak}
-        setValue={setLeak}
-        min={0}
-        max={1}
-        step={0.05}
-        digits={2}
-      />
-      <Stepper
-        label="Vignette"
-        value={vignetteStrength}
-        setValue={setVignetteStrength}
-        min={0}
-        max={1}
-        step={0.05}
-        digits={2}
-      />
-    </div>
-
-    <div className="text-[11px] text-neutral-400 mt-2">
-      <b>Pro Tip:</b> Keep Texture around 0.30–0.40 for that &quot;printed flyer&quot; look.
-    </div>
-  </Collapsible>
-</div>
-{/* UI: CINEMATIC OVERLAYS (END) */}
-
-
-
-
-{/* UI: MASTER COLOR GRADE (BEGIN) */}
-<div
-  className={
-    selectedPanel === "mastergrade"
-      ? "relative rounded-xl border border-blue-400 transition"
-      : "relative rounded-xl border border-neutral-700 transition"
-  }
->
-  <Collapsible
-    title="Master Color Grade"
-    storageKey="p:mastergrade"
-    isOpen={selectedPanel === "mastergrade"}
-    onToggle={() =>
-      useFlyerState
-        .getState()
-        .setSelectedPanel(selectedPanel === "mastergrade" ? null : "mastergrade")
-    }
-    titleClassName={
-      selectedPanel === "mastergrade"
-        ? "text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]"
-        : ""
-    }
-    right={
-  <Chip
-    small
-    onClick={() => {
-      setExp(1);
-      setContrast(1.08);
-      setSaturation(1.10);
-      setWarmth(0.10);
-      setTint(0);
-      setGamma(1);
-      setGrain(0.15);
-      setFilmGrade(0.6);
-      setVibrance(0.15);
-    }}
-  >
-    Reset
-  </Chip>
-}
-
-  >
-    {/* 🔥 NEW: ONE-CLICK VIBE PRESETS */}
-    <div className="grid grid-cols-3 gap-2 mb-4">
-      {[
-        {
-          label: "Cyber",
-          set: { exp: 1.05, con: 1.15, sat: 1.25, warm: 0.0, tint: -0.5, grain: 0.15, gamma: 1.0, film: 0.55, vib: 0.25 },
-        },
-        {
-          label: "Gold",
-          set: { exp: 1.02, con: 1.10, sat: 1.05, warm: 0.35, tint: 0.1, grain: 0.10, gamma: 0.95, film: 0.5, vib: 0.1 },
-        },
-        {
-          label: "Noir",
-          set: { exp: 1.1, con: 1.25, sat: 0.0, warm: 0.1, tint: 0.0, grain: 0.35, gamma: 1.1, film: 0.65, vib: 0.0 },
-        },
-        {
-          label: "Film",
-          set: { exp: 0.95, con: 0.95, sat: 0.9, warm: 0.15, tint: 0.2, grain: 0.25, gamma: 0.9, film: 0.7, vib: 0.1 },
-        },
-        {
-          label: "M31",
-          set: { exp: 1.02, con: 1.22, sat: 1.2, warm: 0.12, tint: -0.25, grain: 0.18, gamma: 0.95, film: 0.75, vib: 0.3 },
-        },
-        {
-          label: "Berlin",
-          set: { exp: 1.0, con: 1.1, sat: 1.12, warm: 0.08, tint: -0.1, grain: 0.12, gamma: 1.0, film: 0.5, vib: 0.25 },
-        },
-        {
-          label: "We’ll See",
-          set: { exp: 1.02, con: 1.05, sat: 1.05, warm: 0.18, tint: -0.05, grain: 0.12, gamma: 1.0, film: 0.55, vib: 0.2 },
-        },
-        {
-          label: "Matte Anchor",
-          set: { exp: 0.98, con: 0.92, sat: 0.85, warm: 0.12, tint: 0.05, grain: 0.3, gamma: 0.9, film: 0.8, vib: 0.05 },
-        },
-        {
-          label: "Urban Dark",
-          set: { exp: 0.95, con: 1.2, sat: 0.95, warm: 0.1, tint: -0.25, grain: 0.25, gamma: 0.95, film: 0.7, vib: 0.12 },
-        },
-      ].map((mode) => (
-        <button
-          key={mode.label}
-          type="button"
-          className="text-[10px] font-bold py-1.5 rounded bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/30 transition-colors"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-
-            setExp(mode.set.exp);
-            setContrast(mode.set.con);
-            setSaturation(mode.set.sat);
-            setWarmth(mode.set.warm);
-            setTint(mode.set.tint);
-            setGrain(mode.set.grain);
-            setGamma(mode.set.gamma);
-            setFilmGrade(mode.set.film);
-            setVibrance(mode.set.vib);
-          }}
-        >
-          {mode.label}
-        </button>
-      ))}
-    </div>
-
-    <div className="grid grid-cols-3 gap-3">
-      <Stepper label="Exposure"   value={exp}        setValue={setExp}        min={0.7} max={1.4} step={0.02} digits={2} />
-      <Stepper label="Contrast"   value={contrast}   setValue={setContrast}   min={0.7} max={1.5} step={0.02} digits={2} />
-      <Stepper label="Saturation" value={saturation} setValue={setSaturation} min={0.0} max={1.6} step={0.02} digits={2} />
-    </div>
-
-    <div className="grid grid-cols-3 gap-3 mt-2">
-      <Stepper label="Warmth" value={warmth} setValue={setWarmth} min={0}   max={1}   step={0.02} digits={2} />
-      <Stepper label="Tint"   value={tint}   setValue={setTint}   min={-1}  max={1}   step={0.02} digits={2} />
-      <Stepper label="Gamma"  value={gamma}  setValue={setGamma}  min={0.7} max={1.5} step={0.02} digits={2} />
-    </div>
-    <div className="grid grid-cols-3 gap-3 mt-2">
-      <Stepper label="Vibrance" value={vibrance} setValue={setVibrance} min={0} max={1} step={0.02} digits={2} />
-      <Stepper label="Grain" value={grain} setValue={setGrain} min={0} max={1} step={0.05} digits={2} />
-      <Stepper label="Film Curve" value={filmGrade} setValue={setFilmGrade} min={0} max={1} step={0.05} digits={2} />
-    </div>
-
-
-    <div className="text-[11px] text-neutral-400 mt-2">
-      <b>Tip:</b> Click a preset above, then tweak the sliders to refine.
-    </div>
-  </Collapsible>
-</div>
-{/* UI: MASTER COLOR GRADE (END) */}
-
-  </>
-)}
-
 </aside>
 
 {/* --- MOBILE ACTION BAR --- */}
