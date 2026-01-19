@@ -2835,8 +2835,7 @@ return (
         </div>
       );
     })()}
-  </>
-)}
+</div>
 {/* =========================== SHAPES LAYER (END) ======================== */}
 
 
@@ -13703,8 +13702,7 @@ style={{ top: STICKY_TOP }}
       </div>
     </div>
   )}
-  {uiMode === "design" && (
-    <>
+  <div className={uiMode === "design" ? "" : "hidden"}>
 {/* UI: GETTING STARTED (BEGIN) */}
 <Collapsible
             title="Getting started"
@@ -14862,11 +14860,9 @@ style={{ top: STICKY_TOP }}
 
 
  
-    </>
-  )}
+</div>
 
-{uiMode === "finish" && (
-  <>
+<div className={uiMode === "finish" ? "" : "hidden"}>
 {/* UI: CINEMATIC OVERLAYS (BEGIN) */}
 <div
   className={
@@ -15075,8 +15071,7 @@ style={{ top: STICKY_TOP }}
 </div>
 {/* UI: MASTER COLOR GRADE (END) */}
 
-  </>
-)}
+</div>
 
 </aside>
 
