@@ -1,0 +1,394 @@
+/* app/globals.css */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ADD (or replace your broken block with this): */
+@layer components {
+  .chip {
+    @apply px-2 py-1 rounded border border-neutral-700 bg-neutral-900/70 hover:bg-neutral-800 text-xs;
+  }
+}
+
+/* Make it the default everywhere */
+html, body {
+  font-family: 'LEMONMILK-Light.otf', sans-serif;
+}
+
+
+/* Modern minimal scrollbars — add class "beauty-scroll" to any pane */
+.beauty-scroll { scrollbar-width: thin; scrollbar-color: #2b2f3a transparent; }
+.beauty-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+.beauty-scroll::-webkit-scrollbar-track { background: transparent; }
+.beauty-scroll::-webkit-scrollbar-thumb {
+  background-clip: padding-box;
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-color: #2b2f3a;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset;
+}
+.beauty-scroll::-webkit-scrollbar-thumb:hover { background-color: #3b4150; }
+.beauty-scroll::-webkit-scrollbar-thumb:active { background-color: #4b5366; }
+.beauty-scroll::-webkit-scrollbar-corner { background: transparent; }
+
+
+.neon-glow {
+  box-shadow:
+    0 0 6px rgba(255, 0, 180, 0.8),
+    0 0 12px rgba(255, 0, 180, 0.7),
+    0 0 20px rgba(255, 0, 200, 0.6);
+  animation: neonPulse 1.6s ease-in-out infinite;
+  border-radius: 12px;
+}
+
+@keyframes neonPulse {
+  0% {
+    box-shadow:
+      0 0 6px rgba(255, 0, 180, 0.9),
+      0 0 12px rgba(255, 0, 180, 0.7),
+      0 0 20px rgba(255, 0, 200, 0.6);
+  }
+  50% {
+    box-shadow:
+      0 0 14px rgba(255, 0, 255, 1),
+      0 0 30px rgba(255, 0, 200, 1),
+      0 0 45px rgba(255, 0, 255, 0.9);
+  }
+  100% {
+    box-shadow:
+      0 0 6px rgba(255, 0, 180, 0.9),
+      0 0 12px rgba(255, 0, 180, 0.7),
+      0 0 20px rgba(255, 0, 200, 0.6);
+  }
+}
+
+
+
+/* FONTTS */
+
+/* --- STANDARD FIXED: DIMITRI_ --- */
+@font-face {
+  font-family: "DIMITRI_";
+  src: url("/fonts/DIMITRI_.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- STABLE PATH: Aliens Among Us (now aliasing to lowercase filename) --- */
+@font-face {
+  font-family: "Aliens Among Us";
+  src: url("/fonts/aliens-among-us.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- STABLE PATH: Game Of Squids (now aliasing to lowercase filename) --- */
+@font-face {
+  font-family: "Game Of Squids";
+  src: url("/fonts/game-of-squids.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- STANDARD FIXED: Aqilah-JRYXK --- */
+@font-face {
+  font-family: "Aqilah-JRYXK";
+  src: url("/fonts/Aqilah-JRYXK.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- STANDARD FIXED: EdgeOfTheGalaxyRegular-OVEa6 --- */
+@font-face {
+  font-family: "EdgeOfTheGalaxyRegular-OVEa6";
+  src: url("/fonts/EdgeOfTheGalaxyRegular-OVEa6.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- STANDARD FIXED: raidercrusader --- */
+@font-face {
+  font-family: "raidercrusader";
+  src: url("/fonts/raidercrusader.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- STANDARD FIXED: Oups --- */
+@font-face {
+  font-family: "Oups";
+  src: url("/fonts/Oups.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- STABLE PATH: Doctor Glitch (now aliasing to lowercase filename) --- */
+@font-face {
+  font-family: "Doctor Glitch";
+  src: url("/fonts/doctor-glitch.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- STABLE PATH: Dear Script (Demo_Font) --- */
+@font-face {
+  font-family: "Dear Script (Demo_Font)";
+  src: url("/fonts/dear-script-demo-font.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- STANDARD FIXED: edosz --- */
+@font-face {
+  font-family: "edosz";
+  src: url("/fonts/edosz.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- STABLE PATH: Galaxia Personal Used --- */
+@font-face {
+  font-family: "Galaxia Personal Used";
+  src: url("/fonts/galaxia-personal-used.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- STABLE PATH: Dune_Rise --- */
+@font-face {
+  font-family: "Dune_Rise";
+  src: url("/fonts/dune-rise.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- STABLE PATH: who asks satan --- */
+@font-face {
+  font-family: "who asks satan";
+  src: url("/fonts/who-asks-satan.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- STANDARD FIXED: cubic --- */
+@font-face {
+  font-family: "cubic";
+  src: url("/fonts/cubic.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- FIX: Azonix (Now correctly requesting .ttf) --- */
+@font-face {
+  font-family: "Azonix";
+  src: url("/fonts/Azonix.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- FIX: Designer (Now correctly requesting .ttf) --- */
+@font-face {
+  font-family: "Designer";
+  src: url("/fonts/Designer.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- FIX: Birch (Typo fix: font-family: "Birch" source: "Brich.ttf") --- */
+@font-face {
+  font-family: "Birch";
+  src: url("/fonts/Brich.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- STABLE PATH: Atlantis Famingo DEMO VERSION --- */
+@font-face {
+  font-family: "Atlantis Famingo DEMO VERSION";
+  src: url("/fonts/atlantis-famingo-demo-version.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- STANDARD FIXED: BebasNeue-Regular --- */
+@font-face {
+  font-family: "BebasNeue-Regular";
+  src: url("/fonts/BebasNeue-Regular.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- STANDARD FIXED: ChettaVissto --- */
+@font-face {
+  font-family: "ChettaVissto";
+  src: url("/fonts/ChettaVissto.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- FIX: Antonio (Now correctly requesting .ttf) --- */
+@font-face {
+  font-family: "Antonio";
+  src: url("/fonts/Antonio.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- STABLE PATH: Antone DEMO --- */
+@font-face {
+  font-family: "Antone DEMO";
+  src: url("/fonts/antone-demo.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- FIX: Maglisto (Now correctly requesting .ttf) --- */
+@font-face {
+  font-family: "Maglisto";
+  src: url("/fonts/Maglisto.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- LEMON MILK (All requesting .ttf now) --- */
+@font-face {
+  font-family: "LEMONMILK-Bold";
+  src: url("/fonts/LEMONMILK-Bold.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "LEMONMILK-Light";
+  src: url("/fonts/LEMONMILK-Light.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "LEMONMILK-Regular";
+  src: url("/fonts/LEMONMILK-Regular.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- COOLVETICA (All requesting .ttf now) --- */
+@font-face {
+  font-family: "Coolvetica Hv Comp";
+  src: url("/fonts/Coolvetica Hv Comp.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Coolvetica Rg Cond";
+  src: url("/fonts/Coolvetica Rg Cond.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Coolvetica Rg Cram";
+  src: url("/fonts/Coolvetica Rg Cram.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- STANDARD FIXED: Nexa-Heavy --- */
+@font-face {
+  font-family: "Nexa-Heavy";
+  src: url("/fonts/Nexa-Heavy.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- STANDARD FIXED: Nexa-ExtraLight --- */
+@font-face {
+  font-family: "Nexa-ExtraLight";
+  src: url("/fonts/Nexa-ExtraLight.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* === Nightlife Flyers: slider styling for Stepper -> Slider swap === */
+.nf-range {
+  --nf-thumb: #ffffff;
+  --nf-track: rgba(255,255,255,0.22);
+  --nf-track-active: rgba(99,102,241,0.75); /* indigo-ish */
+  --nf-focus: rgba(99,102,241,0.45);
+  width: 100%;
+}
+.nf-range:focus { outline: none; }
+
+/* WebKit */
+.nf-range::-webkit-slider-runnable-track {
+  height: 4px;
+  background: var(--nf-track);
+  border-radius: 999px;
+}
+.nf-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px; /* centers thumb on 4px track */
+  border-radius: 999px;
+  background: var(--nf-thumb);
+  border: 1px solid rgba(0,0,0,0.35);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.35);
+}
+.nf-range:focus::-webkit-slider-runnable-track {
+  box-shadow: 0 0 0 6px var(--nf-focus);
+}
+
+/* Firefox */
+.nf-range::-moz-range-track {
+  height: 4px;
+  background: var(--nf-track);
+  border-radius: 999px;
+}
+.nf-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--nf-thumb);
+  border: 1px solid rgba(0,0,0,0.35);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.35);
+}
+
+/* Active progress color (Firefox only supports a separate progress piece) */
+.nf-range::-moz-range-progress {
+  height: 4px;
+  background: var(--nf-track-active);
+  border-radius: 999px;
+}
+
+
+
