@@ -12387,6 +12387,7 @@ const [mobileControlsOpen, setMobileControlsOpen] = React.useState(false);
 const [mobileControlsTab, setMobileControlsTab] = React.useState<"design" | "assets">(
   "design"
 );
+const [uiMode, setUiMode] = React.useState<"design" | "finish">("design");
 
 const mobileControlsTabs = (
   <div className="lg:hidden flex items-center gap-2 px-4 py-2 bg-neutral-950/90 border-b border-neutral-800">
@@ -13550,36 +13551,59 @@ return (
 
      {/* RIGHT: EXPORT BUTTON (aligned to right panel column) */}
         <div className="flex items-center gap-4 justify-self-stretch w-full pr-1">
-          <div className="flex items-center gap-2 text-[11px]">
-            <span>Export</span>
-            <Chip small active={exportType==='png'} onClick={()=>setExportType('png')}>PNG</Chip>
-            <Chip small active={exportType==='jpg'} onClick={()=>setExportType('jpg')}>JPG</Chip>
-          </div>
-          <div className="flex items-center gap-2 text-[11px]">
-            <span>Scale</span>
-            <Chip small active={exportScale===2} onClick={()=>setExportScale(2)}>2x</Chip>
-            <Chip small active={exportScale===4} onClick={()=>setExportScale(4)}>4x</Chip>
-          </div>
-          <div className="flex items-center gap-2 text-[11px]">
-             <Chip small onClick={handleExportJSON} title="Save Project as JSON">
-                <span>Save</span>
-             </Chip>
-          </div>
-         <div className="ml-auto">
-          <Chip
-            small
-            onClick={() => exportArtboardClean(artRef.current!, exportType as 'png' | 'jpg')}
-          >
-            <span className="whitespace-nowrap">download {exportType}</span>
-          </Chip>
-        </div>
+          {uiMode === "finish" ? (
+            <>
+              <Chip
+                small
+                onClick={() => setUiMode("design")}
+                className="bg-neutral-900/70 border border-neutral-700"
+              >
+                Back to Design
+              </Chip>
+              <div className="flex items-center gap-2 text-[11px]">
+                <span>Export</span>
+                <Chip small active={exportType==='png'} onClick={()=>setExportType('png')}>PNG</Chip>
+                <Chip small active={exportType==='jpg'} onClick={()=>setExportType('jpg')}>JPG</Chip>
+              </div>
+              <div className="flex items-center gap-2 text-[11px]">
+                <span>Scale</span>
+                <Chip small active={exportScale===2} onClick={()=>setExportScale(2)}>2x</Chip>
+                <Chip small active={exportScale===4} onClick={()=>setExportScale(4)}>4x</Chip>
+              </div>
+              <div className="flex items-center gap-2 text-[11px]">
+                <Chip small onClick={handleExportJSON} title="Save Project as JSON">
+                  <span>Save</span>
+                </Chip>
+              </div>
+              <div className="ml-auto">
+                <Chip
+                  small
+                  onClick={() => exportArtboardClean(artRef.current!, exportType as 'png' | 'jpg')}
+                >
+                  <span className="whitespace-nowrap">download {exportType}</span>
+                </Chip>
+              </div>
+            </>
+          ) : (
+            <div className="ml-auto">
+              <Chip
+                small
+                onClick={() => {
+                  setUiMode("finish");
+                  setSelectedPanel("cinema");
+                }}
+                className="bg-fuchsia-600/80 border border-fuchsia-400 text-white"
+              >
+                Next: Finish
+              </Chip>
+            </div>
+          )}
 
-       
           {/* Credits badge — keep inside the same column */}
           {hydrated && (
-          <div className="ml-2 shrink-0 text-[11px] px-2 py-[6px] rounded-full border border-neutral-700 bg-neutral-900/70">
-            Credits: <b>{credits}</b>
-          </div>
+            <div className="ml-2 shrink-0 text-[11px] px-2 py-[6px] rounded-full border border-neutral-700 bg-neutral-900/70">
+              Credits: <b>{credits}</b>
+            </div>
           )}
         </div>
 
@@ -13590,7 +13614,7 @@ return (
 {/* --- ONBOARDING STRIP (only after hydration, only first open) --- */}
 {hydrated && showOnboard && (
           <div
-            className="sticky top-14 z-[49] text-white"
+            className="sticky top-14 z-[49] text-white hidden lg:block"
             style={{
               background:
                 'linear-gradient(90deg, rgba(99,102,241,.9), rgba(236,72,153,.9))',
@@ -13677,52 +13701,15 @@ style={{ top: STICKY_TOP }}
           </button>
         ))}
       </div>
-      <div className="mt-3 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() =>
-            exportArtboardClean(artRef.current!, exportType as "png" | "jpg")
-          }
-          className="flex-1 text-[11px] font-semibold py-2 rounded bg-fuchsia-600 hover:bg-fuchsia-500 transition-colors"
-        >
-          Export {exportType.toUpperCase()}
-        </button>
-        <div className="flex gap-1">
-          <button
-            type="button"
-            onClick={() => setExportType("png")}
-            className={[
-              "text-[10px] font-bold px-2 py-2 rounded border",
-              exportType === "png"
-                ? "bg-white/20 border-white/30 text-white"
-                : "bg-white/5 border-white/10 text-neutral-400",
-            ].join(" ")}
-          >
-            PNG
-          </button>
-          <button
-            type="button"
-            onClick={() => setExportType("jpg")}
-            className={[
-              "text-[10px] font-bold px-2 py-2 rounded border",
-              exportType === "jpg"
-                ? "bg-white/20 border-white/30 text-white"
-                : "bg-white/5 border-white/10 text-neutral-400",
-            ].join(" ")}
-          >
-            JPG
-          </button>
-        </div>
-      </div>
     </div>
   )}
-
-
+  {uiMode === "design" && (
+    <>
 {/* UI: GETTING STARTED (BEGIN) */}
 <Collapsible
             title="Getting started"
             storageKey="p:start"
-            defaultOpen={true}
+            defaultOpen={false}
             titleClassName="text-[#78E3FF] drop-shadow-[0_0_10px_rgba(120,227,255,0.95)]"
             right={
               <Chip small onClick={() => { 
@@ -15198,6 +15185,7 @@ style={{ top: STICKY_TOP }}
 className={clsx(
   "order-3 lg:sticky self-start max-h-none lg:max-h-[calc(100vh-120px)] overflow-visible lg:overflow-y-auto space-y-3 lg:pr-1",
   mobileControlsOpen && mobileControlsTab === "assets" ? "block" : "hidden",
+  uiMode === "finish" ? "hidden" : "",
   "lg:block"
 )}
 style={{ top: STICKY_TOP }}
@@ -17591,8 +17579,11 @@ titleClassName={
 </div>
 {/* UI: LOGO — MIRROR OF PORTRAIT LOGIC (END) */}
 
+    </>
+  )}
 
-
+{uiMode === "finish" && (
+  <>
 {/* UI: CINEMATIC OVERLAYS (BEGIN) */}
 <div
   className={
@@ -17801,43 +17792,60 @@ titleClassName={
 </div>
 {/* UI: MASTER COLOR GRADE (END) */}
 
+  </>
+)}
+
 </aside>
 
 {/* --- MOBILE ACTION BAR --- */}
 <div className="lg:hidden fixed inset-x-0 bottom-0 z-[90] pb-[calc(env(safe-area-inset-bottom,0px)+8px)]">
   <div className="mx-auto max-w-7xl px-4">
     <div className="flex items-center gap-2 rounded-xl border border-neutral-800 bg-neutral-950/90 backdrop-blur px-2 py-2">
-      <button
-        type="button"
-        onClick={() => setMobileControlsOpen((v) => !v)}
-        className="flex-1 text-[11px] font-semibold uppercase tracking-wider px-3 py-2 rounded bg-neutral-900 border border-neutral-700"
-      >
-        Controls
-      </button>
-      <button
-        type="button"
-        onClick={() => {
-          setSelectedPanel("background");
-          generateBackground();
-        }}
-        className="flex-1 text-[11px] font-semibold uppercase tracking-wider px-3 py-2 rounded bg-indigo-600 hover:bg-indigo-700"
-      >
-        Generate
-      </button>
-      <button
-        type="button"
-        onClick={() => handleExportJSON()}
-        className="flex-1 text-[11px] font-semibold uppercase tracking-wider px-3 py-2 rounded bg-neutral-900 border border-neutral-700"
-      >
-        Save
-      </button>
-      <button
-        type="button"
-        onClick={() => exportArtboardClean(artRef.current!, exportType as "png" | "jpg")}
-        className="flex-1 text-[11px] font-semibold uppercase tracking-wider px-3 py-2 rounded bg-fuchsia-600 hover:bg-fuchsia-500"
-      >
-        Export
-      </button>
+      {uiMode === "design" ? (
+        <>
+          <button
+            type="button"
+            onClick={() => setMobileControlsOpen((v) => !v)}
+            className="flex-1 text-[11px] font-semibold uppercase tracking-wider px-3 py-2 rounded bg-neutral-900 border border-neutral-700"
+          >
+            Controls
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedPanel("background");
+              generateBackground();
+            }}
+            className="flex-1 text-[11px] font-semibold uppercase tracking-wider px-3 py-2 rounded bg-indigo-600 hover:bg-indigo-700"
+          >
+            Generate
+          </button>
+          <button
+            type="button"
+            onClick={() => handleExportJSON()}
+            className="flex-1 text-[11px] font-semibold uppercase tracking-wider px-3 py-2 rounded bg-neutral-900 border border-neutral-700"
+          >
+            Save
+          </button>
+        </>
+      ) : (
+        <>
+          <button
+            type="button"
+            onClick={() => setUiMode("design")}
+            className="flex-1 text-[11px] font-semibold uppercase tracking-wider px-3 py-2 rounded bg-neutral-900 border border-neutral-700"
+          >
+            Back
+          </button>
+          <button
+            type="button"
+            onClick={() => exportArtboardClean(artRef.current!, exportType as "png" | "jpg")}
+            className="flex-1 text-[11px] font-semibold uppercase tracking-wider px-3 py-2 rounded bg-fuchsia-600 hover:bg-fuchsia-500"
+          >
+            Export
+          </button>
+        </>
+      )}
     </div>
   </div>
 </div>
