@@ -2559,7 +2559,8 @@ return (
       )`,
     }}
   />
-</div>
+  </>
+)}
 
 
     {/* Cinematic color grade (soft-light, under text) */}
@@ -2835,7 +2836,8 @@ return (
         </div>
       );
     })()}
-</div>
+  </>
+)}
 {/* =========================== SHAPES LAYER (END) ======================== */}
 
 
