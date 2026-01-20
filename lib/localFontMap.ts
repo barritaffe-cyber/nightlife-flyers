@@ -2,20 +2,20 @@
 
 export const FONT_FILE_MAP: Record<string, string> = {
   // --- STABLE PATHS (No spaces/special chars) ---
-  "DIMITRI_": "/fonts/DIMITRI_.ttf",
-  "Aliens Among Us": "/fonts/aliens-among-us.ttf",
-  "Game Of Squids": "/fonts/game-of-squids.ttf",
+  "DIMITRI_": "/fonts/DIMITRI_.TTF",
+  "Aliens Among Us": "/fonts/Aliens-Among-Us.ttf",
+  "Game Of Squids": "/fonts/Game-Of-Squids.ttf",
   "Aqilah-JRYXK": "/fonts/Aqilah-JRYXK.ttf",
   "EdgeOfTheGalaxyRegular-OVEa6": "/fonts/EdgeOfTheGalaxyRegular-OVEa6.ttf",
   "raidercrusader": "/fonts/raidercrusader.ttf",
   "Oups": "/fonts/Oups.ttf",
-  "Doctor Glitch": "/fonts/doctor-glitch.ttf",
+  "Doctor Glitch": "/fonts/Doctor-Glitch.ttf",
   "Dear Script (Demo_Font)": "/fonts/dear-script-demo-font.ttf",
   "edosz": "/fonts/edosz.ttf",
-  "Galaxia Personal Used": "/fonts/galaxia-personal-used.ttf",
+  "Galaxia Personal Used": "/fonts/Galaxia-Personal-Used.ttf",
   "Dune_Rise": "/fonts/dune-rise.ttf",
   "who asks satan": "/fonts/who-asks-satan.ttf",
-  "African": "/fontsAfrican.ttf",
+  "African": "/fonts/African.ttf",
   
   // --- LEMON MILK (Kept as-is for consistency) ---
   "LEMONMILK-BoldItalic": "/fonts/LEMONMILK-BoldItalic.ttf",
@@ -24,8 +24,8 @@ export const FONT_FILE_MAP: Record<string, string> = {
   "LEMONMILK-Regular": "/fonts/LEMONMILK-Regular.ttf",
   
   // --- COOLVETICA (Renamed) ---
-  "Coolvetica Hv Comp": "/fonts/coolvetica-hv-comp.ttf",
-  "Coolvetica Rg Cram": "/fonts/coolvetica-rg-cram.ttf",
+  "Coolvetica Hv Comp": "/fonts/Coolvetica-Hv-Comp.ttf",
+  "Coolvetica Rg Cram": "/fonts/Coolvetica-Rg-Cram.ttf",
   
   // --- OTHER (Renamed/Stabilized) ---
   "Nexa-Heavy": "/fonts/Nexa-Heavy.ttf",

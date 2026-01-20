@@ -70,7 +70,7 @@ html, body {
 /* --- STANDARD FIXED: DIMITRI_ --- */
 @font-face {
   font-family: "DIMITRI_";
-  src: url("/fonts/DIMITRI_.ttf") format("truetype");
+  src: url("/fonts/DIMITRI_.TTF") format("truetype");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -79,7 +79,7 @@ html, body {
 /* --- STABLE PATH: Aliens Among Us (now aliasing to lowercase filename) --- */
 @font-face {
   font-family: "Aliens Among Us";
-  src: url("/fonts/aliens-among-us.ttf") format("truetype");
+  src: url("/fonts/Aliens-Among-Us.ttf") format("truetype");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -88,7 +88,7 @@ html, body {
 /* --- STABLE PATH: Game Of Squids (now aliasing to lowercase filename) --- */
 @font-face {
   font-family: "Game Of Squids";
-  src: url("/fonts/game-of-squids.ttf") format("truetype");
+  src: url("/fonts/Game-Of-Squids.ttf") format("truetype");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -133,7 +133,7 @@ html, body {
 /* --- STABLE PATH: Doctor Glitch (now aliasing to lowercase filename) --- */
 @font-face {
   font-family: "Doctor Glitch";
-  src: url("/fonts/doctor-glitch.ttf") format("truetype");
+  src: url("/fonts/Doctor-Glitch.ttf") format("truetype");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -160,7 +160,7 @@ html, body {
 /* --- STABLE PATH: Galaxia Personal Used --- */
 @font-face {
   font-family: "Galaxia Personal Used";
-  src: url("/fonts/galaxia-personal-used.ttf") format("truetype");
+  src: url("/fonts/Galaxia-Personal-Used.ttf") format("truetype");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -300,21 +300,21 @@ html, body {
 /* --- COOLVETICA (All requesting .ttf now) --- */
 @font-face {
   font-family: "Coolvetica Hv Comp";
-  src: url("/fonts/Coolvetica Hv Comp.ttf") format("truetype");
+  src: url("/fonts/Coolvetica-Hv-Comp.ttf") format("truetype");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: "Coolvetica Rg Cond";
-  src: url("/fonts/Coolvetica Rg Cond.ttf") format("truetype");
+  src: url("/fonts/Coolvetica-Rg-Cond.ttf") format("truetype");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: "Coolvetica Rg Cram";
-  src: url("/fonts/Coolvetica Rg Cram.ttf") format("truetype");
+  src: url("/fonts/Coolvetica-Rg-Cram.ttf") format("truetype");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -389,6 +389,5 @@ html, body {
   background: var(--nf-track-active);
   border-radius: 999px;
 }
-
 
 
