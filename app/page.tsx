@@ -13721,7 +13721,7 @@ style={{ minHeight: 'calc(100vh - 96px)' }}
 <aside
 id="mobile-controls-panel"
 className={clsx(
-  "order-2 lg:sticky self-start max-h-none lg:max-h-[calc(100vh-120px)] overflow-visible lg:overflow-y-auto space-y-3 lg:pr-1",
+  "order-2 lg:sticky self-start max-h-none lg:max-h-[calc(100vh-120px)] overflow-visible lg:overflow-y-auto space-y-3 px-3 lg:px-0 lg:pr-1",
   mobileControlsOpen && mobileControlsTab === "design" ? "block" : "hidden",
   "lg:block"
 )}
