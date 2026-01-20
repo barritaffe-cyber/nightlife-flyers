@@ -15419,6 +15419,7 @@ style={{ top: STICKY_TOP }}
     </div>
   </div>  
 </div>
+  </div>
 
 </section>
 {/* ---------- Right Panel ---------- */}
