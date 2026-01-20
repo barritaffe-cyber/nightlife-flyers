@@ -13789,7 +13789,7 @@ return (
 <header className="sticky top-0 z-50 bg-neutral-950/80 supports-[backdrop-filter]:backdrop-blur backdrop-blur border-b border-neutral-800">
         <div className="mx-auto max-w-7xl px-4 py-2 lg:h-14 grid grid-cols-1 lg:grid-cols-[clamp(260px,22vw,360px)_minmax(560px,1fr)_clamp(260px,22vw,360px)] gap-2 lg:gap-4 items-center">
           {/* LEFT: Brand */}
-             <div className={clsx("flex items-center gap-3", format === "story" ? "hidden lg:flex" : "")}>
+             <div className="hidden lg:flex items-center gap-3">
               <svg
                 width="28"
                 height="28"
@@ -13818,24 +13818,6 @@ return (
               >
                 Pricing
               </Link>
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileControlsTab("design");
-                  setMobileControlsOpen(true);
-                  setTimeout(() => {
-                    document
-                      .getElementById("mobile-controls-panel")
-                      ?.scrollIntoView({ behavior: "smooth", block: "start" });
-                  }, 0);
-                }}
-                className={clsx(
-                  "ml-2 lg:hidden text-[11px] px-2 py-[4px] rounded-md border border-neutral-700 bg-neutral-900/80 hover:bg-neutral-800 text-neutral-200",
-                  format === "story" ? "hidden" : ""
-                )}
-              >
-                Controls
-              </button>
             </div>
 
 {/* === FORMAT TOGGLE & VIEW SETTINGS === */}
