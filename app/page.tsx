@@ -12397,9 +12397,17 @@ const handleTemplateSelect = React.useCallback(
       // 🧠 Save a snapshot of the base template (for optional reset)
       setTemplateBase(JSON.parse(JSON.stringify(tpl)));
 
-      // 🪄 Apply template once on selection
+      // 🪄 Apply template once on selection (force square for startup)
+      const startupFormat: Format = "square";
+      setFormat(startupFormat);
       setTemplateId(tpl.id);
-      applyTemplate(tpl, { targetFormat: format });
+      applyTemplate(tpl, { targetFormat: startupFormat });
+      const startScale =
+        tpl.formats?.[startupFormat]?.bgScale ?? tpl.base?.bgScale ?? null;
+      if (typeof startScale === "number") {
+        templateBgScaleRef.current = startScale;
+        setBgScale(startScale);
+      }
     } catch (err) {
 
       alert("Could not load template.");
@@ -12417,7 +12425,7 @@ const handleTemplateSelect = React.useCallback(
 }, 1200);
 
   },
-  [format]
+  []
 );
 // === /STARTUP SCREEN ===
 
