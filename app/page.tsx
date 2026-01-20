@@ -12174,6 +12174,12 @@ const applyTemplateFromGallery = React.useCallback(
     setTemplateId(tpl.id);
     setActiveTemplate(tpl);
     applyTemplate(tpl, { targetFormat: fmt, initialLoad: true });
+    const variant =
+      tpl.formats?.[fmt] ?? tpl.formats?.square ?? tpl.base ?? {};
+    if (typeof variant.bgScale === "number") {
+      templateBgScaleRef.current = variant.bgScale;
+      setBgScale(variant.bgScale);
+    }
     if (tpl.preview) {
       setBgUploadUrl(null);
       setBgUrl(tpl.preview);
