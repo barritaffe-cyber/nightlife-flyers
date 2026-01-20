@@ -381,7 +381,7 @@ Background lock (strict):
         prompt: finalPrompt,
         token: AI_API_KEY,
         aspect_ratio,
-        safety_tolerance: 2,
+        safety_tolerance: 1,
       });
     } catch (err: any) {
       const msg = String(err?.message || err || "");
