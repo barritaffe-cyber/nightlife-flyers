@@ -508,14 +508,37 @@ Background lock (strict):
       const safeSubjBuf = await safeCropSubject(subjBuf);
       const safeCompositeBuf = await buildComposite(safeSubjBuf);
       const safeCompositeDataUrl = bufferToDataUrlPng(safeCompositeBuf);
-      const outUrl = await runFlux({
-        imageDataUrls: [safeCompositeDataUrl, bgOnlyDataUrl],
-        prompt: finalPrompt,
-        token: AI_API_KEY as string,
-        aspect_ratio,
-        safety_tolerance: 2,
-      });
-      return NextResponse.json({ url: outUrl, style: safeStyle, format });
+      try {
+        const outUrl = await runFlux({
+          imageDataUrls: [safeCompositeDataUrl, bgOnlyDataUrl],
+          prompt: finalPrompt,
+          token: AI_API_KEY as string,
+          aspect_ratio,
+          safety_tolerance: 2,
+        });
+        return NextResponse.json({ url: outUrl, style: safeStyle, format });
+      } catch (err: any) {
+        const msg = String(err?.message || err || "");
+        const isSensitive = msg.toLowerCase().includes("sensitive");
+        if (!isSensitive) throw err;
+
+        const softenedSubj = await sharp(safeSubjBuf)
+          .modulate({ saturation: 0.85 })
+          .blur(0.3)
+          .png()
+          .toBuffer();
+        const safeCompositeBuf2 = await buildComposite(softenedSubj);
+        const safeCompositeDataUrl2 = bufferToDataUrlPng(safeCompositeBuf2);
+        const safePrompt = `Family-friendly event photo. Preserve the original background exactly. No nightlife, no alcohol, no suggestive content, no revealing outfits. Neutral, clean, documentary lighting.`;
+        const outUrl = await runFlux({
+          imageDataUrls: [safeCompositeDataUrl2, bgOnlyDataUrl],
+          prompt: safePrompt,
+          token: AI_API_KEY as string,
+          aspect_ratio,
+          safety_tolerance: 1,
+        });
+        return NextResponse.json({ url: outUrl, style: safeStyle, format });
+      }
     }
 
     if (provider === "openai") {
