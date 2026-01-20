@@ -11952,24 +11952,30 @@ const applyTemplate = React.useCallback(
     const variant: Partial<TemplateBase> =
       tpl.formats?.[fmt] ?? tpl.formats?.square ?? tpl.base ?? {};
 
-    const freshSession = useFlyerState.getState().session;
+    const store = useFlyerState.getState();
+    const freshSession = store.session;
     const existing: Partial<TemplateBase> = freshSession[fmt] ?? {};
+    const isFresh = !store.sessionDirty?.[fmt];
 
     // 2) MERGE
     const merged: Partial<TemplateBase> =
-      opts?.initialLoad
-        ? { ...variant, ...existing } 
-        : { ...existing, ...variant };
+      opts?.initialLoad && isFresh
+        ? { ...variant }
+        : opts?.initialLoad
+          ? { ...variant, ...existing }
+          : { ...existing, ...variant };
 
-    // 3) WRITE TO SESSION
-    useFlyerState.getState().setSession((prev) => ({
-      ...prev,
-      [fmt]: merged,
-    }));
-    useFlyerState.getState().setSessionDirty((prev) => ({
-      ...prev,
-      [fmt]: true,
-    }));
+    // 3) WRITE TO SESSION (skip when initial template load hasn't been edited yet)
+    if (!(opts?.initialLoad && isFresh)) {
+      store.setSession((prev) => ({
+        ...prev,
+        [fmt]: merged,
+      }));
+      store.setSessionDirty((prev) => ({
+        ...prev,
+        [fmt]: true,
+      }));
+    }
 
     // 4) APPLY TO UI (With Explicit Fallbacks!)
     
@@ -12205,7 +12211,10 @@ const syncCurrentStateToSession = () => {
     lineHeight,
     textColWidth,            // Max width
     headlineLineHeight: lineHeight,
-    headSize: headManualPx,  // ✅ Map internal 'Px' state to template 'Size'
+    headSize: headManualPx,  // legacy key
+    headlineSize: headManualPx,
+    headSizeAuto,
+    headMaxPx,
     headlineItalic: textFx.italic,
     headlineBold: textFx.bold,
     headlineUppercase: textFx.uppercase,
@@ -12220,7 +12229,8 @@ const syncCurrentStateToSession = () => {
     // 2. HEADLINE 2 (The Sub-Headline)
     // ------------------------------------------------
     head2Enabled: headline2Enabled[format],
-    head2,               // ✅ Renamed from 'head2' to match standard key
+    head2,
+    head2line: head2,
     head2Family,
     head2Color,
     head2Size: head2SizePx,  // ✅ Map internal 'Px' state to template 'Size'
@@ -12249,6 +12259,7 @@ const syncCurrentStateToSession = () => {
     // Map 'body' state vars to 'details' template keys if needed
     detailsFamily, 
     detailsColor: bodyColor,
+    bodyColor,
     detailsSize: bodySize,
     detailsLineHeight,
     detailsAlign,
@@ -12365,6 +12376,22 @@ const syncCurrentStateToSession = () => {
   }));
 };
 
+const applySessionForFormat = (fmt: Format) => {
+  const session = useFlyerState.getState().session?.[fmt] ?? {};
+  if (!session || Object.keys(session).length === 0) return false;
+
+  const sessionTemplate: TemplateSpec = {
+    id: "__session__",
+    label: "Session",
+    tags: [],
+    preview: "",
+    formats: fmt === "square" ? { square: session } : { story: session },
+  };
+
+  applyTemplate(sessionTemplate, { targetFormat: fmt, initialLoad: true });
+  return true;
+};
+
 
 
 // === STARTUP SCREEN (CHOOSE A VIBE) ===
@@ -12399,14 +12426,20 @@ const handleTemplateSelect = React.useCallback(
 
       // 🪄 Apply template once on selection (force square for startup)
       const startupFormat: Format = "square";
+      useFlyerState.getState().setSession({ square: {}, story: {} });
+      useFlyerState.getState().setSessionDirty({ square: false, story: false });
       setFormat(startupFormat);
       setTemplateId(tpl.id);
-      applyTemplate(tpl, { targetFormat: startupFormat });
+      applyTemplate(tpl, { targetFormat: startupFormat, initialLoad: true });
       const startScale =
         tpl.formats?.[startupFormat]?.bgScale ?? tpl.base?.bgScale ?? null;
       if (typeof startScale === "number") {
         templateBgScaleRef.current = startScale;
         setBgScale(startScale);
+      }
+      if (tpl.preview) {
+        setBgUploadUrl(null);
+        setBgUrl(tpl.preview);
       }
     } catch (err) {
 
@@ -15404,6 +15437,8 @@ style={{ top: STICKY_TOP }}
             if (tpl) {
               // initialLoad=true => { ...variant, ...existingSession }
               applyTemplate(tpl, { targetFormat: next, initialLoad: true });
+            } else {
+              applySessionForFormat(next);
             }
 
             // 3) Cleanup
