@@ -339,21 +339,23 @@ export async function POST(req: Request) {
     // NOTE: if background adherence is still weak, drop this to 0.88–0.92
     const subjectScale = 0.96;
     const subjSize = Math.round(size * subjectScale);
-
-    const subjPng = await sharp(subjBuf)
-      .resize(subjSize, subjSize, { fit: "contain" })
-      .png()
-      .toBuffer();
-
     const subjLeft = Math.round((size - subjSize) / 2);
     const yLift = Math.round(size * (safeStyle === "tropical" ? 0.02 : 0.06));
     const subjTop = Math.round((size - subjSize) / 2) - yLift;
 
+    async function buildComposite(subjInput: Buffer) {
+      const subjPng = await sharp(subjInput)
+        .resize(subjSize, subjSize, { fit: "contain" })
+        .png()
+        .toBuffer();
+      return await sharp(bgCanvas)
+        .composite([{ input: subjPng, left: subjLeft, top: subjTop }])
+        .png()
+        .toBuffer();
+    }
+
     // 3) Composite subject onto the background for placement reference
-    const preCompositeBuf = await sharp(bgCanvas)
-      .composite([{ input: subjPng, left: subjLeft, top: subjTop }])
-      .png()
-      .toBuffer();
+    const preCompositeBuf = await buildComposite(subjBuf);
 
     // 4) Convert both images to data URLs (order matters)
     const preCompositeDataUrl = bufferToDataUrlPng(preCompositeBuf);
@@ -381,17 +383,33 @@ Background lock (strict):
         prompt: finalPrompt,
         token: AI_API_KEY,
         aspect_ratio,
-        safety_tolerance: 1,
+        safety_tolerance: 2,
       });
     } catch (err: any) {
       const msg = String(err?.message || err || "");
       const isSensitive = msg.toLowerCase().includes("sensitive");
       if (!isSensitive) throw err;
 
+      let safeSubj = subjBuf;
+      try {
+        const meta = await sharp(subjBuf).metadata();
+        if (meta.width && meta.height) {
+          const cropH = Math.max(1, Math.round(meta.height * 0.75));
+          safeSubj = await sharp(subjBuf)
+            .extract({ left: 0, top: 0, width: meta.width, height: cropH })
+            .png()
+            .toBuffer();
+        }
+      } catch {
+        // keep original if cropping fails
+      }
+
+      const safeCompositeBuf = await buildComposite(safeSubj);
+      const safeCompositeDataUrl = bufferToDataUrlPng(safeCompositeBuf);
       const safePrompt =
-        `${finalPrompt}\n\nSafety override: fully clothed, family-friendly, no skin emphasis, no suggestive content.`;
+        `${finalPrompt}\n\nSafety override: fully clothed, high-fashion portrait, no skin emphasis, non-suggestive.`;
       outUrl = await runFlux({
-        imageDataUrls: [preCompositeDataUrl, bgOnlyDataUrl],
+        imageDataUrls: [safeCompositeDataUrl, bgOnlyDataUrl],
         prompt: safePrompt,
         token: AI_API_KEY,
         aspect_ratio,
