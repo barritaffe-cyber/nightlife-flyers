@@ -12457,7 +12457,12 @@ const activeTextTarget = React.useMemo(() => {
 const activeTextMeta = React.useMemo(() => {
   switch (activeTextTarget) {
     case "headline":
-      return { label: "Headline", font: headlineFamily, size: headDisplayPx, lineHeight };
+      return {
+        label: "Headline",
+        font: headlineFamily,
+        size: headSizeAuto ? headMaxPx : headManualPx,
+        lineHeight
+      };
     case "headline2":
     case "head2":
       return { label: "Headline 2", font: head2Family, size: head2SizePx, lineHeight: head2LineHeight };
