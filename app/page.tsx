@@ -11962,7 +11962,18 @@ const applyTemplate = React.useCallback(
       tpl.formats?.[fmt] ?? tpl.formats?.square ?? tpl.base ?? {};
     const incomingScale =
       typeof variant.bgScale === "number" ? variant.bgScale : 1.0;
-    console.log("[applyTemplate] id=", tpl.id, "format=", fmt, "bgScale=", incomingScale);
+    console.log(
+      "[applyTemplate] id=",
+      tpl.id,
+      "format=",
+      fmt,
+      "bgScale=",
+      incomingScale,
+      "raw=",
+      (tpl.formats?.[fmt] as any)?.bgScale ?? null,
+      "square=",
+      (tpl.formats?.square as any)?.bgScale ?? null
+    );
 
     // ensure bg scale is available synchronously for any effects
     templateBgScaleRef.current = incomingScale;
