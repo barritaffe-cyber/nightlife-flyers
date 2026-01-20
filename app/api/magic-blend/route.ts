@@ -181,9 +181,20 @@ function isDataUrl(v: string) {
 }
 
 function dataUrlToBuffer(dataUrl: string) {
-  const m = dataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.*)$/);
-  if (!m) throw new Error("Invalid data URL");
-  return Buffer.from(m[2], "base64");
+  if (!dataUrl.startsWith("data:")) throw new Error("Invalid data URL");
+  const comma = dataUrl.indexOf(",");
+  if (comma === -1) throw new Error("Invalid data URL");
+  const meta = dataUrl.slice(5, comma);
+  const data = dataUrl.slice(comma + 1);
+  if (!data) throw new Error("Invalid data URL");
+  if (meta.includes(";base64")) return Buffer.from(data, "base64");
+  return Buffer.from(decodeURIComponent(data), "base64");
+}
+
+function isProbablyBase64(v: string) {
+  if (typeof v !== "string") return false;
+  if (v.length < 64) return false;
+  return /^[A-Za-z0-9+/=]+$/.test(v);
 }
 
 async function toBufferFromAnyImage(input: string): Promise<Buffer> {
@@ -194,6 +205,10 @@ async function toBufferFromAnyImage(input: string): Promise<Buffer> {
     );
   }
   if (isDataUrl(input)) return dataUrlToBuffer(input);
+  if (!input.startsWith("http")) {
+    if (isProbablyBase64(input)) return Buffer.from(input, "base64");
+    throw new Error("Invalid image input. Expected data URL or http(s) URL.");
+  }
 
   const res = await fetch(input);
   if (!res.ok) {
