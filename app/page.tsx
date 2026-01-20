@@ -1842,7 +1842,7 @@ React.useLayoutEffect(() => {
   ro.observe(root);
  ro.observe(canvasRefs.headline!);
   return () => ro.disconnect();
-}, [headline, headDisplayPx, lineHeight, textColWidth, align]);
+}, [headline, headDisplayPx, lineHeight, textColWidth, align, headlineFontTick]);
 
 
 useEffect(() => {
@@ -1920,7 +1920,7 @@ useEffect(() => {
   // style
   textFx.bold, textFx.italic, textFx.tracking, textFx.uppercase,
   // mode/limits
-  headSizeAuto, headManualPx, headMaxPx
+  headSizeAuto, headManualPx, headMaxPx, headlineFontTick
 ]);
 /* >>> HEADLINE SIZE AUTO-FIT (END) <<< */
 
@@ -3232,6 +3232,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
   }}
 >
   <h1
+    key={`headline-${headlineFamily}-${headlineFontTick}`}
     className="font-black"
     style={{
       fontFamily: headlineFamily,
@@ -7676,7 +7677,16 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
   const [subtagSize, setSubtagSize] = useState<number>(20);
 
  // === AUTO-LOAD LOCAL FONTS WHEN SELECTED =============================
-  useEffect(() => { ensureFontLoaded(headlineFamily); }, [headlineFamily]);
+  const [headlineFontTick, setHeadlineFontTick] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    ensureFontLoaded(headlineFamily).then(() => {
+      if (alive) setHeadlineFontTick((v) => v + 1);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [headlineFamily]);
   useEffect(() => { ensureFontLoaded(bodyFamily); }, [bodyFamily]);
   useEffect(() => { ensureFontLoaded(venueFamily); }, [venueFamily]);
   useEffect(() => { ensureFontLoaded(subtagFamily); }, [subtagFamily]);
