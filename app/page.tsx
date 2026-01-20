@@ -12437,6 +12437,7 @@ const [mobileControlsTab, setMobileControlsTab] = React.useState<"design" | "ass
   "design"
 );
 const [uiMode, setUiMode] = React.useState<"design" | "finish">("design");
+const [floatingEditorVisible, setFloatingEditorVisible] = React.useState(false);
 const activeTextTarget = React.useMemo(() => {
   const byPanel = selectedPanel && ["headline", "head2", "details", "details2", "venue", "subtag"].includes(selectedPanel)
     ? selectedPanel
@@ -12454,42 +12455,120 @@ const activeTextTarget = React.useMemo(() => {
     | "headline2"
     | null;
 }, [selectedPanel, moveTarget]);
-const activeTextMeta = React.useMemo(() => {
+const activeTextControls = React.useMemo(() => {
   switch (activeTextTarget) {
     case "headline":
       return {
         label: "Headline",
         font: headlineFamily,
+        fonts: HEADLINE_FONTS_LOCAL,
         size: headSizeAuto ? headMaxPx : headManualPx,
-        lineHeight
+        sizeMin: 36,
+        sizeMax: 300,
+        sizeStep: 2,
+        lineHeight,
+        lineMin: 0.3,
+        lineMax: 1.3,
+        lineStep: 0.02,
+        onFont: (v: string) => {
+          setHeadlineFamily(v);
+          setTextStyle("headline", format, { family: v });
+        },
+        onSize: (v: number) => {
+          setHeadSizeAuto(false);
+          setHeadManualPx(v);
+          setTextStyle("headline", format, { sizePx: v });
+        },
+        onLine: (v: number) => setLineHeight(v),
       };
     case "headline2":
     case "head2":
       return { label: "Headline 2", font: head2Family, size: head2SizePx, lineHeight: head2LineHeight };
     case "details":
-      return { label: "Details", font: bodyFamily, size: bodySize, lineHeight: detailsLineHeight };
+      return {
+        label: "Details",
+        font: detailsFamily,
+        fonts: BODY_FONTS_LOCAL,
+        size: bodySize,
+        sizeMin: 8,
+        sizeMax: 60,
+        sizeStep: 1,
+        lineHeight: detailsLineHeight,
+        lineMin: 0.8,
+        lineMax: 2.2,
+        lineStep: 0.05,
+        onFont: (v: string) => setDetailsFamily(v),
+        onSize: (v: number) => setBodySize(v),
+        onLine: (v: number) => setDetailsLineHeight(v),
+      };
     case "details2":
-      return { label: "Details 2", font: details2Family ?? bodyFamily, size: details2Size, lineHeight: details2LineHeight };
+      return {
+        label: "Details 2",
+        font: details2Family ?? bodyFamily,
+        fonts: BODY_FONTS2_LOCAL,
+        size: details2Size,
+        sizeMin: 8,
+        sizeMax: 60,
+        sizeStep: 1,
+        lineHeight: details2LineHeight,
+        lineMin: 0.8,
+        lineMax: 2.2,
+        lineStep: 0.05,
+        onFont: (v: string) => setDetails2Family(v),
+        onSize: (v: number) => setDetails2Size(v),
+        onLine: (v: number) => setDetails2LineHeight(v),
+      };
     case "venue":
-      return { label: "Venue", font: venueFamily, size: venueSize, lineHeight: venueLineHeight };
+      return {
+        label: "Venue",
+        font: venueFamily,
+        fonts: VENUE_FONTS_LOCAL,
+        size: venueSize,
+        sizeMin: 10,
+        sizeMax: 96,
+        sizeStep: 1,
+        lineHeight: venueLineHeight,
+        lineMin: 0.6,
+        lineMax: 1.8,
+        lineStep: 0.05,
+        onFont: (v: string) => setVenueFamily(v),
+        onSize: (v: number) => setVenueSize(v),
+        onLine: (v: number) => setVenueLineHeight(v),
+      };
     case "subtag":
-      return { label: "Subtag", font: subtagFamily, size: subtagSize, lineHeight: 1 };
+      return {
+        label: "Subtag",
+        font: subtagFamily,
+        fonts: SUBTAG_FONTS_LOCAL,
+        size: subtagSize,
+        sizeMin: 8,
+        sizeMax: 48,
+        sizeStep: 1,
+        lineHeight: 1,
+        lineMin: 0.8,
+        lineMax: 1.8,
+        lineStep: 0.05,
+        onFont: (v: string) => setSubtagFamily(v),
+        onSize: (v: number) => setSubtagSize(v),
+        onLine: () => {},
+      };
     default:
       return null;
   }
 }, [
   activeTextTarget,
   headlineFamily,
+  lineHeight,
   headSizeAuto,
   headManualPx,
   headMaxPx,
-  lineHeight,
   head2Family,
   head2SizePx,
   head2LineHeight,
-  bodyFamily,
+  detailsFamily,
   bodySize,
   detailsLineHeight,
+  bodyFamily,
   details2Family,
   details2Size,
   details2LineHeight,
@@ -12498,6 +12577,8 @@ const activeTextMeta = React.useMemo(() => {
   venueLineHeight,
   subtagFamily,
   subtagSize,
+  format,
+  textFx.tracking,
 ]);
 
 const mobileControlsTabs = (
@@ -12526,6 +12607,21 @@ const mobileControlsTabs = (
     </button>
   </div>
 );
+
+React.useEffect(() => {
+  if (activeTextControls) {
+    setFloatingEditorVisible(true);
+  } else {
+    setFloatingEditorVisible(false);
+  }
+}, [activeTextControls]);
+
+React.useEffect(() => {
+  if (!mobileControlsOpen) return;
+  const onScroll = () => setFloatingEditorVisible(false);
+  window.addEventListener("scroll", onScroll, { passive: true });
+  return () => window.removeEventListener("scroll", onScroll);
+}, [mobileControlsOpen]);
 
 React.useEffect(() => {
   const saved = localStorage.getItem("nf:lastDesign");
@@ -13778,17 +13874,44 @@ className={clsx(
 )}
 style={{ minHeight: 'calc(100vh - 96px)' }}
 >
-{activeTextMeta && (
-  <div className="lg:hidden fixed left-3 top-[calc(env(safe-area-inset-top,0px)+58px)] z-[70] rounded-xl border border-white/10 bg-neutral-900/90 backdrop-blur px-3 py-2 shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+{activeTextControls && floatingEditorVisible && (
+  <div className="lg:hidden fixed left-1/2 -translate-x-1/2 z-[70] rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur px-3 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.45)]"
+       style={{ bottom: "calc(env(safe-area-inset-bottom,0px) + 72px)" }}>
     <div className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</div>
-    <div className="text-[12px] font-semibold text-white">{activeTextMeta.label}</div>
-    <div className="mt-1 text-[10px] text-neutral-300">
-      Font: <span className="text-neutral-100">{activeTextMeta.font}</span>
-    </div>
-    <div className="text-[10px] text-neutral-300">
-      Size: <span className="text-neutral-100">{Math.round(Number(activeTextMeta.size) || 0)}px</span>
-      <span className="mx-1 text-neutral-600">•</span>
-      Line: <span className="text-neutral-100">{Number(activeTextMeta.lineHeight || 0).toFixed(2)}</span>
+    <div className="text-[12px] font-semibold text-white">{activeTextControls.label}</div>
+    <div className="mt-2 grid gap-2">
+      <label className="text-[10px] text-neutral-400">Font</label>
+      <select
+        value={activeTextControls.font}
+        onChange={(e) => activeTextControls.onFont?.(e.target.value)}
+        className="w-64 max-w-[75vw] rounded-md bg-neutral-900 border border-neutral-700 text-[11px] px-2 py-1 text-white"
+      >
+        {(activeTextControls.fonts ?? []).map((f) => (
+          <option key={f} value={f} style={{ fontFamily: f }}>
+            {f}
+          </option>
+        ))}
+      </select>
+      <div className="text-[10px] text-neutral-400">Size</div>
+      <input
+        type="range"
+        min={activeTextControls.sizeMin}
+        max={activeTextControls.sizeMax}
+        step={activeTextControls.sizeStep}
+        value={Number(activeTextControls.size || 0)}
+        onChange={(e) => activeTextControls.onSize?.(Number(e.target.value))}
+        className="w-64 max-w-[75vw] accent-fuchsia-500"
+      />
+      <div className="text-[10px] text-neutral-400">Line Height</div>
+      <input
+        type="range"
+        min={activeTextControls.lineMin}
+        max={activeTextControls.lineMax}
+        step={activeTextControls.lineStep}
+        value={Number(activeTextControls.lineHeight || 0)}
+        onChange={(e) => activeTextControls.onLine?.(Number(e.target.value))}
+        className="w-64 max-w-[75vw] accent-indigo-400"
+      />
     </div>
   </div>
 )}
@@ -15204,6 +15327,7 @@ style={{ top: STICKY_TOP }}
       }}
       onMouseDownCapture={(e) => {
         if (suppressCloseRef.current) return;
+        setFloatingEditorVisible(true);
 
         const el = e.target as HTMLElement;
 
