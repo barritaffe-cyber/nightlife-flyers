@@ -11950,28 +11950,19 @@ const applyTemplate = React.useCallback(
     const store = useFlyerState.getState();
     const freshSession = store.session;
     const existing: Partial<TemplateBase> = freshSession[fmt] ?? {};
-    const wasDirty = !!store.sessionDirty?.[fmt];
 
     // 2) MERGE
     const merged: Partial<TemplateBase> = opts?.initialLoad
-      ? (wasDirty ? { ...variant, ...existing } : { ...variant })
+      ? { ...variant }
       : { ...existing, ...variant };
 
-    // 3) SESSION: initialLoad should not write user session unless already dirty
+    // 3) SESSION: initialLoad should be authoritative and non-dirty
     if (opts?.initialLoad) {
-      if (!wasDirty) {
-        store.setSession((prev) => ({ ...prev, [fmt]: {} }));
-        store.setSessionDirty((prev) => ({ ...prev, [fmt]: false }));
-      }
+      store.setSession((prev) => ({ ...prev, [fmt]: { ...variant } }));
+      store.setSessionDirty((prev) => ({ ...prev, [fmt]: false }));
     } else {
-      store.setSession((prev) => ({
-        ...prev,
-        [fmt]: merged,
-      }));
-      store.setSessionDirty((prev) => ({
-        ...prev,
-        [fmt]: true,
-      }));
+      store.setSession((prev) => ({ ...prev, [fmt]: merged }));
+      store.setSessionDirty((prev) => ({ ...prev, [fmt]: true }));
     }
 
     // 4) APPLY TO UI (With Explicit Fallbacks!)
@@ -12134,7 +12125,7 @@ const applyTemplate = React.useCallback(
     // 2. HEADLINE 2 (Sub)
     setHead2Color(merged.head2Color ?? '#ffffff');
 
-    if (tpl.preview && (!opts?.initialLoad || !wasDirty)) {
+    if (tpl.preview && !opts?.initialLoad) {
       setBgUploadUrl(null);
       setBgUrl(tpl.preview);
     }
@@ -12439,7 +12430,7 @@ const handleTemplateSelect = React.useCallback(
       // 🧠 Save a snapshot of the base template (for optional reset)
       setTemplateBase(JSON.parse(JSON.stringify(tpl)));
 
-      // ✅ Fresh startup load should ignore any prior session data
+      // ✅ Startup load should be authoritative
       const startupFormat: Format = "square";
       const store = useFlyerState.getState();
       store.setSession({ square: {}, story: {} });
@@ -12448,6 +12439,10 @@ const handleTemplateSelect = React.useCallback(
       setTemplateId(tpl.id);
       setActiveTemplate(tpl);
       applyTemplate(tpl, { targetFormat: startupFormat, initialLoad: true });
+      if (tpl.preview) {
+        setBgUploadUrl(null);
+        setBgUrl(tpl.preview);
+      }
     } catch (err) {
 
       alert("Could not load template.");
