@@ -1108,6 +1108,7 @@ export const TEMPLATE_GALLERY: TemplateSpec[] = [
 
         bgPosX: 50.5,
         bgPosY: 35.4,
+        bgScale: 1.3,
         vignetteStrength:.1,
         
 
@@ -1475,6 +1476,7 @@ export const TEMPLATE_GALLERY: TemplateSpec[] = [
 
         bgPosX: 64.6,
         bgPosY: 70.9,
+        bgScale: 1.5,
         vignetteStrength:.1,
 
         textColWidth: 70,
@@ -1601,6 +1603,7 @@ export const TEMPLATE_GALLERY: TemplateSpec[] = [
 
         bgPosX: 66.5,
         bgPosY: 41.4,
+        bgScale: 1.4,
         vignetteStrength:.1,
 
         textColWidth: 70,
@@ -1727,6 +1730,7 @@ export const TEMPLATE_GALLERY: TemplateSpec[] = [
 
         bgPosX: 43,
         bgPosY: 35.2,
+        bgScale: 1.3,
         vignetteStrength:.1,
 
         textColWidth: 70,
