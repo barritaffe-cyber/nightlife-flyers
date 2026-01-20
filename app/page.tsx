@@ -8120,6 +8120,23 @@ React.useEffect(() => {
   const [exportScale, setExportScale] = useState(2); // allow control
   const [designName, setDesignName] = useState('');
   const [hideUiForExport, setHideUiForExport] = useState<boolean>(false);
+  const [viewport, setViewport] = React.useState({ w: 0, h: 0 });
+
+  React.useEffect(() => {
+    const update = () => setViewport({ w: window.innerWidth, h: window.innerHeight });
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  const canvasScale = React.useMemo(() => {
+    if (!viewport.w || !viewport.h) return 1;
+    const maxW = Math.max(320, viewport.w - 16);
+    const maxH = Math.max(320, viewport.h - 220);
+    return Math.min(1, maxW / size.w, maxH / size.h);
+  }, [viewport.w, viewport.h, size.w, size.h]);
+  const scaledCanvasW = Math.round(size.w * canvasScale);
+  const scaledCanvasH = Math.round(size.h * canvasScale);
 
 
   
@@ -13493,12 +13510,27 @@ return (
               {/* ALWAYS-SHOW PRICING LINK */}
               <Link
                 href="/pricing"  // ← change to "/pricing-plans" if your route is app/pricing-plans/page.tsx
-                className="ml-2 text-[12px] px-2 py-[2px] rounded-md border border-white/20 bg-white/10 hover:bg-white/20
+                className="ml-2 text-[12px] px-2 py-[2px] rounded-md border border-white/20 bg-white/10 hover:bg-white/20 hidden lg:inline-flex
                            text-[#78E3FF] drop-shadow-[0_0_10px_rgba(120,227,255,0.95)]"
                 aria-label="View Pricing"
               >
                 Pricing
               </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileControlsTab("design");
+                  setMobileControlsOpen(true);
+                  setTimeout(() => {
+                    document
+                      .getElementById("mobile-controls-panel")
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }, 0);
+                }}
+                className="ml-2 lg:hidden text-[11px] px-2 py-[4px] rounded-md border border-neutral-700 bg-neutral-900/80 hover:bg-neutral-800 text-neutral-200"
+              >
+                Controls
+              </button>
             </div>
 
 {/* === FORMAT TOGGLE & VIEW SETTINGS === */}
@@ -13545,6 +13577,19 @@ return (
               >
                 Guides
               </Chip>
+              {uiMode === "finish" ? (
+                <Chip small onClick={() => setUiMode("design")}>Back to Design</Chip>
+              ) : (
+                <Chip
+                  small
+                  onClick={() => {
+                    setUiMode("finish");
+                    setSelectedPanel("cinema");
+                  }}
+                >
+                  Next: Finish
+                </Chip>
+              )}
             </div>
           </div>
 
@@ -13552,15 +13597,8 @@ return (
 
      {/* RIGHT: EXPORT BUTTON (aligned to right panel column) */}
         <div className="flex items-center gap-4 justify-self-stretch w-full pr-1">
-          {uiMode === "finish" ? (
+          {uiMode === "finish" && (
             <>
-              <Chip
-                small
-                onClick={() => setUiMode("design")}
-                className="bg-neutral-900/70 border border-neutral-700"
-              >
-                Back to Design
-              </Chip>
               <div className="flex items-center gap-2 text-[11px]">
                 <span>Export</span>
                 <Chip small active={exportType==='png'} onClick={()=>setExportType('png')}>PNG</Chip>
@@ -13585,26 +13623,6 @@ return (
                 </Chip>
               </div>
             </>
-          ) : (
-            <div className="ml-auto">
-              <Chip
-                small
-                onClick={() => {
-                  setUiMode("finish");
-                  setSelectedPanel("cinema");
-                }}
-                className="bg-fuchsia-600/80 border border-fuchsia-400 text-white"
-              >
-                Next: Finish
-              </Chip>
-            </div>
-          )}
-
-          {/* Credits badge — keep inside the same column */}
-          {hydrated && (
-            <div className="ml-2 shrink-0 text-[11px] px-2 py-[6px] rounded-full border border-neutral-700 bg-neutral-900/70">
-              Credits: <b>{credits}</b>
-            </div>
           )}
         </div>
 
@@ -13670,6 +13688,7 @@ style={{ minHeight: 'calc(100vh - 96px)' }}
 
 {/* ---------- Left Panel ---------- */}
 <aside
+id="mobile-controls-panel"
 className={clsx(
   "order-2 lg:sticky self-start max-h-none lg:max-h-[calc(100vh-120px)] overflow-visible lg:overflow-y-auto space-y-3 lg:pr-1",
   mobileControlsOpen && mobileControlsTab === "design" ? "block" : "hidden",
@@ -13711,14 +13730,6 @@ style={{ top: STICKY_TOP }}
             storageKey="p:start"
             defaultOpen={false}
             titleClassName="text-[#78E3FF] drop-shadow-[0_0_10px_rgba(120,227,255,0.95)]"
-            right={
-              <Chip small onClick={() => { 
-                try { localStorage.setItem('nf:onboarded:v1','1'); } catch {}
-                setShowOnboard(false);
-              }}>
-                Dismiss
-              </Chip>
-            }
           >
            {/* === GETTING STARTED — REPLACEMENT CONTENT === */}
             <div className="space-y-3 text-[13px] text-neutral-100">
@@ -15087,30 +15098,46 @@ style={{ top: STICKY_TOP }}
 
 {/* ===== CENTER: ARTBOARD + OVERLAY (ANIMATED FORMAT SWITCH) ===== */}
 <div
-    id="export-root" 
-    data-export-root="true"
-    ref={artWrapRef}
-    className="relative isolate z-0 flex justify-center items-center..." // (keep your existing classes)
-    style={{ width: "auto", height: "auto" }}
-    onMouseDownCapture={(e) => {
-      if (suppressCloseRef.current) return;
+  className="relative flex justify-center items-start w-full"
+  style={{
+    width: scaledCanvasW,
+    height: scaledCanvasH,
+    maxWidth: "100%",
+  }}
+>
+  <div
+      id="export-root" 
+      data-export-root="true"
+      ref={artWrapRef}
+      className="relative isolate z-0 flex justify-center items-center..."
+      style={{
+        width: size.w,
+        height: size.h,
+        position: "absolute",
+        left: "50%",
+        top: 0,
+        transform: `translateX(-50%) scale(${canvasScale})`,
+        transformOrigin: "top center",
+      }}
+      onMouseDownCapture={(e) => {
+        if (suppressCloseRef.current) return;
 
-      const el = e.target as HTMLElement;
+        const el = e.target as HTMLElement;
 
-      // ✅ THE FIX: If the user clicked a BUTTON or a STARTUP modal, 
-      // do NOT let the background canvas "clear" the selection.
-      if (el.closest('button') || el.closest('[key="startup"]') || el.closest('.fixed')) {
-        return;
-      }
+        // ✅ THE FIX: If the user clicked a BUTTON or a STARTUP modal, 
+        // do NOT let the background canvas "clear" the selection.
+        if (el.closest('button') || el.closest('[key="startup"]') || el.closest('.fixed')) {
+          return;
+        }
 
-      if (typeof window !== "undefined" && window.innerWidth < 1024) {
-        setMobileControlsOpen(false);
-      }
-      if (!el.closest('[data-portrait-area="true"]') && !el.closest(".panel")) {
-        clearSelection(e.nativeEvent);
-      }
-    }}
-  >
+        if (typeof window !== "undefined" && window.innerWidth < 1024) {
+          setMobileControlsOpen(false);
+        }
+        if (!el.closest('[data-portrait-area="true"]') && !el.closest(".panel")) {
+          clearSelection(e.nativeEvent);
+        }
+      }}
+    >
   <svg width="0" height="0" className="absolute">
     <filter id="master-grade" colorInterpolationFilters="sRGB">
       <feComponentTransfer in="SourceGraphic" result="rgbCurve">
@@ -16095,6 +16122,7 @@ style={{ top: STICKY_TOP }}
       </div>
     </Collapsible>
   </div>
+</div>
 </div>
 {/* UI: MAGIC BLEND PANEL (END) */}
 
@@ -17806,23 +17834,6 @@ titleClassName={
             className="flex-1 text-[11px] font-semibold uppercase tracking-wider px-3 py-2 rounded bg-neutral-900 border border-neutral-700"
           >
             Controls
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedPanel("background");
-              generateBackground();
-            }}
-            className="flex-1 text-[11px] font-semibold uppercase tracking-wider px-3 py-2 rounded bg-indigo-600 hover:bg-indigo-700"
-          >
-            Generate
-          </button>
-          <button
-            type="button"
-            onClick={() => handleExportJSON()}
-            className="flex-1 text-[11px] font-semibold uppercase tracking-wider px-3 py-2 rounded bg-neutral-900 border border-neutral-700"
-          >
-            Save
           </button>
         </>
       ) : (
