@@ -1237,7 +1237,8 @@ export const TEMPLATE_GALLERY: TemplateSpec[] = [
         subtagShadow: false,
 
         bgPosX: 30.3,
-        bgPosY: 67.7,
+        bgPosY: 67.7,        
+        bgScale: 1.5,
         vignetteStrength:.1,
 
 
