@@ -12424,17 +12424,25 @@ const handleTemplateSelect = React.useCallback(
       // 🧠 Save a snapshot of the base template (for optional reset)
       setTemplateBase(JSON.parse(JSON.stringify(tpl)));
 
-      // ✅ Apply via the same flow as the Templates panel
+      // ✅ Fresh-load the template for Choose-a-Vibe (no session bleed)
       const startupFormat: Format = "square";
+      const store = useFlyerState.getState();
+      store.setSession({ square: {}, story: {} });
+      store.setSessionDirty({ square: false, story: false });
       setFormat(startupFormat);
       setTemplateId(tpl.id);
       setActiveTemplate(tpl);
-      applyTemplate(tpl, { targetFormat: startupFormat });
+      applyTemplate(tpl, { targetFormat: startupFormat, initialLoad: true });
+      store.setSessionDirty({ square: false, story: false });
       const startScale =
         tpl.formats?.[startupFormat]?.bgScale ?? tpl.base?.bgScale ?? null;
       if (typeof startScale === "number") {
         templateBgScaleRef.current = startScale;
         setBgScale(startScale);
+      }
+      if (tpl.preview) {
+        setBgUploadUrl(null);
+        setBgUrl(tpl.preview);
       }
     } catch (err) {
 
