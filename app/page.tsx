@@ -13889,49 +13889,6 @@ className={clsx(
 )}
 style={{ minHeight: 'calc(100vh - 96px)' }}
 >
-{activeTextControls && floatingEditorVisible && (
-  <div className="lg:hidden fixed left-1/2 -translate-x-1/2 z-[70] rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur px-3 py-2 shadow-[0_12px_30px_rgba(0,0,0,0.45)] w-[calc(100%-24px)] max-w-[540px]"
-       style={{ bottom: "calc(env(safe-area-inset-bottom,0px) + 12px)" }}>
-    <div className="flex items-center gap-2 text-[11px] font-semibold text-white">
-      <span className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</span>
-      <span className="text-neutral-300">•</span>
-      <span>{activeTextControls.label}</span>
-    </div>
-    <div className="mt-2 grid grid-cols-[minmax(120px,1fr)_80px] gap-2 items-center">
-      <select
-        value={activeTextControls.font}
-        onChange={(e) => activeTextControls.onFont?.(e.target.value)}
-        className="w-full rounded-md bg-neutral-900 border border-neutral-700 text-[11px] px-2 py-1 text-white"
-      >
-        {(activeTextControls.fonts ?? []).map((f) => (
-          <option key={f} value={f} style={{ fontFamily: f }}>
-            {f}
-          </option>
-        ))}
-      </select>
-      <input
-        type="range"
-        min={activeTextControls.sizeMin}
-        max={activeTextControls.sizeMax}
-        step={activeTextControls.sizeStep}
-        value={Number(activeTextControls.size || 0)}
-        onChange={(e) => activeTextControls.onSize?.(Number(e.target.value))}
-        className="accent-fuchsia-500"
-      />
-      <div className="text-[10px] text-neutral-400">Line</div>
-      <input
-        type="range"
-        min={activeTextControls.lineMin}
-        max={activeTextControls.lineMax}
-        step={activeTextControls.lineStep}
-        value={Number(activeTextControls.lineHeight || 0)}
-        onChange={(e) => activeTextControls.onLine?.(Number(e.target.value))}
-        className="accent-indigo-400"
-      />
-    </div>
-  </div>
-)}
-
 {/* ---------- Left Panel ---------- */}
 <aside
 id="mobile-controls-panel"
@@ -15643,6 +15600,53 @@ style={{ top: STICKY_TOP }}
   </div>  
 </div>
   </div>
+
+  {activeTextControls && floatingEditorVisible && (
+    <div className="lg:hidden w-full flex justify-center px-3 pt-3">
+      <div
+        className="rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur px-3 py-2 shadow-[0_12px_30px_rgba(0,0,0,0.45)]"
+        style={{ width: scaledCanvasW, maxWidth: "100%" }}
+      >
+        <div className="flex items-center gap-2 text-[11px] font-semibold text-white">
+          <span className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</span>
+          <span className="text-neutral-300">•</span>
+          <span>{activeTextControls.label}</span>
+        </div>
+        <div className="mt-2 grid grid-cols-[minmax(120px,1fr)_80px] gap-2 items-center">
+          <select
+            value={activeTextControls.font}
+            onChange={(e) => activeTextControls.onFont?.(e.target.value)}
+            className="w-full rounded-md bg-neutral-900 border border-neutral-700 text-[11px] px-2 py-1 text-white"
+          >
+            {(activeTextControls.fonts ?? []).map((f) => (
+              <option key={f} value={f} style={{ fontFamily: f }}>
+                {f}
+              </option>
+            ))}
+          </select>
+          <input
+            type="range"
+            min={activeTextControls.sizeMin}
+            max={activeTextControls.sizeMax}
+            step={activeTextControls.sizeStep}
+            value={Number(activeTextControls.size || 0)}
+            onChange={(e) => activeTextControls.onSize?.(Number(e.target.value))}
+            className="accent-fuchsia-500"
+          />
+          <div className="text-[10px] text-neutral-400">Line</div>
+          <input
+            type="range"
+            min={activeTextControls.lineMin}
+            max={activeTextControls.lineMax}
+            step={activeTextControls.lineStep}
+            value={Number(activeTextControls.lineHeight || 0)}
+            onChange={(e) => activeTextControls.onLine?.(Number(e.target.value))}
+            className="accent-indigo-400"
+          />
+        </div>
+      </div>
+    </div>
+  )}
 
 </section>
 {/* ---------- Right Panel ---------- */}
