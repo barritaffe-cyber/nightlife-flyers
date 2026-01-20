@@ -407,7 +407,7 @@ export async function POST(req: Request) {
       background,
       style = "club",
       format = "square",
-      provider = "stability",
+      provider = "replicate",
     } = body as {
       subject: string;
       background: string;
@@ -446,6 +446,14 @@ export async function POST(req: Request) {
     // 2) Subject buffer
     const subjBuf = await toBufferFromAnyImage(subject);
 
+    // Subject framing: bigger & slightly lifted (poster feel)
+    // NOTE: if background adherence is still weak, drop this to 0.88–0.92
+    const subjectScale = 0.96;
+    const subjSize = Math.round(baseSize * subjectScale);
+    const subjLeft = Math.round((sizeW - subjSize) / 2);
+    const yLift = Math.round(baseSize * (safeStyle === "tropical" ? 0.02 : 0.06));
+    const subjTop = Math.round((sizeH - subjSize) / 2) - yLift;
+
     async function safeCropSubject(buf: Buffer) {
       try {
         const meta = await sharp(buf).metadata();
@@ -459,14 +467,6 @@ export async function POST(req: Request) {
         return buf;
       }
     }
-
-    // Subject framing: bigger & slightly lifted (poster feel)
-    // NOTE: if background adherence is still weak, drop this to 0.88–0.92
-    const subjectScale = 0.96;
-    const subjSize = Math.round(baseSize * subjectScale);
-    const subjLeft = Math.round((sizeW - subjSize) / 2);
-    const yLift = Math.round(baseSize * (safeStyle === "tropical" ? 0.02 : 0.06));
-    const subjTop = Math.round((sizeH - subjSize) / 2) - yLift;
 
     async function buildComposite(subjInput: Buffer) {
       const subjPng = await sharp(subjInput)
@@ -505,8 +505,11 @@ Background lock (strict):
     const sizeStr = format === "story" ? "1024x1792" : "1024x1024";
 
     if (provider === "replicate") {
+      const safeSubjBuf = await safeCropSubject(subjBuf);
+      const safeCompositeBuf = await buildComposite(safeSubjBuf);
+      const safeCompositeDataUrl = bufferToDataUrlPng(safeCompositeBuf);
       const outUrl = await runFlux({
-        imageDataUrls: [preCompositeDataUrl, bgOnlyDataUrl],
+        imageDataUrls: [safeCompositeDataUrl, bgOnlyDataUrl],
         prompt: finalPrompt,
         token: AI_API_KEY as string,
         aspect_ratio,
