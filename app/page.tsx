@@ -6805,6 +6805,9 @@ useEffect(() => {
   
   // === HYDRATION GATE (SSR/CSR match) ===
   const [hydrated, setHydrated] = React.useState(false);
+  const [storageReady, setStorageReady] = React.useState(false);
+  const storageReadyRef = React.useRef(false);
+  const pendingStartupKeyRef = React.useRef<string | null>(null);
   // ===== LOGO UPLOAD (fix for “Cannot find name 'addLogosFromFiles'”) =====
 
 const countLogos = (list: any[]) => list.filter(i => i.imgUrl && i.name === 'logo').length;
@@ -6843,6 +6846,14 @@ async function addLogosFromFiles(files: FileList) {
 // ===== /LOGO UPLOAD =====
 
   React.useEffect(() => setHydrated(true), []);
+  React.useEffect(() => {
+    if (!hydrated) return;
+    const id = window.setTimeout(() => {
+      storageReadyRef.current = true;
+      setStorageReady(true);
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [hydrated]);
 
   // ------------------------------------------------------------
 
@@ -12411,6 +12422,10 @@ const [templateBase, setTemplateBase] = React.useState<any>(null);
 const handleTemplateSelect = React.useCallback(
   (key: string) => {
     setLoadingStartup(true);
+    if (!storageReadyRef.current) {
+      pendingStartupKeyRef.current = key;
+      return;
+    }
 
     try {
       // ✅ Map each vibe to a real template index
@@ -12443,6 +12458,12 @@ const handleTemplateSelect = React.useCallback(
         setBgUploadUrl(null);
         setBgUrl(tpl.preview);
       }
+      const startScale =
+        tpl.formats?.[startupFormat]?.bgScale ?? tpl.base?.bgScale ?? null;
+      if (typeof startScale === "number") {
+        templateBgScaleRef.current = startScale;
+        setBgScale(startScale);
+      }
     } catch (err) {
 
       alert("Could not load template.");
@@ -12463,6 +12484,14 @@ const handleTemplateSelect = React.useCallback(
   []
 );
 // === /STARTUP SCREEN ===
+
+React.useEffect(() => {
+  if (!storageReady) return;
+  const pending = pendingStartupKeyRef.current;
+  if (!pending) return;
+  pendingStartupKeyRef.current = null;
+  handleTemplateSelect(pending);
+}, [storageReady, handleTemplateSelect]);
 
 
 /* ===== AUTOSAVE: SMART SAVE/LOAD (BEGIN) ===== */
