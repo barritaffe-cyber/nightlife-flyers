@@ -9,6 +9,10 @@ const FLUX_ENDPOINT =
 
 const AI_API_KEY = process.env.REPLICATE_API_TOKEN;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const STABILITY_API_KEY = process.env.STABILITY_API_KEY;
+const STABILITY_API_URL =
+  process.env.STABILITY_API_URL ||
+  "https://api.stability.ai/v2beta/stable-image/generate/sd3";
 
 // -----------------------------
 // MASTER INTERNAL PROMPT (BASE)
@@ -328,14 +332,57 @@ async function runOpenAIEdit(opts: {
   throw new Error("OpenAI returned empty image");
 }
 
+async function runStabilityEdit(opts: {
+  image: Buffer;
+  prompt: string;
+  size: "1024x1024" | "1024x1792" | "1792x1024";
+}) {
+  if (!STABILITY_API_KEY) {
+    throw new Error("Missing STABILITY_API_KEY in .env.local");
+  }
+
+  const form = new FormData();
+  const blob = new Blob([new Uint8Array(opts.image)], { type: "image/png" });
+  form.append("image", blob, "image.png");
+  form.append("prompt", opts.prompt);
+  form.append("output_format", "png");
+  form.append("size", opts.size);
+
+  const res = await fetch(STABILITY_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${STABILITY_API_KEY}`,
+    },
+    body: form,
+  });
+
+  const contentType = res.headers.get("content-type") || "";
+  if (!res.ok) {
+    const msg = contentType.includes("application/json")
+      ? (await res.json()).message || `Stability HTTP ${res.status}`
+      : `Stability HTTP ${res.status}`;
+    throw new Error(msg);
+  }
+
+  if (contentType.includes("application/json")) {
+    const j = await res.json();
+    const img = j?.image || j?.data?.[0]?.image;
+    if (!img) throw new Error("No image in Stability response");
+    return `data:image/png;base64,${img}`;
+  }
+
+  const buf = Buffer.from(await res.arrayBuffer());
+  return `data:image/png;base64,${buf.toString("base64")}`;
+}
+
 // -----------------------------
 // route
 // -----------------------------
 export async function POST(req: Request) {
   try {
-    if (!OPENAI_API_KEY && !AI_API_KEY) {
+    if (!OPENAI_API_KEY && !AI_API_KEY && !STABILITY_API_KEY) {
       return NextResponse.json(
-        { error: "Missing OPENAI_API_KEY in .env.local" },
+        { error: "Missing STABILITY_API_KEY / OPENAI_API_KEY / REPLICATE_API_TOKEN in .env.local" },
         { status: 500 }
       );
     }
@@ -346,13 +393,13 @@ export async function POST(req: Request) {
       background,
       style = "club",
       format = "square",
-      provider = "openai",
+      provider = "stability",
     } = body as {
       subject: string;
       background: string;
       style?: MagicBlendStyle;
       format?: "square" | "story" | "portrait";
-      provider?: "openai" | "replicate";
+      provider?: "stability" | "openai" | "replicate";
     };
 
     if (!subject || !background) {
@@ -439,7 +486,16 @@ Background lock (strict):
       return NextResponse.json({ url: outUrl, style: safeStyle, format });
     }
 
-    const outUrl = await runOpenAIEdit({
+    if (provider === "openai") {
+      const outUrl = await runOpenAIEdit({
+        image: preCompositeBuf,
+        prompt: finalPrompt,
+        size: sizeStr,
+      });
+      return NextResponse.json({ url: outUrl, style: safeStyle, format });
+    }
+
+    const outUrl = await runStabilityEdit({
       image: preCompositeBuf,
       prompt: finalPrompt,
       size: sizeStr,
