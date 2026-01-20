@@ -13789,8 +13789,13 @@ return (
 <header className="sticky top-0 z-50 bg-neutral-950/80 supports-[backdrop-filter]:backdrop-blur backdrop-blur border-b border-neutral-800">
         <div className="mx-auto max-w-7xl px-4 py-2 lg:h-14 grid grid-cols-1 lg:grid-cols-[clamp(260px,22vw,360px)_minmax(560px,1fr)_clamp(260px,22vw,360px)] gap-2 lg:gap-4 items-center">
           {/* LEFT: Brand */}
-             <div className="flex items-center gap-3">
-              <svg width="28" height="28" viewBox="0 0 64 64" className="rounded-[10px] shadow-[0_8px_28px_rgba(0,0,0,.45)]">
+             <div className={clsx("flex items-center gap-3", format === "story" ? "hidden lg:flex" : "")}>
+              <svg
+                width="28"
+                height="28"
+                viewBox="0 0 64 64"
+                className="rounded-[10px] shadow-[0_8px_28px_rgba(0,0,0,.45)]"
+              >
                 <defs>
                   <linearGradient id="lg" x1="0" y1="1" x2="1" y2="0">
                     <stop offset="0" stopColor="#6366F1"/><stop offset="1" stopColor="#EC4899"/>
@@ -13824,7 +13829,10 @@ return (
                       ?.scrollIntoView({ behavior: "smooth", block: "start" });
                   }, 0);
                 }}
-                className="ml-2 lg:hidden text-[11px] px-2 py-[4px] rounded-md border border-neutral-700 bg-neutral-900/80 hover:bg-neutral-800 text-neutral-200"
+                className={clsx(
+                  "ml-2 lg:hidden text-[11px] px-2 py-[4px] rounded-md border border-neutral-700 bg-neutral-900/80 hover:bg-neutral-800 text-neutral-200",
+                  format === "story" ? "hidden" : ""
+                )}
               >
                 Controls
               </button>
