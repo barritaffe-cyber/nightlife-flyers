@@ -17,9 +17,9 @@ const STABILITY_API_URL =
 // -----------------------------
 // MASTER INTERNAL PROMPT (BASE)
 // -----------------------------
-const BASE_PROMPT = `High-impact cinematic flyer image with strong depth and energy.
+const BASE_PROMPT = `Cinematic high-fashion editorial portrait with strong depth and atmosphere.
 
-The person is photographed inside the background environment and must feel physically embedded in the scene.
+The subject is photographed inside the background environment and must feel physically embedded in the scene.
 The subject must be re-lit by the environment, with lighting visibly interacting with surfaces and atmosphere.
 No halos, no outlines, no artificial glow around the subject.
 
@@ -43,11 +43,11 @@ BACKGROUND SUBJECTS (keep but de-emphasize):
 
 Safety:
 - fully clothed, family-friendly, non-suggestive attire
-- no nudity, no lingerie, no explicit or sexualized content
+- no nudity, no explicit or sexualized content
 
 LIGHT → ATMOSPHERE → SUBJECT INTERACTION (critical):
 - use only the existing light sources from Image 2 (do not invent new light rigs)
-- if the background has no beams/lasers, do not add them
+- if the background has no beams, do not add them
 - subtle atmospheric haze only if already present in the background
 - atmospheric light softly carries color onto the subject’s skin and clothing
 - colored light spills gently across fabric folds and facial planes
@@ -78,7 +78,7 @@ MOTION AND ENERGY:
 - floating particles and subtle sparks catch highlights for motion and texture
 - light motion blur on lights and particles only (subject remains sharp)
 
-Cinematic poster composition:
+Composition:
 - tight, confident framing
 - subject dominates but feels grounded in the environment
 - bold, graphic contrast suitable for nightlife flyers
@@ -94,9 +94,9 @@ type MagicBlendStyle = "club" | "tropical" | "jazz_bar" | "outdoor_summer";
 const STYLE_SUFFIX: Record<MagicBlendStyle, string> = {
   club: `Environment styling:
 - modern nightclub or concert venue
-- bold stage lighting in reds, magentas, and ambers
-- energetic light beams and lasers behind the subject
-- high-energy nightlife atmosphere
+- cyan and magenta light accents
+- volumetric haze only if present in the background
+- architectural lighting, glossy surfaces, high-end atmosphere
 
 Avoid:
 - tropical elements (palms, beach, sunset, tiki decor)
@@ -106,7 +106,7 @@ Avoid:
 - tropical night venue or rooftop lounge
 - warm ambient lighting with palms or outdoor elements
 - golden and warm accent lights mixed with subtle color
-- relaxed but vibrant nightlife energy
+- relaxed but vibrant atmosphere
 - minimal atmosphere; no visible beams unless already present
 - keep the background scene intact and unchanged
 
@@ -122,10 +122,10 @@ Avoid:
 - Only enhance the existing scene with cinematic lighting, atmosphere, and depth.
 
 Lighting integration (depth layers):
-- Add subtle practical light sources that match the background’s existing vibe (warm bar lights, stage spot, sconces).
+- Add subtle practical light sources that match the background’s existing lighting.
 - Include lighting behind the subject (backlights) to create separation through contrast, NOT through glow/halos.
 - Include lighting in front of the subject (soft key/fill) that is motivated by the environment.
-- Include mid-layer lighting beams that pass through atmosphere.
+- Include mid-layer light shafts only if present in Image 2.
 
 Atmosphere interaction:
 - Use a light amount of smoke/haze only to reveal beams and add depth.
@@ -147,7 +147,7 @@ Avoid:
 - tropical decor, palms, beach, or sunset lighting
 - outdoor daytime lighting or bright sun`,
   outdoor_summer: `Environment styling:
-- vibrant, cinematic summer day-party atmosphere (hot, joyful, alive)
+- vibrant, cinematic summer day-party atmosphere
 - bright natural sunlight with warm golden highlights and soft, flattering shadows
 - subtle heat haze and gentle light bloom; fine dust specks catching sunlight
 - rich saturated blue sky with soft gradients, open and clean
@@ -164,8 +164,8 @@ Mood:
 - carefree, stylish, euphoric
 
 Style keywords:
-- cinematic summer, Afrobeat energy, luxury day party, tropical heat
-- joyful chaos, lifestyle promo, high-end event atmosphere
+- cinematic summer, luxury day party, tropical heat
+- lively atmosphere, lifestyle promo, high-end event atmosphere
 
 Quality:
 - ultra-realistic, clean detail, soft motion blur
