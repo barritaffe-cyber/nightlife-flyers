@@ -248,6 +248,7 @@ async function runFlux(opts: {
   prompt: string;
   token: string;
   aspect_ratio: "1:1" | "9:16" | "4:5";
+  safety_tolerance?: number;
 }) {
   const response = await fetch(FLUX_ENDPOINT, {
     method: "POST",
@@ -264,7 +265,7 @@ async function runFlux(opts: {
         aspect_ratio: opts.aspect_ratio,
         output_format: "png",
         output_quality: 95,
-        safety_tolerance: 2,
+        safety_tolerance: opts.safety_tolerance ?? 2,
       },
     }),
   });
@@ -373,12 +374,30 @@ Background lock (strict):
 - Only add subtle atmosphere and a few small accent lights; no scene overhaul.`;
 
     // --- Single unified pass with TWO reference images (Imagine Art style) ---
-    const outUrl = await runFlux({
-      imageDataUrls: [preCompositeDataUrl, bgOnlyDataUrl],
-      prompt: finalPrompt,
-      token: AI_API_KEY,
-      aspect_ratio,
-    });
+    let outUrl: string;
+    try {
+      outUrl = await runFlux({
+        imageDataUrls: [preCompositeDataUrl, bgOnlyDataUrl],
+        prompt: finalPrompt,
+        token: AI_API_KEY,
+        aspect_ratio,
+        safety_tolerance: 2,
+      });
+    } catch (err: any) {
+      const msg = String(err?.message || err || "");
+      const isSensitive = msg.toLowerCase().includes("sensitive");
+      if (!isSensitive) throw err;
+
+      const safePrompt =
+        `${finalPrompt}\n\nSafety override: fully clothed, family-friendly, no skin emphasis, no suggestive content.`;
+      outUrl = await runFlux({
+        imageDataUrls: [preCompositeDataUrl, bgOnlyDataUrl],
+        prompt: safePrompt,
+        token: AI_API_KEY,
+        aspect_ratio,
+        safety_tolerance: 1,
+      });
+    }
 
     return NextResponse.json({ url: outUrl, style: safeStyle, format });
   } catch (err: any) {
