@@ -12426,16 +12426,23 @@ const handleTemplateSelect = React.useCallback(
 
       // 🪄 Apply template once on selection (force square for startup)
       const startupFormat: Format = "square";
-      useFlyerState.getState().setSession({ square: {}, story: {} });
-      useFlyerState.getState().setSessionDirty({ square: false, story: false });
+      const store = useFlyerState.getState();
+      store.setSession({ square: {}, story: {} });
+      store.setSessionDirty({ square: false, story: false });
       portraitCacheRef.current = { square: null, story: null };
       subtagCacheRef.current = { square: null, story: null };
       isSwitchingFormatRef.current = false;
       setFormat(startupFormat);
       setTemplateId(tpl.id);
       setActiveTemplate(tpl);
-      applyTemplate(tpl, { targetFormat: startupFormat });
-      useFlyerState.getState().setSessionDirty({ square: false, story: false });
+      setTimeout(() => {
+        applyTemplate(tpl, { targetFormat: startupFormat, initialLoad: true });
+        if (tpl.preview) {
+          setBgUploadUrl(null);
+          setBgUrl(tpl.preview);
+        }
+        store.setSessionDirty({ square: false, story: false });
+      }, 0);
       const startScale =
         tpl.formats?.[startupFormat]?.bgScale ?? tpl.base?.bgScale ?? null;
       if (typeof startScale === "number") {
