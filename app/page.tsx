@@ -12437,6 +12437,61 @@ const [mobileControlsTab, setMobileControlsTab] = React.useState<"design" | "ass
   "design"
 );
 const [uiMode, setUiMode] = React.useState<"design" | "finish">("design");
+const activeTextTarget = React.useMemo(() => {
+  const byPanel = selectedPanel && ["headline", "head2", "details", "details2", "venue", "subtag"].includes(selectedPanel)
+    ? selectedPanel
+    : null;
+  const byMove = moveTarget && ["headline", "headline2", "details", "details2", "venue", "subtag"].includes(moveTarget)
+    ? moveTarget
+    : null;
+  return (byPanel ?? byMove ?? null) as
+    | "headline"
+    | "head2"
+    | "details"
+    | "details2"
+    | "venue"
+    | "subtag"
+    | "headline2"
+    | null;
+}, [selectedPanel, moveTarget]);
+const activeTextMeta = React.useMemo(() => {
+  switch (activeTextTarget) {
+    case "headline":
+      return { label: "Headline", font: headlineFamily, size: headDisplayPx, lineHeight };
+    case "headline2":
+    case "head2":
+      return { label: "Headline 2", font: head2Family, size: head2SizePx, lineHeight: head2LineHeight };
+    case "details":
+      return { label: "Details", font: bodyFamily, size: bodySize, lineHeight: detailsLineHeight };
+    case "details2":
+      return { label: "Details 2", font: details2Family ?? bodyFamily, size: details2Size, lineHeight: details2LineHeight };
+    case "venue":
+      return { label: "Venue", font: venueFamily, size: venueSize, lineHeight: venueLineHeight };
+    case "subtag":
+      return { label: "Subtag", font: subtagFamily, size: subtagSize, lineHeight: 1 };
+    default:
+      return null;
+  }
+}, [
+  activeTextTarget,
+  headlineFamily,
+  headDisplayPx,
+  lineHeight,
+  head2Family,
+  head2SizePx,
+  head2LineHeight,
+  bodyFamily,
+  bodySize,
+  detailsLineHeight,
+  details2Family,
+  details2Size,
+  details2LineHeight,
+  venueFamily,
+  venueSize,
+  venueLineHeight,
+  subtagFamily,
+  subtagSize,
+]);
 
 const mobileControlsTabs = (
   <div className="lg:hidden flex items-center gap-2 px-4 py-2 bg-neutral-950/90 border-b border-neutral-800">
@@ -13716,6 +13771,20 @@ className={clsx(
 )}
 style={{ minHeight: 'calc(100vh - 96px)' }}
 >
+{activeTextMeta && (
+  <div className="lg:hidden fixed left-3 top-[calc(env(safe-area-inset-top,0px)+58px)] z-[70] rounded-xl border border-white/10 bg-neutral-900/90 backdrop-blur px-3 py-2 shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+    <div className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</div>
+    <div className="text-[12px] font-semibold text-white">{activeTextMeta.label}</div>
+    <div className="mt-1 text-[10px] text-neutral-300">
+      Font: <span className="text-neutral-100">{activeTextMeta.font}</span>
+    </div>
+    <div className="text-[10px] text-neutral-300">
+      Size: <span className="text-neutral-100">{Math.round(Number(activeTextMeta.size) || 0)}px</span>
+      <span className="mx-1 text-neutral-600">•</span>
+      Line: <span className="text-neutral-100">{Number(activeTextMeta.lineHeight || 0).toFixed(2)}</span>
+    </div>
+  </div>
+)}
 
 {/* ---------- Left Panel ---------- */}
 <aside
