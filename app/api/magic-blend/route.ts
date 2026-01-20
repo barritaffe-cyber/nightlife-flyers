@@ -346,32 +346,42 @@ async function runStabilityEdit(opts: {
   form.append("image", blob, "image.png");
   form.append("prompt", opts.prompt);
   form.append("output_format", "png");
-  form.append("size", opts.size);
+  const aspectRatio =
+    opts.size === "1024x1792" ? "9:16" : opts.size === "1792x1024" ? "16:9" : "1:1";
+  form.append("aspect_ratio", aspectRatio);
 
   const res = await fetch(STABILITY_API_URL, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${STABILITY_API_KEY}`,
+      Accept: "application/json",
     },
     body: form,
   });
 
   const contentType = res.headers.get("content-type") || "";
+  const rawText = await res.text();
   if (!res.ok) {
-    const msg = contentType.includes("application/json")
-      ? (await res.json()).message || `Stability HTTP ${res.status}`
-      : `Stability HTTP ${res.status}`;
+    let msg = `Stability HTTP ${res.status}`;
+    try {
+      if (contentType.includes("application/json")) {
+        const j = JSON.parse(rawText);
+        msg = j?.message || j?.error || msg;
+      } else if (rawText) {
+        msg = rawText;
+      }
+    } catch {}
     throw new Error(msg);
   }
 
   if (contentType.includes("application/json")) {
-    const j = await res.json();
+    const j = JSON.parse(rawText || "{}");
     const img = j?.image || j?.data?.[0]?.image;
     if (!img) throw new Error("No image in Stability response");
     return `data:image/png;base64,${img}`;
   }
 
-  const buf = Buffer.from(await res.arrayBuffer());
+  const buf = Buffer.from(rawText, "base64");
   return `data:image/png;base64,${buf.toString("base64")}`;
 }
 
