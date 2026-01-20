@@ -7110,12 +7110,7 @@ const quickGenerate = async () => {
 // Computed layout for the active template and format
 const currentLayout = activeTemplate ? loadTemplate(activeTemplate, format) : null;
 
-// Apply button handler (called from TemplateGalleryPanel)
-const handleApply = React.useCallback((tpl: TemplateSpec) => {
-  setActiveTemplate(tpl);
-  setFormat('square');
-
-}, []);
+// Apply button handler moved below applyTemplate definition (to avoid TDZ)
 
 // Format toggle handler (called from Square/Story chips)
 // === OPTIONAL: Artboard resize helper for format switching ===
@@ -11955,18 +11950,20 @@ const applyTemplate = React.useCallback(
     const store = useFlyerState.getState();
     const freshSession = store.session;
     const existing: Partial<TemplateBase> = freshSession[fmt] ?? {};
-    const isFresh = !store.sessionDirty?.[fmt];
+    const wasDirty = !!store.sessionDirty?.[fmt];
 
     // 2) MERGE
-    const merged: Partial<TemplateBase> =
-      opts?.initialLoad && isFresh
-        ? { ...variant }
-        : opts?.initialLoad
-          ? { ...variant, ...existing }
-          : { ...existing, ...variant };
+    const merged: Partial<TemplateBase> = opts?.initialLoad
+      ? (wasDirty ? { ...variant, ...existing } : { ...variant })
+      : { ...existing, ...variant };
 
-    // 3) WRITE TO SESSION (skip when initial template load hasn't been edited yet)
-    if (!(opts?.initialLoad && isFresh)) {
+    // 3) SESSION: initialLoad should not write user session unless already dirty
+    if (opts?.initialLoad) {
+      if (!wasDirty) {
+        store.setSession((prev) => ({ ...prev, [fmt]: {} }));
+        store.setSessionDirty((prev) => ({ ...prev, [fmt]: false }));
+      }
+    } else {
       store.setSession((prev) => ({
         ...prev,
         [fmt]: merged,
@@ -12137,7 +12134,7 @@ const applyTemplate = React.useCallback(
     // 2. HEADLINE 2 (Sub)
     setHead2Color(merged.head2Color ?? '#ffffff');
 
-    if (!opts?.initialLoad && tpl.preview) {
+    if (tpl.preview && (!opts?.initialLoad || !wasDirty)) {
       setBgUploadUrl(null);
       setBgUrl(tpl.preview);
     }
@@ -12160,6 +12157,24 @@ const CINEMATIC_PRESETS = [
   { id: "concrete", label: "Concrete (Industrial)" },
   { id: "default", label: "Matte (Clean)" },
 ] as const;
+
+// Apply button handler (shared with Choose-a-Vibe)
+const applyTemplateFromGallery = React.useCallback(
+  (tpl: TemplateSpec, opts?: { targetFormat?: Format }) => {
+    // 🔒 prevent panel auto-close during apply
+    suppressCloseRef.current = true;
+
+    setTemplateId(tpl.id);
+    setActiveTemplate(tpl);
+    applyTemplate(tpl, { targetFormat: opts?.targetFormat ?? format });
+
+    // 🔓 release on next tick after state settles
+    setTimeout(() => {
+      suppressCloseRef.current = false;
+    }, 0);
+  },
+  [applyTemplate, format]
+);
 
 /* ============================================================
    STARTUP TEMPLATE MAP + HANDLER
@@ -12424,7 +12439,7 @@ const handleTemplateSelect = React.useCallback(
       // 🧠 Save a snapshot of the base template (for optional reset)
       setTemplateBase(JSON.parse(JSON.stringify(tpl)));
 
-      // ✅ Fresh-load the template for Choose-a-Vibe (no session bleed)
+      // ✅ Fresh startup load should ignore any prior session data
       const startupFormat: Format = "square";
       const store = useFlyerState.getState();
       store.setSession({ square: {}, story: {} });
@@ -12433,17 +12448,6 @@ const handleTemplateSelect = React.useCallback(
       setTemplateId(tpl.id);
       setActiveTemplate(tpl);
       applyTemplate(tpl, { targetFormat: startupFormat, initialLoad: true });
-      store.setSessionDirty({ square: false, story: false });
-      const startScale =
-        tpl.formats?.[startupFormat]?.bgScale ?? tpl.base?.bgScale ?? null;
-      if (typeof startScale === "number") {
-        templateBgScaleRef.current = startScale;
-        setBgScale(startScale);
-      }
-      if (tpl.preview) {
-        setBgUploadUrl(null);
-        setBgUrl(tpl.preview);
-      }
     } catch (err) {
 
       alert("Could not load template.");
@@ -14032,16 +14036,7 @@ style={{ top: STICKY_TOP }}
         }, 0);
       }}
       onApply={(t) => {
-        // 🔒 LOCK: Prevent canvas interaction from closing the panel during update
-        suppressCloseRef.current = true;
-
-        setTemplateId(t.id);
-        applyTemplate(t, { targetFormat: format });
-
-        // 🔓 UNLOCK: Release on next tick after React render settles
-        setTimeout(() => {
-          suppressCloseRef.current = false;
-        }, 0);
+        applyTemplateFromGallery(t);
       }}
     />
   </div>
