@@ -13730,7 +13730,7 @@ style={{ top: STICKY_TOP }}
   {mobileControlsOpen && mobileControlsTabs}
 
   
-  <div className={uiMode === "design" ? "" : "hidden"}>
+  <div className={uiMode === "design" ? "space-y-3" : "hidden"}>
 {/* UI: GETTING STARTED (BEGIN) */}
 <Collapsible
             title="Getting started"
@@ -14882,7 +14882,7 @@ style={{ top: STICKY_TOP }}
  
 </div>
 
-<div className={uiMode === "finish" ? "" : "hidden"}>
+<div className={uiMode === "finish" ? "space-y-3" : "hidden"}>
 {/* UI: CINEMATIC OVERLAYS (BEGIN) */}
 <div
   className={
