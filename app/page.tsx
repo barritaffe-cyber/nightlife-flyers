@@ -12166,9 +12166,18 @@ const applyTemplateFromGallery = React.useCallback(
     // 🔒 prevent panel auto-close during apply
     suppressCloseRef.current = true;
 
+    const fmt = opts?.targetFormat ?? format;
+    const store = useFlyerState.getState();
+    store.setSession((prev) => ({ ...prev, [fmt]: {} }));
+    store.setSessionDirty((prev) => ({ ...prev, [fmt]: false }));
+
     setTemplateId(tpl.id);
     setActiveTemplate(tpl);
-    applyTemplate(tpl, { targetFormat: opts?.targetFormat ?? format });
+    applyTemplate(tpl, { targetFormat: fmt, initialLoad: true });
+    if (tpl.preview) {
+      setBgUploadUrl(null);
+      setBgUrl(tpl.preview);
+    }
 
     // 🔓 release on next tick after state settles
     setTimeout(() => {
@@ -12445,25 +12454,10 @@ const handleTemplateSelect = React.useCallback(
       // 🧠 Save a snapshot of the base template (for optional reset)
       setTemplateBase(JSON.parse(JSON.stringify(tpl)));
 
-      // ✅ Startup load should be authoritative
+      // ✅ Startup load should be authoritative (same as gallery apply)
       const startupFormat: Format = "square";
-      const store = useFlyerState.getState();
-      store.setSession({ square: {}, story: {} });
-      store.setSessionDirty({ square: false, story: false });
       setFormat(startupFormat);
-      setTemplateId(tpl.id);
-      setActiveTemplate(tpl);
-      applyTemplate(tpl, { targetFormat: startupFormat, initialLoad: true });
-      if (tpl.preview) {
-        setBgUploadUrl(null);
-        setBgUrl(tpl.preview);
-      }
-      const startScale =
-        tpl.formats?.[startupFormat]?.bgScale ?? tpl.base?.bgScale ?? null;
-      if (typeof startScale === "number") {
-        templateBgScaleRef.current = startScale;
-        setBgScale(startScale);
-      }
+      applyTemplateFromGallery(tpl, { targetFormat: startupFormat });
     } catch (err) {
 
       alert("Could not load template.");
