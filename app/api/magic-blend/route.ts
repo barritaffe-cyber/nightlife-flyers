@@ -373,7 +373,7 @@ async function runStabilityEdit(opts: {
       }
     } catch {}
     console.error("Stability error:", res.status, contentType, rawText);
-    throw new Error(msg);
+    throw new Error(`${msg} | ${rawText || "no body"}`);
   }
 
   if (contentType.includes("application/json")) {
