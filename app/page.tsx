@@ -8129,14 +8129,18 @@ React.useEffect(() => {
     return () => window.removeEventListener("resize", update);
   }, []);
 
+  const canvasSize = React.useMemo(
+    () => (format === "square" ? { w: 540, h: 540 } : { w: 540, h: 960 }),
+    [format]
+  );
   const canvasScale = React.useMemo(() => {
     if (!viewport.w || !viewport.h) return 1;
     const maxW = Math.max(320, viewport.w - 16);
     const maxH = Math.max(320, viewport.h - 220);
-    return Math.min(1, maxW / size.w, maxH / size.h);
-  }, [viewport.w, viewport.h, size.w, size.h]);
-  const scaledCanvasW = Math.round(size.w * canvasScale);
-  const scaledCanvasH = Math.round(size.h * canvasScale);
+    return Math.min(1, maxW / canvasSize.w, maxH / canvasSize.h);
+  }, [viewport.w, viewport.h, canvasSize.w, canvasSize.h]);
+  const scaledCanvasW = Math.round(canvasSize.w * canvasScale);
+  const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
 
 
   
@@ -15111,8 +15115,8 @@ style={{ top: STICKY_TOP }}
       ref={artWrapRef}
       className="relative isolate z-0 flex justify-center items-center..."
       style={{
-        width: size.w,
-        height: size.h,
+        width: canvasSize.w,
+        height: canvasSize.h,
         position: "absolute",
         left: "50%",
         top: 0,
