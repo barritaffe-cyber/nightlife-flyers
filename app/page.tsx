@@ -12480,7 +12480,9 @@ const activeTextMeta = React.useMemo(() => {
 }, [
   activeTextTarget,
   headlineFamily,
-  headDisplayPx,
+  headSizeAuto,
+  headManualPx,
+  headMaxPx,
   lineHeight,
   head2Family,
   head2SizePx,
