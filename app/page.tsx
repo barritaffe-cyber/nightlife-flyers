@@ -13672,9 +13672,8 @@ return (
                 >
                   Dismiss
                 </button>
-              </div>
-            </div>
-          </div>
+  </div>
+</div>
 )}     
 
 {/* ===== UI: MAIN 3-COL LAYOUT (BEGIN) ===== */}
@@ -16122,6 +16121,7 @@ style={{ top: STICKY_TOP }}
         </button>
       </div>
     </Collapsible>
+  </div>
   </div>
 </div>
 </div>
