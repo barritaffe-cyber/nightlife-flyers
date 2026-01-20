@@ -446,6 +446,20 @@ export async function POST(req: Request) {
     // 2) Subject buffer
     const subjBuf = await toBufferFromAnyImage(subject);
 
+    async function safeCropSubject(buf: Buffer) {
+      try {
+        const meta = await sharp(buf).metadata();
+        if (!meta.width || !meta.height) return buf;
+        const cropH = Math.max(1, Math.round(meta.height * 0.75));
+        return await sharp(buf)
+          .extract({ left: 0, top: 0, width: meta.width, height: cropH })
+          .png()
+          .toBuffer();
+      } catch {
+        return buf;
+      }
+    }
+
     // Subject framing: bigger & slightly lifted (poster feel)
     // NOTE: if background adherence is still weak, drop this to 0.88–0.92
     const subjectScale = 0.96;
@@ -466,7 +480,8 @@ export async function POST(req: Request) {
     }
 
     // 3) Composite subject onto the background for placement reference
-    const preCompositeBuf = await buildComposite(subjBuf);
+    const safeSubjBuf = await safeCropSubject(subjBuf);
+    const preCompositeBuf = await buildComposite(safeSubjBuf);
 
     // 4) Convert both images to data URLs (order matters)
     const preCompositeDataUrl = bufferToDataUrlPng(preCompositeBuf);
