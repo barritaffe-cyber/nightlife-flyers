@@ -8,6 +8,7 @@ const FLUX_ENDPOINT =
   "https://api.replicate.com/v1/models/black-forest-labs/flux-2-pro/predictions";
 
 const AI_API_KEY = process.env.REPLICATE_API_TOKEN;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 // -----------------------------
 // MASTER INTERNAL PROMPT (BASE)
@@ -287,24 +288,71 @@ async function runFlux(opts: {
   throw new Error(`AI Provider failed: ${raw}`);
 }
 
+async function runOpenAIEdit(opts: {
+  image: Buffer;
+  prompt: string;
+  size: "1024x1024" | "1024x1792" | "1792x1024";
+}) {
+  if (!OPENAI_API_KEY) {
+    throw new Error("Missing OPENAI_API_KEY in .env.local");
+  }
+
+  const form = new FormData();
+  const blob = new Blob([new Uint8Array(opts.image)], { type: "image/png" });
+  form.append("image", blob, "image.png");
+  form.append("model", "gpt-image-1");
+  form.append("prompt", opts.prompt);
+  form.append("size", opts.size);
+
+  const res = await fetch("https://api.openai.com/v1/images/edits", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
+    },
+    body: form,
+  });
+
+  const j = await res.json().catch(() => ({} as any));
+  if (!res.ok) {
+    const msg = j?.error?.message || `OpenAI HTTP ${res.status}`;
+    throw new Error(msg);
+  }
+
+  const out = j?.data?.[0];
+  if (!out) throw new Error("No image in OpenAI response");
+
+  if (out.b64_json) {
+    return `data:image/png;base64,${out.b64_json}`;
+  }
+  if (out.url) return out.url as string;
+  throw new Error("OpenAI returned empty image");
+}
+
 // -----------------------------
 // route
 // -----------------------------
 export async function POST(req: Request) {
   try {
-    if (!AI_API_KEY) {
+    if (!OPENAI_API_KEY && !AI_API_KEY) {
       return NextResponse.json(
-        { error: "Missing REPLICATE_API_TOKEN in .env.local" },
+        { error: "Missing OPENAI_API_KEY in .env.local" },
         { status: 500 }
       );
     }
 
     const body = await req.json();
-    const { subject, background, style = "club", format = "square" } = body as {
+    const {
+      subject,
+      background,
+      style = "club",
+      format = "square",
+      provider = "openai",
+    } = body as {
       subject: string;
       background: string;
       style?: MagicBlendStyle;
       format?: "square" | "story" | "portrait";
+      provider?: "openai" | "replicate";
     };
 
     if (!subject || !background) {
@@ -323,12 +371,14 @@ export async function POST(req: Request) {
       format === "story" ? "9:16" : format === "portrait" ? "4:5" : "1:1";
 
     // --- Precomposite subject onto background (conditioning image) ---
-    const size = 1024;
+    const sizeW = format === "story" ? 1024 : 1024;
+    const sizeH = format === "story" ? 1792 : 1024;
+    const baseSize = Math.min(sizeW, sizeH);
 
     // 1) Background canvas (this is the "truth" reference)
     const bgBuf = await toBufferFromAnyImage(background);
     const bgCanvas = await sharp(bgBuf)
-      .resize(size, size, { fit: "cover" })
+      .resize(sizeW, sizeH, { fit: "cover" })
       .png()
       .toBuffer();
 
@@ -338,10 +388,10 @@ export async function POST(req: Request) {
     // Subject framing: bigger & slightly lifted (poster feel)
     // NOTE: if background adherence is still weak, drop this to 0.88–0.92
     const subjectScale = 0.96;
-    const subjSize = Math.round(size * subjectScale);
-    const subjLeft = Math.round((size - subjSize) / 2);
-    const yLift = Math.round(size * (safeStyle === "tropical" ? 0.02 : 0.06));
-    const subjTop = Math.round((size - subjSize) / 2) - yLift;
+    const subjSize = Math.round(baseSize * subjectScale);
+    const subjLeft = Math.round((sizeW - subjSize) / 2);
+    const yLift = Math.round(baseSize * (safeStyle === "tropical" ? 0.02 : 0.06));
+    const subjTop = Math.round((sizeH - subjSize) / 2) - yLift;
 
     async function buildComposite(subjInput: Buffer) {
       const subjPng = await sharp(subjInput)
@@ -376,47 +426,24 @@ Background lock (strict):
 - Only add subtle atmosphere and a few small accent lights; no scene overhaul.`;
 
     // --- Single unified pass with TWO reference images (Imagine Art style) ---
-    let outUrl: string;
-    try {
-      outUrl = await runFlux({
+    const sizeStr = format === "story" ? "1024x1792" : "1024x1024";
+
+    if (provider === "replicate") {
+      const outUrl = await runFlux({
         imageDataUrls: [preCompositeDataUrl, bgOnlyDataUrl],
         prompt: finalPrompt,
-        token: AI_API_KEY,
+        token: AI_API_KEY as string,
         aspect_ratio,
         safety_tolerance: 2,
       });
-    } catch (err: any) {
-      const msg = String(err?.message || err || "");
-      const isSensitive = msg.toLowerCase().includes("sensitive");
-      if (!isSensitive) throw err;
-
-      let safeSubj = subjBuf;
-      try {
-        const meta = await sharp(subjBuf).metadata();
-        if (meta.width && meta.height) {
-          const cropH = Math.max(1, Math.round(meta.height * 0.75));
-          safeSubj = await sharp(subjBuf)
-            .extract({ left: 0, top: 0, width: meta.width, height: cropH })
-            .png()
-            .toBuffer();
-        }
-      } catch {
-        // keep original if cropping fails
-      }
-
-      const safeCompositeBuf = await buildComposite(safeSubj);
-      const safeCompositeDataUrl = bufferToDataUrlPng(safeCompositeBuf);
-      const safePrompt =
-        `${finalPrompt}\n\nSafety override: fully clothed, high-fashion portrait, no skin emphasis, non-suggestive.`;
-      outUrl = await runFlux({
-        imageDataUrls: [safeCompositeDataUrl, bgOnlyDataUrl],
-        prompt: safePrompt,
-        token: AI_API_KEY,
-        aspect_ratio,
-        safety_tolerance: 1,
-      });
+      return NextResponse.json({ url: outUrl, style: safeStyle, format });
     }
 
+    const outUrl = await runOpenAIEdit({
+      image: preCompositeBuf,
+      prompt: finalPrompt,
+      size: sizeStr,
+    });
     return NextResponse.json({ url: outUrl, style: safeStyle, format });
   } catch (err: any) {
     console.error("❌ MAGIC BLEND ERROR:", err);
