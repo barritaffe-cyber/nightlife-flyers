@@ -671,7 +671,7 @@ const Collapsible: React.FC<{
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.25, ease: "easeInOut" }}
-            className="mt-3 overflow-hidden"
+            className="mt-3 overflow-hidden px-2 pb-2"
           >
             {children}
           </motion.div>
@@ -8104,6 +8104,12 @@ const switchFormat = React.useCallback((next: Format) => {
   templateId,
 ]);
 
+// Re-apply template bgScale after bg image swaps (mobile load timing).
+React.useEffect(() => {
+  if (templateBgScaleRef.current == null) return;
+  setBgScale(templateBgScaleRef.current);
+}, [bgUrl, bgUploadUrl, format]);
+
 
 // ============================================================================
 
@@ -11931,6 +11937,7 @@ const clearHeavyStorage = () => {
    Ensures values from the previous format do not 'leak' into the new one.
    ============================================================================
 */
+const templateBgScaleRef = React.useRef<number | null>(null);
 const applyTemplate = React.useCallback(
   (
     tpl: TemplateSpec,
@@ -12002,6 +12009,7 @@ const applyTemplate = React.useCallback(
     setVenueRotate(merged.venueRotate ?? 0);
     setSubtagRotate(merged.subtagRotate ?? 0);
     setPortraitScale(merged.portraitScale ?? 1);
+    templateBgScaleRef.current = merged.bgScale ?? null;
     setBgScale(merged.bgScale ?? 1);
     setLogoScale(merged.logoScale ?? 1);
     setBgBlur(merged.bgBlur ?? 0); 
@@ -13713,31 +13721,7 @@ style={{ top: STICKY_TOP }}
 >               
   {mobileControlsOpen && mobileControlsTabs}
 
-  {mobileControlsOpen && mobileControlsTab === "design" && (
-    <div className="lg:hidden rounded-xl border border-neutral-700 bg-neutral-900/60 p-3">
-      <div className="text-[10px] uppercase tracking-wider text-neutral-400 font-bold">
-        Mobile Quick Start
-      </div>
-      <div className="grid grid-cols-2 gap-2 mt-2">
-        {QUICK_START_TEMPLATES.map((tpl) => (
-          <button
-            key={tpl.id}
-            type="button"
-            className="text-[11px] font-semibold py-2 rounded bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-colors"
-            onClick={() => {
-              const fullTpl = TEMPLATE_GALLERY.find((t) => t.id === tpl.id);
-              if (!fullTpl) return;
-              setTemplateId(fullTpl.id);
-              applyTemplate(fullTpl, { targetFormat: format });
-              setMobileControlsOpen(false);
-            }}
-          >
-            {tpl.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  )}
+  
   <div className={uiMode === "design" ? "" : "hidden"}>
 {/* UI: GETTING STARTED (BEGIN) */}
 <Collapsible
