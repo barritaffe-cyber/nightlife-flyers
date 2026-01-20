@@ -11962,18 +11962,22 @@ const applyTemplate = React.useCallback(
       tpl.formats?.[fmt] ?? tpl.formats?.square ?? tpl.base ?? {};
     const incomingScale =
       typeof variant.bgScale === "number" ? variant.bgScale : 1.0;
-    console.log(
-      "[applyTemplate] id=",
-      tpl.id,
-      "format=",
-      fmt,
-      "bgScale=",
-      incomingScale,
-      "raw=",
-      (tpl.formats?.[fmt] as any)?.bgScale ?? null,
-      "square=",
-      (tpl.formats?.square as any)?.bgScale ?? null
-    );
+    if (tpl.id === "latin_street_tropical") {
+      console.log(
+        "[applyTemplate] id=",
+        tpl.id,
+        "format=",
+        fmt,
+        "bgScale=",
+        incomingScale,
+        "raw=",
+        (tpl.formats?.[fmt] as any)?.bgScale ?? null,
+        "square=",
+        (tpl.formats?.square as any)?.bgScale ?? null,
+        "preview=",
+        tpl.preview
+      );
+    }
 
     // ensure bg scale is available synchronously for any effects
     templateBgScaleRef.current = incomingScale;
@@ -14364,11 +14368,6 @@ style={{ top: STICKY_TOP }}
         .getState()
         .setSelectedPanel(selectedPanel === "headline" ? null : "headline")
     }
-    titleClassName={
-      selectedPanel === "headline"
-        ? "text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]"
-        : ""
-    }
     right={
       <div className="flex items-center gap-3 text-[11px]">
         {/* HIDE TOGGLE */}
@@ -14405,13 +14404,7 @@ style={{ top: STICKY_TOP }}
       </div>
     }
   >
-    <div
-      className={
-        selectedPanel === "headline"
-          ? "p-2 rounded-md ring-2 ring-blue-400 shadow-[0_0_18px_4px_rgba(0,170,255,0.55)]"
-          : "p-0"
-      }
-    >
+    <div className="p-0">
       {/* TEXT INPUT */}
       <textarea
         value={headline}
@@ -14519,11 +14512,6 @@ style={{ top: STICKY_TOP }}
         .getState()
         .setSelectedPanel(selectedPanel === "head2" ? null : "head2")
     }
-    titleClassName={
-      selectedPanel === "head2"
-        ? "text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]"
-        : ""
-    }
     right={
       <div className="flex items-center gap-3 text-[11px]">
         {/* ENABLE */}
@@ -14564,13 +14552,7 @@ style={{ top: STICKY_TOP }}
     }
   >
     {/* ⭐ NEON ACTIVE WRAPPER (FUCHSIA) */}
-    <div
-      className={
-        selectedPanel === "head2"
-          ? "p-2 rounded-md ring-2 ring-blue-400 shadow-[0_0_18px_4px_rgba(0,170,255,0.55)]"
-          : "p-0"
-      }
-    >
+    <div className="p-0">
       {/* TEXT FIELD */}
       <textarea
         value={head2}
@@ -14715,11 +14697,6 @@ style={{ top: STICKY_TOP }}
         .getState()
         .setSelectedPanel(selectedPanel === "subtag" ? null : "subtag")
     }
-    titleClassName={
-      selectedPanel === "subtag"
-        ? "text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]"
-        : ""
-    }
     right={
       <div className="flex items-center gap-3 text-[11px]">
         <Chip
@@ -14739,13 +14716,7 @@ style={{ top: STICKY_TOP }}
     }
   >
     {/* ⭐ Inner highlight wrapper only when active */}
-    <div
-      className={
-        selectedPanel === "subtag"
-          ? "p-2 rounded-md ring-2 ring-blue-400 shadow-[0_0_18px_4px_rgba(0,170,255,0.55)]"
-          : "p-0"
-      }
-    >
+    <div className="p-0">
       {/* Disable rest of panel when subtag is OFF */}
       <div className={subtagEnabled[format] ? "" : "opacity-50 pointer-events-none"}>
         {/* ---------- TEXT INPUT ---------- */}
@@ -14826,11 +14797,6 @@ style={{ top: STICKY_TOP }}
         .getState()
         .setSelectedPanel(selectedPanel === "details" ? null : "details")
     }
-    titleClassName={
-      selectedPanel === "details"
-        ? "text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]"
-        : ""
-    }
     right={
       <div className="flex items-center gap-2 text-[11px]">
         <span className="opacity-70">Font</span>
@@ -14849,13 +14815,7 @@ style={{ top: STICKY_TOP }}
     }
   >
     {/* ⭐ INNER NEON ACTIVE WRAPPER */}
-    <div
-      className={
-        selectedPanel === "details"
-          ? "p-2 rounded-md ring-2 ring-blue-400 shadow-[0_0_18px_4px_rgba(0,170,255,0.55)]"
-          : "p-0"
-      }
-    >
+    <div className="p-0">
       {/* ---------- ALIGN (RIGHT-ALIGNED BELOW FONT) ---------- */}
       <div className="flex justify-end mt-3">
         <div className="flex items-center gap-2 text-[11px]">
@@ -14930,11 +14890,6 @@ style={{ top: STICKY_TOP }}
         .getState()
         .setSelectedPanel(selectedPanel === "details2" ? null : "details2")
     }
-    titleClassName={
-      selectedPanel === "details2"
-        ? "text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]"
-        : ""
-    }
     right={
       <div className="flex items-center gap-3 text-[11px]">
         <Chip
@@ -14962,13 +14917,7 @@ style={{ top: STICKY_TOP }}
     }
   >
     {/* ⭐ INNER NEON ACTIVE WRAPPER */}
-    <div
-      className={
-        selectedPanel === "details2"
-          ? "p-2 rounded-md ring-2 ring-blue-400 shadow-[0_0_18px_4px_rgba(0,170,255,0.55)]"
-          : "p-0"
-      }
-    >
+    <div className="p-0">
       {/* Disable all controls when off */}
       <div className={details2Enabled[format] ? "" : "opacity-50 pointer-events-none"}>
         {/* ---------- ALIGN + COLOR ---------- */}
@@ -15044,11 +14993,6 @@ style={{ top: STICKY_TOP }}
         .getState()
         .setSelectedPanel(selectedPanel === "venue" ? null : "venue")
     }
-    titleClassName={
-      selectedPanel === "venue"
-        ? "text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]"
-        : ""
-    }
     right={
       <div className="flex items-center gap-3 text-[11px]">
         <span className="opacity-80">Font</span>
@@ -15067,13 +15011,7 @@ style={{ top: STICKY_TOP }}
     }
   >
     {/* ⭐ INNER NEON ACTIVE WRAPPER */}
-    <div
-      className={
-        selectedPanel === "venue"
-          ? "p-2 rounded-md ring-2 ring-blue-400 shadow-[0_0_18px_4px_rgba(0,170,255,0.55)]"
-          : "p-0"
-      }
-    >
+    <div className="p-0">
       {/* ---------- ALIGN ---------- */}
       <div className="flex justify-end mt-3">
         <div className="flex items-center gap-2 text-[11px]">
