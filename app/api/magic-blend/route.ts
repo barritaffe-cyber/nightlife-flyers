@@ -349,6 +349,7 @@ async function runStabilityEdit(opts: {
   const aspectRatio =
     opts.size === "1024x1792" ? "9:16" : opts.size === "1792x1024" ? "16:9" : "1:1";
   form.append("aspect_ratio", aspectRatio);
+  form.append("strength", "0.6");
 
   const res = await fetch(STABILITY_API_URL, {
     method: "POST",
@@ -371,6 +372,7 @@ async function runStabilityEdit(opts: {
         msg = rawText;
       }
     } catch {}
+    console.error("Stability error:", res.status, contentType, rawText);
     throw new Error(msg);
   }
 
