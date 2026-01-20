@@ -13672,8 +13672,9 @@ return (
                 >
                   Dismiss
                 </button>
-  </div>
-</div>
+              </div>
+            </div>
+          </div>
 )}     
 
 {/* ===== UI: MAIN 3-COL LAYOUT (BEGIN) ===== */}
