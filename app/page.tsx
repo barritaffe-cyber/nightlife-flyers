@@ -1691,6 +1691,17 @@ const LockButton = ({
 
   const size = format === 'square' ? { w: 540, h: 540 } : { w: 540, h: 960 };
   const rootRef = useRef<HTMLDivElement>(null);
+  const [headlineFontTick, setHeadlineFontTick] = React.useState(0);
+
+  React.useEffect(() => {
+    let alive = true;
+    ensureFontLoaded(headlineFamily).then(() => {
+      if (alive) setHeadlineFontTick((v) => v + 1);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [headlineFamily]);
 
 
   // =========================================================
@@ -7677,16 +7688,6 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
   const [subtagSize, setSubtagSize] = useState<number>(20);
 
  // === AUTO-LOAD LOCAL FONTS WHEN SELECTED =============================
-  const [headlineFontTick, setHeadlineFontTick] = useState(0);
-  useEffect(() => {
-    let alive = true;
-    ensureFontLoaded(headlineFamily).then(() => {
-      if (alive) setHeadlineFontTick((v) => v + 1);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [headlineFamily]);
   useEffect(() => { ensureFontLoaded(bodyFamily); }, [bodyFamily]);
   useEffect(() => { ensureFontLoaded(venueFamily); }, [venueFamily]);
   useEffect(() => { ensureFontLoaded(subtagFamily); }, [subtagFamily]);
