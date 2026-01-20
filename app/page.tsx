@@ -16122,8 +16122,6 @@ style={{ top: STICKY_TOP }}
       </div>
     </Collapsible>
   </div>
-  </div>
-</div>
 </div>
 {/* UI: MAGIC BLEND PANEL (END) */}
 
