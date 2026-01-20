@@ -12424,25 +12424,12 @@ const handleTemplateSelect = React.useCallback(
       // 🧠 Save a snapshot of the base template (for optional reset)
       setTemplateBase(JSON.parse(JSON.stringify(tpl)));
 
-      // 🪄 Apply template once on selection (force square for startup)
+      // ✅ Apply via the same flow as the Templates panel
       const startupFormat: Format = "square";
-      const store = useFlyerState.getState();
-      store.setSession({ square: {}, story: {} });
-      store.setSessionDirty({ square: false, story: false });
-      portraitCacheRef.current = { square: null, story: null };
-      subtagCacheRef.current = { square: null, story: null };
-      isSwitchingFormatRef.current = false;
       setFormat(startupFormat);
       setTemplateId(tpl.id);
       setActiveTemplate(tpl);
-      setTimeout(() => {
-        applyTemplate(tpl, { targetFormat: startupFormat, initialLoad: true });
-        if (tpl.preview) {
-          setBgUploadUrl(null);
-          setBgUrl(tpl.preview);
-        }
-        store.setSessionDirty({ square: false, story: false });
-      }, 0);
+      applyTemplate(tpl, { targetFormat: startupFormat });
       const startScale =
         tpl.formats?.[startupFormat]?.bgScale ?? tpl.base?.bgScale ?? null;
       if (typeof startScale === "number") {
