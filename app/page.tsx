@@ -8112,8 +8112,11 @@ const switchFormat = React.useCallback((next: Format) => {
 
 // Re-apply template bgScale after bg image swaps (mobile load timing).
 React.useEffect(() => {
-  if (templateBgScaleRef.current == null) return;
-  setBgScale(templateBgScaleRef.current);
+  if (templateBgScaleRef.current !== null && templateBgScaleRef.current !== undefined) {
+    setBgScale(templateBgScaleRef.current);
+  } else {
+    setBgScale(1.3);
+  }
 }, [bgUrl, bgUploadUrl, format]);
 
 
@@ -11957,6 +11960,13 @@ const applyTemplate = React.useCallback(
     // 1) GET TEMPLATE & SESSION DATA
     const variant: Partial<TemplateBase> =
       tpl.formats?.[fmt] ?? tpl.formats?.square ?? tpl.base ?? {};
+    const incomingScale =
+      typeof variant.bgScale === "number" ? variant.bgScale : 1.0;
+    console.log("[applyTemplate] id=", tpl.id, "format=", fmt, "bgScale=", incomingScale);
+
+    // ensure bg scale is available synchronously for any effects
+    templateBgScaleRef.current = incomingScale;
+    setBgScale(incomingScale);
 
     const store = useFlyerState.getState();
     const freshSession = store.session;
@@ -12014,8 +12024,8 @@ const applyTemplate = React.useCallback(
     setVenueRotate(merged.venueRotate ?? 0);
     setSubtagRotate(merged.subtagRotate ?? 0);
     setPortraitScale(merged.portraitScale ?? 1);
-    templateBgScaleRef.current = merged.bgScale ?? null;
-    setBgScale(merged.bgScale ?? 1);
+    templateBgScaleRef.current = incomingScale;
+    setBgScale(incomingScale);
     setLogoScale(merged.logoScale ?? 1);
     setBgBlur(merged.bgBlur ?? 0); 
 
@@ -12136,6 +12146,9 @@ const applyTemplate = React.useCallback(
     // 2. HEADLINE 2 (Sub)
     setHead2Color(merged.head2Color ?? '#ffffff');
 
+    if (opts?.initialLoad) {
+      store.setSessionValue(fmt, "bgScale", incomingScale);
+    }
     if (tpl.preview && !opts?.initialLoad) {
       setBgUploadUrl(null);
       setBgUrl(tpl.preview);
@@ -12232,6 +12245,7 @@ const handleStartupSelect = (key: string) => {
 // === SYNC HELPER: Saves all current local state to the global session ===
 const syncCurrentStateToSession = () => {
 
+  const currentScale = templateBgScaleRef.current ?? bgScale;
   const currentData = {
     // ------------------------------------------------
     // 1. HEADLINE 1 (The Main Title)
@@ -12374,7 +12388,7 @@ const syncCurrentStateToSession = () => {
     // Background Image
     bgPosX,
     bgPosY,
-    bgScale,
+    bgScale: currentScale,
     bgBlur,
     // Portrait Image
     portraitX,
