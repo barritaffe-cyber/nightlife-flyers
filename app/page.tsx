@@ -12483,7 +12483,22 @@ const activeTextControls = React.useMemo(() => {
       };
     case "headline2":
     case "head2":
-      return { label: "Headline 2", font: head2Family, size: head2SizePx, lineHeight: head2LineHeight };
+      return {
+        label: "Sub Headline",
+        font: head2Family,
+        fonts: HEADLINE2_FONTS_LOCAL,
+        size: head2SizePx,
+        sizeMin: 12,
+        sizeMax: 120,
+        sizeStep: 1,
+        lineHeight: head2LineHeight,
+        lineMin: 0.6,
+        lineMax: 1.6,
+        lineStep: 0.05,
+        onFont: (v: string) => setHead2Family(v),
+        onSize: (v: number) => setHead2SizePx(v),
+        onLine: (v: number) => setHead2LineHeight(v),
+      };
     case "details":
       return {
         label: "Details",
@@ -13875,16 +13890,18 @@ className={clsx(
 style={{ minHeight: 'calc(100vh - 96px)' }}
 >
 {activeTextControls && floatingEditorVisible && (
-  <div className="lg:hidden fixed left-1/2 -translate-x-1/2 z-[70] rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur px-3 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.45)]"
-       style={{ bottom: "calc(env(safe-area-inset-bottom,0px) + 72px)" }}>
-    <div className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</div>
-    <div className="text-[12px] font-semibold text-white">{activeTextControls.label}</div>
-    <div className="mt-2 grid gap-2">
-      <label className="text-[10px] text-neutral-400">Font</label>
+  <div className="lg:hidden fixed left-1/2 -translate-x-1/2 z-[70] rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur px-3 py-2 shadow-[0_12px_30px_rgba(0,0,0,0.45)] w-[calc(100%-24px)] max-w-[540px]"
+       style={{ bottom: "calc(env(safe-area-inset-bottom,0px) + 12px)" }}>
+    <div className="flex items-center gap-2 text-[11px] font-semibold text-white">
+      <span className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</span>
+      <span className="text-neutral-300">•</span>
+      <span>{activeTextControls.label}</span>
+    </div>
+    <div className="mt-2 grid grid-cols-[minmax(120px,1fr)_80px] gap-2 items-center">
       <select
         value={activeTextControls.font}
         onChange={(e) => activeTextControls.onFont?.(e.target.value)}
-        className="w-64 max-w-[75vw] rounded-md bg-neutral-900 border border-neutral-700 text-[11px] px-2 py-1 text-white"
+        className="w-full rounded-md bg-neutral-900 border border-neutral-700 text-[11px] px-2 py-1 text-white"
       >
         {(activeTextControls.fonts ?? []).map((f) => (
           <option key={f} value={f} style={{ fontFamily: f }}>
@@ -13892,7 +13909,6 @@ style={{ minHeight: 'calc(100vh - 96px)' }}
           </option>
         ))}
       </select>
-      <div className="text-[10px] text-neutral-400">Size</div>
       <input
         type="range"
         min={activeTextControls.sizeMin}
@@ -13900,9 +13916,9 @@ style={{ minHeight: 'calc(100vh - 96px)' }}
         step={activeTextControls.sizeStep}
         value={Number(activeTextControls.size || 0)}
         onChange={(e) => activeTextControls.onSize?.(Number(e.target.value))}
-        className="w-64 max-w-[75vw] accent-fuchsia-500"
+        className="accent-fuchsia-500"
       />
-      <div className="text-[10px] text-neutral-400">Line Height</div>
+      <div className="text-[10px] text-neutral-400">Line</div>
       <input
         type="range"
         min={activeTextControls.lineMin}
@@ -13910,7 +13926,7 @@ style={{ minHeight: 'calc(100vh - 96px)' }}
         step={activeTextControls.lineStep}
         value={Number(activeTextControls.lineHeight || 0)}
         onChange={(e) => activeTextControls.onLine?.(Number(e.target.value))}
-        className="w-64 max-w-[75vw] accent-indigo-400"
+        className="accent-indigo-400"
       />
     </div>
   </div>
