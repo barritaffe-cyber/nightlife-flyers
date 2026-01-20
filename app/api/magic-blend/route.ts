@@ -343,6 +343,7 @@ async function runStabilityEdit(opts: {
 
   const form = new FormData();
   const blob = new Blob([new Uint8Array(opts.image)], { type: "image/png" });
+  form.append("mode", "image-to-image");
   form.append("image", blob, "image.png");
   form.append("prompt", opts.prompt);
   form.append("output_format", "png");
