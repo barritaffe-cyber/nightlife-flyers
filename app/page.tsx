@@ -12428,18 +12428,19 @@ const handleTemplateSelect = React.useCallback(
       const startupFormat: Format = "square";
       useFlyerState.getState().setSession({ square: {}, story: {} });
       useFlyerState.getState().setSessionDirty({ square: false, story: false });
+      portraitCacheRef.current = { square: null, story: null };
+      subtagCacheRef.current = { square: null, story: null };
+      isSwitchingFormatRef.current = false;
       setFormat(startupFormat);
       setTemplateId(tpl.id);
-      applyTemplate(tpl, { targetFormat: startupFormat, initialLoad: true });
+      setActiveTemplate(tpl);
+      applyTemplate(tpl, { targetFormat: startupFormat });
+      useFlyerState.getState().setSessionDirty({ square: false, story: false });
       const startScale =
         tpl.formats?.[startupFormat]?.bgScale ?? tpl.base?.bgScale ?? null;
       if (typeof startScale === "number") {
         templateBgScaleRef.current = startScale;
         setBgScale(startScale);
-      }
-      if (tpl.preview) {
-        setBgUploadUrl(null);
-        setBgUrl(tpl.preview);
       }
     } catch (err) {
 
