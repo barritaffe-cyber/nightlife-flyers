@@ -529,7 +529,11 @@ Background lock (strict):
           .toBuffer();
         const safeCompositeBuf2 = await buildComposite(softenedSubj);
         const safeCompositeDataUrl2 = bufferToDataUrlPng(safeCompositeBuf2);
-        const safePrompt = `Family-friendly event photo. Preserve the original background exactly. No nightlife, no alcohol, no suggestive content, no revealing outfits. Neutral, clean, documentary lighting.`;
+        const safePrompt =
+          `Preserve the exact subject identity from Image 1 (face, skin tone, hair, clothing). ` +
+          `Do not change ethnicity, age, or gender. ` +
+          `Preserve the background from Image 2 exactly. ` +
+          `Family-friendly, non-suggestive, neutral lighting.`;
         const outUrl = await runFlux({
           imageDataUrls: [safeCompositeDataUrl2, bgOnlyDataUrl],
           prompt: safePrompt,
