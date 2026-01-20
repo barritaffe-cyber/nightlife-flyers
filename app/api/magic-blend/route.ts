@@ -17,74 +17,38 @@ const STABILITY_API_URL =
 // -----------------------------
 // MASTER INTERNAL PROMPT (BASE)
 // -----------------------------
-const BASE_PROMPT = `Cinematic high-fashion editorial portrait with strong depth and atmosphere.
+const BASE_PROMPT = `Cinematic photo composite. Integrate the subject into the background environment so it looks shot in-camera.
 
-The subject is photographed inside the background environment and must feel physically embedded in the scene.
-The subject must be re-lit by the environment, with lighting visibly interacting with surfaces and atmosphere.
-No halos, no outlines, no artificial glow around the subject.
+Blend requirements (critical):
+- match the background lighting direction, color temperature, and contrast
+- add realistic contact shadows at feet/base and soft ambient occlusion around edges
+- add subtle edge color bleed and light wrap from the environment
+- match lens and depth-of-field; soften cutout edges slightly
+- preserve subject identity, face, hairstyle, clothing, and pose from Image 1
+- do not change facial features or body proportions, but allow re-lighting and color grading
 
-SUBJECT FIDELITY (critical):
-- preserve the same person, face, hairstyle, clothing, and pose from Image 1
-- do not change identity, outfit, or body shape
-- do not stylize the subject or alter facial features
-- keep the same facial likeness, skin tone, and body proportions as Image 1
-- keep the same expression and eye direction as Image 1
+Grounding:
+- align subject scale and perspective to the background
+- keep the subject on a believable ground plane (no floating)
 
-GROUNDING (critical):
-- subject must be grounded on a surface with a visible contact shadow
-- match the scene perspective and horizon line from Image 2
-- match subject scale to the environment so it does not appear floating
-- subject feet/base must align to a plausible ground plane
+Background integrity:
+- preserve the background scene from Image 2 (no new objects, no major layout changes)
+- keep background people/subjects, but push them back in depth and contrast
 
-BACKGROUND SUBJECTS (keep but de-emphasize):
-- keep any existing people or subjects from Image 2, but push them back in depth
-- reduce their contrast and sharpness so the main subject remains dominant
-- do not remove them entirely; they should remain in the scene as background context
+Lighting interaction:
+- only use light sources that already exist in Image 2
+- if there are no beams, do not add beams
+- subtle atmosphere only if already present; no heavy fog
+- subject should block light beams and receive color spill from the scene
+
+Look:
+- strong contrast with clean blacks/highlights
+- natural skin tones influenced by scene lighting
+- no halos, no glow outlines, no sticker/cutout look
+- no text, no logos, no watermarks, no extra people
 
 Safety:
-- fully clothed, family-friendly, non-suggestive attire
-- no nudity, no explicit or sexualized content
-
-LIGHT → ATMOSPHERE → SUBJECT INTERACTION (critical):
-- use only the existing light sources from Image 2 (do not invent new light rigs)
-- if the background has no beams, do not add them
-- subtle atmospheric haze only if already present in the background
-- atmospheric light softly carries color onto the subject’s skin and clothing
-- colored light spills gently across fabric folds and facial planes
-- light intensity falls off naturally across the subject, not flat
-- the subject blocks and shapes light beams, creating natural occlusion
-
-DEPTH AND OCCLUSION:
-- minimal foreground smoke and particles exist between the camera and the subject
-- mid-ground smoke lightly surrounds the subject for integration
-- background lights sit behind the subject and are partially diffused by atmosphere
-- subject edges are softened by depth and light interaction, never clean or cut out
-- add a grounded contact shadow beneath the subject (feet or base) so they are not floating
-
-COLOR AND CONTRAST (for pop, not glow):
-- high contrast with deep blacks and bright highlights
-- strong black point and clean white point
-- subtle S-curve contrast for punch and depth
-- vibrance and color separation driven by light intensity, not saturation
-- natural skin tones influenced by scene lighting
-
-DEPTH OF FIELD:
-- shallow depth of field with clear separation between planes
-- foreground atmosphere slightly out of focus
-- subject remains sharp
-- background lights fall into soft, colorful bokeh
-
-MOTION AND ENERGY:
-- floating particles and subtle sparks catch highlights for motion and texture
-- light motion blur on lights and particles only (subject remains sharp)
-
-Composition:
-- tight, confident framing
-- subject dominates but feels grounded in the environment
-- bold, graphic contrast suitable for nightlife flyers
-
-Avoid heavy fog, avoid smoky wash, avoid halos, avoid flat lighting.
-No text, no logos, no watermarks, no extra people.`;
+- fully clothed, family-friendly, non-suggestive attire`;
 
 // -----------------------------
 // STYLE SUFFIXES (APPEND ONLY)
