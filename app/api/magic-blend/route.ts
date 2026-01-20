@@ -347,9 +347,10 @@ async function runStabilityEdit(opts: {
   form.append("image", blob, "image.png");
   form.append("prompt", opts.prompt);
   form.append("output_format", "png");
-  const aspectRatio =
-    opts.size === "1024x1792" ? "9:16" : opts.size === "1792x1024" ? "16:9" : "1:1";
-  form.append("aspect_ratio", aspectRatio);
+  const width = opts.size === "1024x1792" ? 1024 : opts.size === "1792x1024" ? 1792 : 1024;
+  const height = opts.size === "1024x1792" ? 1792 : opts.size === "1792x1024" ? 1024 : 1024;
+  form.append("width", String(width));
+  form.append("height", String(height));
   form.append("strength", "0.6");
 
   const res = await fetch(STABILITY_API_URL, {
