@@ -5645,6 +5645,15 @@ export default function Page() {
     shape?: string;
     final?: string;
   } | null>(null);
+  const CINEMATIC_REF_LIBRARY = [
+    { id: "glass-blue", label: "Glass Blue", src: "/cinematic-refs/glass-blue.png" },
+    { id: "chrome-purple", label: "Chrome Purple", src: "/cinematic-refs/chrome-purple.png" },
+    { id: "gold-smoke", label: "Gold Smoke", src: "/cinematic-refs/gold-smoke.png" },
+  ];
+  const [cinematicRefUrl, setCinematicRefUrl] = useState<string | null>(
+    CINEMATIC_REF_LIBRARY[0]?.src ?? null
+  );
+  const [cinematicTextInput, setCinematicTextInput] = useState<string>("LOVE");
   
   // ==========================================
   // 🍌 MAGIC BLEND STATE
@@ -5700,181 +5709,49 @@ export default function Page() {
   // 3. THE FIXED HANDLER (Must be inside Page)
   // =========================================================
  const handleCreateCinematic = async () => {
-  // A. Validation (optional reflection upload)
-  if (!cinematicWrapperUrl) {
-
+  const ref = cinematicRefUrl;
+  const txt = String(cinematicTextInput || "").trim();
+  if (!ref) {
+    alert("Select a reference image.");
+    return;
+  }
+  if (!txt) {
+    alert("Enter the text you want.");
+    return;
   }
 
   setIsGeneratingCinematic(true);
 
   try {
+    const res = await fetch("/api/gen-cinematic-text", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reference: ref, text: txt }),
+    });
 
-
-    // ✅ Only keep these 3 materials for now
-    const allowed = new Set(["gold", "silver", "chrome"]);
-    const presetIdRaw = selectedMaterialId || "gold";
-    const presetId = allowed.has(presetIdRaw) ? presetIdRaw : "gold";
-
-    // ✅ Warmth always -1..1 (since magma is removed for now)
-    const warmthForApi = Math.max(-1, Math.min(1, Number(warmthVal) || 0));
-
-    const wrapItem = WRAP_LIBRARY.find((w) => w.id === wrapPreset) || WRAP_LIBRARY[0];
-    const useWrap = wrapsEnabled && wrapItem.id !== "none" && !!wrapItem.src;
-    let reflectionBgSnapshot: string | null = null;
-    try {
-      reflectionBgSnapshot =
-        (await (artRef.current as any)?.exportBackgroundDataUrl?.({
-          size: 1024,
-        })) || null;
-    } catch {}
-    const reflectionSource =
-      cinematicWrapperUrl || reflectionBgSnapshot || bgUploadUrl || bgUrl || null;
-    const reflectionScale =
-      presetId === "chrome" ? 2.4 : presetId === "silver" ? 1.45 : 0.85;
-    const reflectionForPlate = clamp(
-      reflectionVal * reflectionScale,
-      0.5,
-      2.5
-    );
-    const reflectionPlate = useWrap
-      ? ""
-      : await buildTiledReflectionPlateDataUrl(
-          reflectionSource,
-          2048,
-          presetId,
-          lightingVal,
-          reflectionForPlate,
-          warmthForApi
-        );
-
-    // D. Build the Maps
-    const maps = await buildCinematicMaps(
-      headline || "HEADLINE",
-      headlineFamily,
-      useWrap ? wrapItem.src : reflectionPlate,
-      useWrap ? wrapPreset : "none",
-      userLineHeight,
-      2048,
-      presetId
-    );
-
-    if (!maps.base || maps.base.length < 100) {
-      throw new Error("Failed to generate base texture map.");
-    }
-
-
-    const wrapActive = wrapsEnabled && wrapPreset !== "none";
-    const baseReady = await downscaleDataUrlClient(
-      maps.base,
-      wrapActive ? 1536 : 1024,
-      wrapActive ? "image/png" : "image/jpeg",
-      wrapActive ? 0.98 : 0.95
-    );
-    const edgeReady = await downscaleDataUrlClient(maps.edge, 1024, "image/png");
-
-    if (!baseReady.startsWith("data:image/")) {
-      throw new Error("Invalid base data URL.");
-    }
+    const data = await res.json().catch(() => ({} as any));
+    if (!res.ok) throw new Error(data?.error || "Generation failed");
+    const renderedUrl = data?.url;
+    if (!renderedUrl) throw new Error("API returned no image URL");
 
     setCinematicDebug({
-      base: baseReady,
-      edge: edgeReady,
+      base: ref,
+      final: renderedUrl,
     });
 
-
-    // ✅ API expects material keys: gold | silver | chrome
-    const materialForApi = presetId;
-
-    let renderedUrl = "";
-    let data: any = null;
-    if (wrapActive) {
-      renderedUrl = await compositeWrapFromMaps(
-        maps.base,
-        maps.edge,
-        maps.depth,
-        maps.mask
-      );
-      setCinematicDebug((prev) => ({
-        ...prev,
-        final: renderedUrl,
-      }));
-    } else if (presetId === "silver") {
-      renderedUrl = await compositeSilverStudio(
-        maps.base,
-        maps.edge,
-        maps.depth,
-        maps.mask
-      );
-      setCinematicDebug((prev) => ({
-        ...prev,
-        final: renderedUrl,
-      }));
-    } else {
-      const res = await fetch("/api/gen-cinematic-text", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          texture: baseReady,
-          control_edge: edgeReady,
-          material: materialForApi,
-          lighting: lightingVal,
-          reflections: reflectionVal,
-          warmth: warmthForApi,
-          wrap_preset: "none",
-        }),
-      });
-
-      const rawText = await res.text();
-      try {
-        data = rawText ? JSON.parse(rawText) : null;
-      } catch {
-        data = { error: rawText };
-      }
-
-      if (!res.ok) throw new Error(data?.error || "Generation failed");
-
-      renderedUrl = data.url;
-      if (!renderedUrl) throw new Error("API returned no image URL");
-
-      setCinematicDebug((prev) => ({
-        ...prev,
-        shape: data?.intermediate?.canny || prev?.shape,
-        final: renderedUrl,
-      }));
-    }
-
-    // E. Cleanup & Crop
-
-    const cleanedPng = await applyAuthoritativeMaskAndCrop(renderedUrl, maps.mask, {
-      dilatePx: 6,
-      featherPx: 2,
-      maskThreshold: 10,
-      edgeWeightStrength: 0.4,
-      edgeInnerBlurPx: 1,
-      edgeOuterBlurPx: 7,
-      edgeContrastBoost: 0.25,
-    });
-
-    // F. Save Result -> Logo Slots
     const currentSlots = [
       ...(Array.isArray(logoSlots) ? logoSlots : ["", "", "", ""]),
     ];
     let targetIdx = currentSlots.findIndex((s) => !s || s === "");
     if (targetIdx === -1) targetIdx = 3;
-
-    currentSlots[targetIdx] = cleanedPng;
+    currentSlots[targetIdx] = renderedUrl;
 
     if (setLogoSlots) setLogoSlots([...currentSlots]);
     try {
       localStorage.setItem("nf:logoSlots", JSON.stringify(currentSlots));
-    } catch {
+    } catch {}
 
-    }
-
-    // ✅ IMPORTANT: after render, open the panel that contains the slots
-    // Your Logo panel key uses selectedPanel === "logo"
     setSelectedPanel?.("logo");
-    // (optional) scroll to it if you added id="logo-panel" on the wrapper
     setTimeout(() => {
       document.getElementById("logo-panel")?.scrollIntoView({
         behavior: "smooth",
@@ -5882,14 +5759,10 @@ export default function Page() {
       });
     }, 0);
 
-    // G. Reset UI
     setIsGeneratingCinematic(false);
     setCinematicModalOpen(false);
     setCinematicWrapperUrl(null);
-
-
   } catch (err: any) {
-
     setIsGeneratingCinematic(false);
     alert(`Error: ${err?.message || "Unknown error"}`);
   }
@@ -9805,7 +9678,7 @@ async function alignActiveToCenter() {
   // 🔍 find highlighted element (glow = active)
   const el = root.querySelector('[data-active="true"]') as HTMLElement | null;
   if (!el) {
-    alert("❌ No active element selected for alignment");
+    alert("Select element on canvas to align");
     return;
   }
 
@@ -17124,8 +16997,7 @@ titleClassName={
             { id: "pin", src: "https://cdn-icons-png.flaticon.com/512/149/149059.png", name: "Pin" },
             { id: "vinyl2", src: "https://cdn-icons-png.flaticon.com/512/1834/1834342.png", name: "Vinyl Record" },
             { id: "margarita", src: "https://cdn-icons-png.flaticon.com/512/362/362504.png", name: "Margarita" },
-            { id: "gold_mic", src: "https://cdn-icons-png.flaticon.com/512/3050/3050410.png", name: "Gold Mic" },
-            { id: "dj_turntable", src: "https://cdn-icons-png.flaticon.com/512/2906/2906323.png", name: "Turntable" },
+          
           ].map((sticker) => (
             <button
               key={sticker.id}
@@ -17144,7 +17016,8 @@ titleClassName={
                   isSticker: true,
                 });
                 useFlyerState.getState().setSelectedPortraitId(id);
-                useFlyerState.getState().setSelectedPanel("portrait");
+                useFlyerState.getState().setSelectedPanel("icons");
+                useFlyerState.getState().setMoveTarget("icon");
               }}
             >
               <img
@@ -17344,7 +17217,7 @@ titleClassName={
                 useFlyerState.getState().setSelectedPanel("icons");
 
                 // still movable on canvas
-                useFlyerState.getState().setMoveTarget("portrait");
+                useFlyerState.getState().setMoveTarget("icon");
 
               }}
             >
@@ -18313,379 +18186,98 @@ titleClassName={
               </div>
             </div>
           ) : (
-            <>
-              {/* =========================================================
-                  ✅ LOCK MATERIALS HERE: gold / silver / chrome only
-                 ========================================================= */}
-              {(() => {
-                const ALLOWED_MATERIALS = new Set(["gold", "silver", "chrome"]);
+            <div className="space-y-4">
+              <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-bold">
+                Choose Reference Style
+              </div>
 
-                // Force selectedMaterialId into allowed set (prevents magma/ice/etc breaking UI)
-                const safeSelected =
-                  selectedMaterialId && ALLOWED_MATERIALS.has(String(selectedMaterialId))
-                    ? selectedMaterialId
-                    : "gold";
-
-                // If selected is invalid, snap it immediately (no render flicker)
-                if (safeSelected !== selectedMaterialId) {
-                  // NOTE: safe in render because only runs when modal open
-                  // eslint-disable-next-line react/no-danger
-                  setTimeout(() => setSelectedMaterialId(safeSelected), 0);
-                }
-
-                const PRESETS_LOCKED = (CINEMATIC_PRESETS || []).filter((p: any) =>
-                  ALLOWED_MATERIALS.has(String(p?.id))
-                );
-
-                return (
-                  <>
-                    {/* 1. TEXT INPUT & LINE HEIGHT */}
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-[10px] uppercase tracking-wider text-neutral-500 font-bold">
-                          Headline Text
-                        </label>
-                        <textarea
-                          value={headline}
-                          onChange={(e) => setHeadline(e.target.value)}
-                          rows={2}
-                          className="w-full rounded-lg p-3 bg-black/50 text-white text-center text-2xl font-bold border border-white/10 focus:border-fuchsia-500 outline-none resize-none"
-                          style={{ fontFamily: headlineFamily }}
-                          placeholder="ENTER TEXT"
-                        />
-                      </div>
-
-                      {/* Line Height Slider */}
-                      <div className="flex items-center justify-between bg-white/5 p-2 rounded border border-white/5">
-                        <span className="text-[10px] uppercase font-bold text-neutral-500">
-                          Line Height
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="range"
-                            min={0.7}
-                            max={1.5}
-                            step={0.05}
-                            value={userLineHeight}
-                            onChange={(e) =>
-                              setUserLineHeight(parseFloat(e.target.value))
-                            }
-                            className="accent-fuchsia-500 w-24 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer"
-                          />
-                          <span className="text-xs font-mono text-neutral-300 w-8 text-right">
-                            {userLineHeight.toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 2. RENDER PRESETS (LOCKED LIST) */}
-                    <div className="space-y-2 pt-4 border-t border-white/10">
-                      <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-bold">
-                        Choose Render Style
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-1 max-h-[240px] overflow-y-auto pr-1 custom-scrollbar">
-                        {PRESETS_LOCKED.map((p: any) => {
-                          const active = safeSelected === p.id;
-                          const wrapActive = wrapPreset !== "none";
-                          return (
-                            <button
-                              key={p.id}
-                              type="button"
-                              onClick={() => {
-                                if (wrapActive) setWrapPreset("none");
-                                setSelectedMaterialId(p.id);
-                              }}
-                              className={[
-                                "w-full rounded px-3 py-2 text-left flex items-center justify-between group",
-                                "border transition-all duration-200",
-                                wrapActive
-                                  ? "border-transparent bg-white/5 text-neutral-500"
-                                  : active
-                                  ? "border-fuchsia-500/50 bg-fuchsia-500/10 text-white shadow-[0_0_15px_rgba(232,121,249,0.15)]"
-                                  : "border-transparent bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white",
-                              ].join(" ")}
-                            >
-                              <div className="text-xs font-medium">{p.label}</div>
-                              {active && !wrapActive && (
-                                <div className="w-1.5 h-1.5 rounded-full bg-fuchsia-400 shadow-[0_0_5px_#e879f9]" />
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      {wrapPreset !== "none" && (
-                        <div className="text-[10px] text-amber-300/80 px-1">
-                          * Wrap mode overrides metal material.
-                        </div>
-                      )}
-                    </div>
-
-                    {wrapsEnabled && (
-                      <div className="space-y-2 pt-4 border-t border-white/10">
-                        <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-bold">
-                          Wrap Pattern
-                        </div>
-                        {WRAP_LIBRARY.map((p) => {
-                          const active = wrapPreset === p.id;
-                          return (
-                            <button
-                              key={p.id}
-                              type="button"
-                              onClick={() => setWrapPreset(p.id)}
-                              className={[
-                                "w-full rounded px-3 py-2 text-left flex items-center justify-between group",
-                                "border transition-all duration-200",
-                                active
-                                  ? "border-amber-400/60 bg-amber-400/10 text-white shadow-[0_0_12px_rgba(251,191,36,0.15)]"
-                                  : "border-transparent bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white",
-                              ].join(" ")}
-                            >
-                              <div className="flex items-center gap-2">
-                                {p.id !== "none" && (
-                                  <span
-                                    className="inline-block w-6 h-6 rounded border border-white/10 bg-center bg-cover"
-                                    style={{ backgroundImage: `url(${p.src})` }}
-                                  />
-                                )}
-                                <div className="text-xs font-medium">{p.label}</div>
-                              </div>
-                              {active && (
-                                <div className="w-1.5 h-1.5 rounded-full bg-amber-300 shadow-[0_0_5px_#fbbf24]" />
-                              )}
-                            </button>
-                          );
-                        })}
-                        <div className="text-[10px] text-neutral-600 px-1">
-                          * Pattern is wrapped into the material finish during render.
-                        </div>
-                      </div>
-                    )}
-
-                    {/* --- STUDIO LIGHTING CONTROLS --- */}
-                    {(() => {
-                      const wrapActive = wrapPreset !== "none";
-                      return (
-                    <div
+              <div className="grid grid-cols-2 gap-2">
+                {CINEMATIC_REF_LIBRARY.map((ref) => {
+                  const active = cinematicRefUrl === ref.src;
+                  return (
+                    <button
+                      key={ref.id}
+                      type="button"
+                      onClick={() => setCinematicRefUrl(ref.src)}
                       className={[
-                        "space-y-3 pt-3 border-t border-white/10",
-                        wrapActive ? "opacity-50 pointer-events-none" : "",
+                        "rounded-lg border overflow-hidden text-left transition",
+                        active
+                          ? "border-fuchsia-500/60 bg-fuchsia-500/10"
+                          : "border-neutral-700 bg-white/5 hover:bg-white/10",
                       ].join(" ")}
                     >
-                      <div className="flex justify-between items-center">
-                        <label className="text-[10px] uppercase tracking-wider text-neutral-500 font-bold">
-                          Studio Lighting
-                        </label>
-                        <button
-                          type="button"
-                          disabled={wrapActive}
-                          onClick={() => {
-                            setLightingVal(1.2);
-                            setReflectionVal(1.1);
-                            setWarmthVal(0);
-                          }}
-                          className="text-[9px] text-fuchsia-400 hover:text-fuchsia-300"
-                        >
-                          Reset
-                        </button>
-                      </div>
-
-                      {/* 1. Brightness */}
-                      <div className="flex items-center gap-3">
-                        <span className="text-[10px] text-neutral-400 w-14">
-                          Brightness
-                        </span>
-                        <input
-                          type="range"
-                          min={0.5}
-                          max={2.0}
-                          step={0.1}
-                          value={lightingVal}
-                          onChange={(e) =>
-                            setLightingVal(parseFloat(e.target.value))
-                          }
-                          className="flex-1 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-white"
-                          disabled={wrapActive}
+                      <div className="aspect-square bg-black/40">
+                        <img
+                          src={ref.src}
+                          alt={ref.label}
+                          className="w-full h-full object-cover"
+                          draggable={false}
                         />
                       </div>
-
-                      {/* 2. Reflections (Contrast) */}
-                      <div className="flex items-center gap-3">
-                        <span className="text-[10px] text-neutral-400 w-14">
-                          Reflections
-                        </span>
-                        <input
-                          type="range"
-                          min={0.5}
-                          max={2.5}
-                          step={0.1}
-                          value={reflectionVal}
-                          onChange={(e) =>
-                            setReflectionVal(parseFloat(e.target.value))
-                          }
-                          className="flex-1 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-white"
-                          disabled={wrapActive}
-                        />
+                      <div className="px-2 py-2 text-[10px] font-semibold text-neutral-200">
+                        {ref.label}
                       </div>
+                    </button>
+                  );
+                })}
+              </div>
 
-                      {/* ✅ SINGLE TEMP SLIDER (remove the duplicate one) */}
-                      <div className="mt-3">
-                        <div className="flex items-center justify-between text-xs opacity-80">
-                          <span className="text-[9px] text-blue-400">Cool</span>
-                          <span className="text-[9px] text-amber-400">Warm</span>
-                        </div>
+              <div className="pt-2">
+                <label className="text-[10px] uppercase tracking-wider text-neutral-500 font-bold">
+                  Or Upload Reference
+                </label>
+                <label className="mt-2 flex flex-col items-center justify-center w-full h-14 rounded border border-dashed border-neutral-700 bg-black/20 hover:bg-black/30 cursor-pointer text-[11px] text-neutral-400">
+                  <span>Click to upload a reference image</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      const r = new FileReader();
+                      r.onload = () => setCinematicRefUrl(String(r.result));
+                      r.readAsDataURL(f);
+                    }}
+                  />
+                </label>
+              </div>
 
-                        <input
-                          type="range"
-                          min={-1}
-                          max={1}
-                          step={0.1}
-                          value={warmthVal}
-                          onChange={(e) =>
-                            setWarmthVal(parseFloat(e.target.value))
-                          }
-                          className="w-full h-1 bg-gradient-to-r from-blue-500 via-white to-amber-500 rounded-lg appearance-none cursor-pointer"
-                          disabled={wrapActive}
-                        />
-                      </div>
+              <div className="pt-4 border-t border-white/10">
+                <label className="text-[10px] uppercase tracking-wider text-neutral-500 font-bold">
+                  Text to Replace
+                </label>
+                <input
+                  value={cinematicTextInput}
+                  onChange={(e) => setCinematicTextInput(e.target.value)}
+                  className="mt-2 w-full rounded-lg p-3 bg-black/50 text-white text-center text-xl font-bold border border-white/10 focus:border-fuchsia-500 outline-none"
+                  placeholder="LOVE"
+                />
+              </div>
 
-                      <div className="text-[10px] text-neutral-600 px-1 italic">
-                        * High &quot;Reflections&quot; makes Chrome look like a mirror. Low makes it satin.
-                      </div>
-                      {wrapActive && (
-                        <div className="text-[10px] text-amber-300/80 px-1">
-                          * Lighting controls disabled while wrap is active.
-                        </div>
-                      )}
-                    </div>
-                      );
-                    })()}
+              <div className="pt-4 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={handleCreateCinematic}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-fuchsia-600 text-white font-bold text-sm hover:from-indigo-500 hover:to-fuchsia-500 transition-all shadow-lg active:scale-[0.98] ring-1 ring-white/20"
+                >
+                  Render Text
+                </button>
+              </div>
 
-                    {/* 3. REFLECTION UPLOAD (OPTIONAL) */}
-                    <div className="space-y-2 pt-2">
-                      <div className="flex justify-between items-end">
-                        <label className="text-[10px] uppercase tracking-wider text-neutral-500 font-bold">
-                          Reflection Map (Optional)
-                        </label>
-                        {cinematicWrapperUrl && (
-                          <button
-                            type="button"
-                            onClick={() => setCinematicWrapperUrl(null)}
-                            className="text-[10px] text-red-400 hover:text-red-300 underline decoration-red-400/30"
-                          >
-                            Remove
-                          </button>
-                        )}
-                      </div>
-
-                      <label
-                        className={`flex flex-col items-center justify-center w-full h-14 rounded border border-dashed transition-all cursor-pointer relative overflow-hidden group ${
-                          cinematicWrapperUrl
-                            ? "border-fuchsia-500/50 bg-fuchsia-900/10"
-                            : "border-neutral-700 hover:border-neutral-500 bg-black/20 hover:bg-black/40"
-                        }`}
-                      >
-                        {cinematicWrapperUrl ? (
-                          <>
-                            <img
-                              src={cinematicWrapperUrl}
-                              className="absolute inset-0 w-full h-full object-cover opacity-40 blur-[2px]"
-                              alt="Ref"
-                            />
-                            <div className="relative z-10 flex items-center gap-2 text-[11px] font-bold text-fuchsia-100">
-                              <span>✓ Custom Reflections Loaded</span>
-                            </div>
-                          </>
-                        ) : (
-                          <div className="flex flex-col items-center gap-1 text-neutral-500 group-hover:text-neutral-300 transition-colors">
-                            <span className="text-[11px]">
-                              Click to upload environment map...
-                            </span>
-                          </div>
-                        )}
-
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (!f) return;
-                            const r = new FileReader();
-                            r.onload = () => setCinematicWrapperUrl(String(r.result));
-                            r.readAsDataURL(f);
-                          }}
-                        />
-                      </label>
-
-                      <div className="text-[10px] text-neutral-600 px-1">
-                        * If empty, a default studio environment will be used.
-                      </div>
-                    </div>
-
-                    {/* RENDER BUTTON */}
-                    <div className="pt-4 border-t border-white/10">
-                      <button
-                        type="button"
-                        onClick={handleCreateCinematic}
-                        className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-fuchsia-600 text-white font-bold text-sm hover:from-indigo-500 hover:to-fuchsia-500 transition-all shadow-lg active:scale-[0.98] ring-1 ring-white/20"
-                      >
-                        Render{" "}
-                        Scene
-                      </button>
-                    </div>
-                    {cinematicDebug && (
-                      <div className="pt-4 border-t border-white/10 space-y-2">
-                        <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-bold">
-                          Debug Maps
-                        </div>
-                        {cinematicDebug.base && (
-                          <div className="space-y-1">
-                            <div className="text-[10px] text-neutral-500">Base</div>
-                            <img
-                              src={cinematicDebug.base}
-                              alt="Base map"
-                              className="w-full rounded border border-white/10"
-                            />
-                          </div>
-                        )}
-                        {cinematicDebug.edge && (
-                          <div className="space-y-1">
-                            <div className="text-[10px] text-neutral-500">Edge</div>
-                            <img
-                              src={cinematicDebug.edge}
-                              alt="Edge map"
-                              className="w-full rounded border border-white/10"
-                            />
-                          </div>
-                        )}
-                        {cinematicDebug.shape && (
-                          <div className="space-y-1">
-                            <div className="text-[10px] text-neutral-500">Canny Result</div>
-                            <img
-                              src={cinematicDebug.shape}
-                              alt="Canny result"
-                              className="w-full rounded border border-white/10"
-                            />
-                          </div>
-                        )}
-                        {cinematicDebug.final && (
-                          <div className="space-y-1">
-                            <div className="text-[10px] text-neutral-500">Final</div>
-                            <img
-                              src={cinematicDebug.final}
-                              alt="Final render"
-                              className="w-full rounded border border-white/10"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
-            </>
+              {cinematicDebug?.final && (
+                <div className="pt-2 space-y-2">
+                  <div className="text-[10px] uppercase tracking-wider text-neutral-500 font-bold">
+                    Preview
+                  </div>
+                  <img
+                    src={cinematicDebug.final}
+                    alt="Cinematic text preview"
+                    className="w-full rounded border border-white/10"
+                  />
+                </div>
+              )}
+            </div>
           )}
         </div>
       </motion.div>
