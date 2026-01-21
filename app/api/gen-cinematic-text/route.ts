@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import sharp from "sharp";
 
 const dataUrlToBuffer = (dataUrl: string) => {
   const commaIndex = dataUrl.indexOf(",");
@@ -20,6 +21,29 @@ async function toBufferFromAnyImage(input: string): Promise<Buffer> {
     return Buffer.from(await res.arrayBuffer());
   }
   throw new Error("Invalid image input. Expected data URL or http(s) URL.");
+}
+
+async function removeNearBlackBackground(buf: Buffer, threshold = 8) {
+  const { data, info } = await sharp(buf)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const out = Buffer.from(data);
+  for (let i = 0; i < out.length; i += 4) {
+    const r = out[i];
+    const g = out[i + 1];
+    const b = out[i + 2];
+    if (r <= threshold && g <= threshold && b <= threshold) {
+      out[i + 3] = 0;
+    }
+  }
+
+  return await sharp(out, {
+    raw: { width: info.width, height: info.height, channels: 4 },
+  })
+    .png()
+    .toBuffer();
 }
 
 export async function POST(req: Request) {
@@ -67,11 +91,16 @@ export async function POST(req: Request) {
     const out = j?.data?.[0];
     if (!out) throw new Error("No image in OpenAI response");
 
+    let outBuf: Buffer | null = null;
     if (out.b64_json) {
-      const buf = Buffer.from(out.b64_json, "base64");
-      return NextResponse.json({ url: bufferToDataUrl(buf, "image/png") });
+      outBuf = Buffer.from(out.b64_json, "base64");
+    } else if (out.url) {
+      outBuf = await toBufferFromAnyImage(out.url as string);
     }
-    if (out.url) return NextResponse.json({ url: out.url });
+    if (!outBuf) throw new Error("OpenAI returned empty image");
+
+    const cleaned = await removeNearBlackBackground(outBuf);
+    return NextResponse.json({ url: bufferToDataUrl(cleaned, "image/png") });
 
     throw new Error("OpenAI returned empty image");
   } catch (error: any) {
