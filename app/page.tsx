@@ -14029,14 +14029,12 @@ style={{ minHeight: 'calc(100vh - 96px)' }}
 id="mobile-controls-panel"
 className={clsx(
   "order-2 lg:sticky self-start max-h-none lg:max-h-[calc(100vh-120px)] overflow-visible lg:overflow-y-auto space-y-3 px-3 lg:px-0 lg:pr-1",
-  mobileControlsOpen && mobileControlsTab === "design" && uiMode === "design"
-    ? "block"
-    : "hidden",
+  mobileControlsOpen && mobileControlsTab === "design" ? "block" : "hidden",
   "lg:block"
 )}
 style={{ top: STICKY_TOP }}
 >               
-  {uiMode === "design" && mobileControlsOpen && mobileControlsTabs}
+  {mobileControlsOpen && mobileControlsTabs}
 
   
   <div className={uiMode === "design" ? "space-y-3" : "hidden"}>
@@ -15756,7 +15754,6 @@ style={{ top: STICKY_TOP }}
 className={clsx(
   "order-3 lg:sticky self-start max-h-none lg:max-h-[calc(100vh-120px)] overflow-visible lg:overflow-y-auto space-y-3 lg:pr-1",
   mobileControlsOpen && mobileControlsTab === "assets" ? "block" : "hidden",
-  uiMode === "finish" ? "hidden" : "",
   "lg:block"
 )}
 style={{ top: STICKY_TOP }}
@@ -18204,28 +18201,6 @@ titleClassName={
 </aside>
 
 {/* --- MOBILE ACTION BAR --- */}
-{uiMode === "finish" && (
-  <div className="lg:hidden fixed inset-x-0 bottom-0 z-[90] pb-[calc(env(safe-area-inset-bottom,0px)+8px)]">
-    <div className="mx-auto max-w-7xl px-4">
-      <div className="flex items-center gap-2 rounded-xl border border-neutral-800 bg-neutral-950/90 backdrop-blur px-2 py-2">
-        <button
-          type="button"
-          onClick={() => setUiMode("design")}
-          className="flex-1 text-[11px] font-semibold uppercase tracking-wider px-3 py-2 rounded bg-neutral-900 border border-neutral-700"
-        >
-          Back
-        </button>
-        <button
-          type="button"
-          onClick={() => exportArtboardClean(artRef.current!, exportType as "png" | "jpg")}
-          className="flex-1 text-[11px] font-semibold uppercase tracking-wider px-3 py-2 rounded bg-fuchsia-600 hover:bg-fuchsia-500"
-        >
-          Export
-        </button>
-      </div>
-    </div>
-  </div>
-)}
       </section>
       {/* ===== UI: MAIN 3-COL LAYOUT (END) ===== */}
 
