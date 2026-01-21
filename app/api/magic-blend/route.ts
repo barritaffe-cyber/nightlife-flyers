@@ -38,7 +38,7 @@ Background integrity:
 Lighting interaction:
 - only use light sources that already exist in Image 2
 - if there are no beams, do not add beams
-- subtle atmosphere only if already present; no heavy fog
+- atmosphere allowed when requested by the style; avoid heavy fog
 - subject should block light beams and receive color spill from the scene
 
 Look:
@@ -437,7 +437,7 @@ export async function POST(req: Request) {
 
     // Subject framing: bigger & slightly lifted (poster feel)
     // NOTE: if background adherence is still weak, drop this to 0.88–0.92
-    const subjectScale = 0.96;
+    const subjectScale = safeStyle === "club" ? 1.08 : 0.96;
     const subjSize = Math.round(baseSize * subjectScale);
     const subjLeft = Math.round((sizeW - subjSize) / 2);
     const yLift = Math.round(baseSize * (safeStyle === "tropical" ? 0.02 : 0.06));
@@ -489,6 +489,7 @@ export async function POST(req: Request) {
 - Preserve the background’s layout, architecture, and key features from Image 2.
 - Do not replace the environment or move the scene.
 - It is allowed to intensify existing lighting, haze, and neon accents to match subject energy.
+- It is allowed to add atmospheric smoke around the subject for depth, even if subtle in Image 2.
 - Keep the same time of day and lighting direction as Image 2.`
         : `Background lock (strict):
 - Image 1 is the subject placement and framing reference.
