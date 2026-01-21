@@ -138,6 +138,8 @@ Avoid:
 - lively crowd energy with raised hands and candid movement
 - sun-kissed skin tones, bright colorful summer outfits
 - shallow depth of field; background crowd softened, subject sharp
+- golden hour sunlight option: warm sun flare, lens flare orbs, and glowing foliage
+- soft airy atmosphere with light bloom and warm amber tones
 
 Color grading:
 - warm highlights, rich natural skin tones
