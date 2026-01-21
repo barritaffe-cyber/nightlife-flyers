@@ -42,6 +42,7 @@ Lighting interaction:
 - subject should block light beams and receive color spill from the scene
 - no studio lighting, no beauty lighting, no flat fill
 - if the scene is dark and moody, keep the subject darker and cinematic (no bright/exposed subject)
+- add left and right edge key lights sampled from the scene’s colors to sculpt the subject
 
 Look:
 - strong contrast with clean blacks/highlights
