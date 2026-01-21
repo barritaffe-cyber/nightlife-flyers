@@ -58,13 +58,13 @@ type MagicBlendStyle = "club" | "tropical" | "jazz_bar" | "outdoor_summer";
 const STYLE_SUFFIX: Record<MagicBlendStyle, string> = {
   club: `Environment styling:
 - modern nightclub or concert venue
-- cyan and magenta light accents
-- visible atmospheric haze so beams and light cones read clearly (medium density)
-- add soft atmospheric smoke layers that wrap around the subjects (not heavy fog)
-- stronger directional rim light motivated by existing fixtures
-- match subject lighting to the background’s key/fill ratio and falloff
-- keep real club contrast with deep shadow pockets (not flat)
+- cyan and magenta neon tube lighting with bright accents
+- visible atmospheric haze so beams and light cones read clearly (medium+ density)
+ - subtle depth of field with background bokeh; subject stays sharp
+- strong directional rim light from neon sources (clearly visible on hair/shoulders)
+- stronger key/fill contrast with deep shadow pockets (avoid flat lighting)
 - colored rim light and floor bounce should match background lights and feel energetic
+- add subtle motion energy via light streaks and slight background motion blur (subject stays sharp)
 - architectural lighting, glossy surfaces, high-end atmosphere
 
 Avoid:
