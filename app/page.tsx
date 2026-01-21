@@ -12700,10 +12700,19 @@ const activeAssetControls = React.useMemo(() => {
       label: "Emoji",
       scale: sel.scale ?? 1,
       opacity: sel.opacity ?? 1,
+      locked: !!sel.locked,
       onScale: (v: number) =>
         useFlyerState.getState().updateEmoji(format, sel.id, { scale: v }),
       onOpacity: (v: number) =>
         useFlyerState.getState().updateEmoji(format, sel.id, { opacity: v }),
+      onToggleLock: () =>
+        useFlyerState.getState().updateEmoji(format, sel.id, {
+          locked: !sel.locked,
+        }),
+      onDelete: () => {
+        useFlyerState.getState().removeEmoji(format, sel.id);
+        setSelectedEmojiId(null);
+      },
     };
   }
 
@@ -12716,10 +12725,19 @@ const activeAssetControls = React.useMemo(() => {
       label: sel.isFlare ? "Flare" : "Graphic",
       scale: sel.scale ?? 1,
       opacity: sel.opacity ?? 1,
+      locked: !!sel.locked,
       onScale: (v: number) =>
         useFlyerState.getState().updatePortrait(format, sel.id, { scale: v }),
       onOpacity: (v: number) =>
         useFlyerState.getState().updatePortrait(format, sel.id, { opacity: v }),
+      onToggleLock: () =>
+        useFlyerState.getState().updatePortrait(format, sel.id, {
+          locked: !sel.locked,
+        }),
+      onDelete: () => {
+        removePortrait(format, sel.id);
+        useFlyerState.getState().setSelectedPortraitId(null);
+      },
     };
   }
 
@@ -15729,6 +15747,7 @@ style={{ top: STICKY_TOP }}
               value={Number(activeAssetControls.scale || 0)}
               onChange={(e) => activeAssetControls.onScale(Number(e.target.value))}
               className="w-full accent-fuchsia-500"
+              disabled={activeAssetControls.locked}
             />
           </div>
           <div>
@@ -15741,8 +15760,25 @@ style={{ top: STICKY_TOP }}
               value={Number(activeAssetControls.opacity || 0)}
               onChange={(e) => activeAssetControls.onOpacity(Number(e.target.value))}
               className="w-full accent-indigo-400"
+              disabled={activeAssetControls.locked}
             />
           </div>
+        </div>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => activeAssetControls.onToggleLock?.()}
+            className="text-[11px] rounded-md border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 px-2 py-1.5"
+          >
+            {activeAssetControls.locked ? "Unlock" : "Lock"}
+          </button>
+          <button
+            type="button"
+            onClick={() => activeAssetControls.onDelete?.()}
+            className="text-[11px] rounded-md border border-red-700 bg-red-900/30 text-red-200 hover:bg-red-900/40 px-2 py-1.5"
+          >
+            Delete
+          </button>
         </div>
       </div>
     </div>
