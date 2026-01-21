@@ -60,6 +60,7 @@ const STYLE_SUFFIX: Record<MagicBlendStyle, string> = {
 - modern nightclub or concert venue
 - cyan and magenta light accents
 - visible atmospheric haze so beams and light cones read clearly (medium density)
+- add soft atmospheric smoke layers that wrap around the subjects (not heavy fog)
 - stronger directional rim light motivated by existing fixtures
 - match subject lighting to the background’s key/fill ratio and falloff
 - keep real club contrast with deep shadow pockets (not flat)
