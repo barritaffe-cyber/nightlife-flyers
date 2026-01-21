@@ -438,7 +438,11 @@ export async function POST(req: Request) {
     // Subject framing: bigger & slightly lifted (poster feel)
     // NOTE: if background adherence is still weak, drop this to 0.88–0.92
     const subjectScale = safeStyle === "club" ? 1.08 : 0.96;
-    const subjSize = Math.round(baseSize * subjectScale);
+    const subjSize = Math.min(
+      Math.round(baseSize * subjectScale),
+      sizeW,
+      sizeH
+    );
     const subjLeft = Math.round((sizeW - subjSize) / 2);
     const yLift = Math.round(baseSize * (safeStyle === "tropical" ? 0.02 : 0.06));
     const subjTop = Math.round((sizeH - subjSize) / 2) - yLift;
