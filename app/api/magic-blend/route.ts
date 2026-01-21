@@ -25,7 +25,7 @@ Blend requirements (critical):
 - add subtle edge color bleed and light wrap from the environment
 - match lens and depth-of-field; soften cutout edges slightly
 - preserve subject identity, face, hairstyle, clothing, and pose from Image 1
-- do not change facial features or body proportions, but allow re-lighting and color grading
+- do not change facial features or body proportions; keep the same facial likeness
 
 Grounding:
 - align subject scale and perspective to the background
@@ -74,8 +74,8 @@ const STYLE_SUFFIX: Record<MagicBlendStyle, string> = {
 - tighter framing / camera zoom toward the subject for premium focus
 - rim light should visibly sculpt the subject’s silhouette and edges
 - dynamic rim lighting wraps shoulders, hair, arms; rim lights interact with silhouette
-- atmospheric smoke interacts with the subject: smoke passes in front of and behind for depth
-- smoke swirls around legs, waist, and arms; smoke catches rim lights and glows with scene color
+- light atmospheric smoke interacts with the subject: smoke passes in front of and behind for depth
+- light smoke around legs, very subtle around waist; smoke catches rim lights and glows with scene color
 - light bloom on distant lights only (no bloom on the subject’s face)
 - visual energy funnels toward the subject as the scene’s focal point
 - architectural lighting, glossy surfaces, high-end atmosphere
@@ -96,7 +96,7 @@ Avoid:
 - subject receives warm wrap light and soft rim from practicals
 - contact shadow and gentle ground bounce to anchor the subject
 - atmospheric smoke in front and behind the subject for depth
-- stronger smoke around legs, lighter smoke around waist
+- light smoke around legs, very subtle around waist
 
 Avoid:
 - nightclub lasers or stage strobes
@@ -130,7 +130,7 @@ Lighting integration:
 - match scene contrast on the subject; avoid studio-flat lighting
 - shallow depth of field with warm bokeh; subject stays sharp
 - subtle atmospheric smoke in front and behind the subject for depth
-- slightly stronger smoke around legs, lighter smoke around waist
+- light smoke around legs, very subtle around waist
 - intensify practical lighting so the subject clearly picks up warm highlights
 - stronger rim light from practicals; visible edge lighting on hair/shoulders/arms
 
