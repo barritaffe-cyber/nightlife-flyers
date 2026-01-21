@@ -26,6 +26,7 @@ Blend requirements (critical):
 - match lens and depth-of-field; soften cutout edges slightly
 - preserve subject identity, face, hairstyle, clothing, and pose from Image 1
 - do not change facial features or body proportions; keep the same facial likeness
+- preserve ethnicity, skin tone, and age from Image 1 exactly
 
 Grounding:
 - align subject scale and perspective to the background
