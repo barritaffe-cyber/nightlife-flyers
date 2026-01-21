@@ -5713,6 +5713,20 @@ export default function Page() {
   if (ref && typeof window !== "undefined" && ref.startsWith("/")) {
     ref = `${window.location.origin}${ref}`;
   }
+  if (ref && typeof window !== "undefined" && ref.startsWith("http")) {
+    try {
+      const r = await fetch(ref);
+      const b = await r.blob();
+      ref = await new Promise<string>((resolve, reject) => {
+        const fr = new FileReader();
+        fr.onload = () => resolve(String(fr.result));
+        fr.onerror = () => reject(new Error("Failed to read reference image"));
+        fr.readAsDataURL(b);
+      });
+    } catch (e) {
+      throw new Error("Failed to load reference image");
+    }
+  }
   const txt = String(cinematicTextInput || "").trim();
   if (!ref) {
     alert("Select a reference image.");
