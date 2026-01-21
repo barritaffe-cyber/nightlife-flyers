@@ -493,82 +493,10 @@ export async function POST(req: Request) {
         })
         .png()
         .toBuffer();
-
-      const bgCrop = await sharp(bgCanvas)
-        .extract({ left: subjLeft, top: subjTop, width: subjSize, height: subjSize })
-        .png()
-        .toBuffer();
-
-      // Edge spill: blur background and mask with a softened subject alpha.
-      const edgeAlpha = await sharp(subjPng)
-        .ensureAlpha()
-        .extractChannel("alpha")
-        .blur(6)
-        .linear(0.35)
-        .toBuffer();
-      const spill = await sharp(bgCrop)
-        .blur(10)
-        .joinChannel(edgeAlpha)
-        .png()
-        .toBuffer();
-      const subjWithSpill = await sharp(subjPng)
-        .composite([{ input: spill, blend: "over" }])
-        .png()
-        .toBuffer();
-
-      // Soft contact shadow under subject.
-      const shadowSvg = `<svg width="${subjSize}" height="${subjSize}">
-  <ellipse cx="${Math.round(subjSize * 0.5)}" cy="${Math.round(subjSize * 0.92)}"
-    rx="${Math.round(subjSize * 0.28)}" ry="${Math.round(subjSize * 0.09)}"
-    fill="black" fill-opacity="0.45"/>
-</svg>`;
-      const shadow = await sharp(Buffer.from(shadowSvg))
-        .blur(12)
-        .png()
-        .toBuffer();
-
       return await sharp(bgCanvas)
-        .composite([
-          { input: shadow, left: subjLeft, top: subjTop },
-          { input: subjWithSpill, left: subjLeft, top: subjTop },
-        ])
+        .composite([{ input: subjPng, left: subjLeft, top: subjTop }])
         .png()
         .toBuffer();
-    }
-
-    async function applyFacePass(outputUrlOrData: string, subjInput: Buffer) {
-      try {
-        const outBuf = await toBufferFromAnyImage(outputUrlOrData);
-        const subjPng = await sharp(subjInput)
-          .resize(subjSize, subjSize, {
-            fit: "contain",
-            background: { r: 0, g: 0, b: 0, alpha: 0 },
-          })
-          .png()
-          .toBuffer();
-
-        const faceMaskSvg = `<svg width="${subjSize}" height="${subjSize}">
-  <ellipse cx="${Math.round(subjSize * 0.5)}" cy="${Math.round(subjSize * 0.28)}"
-    rx="${Math.round(subjSize * 0.2)}" ry="${Math.round(subjSize * 0.26)}"
-    fill="white"/>
-</svg>`;
-        const faceMask = await sharp(Buffer.from(faceMaskSvg))
-          .blur(4)
-          .png()
-          .toBuffer();
-        const facePatch = await sharp(subjPng)
-          .composite([{ input: faceMask, blend: "dest-in" }])
-          .png()
-          .toBuffer();
-
-        const out = await sharp(outBuf)
-          .composite([{ input: facePatch, left: subjLeft, top: subjTop }])
-          .png()
-          .toBuffer();
-        return bufferToDataUrlPng(out);
-      } catch {
-        return outputUrlOrData;
-      }
     }
 
     // 3) Composite subject onto the background for placement reference
@@ -626,8 +554,7 @@ ${backgroundLock}`;
           aspect_ratio,
           safety_tolerance: 2,
         });
-        const finalUrl = await applyFacePass(outUrl, safeSubjBuf);
-        return NextResponse.json({ url: finalUrl, style: safeStyle, format });
+        return NextResponse.json({ url: outUrl, style: safeStyle, format });
       } catch (err: any) {
         const msg = String(err?.message || err || "");
         const isSensitive = msg.toLowerCase().includes("sensitive");
@@ -654,8 +581,7 @@ ${backgroundLock}`;
           aspect_ratio,
           safety_tolerance: 1,
         });
-        const finalUrl = await applyFacePass(outUrl, safeSubjBuf);
-        return NextResponse.json({ url: finalUrl, style: safeStyle, format });
+        return NextResponse.json({ url: outUrl, style: safeStyle, format });
       }
     }
 
@@ -666,8 +592,7 @@ ${backgroundLock}`;
         prompt: finalPrompt,
         size: sizeStr,
       });
-      const finalUrl = await applyFacePass(outUrl, safeSubjBuf);
-      return NextResponse.json({ url: finalUrl, style: safeStyle, format });
+      return NextResponse.json({ url: outUrl, style: safeStyle, format });
     }
 
     stage = "stability:run";
@@ -676,8 +601,7 @@ ${backgroundLock}`;
       prompt: finalPrompt,
       size: sizeStr,
     });
-    const finalUrl = await applyFacePass(outUrl, safeSubjBuf);
-    return NextResponse.json({ url: finalUrl, style: safeStyle, format });
+    return NextResponse.json({ url: outUrl, style: safeStyle, format });
   } catch (err: any) {
     const message = err?.message || String(err);
     console.error("❌ MAGIC BLEND ERROR:", { stage, provider: activeProvider, message, err });
