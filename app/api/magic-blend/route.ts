@@ -60,7 +60,7 @@ const STYLE_SUFFIX: Record<MagicBlendStyle, string> = {
 - modern nightclub or concert venue
 - cyan and magenta neon tube lighting with bright accents
 - visible atmospheric haze so beams and light cones read clearly (medium+ density)
-- pronounced depth of field with background bokeh; subject stays sharp
+- 50mm lens, pronounced depth of field with background bokeh; subject stays sharp
 - strong directional rim light from neon sources (clearly visible on hair/shoulders)
 - stronger key/fill contrast with deep shadow pockets (avoid flat lighting)
 - colored rim light and floor bounce should match background lights and feel energetic
@@ -70,6 +70,11 @@ const STYLE_SUFFIX: Record<MagicBlendStyle, string> = {
 - boost subject energy with brighter speculars and vivid neon color spill
 - tighter framing / camera zoom toward the subject for premium focus
 - rim light should visibly sculpt the subject’s silhouette and edges
+- dynamic rim lighting wraps shoulders, hair, arms; rim lights interact with silhouette
+- atmospheric smoke interacts with the subject: smoke passes in front of and behind for depth
+- smoke swirls around legs, waist, and arms; smoke catches rim lights and glows with scene color
+- light bloom on distant lights only (no bloom on the subject’s face)
+- visual energy funnels toward the subject as the scene’s focal point
 - architectural lighting, glossy surfaces, high-end atmosphere
 
 Avoid:
