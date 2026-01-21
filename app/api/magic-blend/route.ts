@@ -467,9 +467,9 @@ export async function POST(req: Request) {
       sizeW,
       sizeH
     );
-    const subjLeft = Math.round((sizeW - subjSize) / 2);
+    const subjLeft = Math.max(0, Math.round((sizeW - subjSize) / 2));
     const yLift = Math.round(baseSize * (safeStyle === "tropical" ? 0.02 : 0.06));
-    const subjTop = Math.round((sizeH - subjSize) / 2) - yLift;
+    const subjTop = Math.max(0, Math.round((sizeH - subjSize) / 2) - yLift);
 
     async function safeCropSubject(buf: Buffer) {
       try {
