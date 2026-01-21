@@ -14052,7 +14052,7 @@ className={clsx(
 )}
 style={{ top: STICKY_TOP }}
 >               
-  {mobileControlsOpen && mobileControlsTabs}
+  {uiMode === "design" && mobileControlsOpen && mobileControlsTabs}
 
   
   <div className={uiMode === "design" ? "space-y-3" : "hidden"}>
@@ -15794,7 +15794,7 @@ className={clsx(
 )}
 style={{ top: STICKY_TOP }}
 >               
-  {mobileControlsOpen && mobileControlsTabs}
+  {uiMode === "design" && mobileControlsOpen && mobileControlsTabs}
 
 {/* UI: PROJECT PORTABLE SAVE (BEGIN) */}
 <Collapsible
