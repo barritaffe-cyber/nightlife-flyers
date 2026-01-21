@@ -85,7 +85,8 @@ const STYLE_SUFFIX: Record<MagicBlendStyle, string> = {
 Avoid:
 - tropical elements (palms, beach, sunset, tiki decor)
 - jazz bar cues (smoke-filled lounge, brass instruments, vintage bar ambience)
-- outdoor daytime lighting or bright sun`,
+- outdoor daytime lighting or bright sun 
+ - no extra people, no silhouettes, no background figures`,
   tropical: `Environment styling:
 - tropical night venue or rooftop lounge
 - warm ambient lighting with palms or outdoor elements
@@ -105,51 +106,30 @@ Avoid:
 - heavy magenta club lighting or EDM concert beams
 - jazz bar interior cues (dark lounge, leather booths, brass instruments)
 - concert lighting rigs, beam arrays, or stage spotlights`,
-  jazz_bar: `Environment styling (premium rooftop jazz lounge):
-- upscale penthouse rooftop social club at night overlooking a glowing city skyline
-- elegant outdoor lounge with plush seating, fire pits, and candlelit tables
-- warm, cinematic lighting dominated by gold, amber, and soft orange tones
-- stylish guests relaxing and socializing in an intimate, premium atmosphere
-- open-air bar and DJ booth integrated into the rooftop design
-- fire features casting dynamic flickering light and reflections
-- city lights stretching into the distance, softly blurred for depth
-- sophisticated nightlife energy — luxury, not chaotic
-- textured materials: wood decking, stone, brick, leather, glass
-- cozy yet exclusive vibe, private-club feeling
-- high contrast lighting with deep shadows and glowing highlights
-- subtle atmospheric haze enhancing light glow and depth
-- balanced composition with foreground (fire pit & seating), midground (bar & guests), background (city skyline)
-- cinematic photography style, ultra-detailed environment
-- instagram-ready, flyer-dominant visual
-- premium hospitality branding aesthetic
+  jazz_bar: `Environment styling (intimate jazz bar):
+- warm amber practicals (bar pendants, lamps, candles) dominate the scene
+- rich, moody bar interior with bottle backlighting and wood/brick textures
+- soft bokeh on background bottles and lights; subject stays sharp
+- cinematic, low-key lighting with deep shadows and glowing highlights
+- cozy, intimate, premium atmosphere (luxury lounge, not chaotic)
+- no outdoor rooftop cues or skyline
 
 Lighting integration:
-- motivated warm key/fill from candles, fire pits, and practicals
-- soft rim light separates the subject from the warm background and wraps edges
-- warm floor bounce and realistic contact shadow to ground the subject
-- subject must pick up warm color spill from nearby lights (skin and fabric)
-- add ambient occlusion around feet, legs, and contact points with floor
-- match scene contrast on the subject; avoid studio-flat lighting
-- shallow depth of field with warm bokeh; subject stays sharp
-- subtle atmospheric smoke in front and behind the subject for depth
-- light smoke around legs, very subtle around waist
-- intensify practical lighting so the subject clearly picks up warm highlights
-- stronger rim light from practicals; visible edge lighting on hair/shoulders/arms
+- warm key light from practicals; subtle warm rim on hair/shoulders
+- subject must pick up amber color spill from nearby lights (skin and fabric)
+- realistic contact shadow to ground the subject; avoid studio-flat lighting
 
 Color & lighting modifiers:
-- warm golds, ambers, and candlelight orange
-- subtle deep blues and charcoal blacks in shadows
-- soft bloom on distant lights, no harsh glare on the subject’s face
+- warm golds, ambers, candlelight orange
+- subtle deep reds/browns in shadows
+- soft bloom on distant lights only
 
 Avoid:
-- daytime
-- empty rooftop
+- rooftop or skyline views
 - nightclub strobe lighting
 - neon rave colors
 - overcrowded party
 - flat lighting
-- cheap furniture
-- low detail
 - no text, no logos, no watermarks`,
   outdoor_summer: `Environment styling:
 - vibrant, cinematic summer day-party atmosphere
@@ -487,7 +467,7 @@ export async function POST(req: Request) {
       }
     }
 
-    async function buildComposite(subjInput: Buffer, withEdgeSpill: boolean) {
+    async function buildComposite(subjInput: Buffer) {
       const subjPng = await sharp(subjInput)
         .resize(subjSize, subjSize, {
           fit: "contain",
@@ -496,34 +476,8 @@ export async function POST(req: Request) {
         .png()
         .toBuffer();
 
-      if (!withEdgeSpill) {
-        return await sharp(bgCanvas)
-          .composite([{ input: subjPng, left: subjLeft, top: subjTop }])
-          .png()
-          .toBuffer();
-      }
-
-      const bgCrop = await sharp(bgCanvas)
-        .extract({ left: subjLeft, top: subjTop, width: subjSize, height: subjSize })
-        .png()
-        .toBuffer();
-      const edgeAlpha = await sharp(subjPng)
-        .ensureAlpha()
-        .extractChannel("alpha")
-        .blur(6)
-        .linear(0.35)
-        .toBuffer();
-      const spill = await sharp(bgCrop)
-        .blur(10)
-        .joinChannel(edgeAlpha)
-        .png()
-        .toBuffer();
-      const subjWithSpill = await sharp(subjPng)
-        .composite([{ input: spill, blend: "over" }])
-        .png()
-        .toBuffer();
       return await sharp(bgCanvas)
-        .composite([{ input: subjWithSpill, left: subjLeft, top: subjTop }])
+        .composite([{ input: subjPng, left: subjLeft, top: subjTop }])
         .png()
         .toBuffer();
     }
@@ -532,10 +486,7 @@ export async function POST(req: Request) {
     stage = "safe-crop";
     const safeSubjBuf = await safeCropSubject(subjBuf);
     stage = "build-composite";
-    const preCompositeBuf = await buildComposite(
-      safeSubjBuf,
-      safeStyle === "jazz_bar"
-    );
+    const preCompositeBuf = await buildComposite(safeSubjBuf);
 
     // 4) Convert both images to data URLs (order matters)
     stage = "data-urls";
@@ -575,10 +526,7 @@ ${backgroundLock}`;
     if (provider === "replicate") {
       stage = "replicate:prep";
       const safeSubjBuf = await safeCropSubject(subjBuf);
-      const safeCompositeBuf = await buildComposite(
-        safeSubjBuf,
-        safeStyle === "jazz_bar"
-      );
+      const safeCompositeBuf = await buildComposite(safeSubjBuf);
       const safeCompositeDataUrl = bufferToDataUrlPng(safeCompositeBuf);
       try {
         stage = "replicate:run";
@@ -601,10 +549,7 @@ ${backgroundLock}`;
           .blur(0.3)
           .png()
           .toBuffer();
-        const safeCompositeBuf2 = await buildComposite(
-          softenedSubj,
-          safeStyle === "jazz_bar"
-        );
+        const safeCompositeBuf2 = await buildComposite(softenedSubj);
         const safeCompositeDataUrl2 = bufferToDataUrlPng(safeCompositeBuf2);
         const safePrompt =
           `Preserve the exact subject identity from Image 1 (face, skin tone, hair, clothing). ` +
