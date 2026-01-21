@@ -125,6 +125,9 @@ Lighting integration:
 - subject must pick up warm color spill from nearby lights (skin and fabric)
 - add ambient occlusion around feet, legs, and contact points with floor
 - match scene contrast on the subject; avoid studio-flat lighting
+- shallow depth of field with warm bokeh; subject stays sharp
+- subtle atmospheric smoke in front and behind the subject for depth
+- slightly stronger smoke around legs, lighter smoke around waist
 
 Color & lighting modifiers:
 - warm golds, ambers, and candlelight orange
