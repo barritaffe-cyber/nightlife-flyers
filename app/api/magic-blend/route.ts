@@ -357,7 +357,10 @@ async function runStabilityEdit(opts: {
 // route
 // -----------------------------
 export async function POST(req: Request) {
+  let stage = "init";
+  let activeProvider: "stability" | "openai" | "replicate" | undefined;
   try {
+    stage = "check-keys";
     if (!OPENAI_API_KEY && !AI_API_KEY && !STABILITY_API_KEY) {
       return NextResponse.json(
         { error: "Missing STABILITY_API_KEY / OPENAI_API_KEY / REPLICATE_API_TOKEN in .env.local" },
@@ -365,6 +368,7 @@ export async function POST(req: Request) {
       );
     }
 
+    stage = "parse-body";
     const body = await req.json();
     const {
       subject,
@@ -379,7 +383,9 @@ export async function POST(req: Request) {
       format?: "square" | "story" | "portrait";
       provider?: "stability" | "openai" | "replicate";
     };
+    activeProvider = provider;
 
+    stage = "validate-inputs";
     if (!subject || !background) {
       return NextResponse.json(
         { error: "Missing required fields: subject, background." },
@@ -387,11 +393,13 @@ export async function POST(req: Request) {
       );
     }
 
+    stage = "resolve-style";
     const safeStyle: MagicBlendStyle =
       style === "tropical" || style === "jazz_bar" || style === "outdoor_summer"
         ? style
         : "club";
 
+    stage = "resolve-format";
     const aspect_ratio: "1:1" | "9:16" | "4:5" =
       format === "story" ? "9:16" : format === "portrait" ? "4:5" : "1:1";
 
@@ -401,6 +409,7 @@ export async function POST(req: Request) {
     const baseSize = Math.min(sizeW, sizeH);
 
     // 1) Background canvas (this is the "truth" reference)
+    stage = "load-background";
     const bgBuf = await toBufferFromAnyImage(background);
     const bgCanvas = await sharp(bgBuf)
       .resize(sizeW, sizeH, { fit: "cover" })
@@ -408,6 +417,7 @@ export async function POST(req: Request) {
       .toBuffer();
 
     // 2) Subject buffer
+    stage = "load-subject";
     const subjBuf = await toBufferFromAnyImage(subject);
 
     // Subject framing: bigger & slightly lifted (poster feel)
@@ -444,14 +454,18 @@ export async function POST(req: Request) {
     }
 
     // 3) Composite subject onto the background for placement reference
+    stage = "safe-crop";
     const safeSubjBuf = await safeCropSubject(subjBuf);
+    stage = "build-composite";
     const preCompositeBuf = await buildComposite(safeSubjBuf);
 
     // 4) Convert both images to data URLs (order matters)
+    stage = "data-urls";
     const preCompositeDataUrl = bufferToDataUrlPng(preCompositeBuf);
     const bgOnlyDataUrl = bufferToDataUrlPng(bgCanvas);
 
     // --- Build prompt (BASE + SUFFIX + background lock) ---
+    stage = "build-prompt";
     const finalPrompt = `${BASE_PROMPT}
 
 ${STYLE_SUFFIX[safeStyle]}
@@ -469,10 +483,12 @@ Background lock (strict):
     const sizeStr = format === "story" ? "1024x1792" : "1024x1024";
 
     if (provider === "replicate") {
+      stage = "replicate:prep";
       const safeSubjBuf = await safeCropSubject(subjBuf);
       const safeCompositeBuf = await buildComposite(safeSubjBuf);
       const safeCompositeDataUrl = bufferToDataUrlPng(safeCompositeBuf);
       try {
+        stage = "replicate:run";
         const outUrl = await runFlux({
           imageDataUrls: [safeCompositeDataUrl, bgOnlyDataUrl],
           prompt: finalPrompt,
@@ -486,6 +502,7 @@ Background lock (strict):
         const isSensitive = msg.toLowerCase().includes("sensitive");
         if (!isSensitive) throw err;
 
+        stage = "replicate:safe-retry";
         const softenedSubj = await sharp(safeSubjBuf)
           .modulate({ saturation: 0.85 })
           .blur(0.3)
@@ -498,6 +515,7 @@ Background lock (strict):
           `Do not change ethnicity, age, or gender. ` +
           `Preserve the background from Image 2 exactly. ` +
           `Family-friendly, non-suggestive, neutral lighting.`;
+        stage = "replicate:safe-run";
         const outUrl = await runFlux({
           imageDataUrls: [safeCompositeDataUrl2, bgOnlyDataUrl],
           prompt: safePrompt,
@@ -510,6 +528,7 @@ Background lock (strict):
     }
 
     if (provider === "openai") {
+      stage = "openai:run";
       const outUrl = await runOpenAIEdit({
         image: preCompositeBuf,
         prompt: finalPrompt,
@@ -518,6 +537,7 @@ Background lock (strict):
       return NextResponse.json({ url: outUrl, style: safeStyle, format });
     }
 
+    stage = "stability:run";
     const outUrl = await runStabilityEdit({
       image: preCompositeBuf,
       prompt: finalPrompt,
@@ -525,9 +545,18 @@ Background lock (strict):
     });
     return NextResponse.json({ url: outUrl, style: safeStyle, format });
   } catch (err: any) {
-    console.error("❌ MAGIC BLEND ERROR:", err);
+    const message = err?.message || String(err);
+    console.error("❌ MAGIC BLEND ERROR:", { stage, provider: activeProvider, message, err });
     return NextResponse.json(
-      { error: err?.message || String(err) },
+      {
+        error: message,
+        debug: {
+          stage,
+          provider: activeProvider,
+          name: err?.name,
+          stack: err?.stack,
+        },
+      },
       { status: 500 }
     );
   }
