@@ -5649,6 +5649,9 @@ export default function Page() {
     { id: "glass-blue", label: "Glass Blue", src: "/cinematic-refs/glass-blue.png" },
     { id: "chrome-purple", label: "Chrome Purple", src: "/cinematic-refs/chrome-purple.png" },
     { id: "gold-smoke", label: "Gold Smoke", src: "/cinematic-refs/gold-smoke.png" },
+    { id: "spicy", label: "Spicy Hot", src: "/cinematic-refs/spicy.png" },
+    { id: "frozen", label: "Frozen", src: "/cinematic-refs/frozen.png" },
+    { id: "white-gold", label: "White Gold", src: "/cinematic-refs/white-gold.png" },
   ];
   const [cinematicRefUrl, setCinematicRefUrl] = useState<string | null>(
     CINEMATIC_REF_LIBRARY[0]?.src ?? null
