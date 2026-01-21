@@ -7801,6 +7801,13 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
     ].join(' ');
   }, [exp, contrast, saturation, warmth, hue, tint, gamma, vibrance]);
 
+  const [isMobileView, setIsMobileView] = React.useState(false);
+
+  const masterFilterCss = React.useMemo(() => {
+    const base = masterFilter;
+    return isMobileView ? base : `url(#master-grade) ${base}`;
+  }, [isMobileView, masterFilter]);
+
   // film grain as an overlay (works with html-to-image)
   const grainStyle: React.CSSProperties = React.useMemo(() => ({
     position: 'absolute',
@@ -12532,6 +12539,7 @@ const [mobileControlsTab, setMobileControlsTab] = React.useState<"design" | "ass
 const [uiMode, setUiMode] = React.useState<"design" | "finish">("design");
 const [floatingEditorVisible, setFloatingEditorVisible] = React.useState(false);
 const [floatingAssetVisible, setFloatingAssetVisible] = React.useState(false);
+//const [isMobileView, setIsMobileView] = React.useState(false);
 const activeTextTarget = React.useMemo(() => {
   const byPanel = selectedPanel && ["headline", "head2", "details", "details2", "venue", "subtag"].includes(selectedPanel)
     ? selectedPanel
@@ -12785,6 +12793,22 @@ React.useEffect(() => {
   window.addEventListener("scroll", onScroll, { passive: true });
   return () => window.removeEventListener("scroll", onScroll);
 }, [mobileControlsOpen]);
+
+React.useEffect(() => {
+  if (typeof window === "undefined") return;
+  const update = () => setIsMobileView(window.innerWidth < 1024);
+  update();
+  window.addEventListener("resize", update);
+  return () => window.removeEventListener("resize", update);
+}, []);
+
+React.useEffect(() => {
+  if (typeof window === "undefined") return;
+  const update = () => setIsMobileView(window.innerWidth < 1024);
+  update();
+  window.addEventListener("resize", update);
+  return () => window.removeEventListener("resize", update);
+}, []);
 
 React.useEffect(() => {
   if (activeAssetControls) {
@@ -17100,6 +17124,8 @@ titleClassName={
             { id: "pin", src: "https://cdn-icons-png.flaticon.com/512/149/149059.png", name: "Pin" },
             { id: "vinyl2", src: "https://cdn-icons-png.flaticon.com/512/1834/1834342.png", name: "Vinyl Record" },
             { id: "margarita", src: "https://cdn-icons-png.flaticon.com/512/362/362504.png", name: "Margarita" },
+            { id: "gold_mic", src: "https://cdn-icons-png.flaticon.com/512/3050/3050410.png", name: "Gold Mic" },
+            { id: "dj_turntable", src: "https://cdn-icons-png.flaticon.com/512/2906/2906323.png", name: "Turntable" },
           ].map((sticker) => (
             <button
               key={sticker.id}
