@@ -60,11 +60,16 @@ const STYLE_SUFFIX: Record<MagicBlendStyle, string> = {
 - modern nightclub or concert venue
 - cyan and magenta neon tube lighting with bright accents
 - visible atmospheric haze so beams and light cones read clearly (medium+ density)
- - subtle depth of field with background bokeh; subject stays sharp
+- pronounced depth of field with background bokeh; subject stays sharp
 - strong directional rim light from neon sources (clearly visible on hair/shoulders)
 - stronger key/fill contrast with deep shadow pockets (avoid flat lighting)
 - colored rim light and floor bounce should match background lights and feel energetic
 - add subtle motion energy via light streaks and slight background motion blur (subject stays sharp)
+- prioritize the subject with stronger local contrast and clarity
+- make the background noticeably softer so the subject pops
+- boost subject energy with brighter speculars and vivid neon color spill
+- tighter framing / camera zoom toward the subject for premium focus
+- rim light should visibly sculpt the subject’s silhouette and edges
 - architectural lighting, glossy surfaces, high-end atmosphere
 
 Avoid:
@@ -471,11 +476,16 @@ export async function POST(req: Request) {
 
     // --- Build prompt (BASE + SUFFIX + background lock) ---
     stage = "build-prompt";
-    const finalPrompt = `${BASE_PROMPT}
-
-${STYLE_SUFFIX[safeStyle]}
-
-Background lock (strict):
+    const backgroundLock =
+      safeStyle === "club"
+        ? `Background lock (guided):
+- Image 1 is the subject placement and framing reference.
+- Image 2 is the background reference and should remain recognizable.
+- Preserve the background’s layout, architecture, and key features from Image 2.
+- Do not replace the environment or move the scene.
+- It is allowed to intensify existing lighting, haze, and neon accents to match subject energy.
+- Keep the same time of day and lighting direction as Image 2.`
+        : `Background lock (strict):
 - Image 1 is the subject placement and framing reference.
 - Image 2 is the background reference and MUST be preserved exactly.
 - Preserve the background’s layout, architecture, structure, and key features from Image 2.
@@ -483,6 +493,12 @@ Background lock (strict):
 - Keep the same time of day and lighting direction as Image 2.
 - Do not change the weather or season.
 - Only add subtle atmosphere and a few small accent lights; no scene overhaul.`;
+
+    const finalPrompt = `${BASE_PROMPT}
+
+${STYLE_SUFFIX[safeStyle]}
+
+${backgroundLock}`;
 
     // --- Single unified pass with TWO reference images (Imagine Art style) ---
     const sizeStr = format === "story" ? "1024x1792" : "1024x1024";
