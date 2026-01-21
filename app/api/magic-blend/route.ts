@@ -59,11 +59,11 @@ const STYLE_SUFFIX: Record<MagicBlendStyle, string> = {
   club: `Environment styling:
 - modern nightclub or concert venue
 - cyan and magenta light accents
-- subtle atmospheric haze so beams feel present (low density)
-- directional rim light motivated by existing fixtures (not studio polish)
+- visible atmospheric haze so beams and light cones read clearly (medium density)
+- stronger directional rim light motivated by existing fixtures
 - match subject lighting to the background’s key/fill ratio and falloff
-- allow a touch of polish, but keep real club contrast and shadow pockets
-- colored rim light and floor bounce should match the background lights
+- keep real club contrast with deep shadow pockets (not flat)
+- colored rim light and floor bounce should match background lights and feel energetic
 - architectural lighting, glossy surfaces, high-end atmosphere
 
 Avoid:
