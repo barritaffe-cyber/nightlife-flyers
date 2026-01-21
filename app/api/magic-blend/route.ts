@@ -120,8 +120,11 @@ Avoid:
 
 Lighting integration:
 - motivated warm key/fill from candles, fire pits, and practicals
-- soft rim light separates the subject from the warm background
+- soft rim light separates the subject from the warm background and wraps edges
 - warm floor bounce and realistic contact shadow to ground the subject
+- subject must pick up warm color spill from nearby lights (skin and fabric)
+- add ambient occlusion around feet, legs, and contact points with floor
+- match scene contrast on the subject; avoid studio-flat lighting
 
 Color & lighting modifiers:
 - warm golds, ambers, and candlelight orange
