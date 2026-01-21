@@ -88,6 +88,12 @@ Avoid:
 - relaxed but vibrant atmosphere
 - minimal atmosphere; no visible beams unless already present
 - keep the background scene intact and unchanged
+- warm lantern glow and string lights; cozy evening vibe
+- shallow depth of field with soft bokeh on lights; subject stays sharp
+- subject receives warm wrap light and soft rim from practicals
+- contact shadow and gentle ground bounce to anchor the subject
+- atmospheric smoke in front and behind the subject for depth
+- stronger smoke around legs, lighter smoke around waist
 
 Avoid:
 - nightclub lasers or stage strobes
