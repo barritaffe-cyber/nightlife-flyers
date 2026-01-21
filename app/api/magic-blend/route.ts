@@ -132,12 +132,12 @@ Avoid:
 - flat lighting
 - no text, no logos, no watermarks`,
   outdoor_summer: `Environment styling:
-- vibrant, cinematic summer day-party atmosphere
-- bright natural sunlight with warm golden highlights and soft, flattering shadows
-- subtle heat haze and gentle light bloom; fine dust specks catching sunlight
-- rich saturated blue sky with soft gradients, open and clean
-- sun-kissed palms and background elements, softened by shallow depth of field
-- rhythmic crowd energy via motion cues (raised hands, hair/fabric movement, light motion blur)
+- vibrant daytime outdoor party by the water (lake, pool, or beachside deck)
+- bright natural sunlight with warm golden highlights and clean shadows
+- visible water spray/mist in the air catching sunlight for energy
+- lively crowd energy with raised hands and candid movement
+- sun-kissed skin tones, bright colorful summer outfits
+- shallow depth of field; background crowd softened, subject sharp
 
 Color grading:
 - warm highlights, rich natural skin tones
@@ -145,16 +145,16 @@ Color grading:
 - deep contrast without crushing shadows
 
 Mood:
-- pool party / carnival-inspired luxury
-- carefree, stylish, euphoric
+- carefree, energetic, celebratory
+- daytime festival / pool party vibe
 
 Style keywords:
-- cinematic summer, luxury day party, tropical heat
-- lively atmosphere, lifestyle promo, high-end event atmosphere
+- cinematic summer, daytime party, lifestyle promo
+- lively crowd energy, premium outdoor event
 
 Quality:
-- ultra-realistic, clean detail, soft motion blur
-- no artificial effects, no text, no logos, no watermarks, no extra people
+- crisp detail, modern editorial look, high-end
+- no low-res, no artifacts, no warped faces
 
 Avoid:
 - nightclub lasers, concert strobes, or heavy club lighting
