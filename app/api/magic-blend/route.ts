@@ -26,7 +26,6 @@ Blend requirements (critical):
 - match lens and depth-of-field; soften cutout edges slightly
 - preserve subject identity, face, hairstyle, clothing, and pose from Image 1
 - do not change facial features or body proportions; keep the same facial likeness
-- preserve ethnicity, skin tone, and age from Image 1 exactly
 
 Grounding:
 - align subject scale and perspective to the background
@@ -537,6 +536,41 @@ export async function POST(req: Request) {
         .toBuffer();
     }
 
+    async function applyFacePass(outputUrlOrData: string, subjInput: Buffer) {
+      try {
+        const outBuf = await toBufferFromAnyImage(outputUrlOrData);
+        const subjPng = await sharp(subjInput)
+          .resize(subjSize, subjSize, {
+            fit: "contain",
+            background: { r: 0, g: 0, b: 0, alpha: 0 },
+          })
+          .png()
+          .toBuffer();
+
+        const faceMaskSvg = `<svg width="${subjSize}" height="${subjSize}">
+  <ellipse cx="${Math.round(subjSize * 0.5)}" cy="${Math.round(subjSize * 0.28)}"
+    rx="${Math.round(subjSize * 0.2)}" ry="${Math.round(subjSize * 0.26)}"
+    fill="white"/>
+</svg>`;
+        const faceMask = await sharp(Buffer.from(faceMaskSvg))
+          .blur(4)
+          .png()
+          .toBuffer();
+        const facePatch = await sharp(subjPng)
+          .composite([{ input: faceMask, blend: "dest-in" }])
+          .png()
+          .toBuffer();
+
+        const out = await sharp(outBuf)
+          .composite([{ input: facePatch, left: subjLeft, top: subjTop }])
+          .png()
+          .toBuffer();
+        return bufferToDataUrlPng(out);
+      } catch {
+        return outputUrlOrData;
+      }
+    }
+
     // 3) Composite subject onto the background for placement reference
     stage = "safe-crop";
     const safeSubjBuf = await safeCropSubject(subjBuf);
@@ -592,7 +626,8 @@ ${backgroundLock}`;
           aspect_ratio,
           safety_tolerance: 2,
         });
-        return NextResponse.json({ url: outUrl, style: safeStyle, format });
+        const finalUrl = await applyFacePass(outUrl, safeSubjBuf);
+        return NextResponse.json({ url: finalUrl, style: safeStyle, format });
       } catch (err: any) {
         const msg = String(err?.message || err || "");
         const isSensitive = msg.toLowerCase().includes("sensitive");
@@ -619,7 +654,8 @@ ${backgroundLock}`;
           aspect_ratio,
           safety_tolerance: 1,
         });
-        return NextResponse.json({ url: outUrl, style: safeStyle, format });
+        const finalUrl = await applyFacePass(outUrl, safeSubjBuf);
+        return NextResponse.json({ url: finalUrl, style: safeStyle, format });
       }
     }
 
@@ -630,7 +666,8 @@ ${backgroundLock}`;
         prompt: finalPrompt,
         size: sizeStr,
       });
-      return NextResponse.json({ url: outUrl, style: safeStyle, format });
+      const finalUrl = await applyFacePass(outUrl, safeSubjBuf);
+      return NextResponse.json({ url: finalUrl, style: safeStyle, format });
     }
 
     stage = "stability:run";
@@ -639,7 +676,8 @@ ${backgroundLock}`;
       prompt: finalPrompt,
       size: sizeStr,
     });
-    return NextResponse.json({ url: outUrl, style: safeStyle, format });
+    const finalUrl = await applyFacePass(outUrl, safeSubjBuf);
+    return NextResponse.json({ url: finalUrl, style: safeStyle, format });
   } catch (err: any) {
     const message = err?.message || String(err);
     console.error("❌ MAGIC BLEND ERROR:", { stage, provider: activeProvider, message, err });
