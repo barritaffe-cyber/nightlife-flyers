@@ -41,6 +41,7 @@ Lighting interaction:
 - atmosphere allowed when requested by the style; avoid heavy fog
 - subject should block light beams and receive color spill from the scene
 - no studio lighting, no beauty lighting, no flat fill
+- if the scene is dark and moody, keep the subject darker and cinematic (no bright/exposed subject)
 
 Look:
 - strong contrast with clean blacks/highlights
