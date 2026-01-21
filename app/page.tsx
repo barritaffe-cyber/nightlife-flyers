@@ -5709,7 +5709,10 @@ export default function Page() {
   // 3. THE FIXED HANDLER (Must be inside Page)
   // =========================================================
  const handleCreateCinematic = async () => {
-  const ref = cinematicRefUrl;
+  let ref = cinematicRefUrl;
+  if (ref && typeof window !== "undefined" && ref.startsWith("/")) {
+    ref = `${window.location.origin}${ref}`;
+  }
   const txt = String(cinematicTextInput || "").trim();
   if (!ref) {
     alert("Select a reference image.");
