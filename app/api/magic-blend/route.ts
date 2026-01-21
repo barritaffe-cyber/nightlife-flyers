@@ -100,37 +100,44 @@ Avoid:
 - heavy magenta club lighting or EDM concert beams
 - jazz bar interior cues (dark lounge, leather booths, brass instruments)
 - concert lighting rigs, beam arrays, or stage spotlights`,
-  jazz_bar: `Environment styling (minimal change / preserve background):
-- Preserve the original background from Image 2 as much as possible.
-- Do NOT add new objects, signs, decor, furniture, or architectural changes.
-- Do NOT change the room layout, wall patterns, ceiling features, or key light positions.
-- Only enhance the existing scene with cinematic lighting, atmosphere, and depth.
+  jazz_bar: `Environment styling (premium rooftop jazz lounge):
+- upscale penthouse rooftop social club at night overlooking a glowing city skyline
+- elegant outdoor lounge with plush seating, fire pits, and candlelit tables
+- warm, cinematic lighting dominated by gold, amber, and soft orange tones
+- stylish guests relaxing and socializing in an intimate, premium atmosphere
+- open-air bar and DJ booth integrated into the rooftop design
+- fire features casting dynamic flickering light and reflections
+- city lights stretching into the distance, softly blurred for depth
+- sophisticated nightlife energy — luxury, not chaotic
+- textured materials: wood decking, stone, brick, leather, glass
+- cozy yet exclusive vibe, private-club feeling
+- high contrast lighting with deep shadows and glowing highlights
+- subtle atmospheric haze enhancing light glow and depth
+- balanced composition with foreground (fire pit & seating), midground (bar & guests), background (city skyline)
+- cinematic photography style, ultra-detailed environment
+- instagram-ready, flyer-dominant visual
+- premium hospitality branding aesthetic
 
-Lighting integration (depth layers):
-- Add subtle practical light sources that match the background’s existing lighting.
-- Include lighting behind the subject (backlights) to create separation through contrast, NOT through glow/halos.
-- Include lighting in front of the subject (soft key/fill) that is motivated by the environment.
-- Include mid-layer light shafts only if present in Image 2.
+Lighting integration:
+- motivated warm key/fill from candles, fire pits, and practicals
+- soft rim light separates the subject from the warm background
+- warm floor bounce and realistic contact shadow to ground the subject
 
-Atmosphere interaction:
-- Use a light amount of smoke/haze only to reveal beams and add depth.
-- Smoke must exist in front of AND behind the subject (depth), but remain subtle.
-- Lights must illuminate the smoke (visible volumetric response) and cast soft color spill onto skin and clothing.
-- Subject must block beams and shape the light (occlusion), edges must never look cut out.
-
-DOF / bokeh:
-- Strong shallow depth of field.
-- Background practical lights fall into soft bokeh.
-- Subject remains sharp, atmosphere closest to camera slightly out of focus.
-
-Style:
-- Premium cinematic jazz bar mood, warm highlights, deep shadows, rich blacks.
-- No text, no logos, no watermarks, no extra people.
+Color & lighting modifiers:
+- warm golds, ambers, and candlelight orange
+- subtle deep blues and charcoal blacks in shadows
+- soft bloom on distant lights, no harsh glare on the subject’s face
 
 Avoid:
-- nightclub lasers, concert beams, or strobe effects
-- tropical decor, palms, beach, or sunset lighting
-- outdoor daytime lighting or bright sun`,
+- daytime
+- empty rooftop
+- nightclub strobe lighting
+- neon rave colors
+- overcrowded party
+- flat lighting
+- cheap furniture
+- low detail
+- no text, no logos, no watermarks`,
   outdoor_summer: `Environment styling:
 - vibrant, cinematic summer day-party atmosphere
 - bright natural sunlight with warm golden highlights and soft, flattering shadows
