@@ -12525,12 +12525,13 @@ React.useEffect(() => {
 
 /* ===== AUTOSAVE: SMART SAVE/LOAD (BEGIN) ===== */
 const [hasSavedDesign, setHasSavedDesign] = React.useState(false);
-const [mobileControlsOpen, setMobileControlsOpen] = React.useState(false);
+const [mobileControlsOpen, setMobileControlsOpen] = React.useState(true);
 const [mobileControlsTab, setMobileControlsTab] = React.useState<"design" | "assets">(
   "design"
 );
 const [uiMode, setUiMode] = React.useState<"design" | "finish">("design");
 const [floatingEditorVisible, setFloatingEditorVisible] = React.useState(false);
+const [floatingAssetVisible, setFloatingAssetVisible] = React.useState(false);
 const activeTextTarget = React.useMemo(() => {
   const byPanel = selectedPanel && ["headline", "head2", "details", "details2", "venue", "subtag"].includes(selectedPanel)
     ? selectedPanel
@@ -12689,6 +12690,42 @@ const activeTextControls = React.useMemo(() => {
   textFx.tracking,
 ]);
 
+const activeAssetControls = React.useMemo(() => {
+  const store = useFlyerState.getState();
+  if (selectedEmojiId) {
+    const list = Array.isArray(emojis) ? emojis : emojis?.[format] || [];
+    const sel = list.find((e: any) => e.id === selectedEmojiId);
+    if (!sel) return null;
+    return {
+      label: "Emoji",
+      scale: sel.scale ?? 1,
+      opacity: sel.opacity ?? 1,
+      onScale: (v: number) =>
+        useFlyerState.getState().updateEmoji(format, sel.id, { scale: v }),
+      onOpacity: (v: number) =>
+        useFlyerState.getState().updateEmoji(format, sel.id, { opacity: v }),
+    };
+  }
+
+  if (selectedPortraitId) {
+    const list = portraits?.[format] || [];
+    const sel = list.find((p: any) => p.id === selectedPortraitId);
+    if (!sel) return null;
+    if (!sel.isFlare && !sel.isSticker) return null;
+    return {
+      label: sel.isFlare ? "Flare" : "Graphic",
+      scale: sel.scale ?? 1,
+      opacity: sel.opacity ?? 1,
+      onScale: (v: number) =>
+        useFlyerState.getState().updatePortrait(format, sel.id, { scale: v }),
+      onOpacity: (v: number) =>
+        useFlyerState.getState().updatePortrait(format, sel.id, { opacity: v }),
+    };
+  }
+
+  return null;
+}, [selectedEmojiId, selectedPortraitId, emojis, portraits, format]);
+
 const mobileControlsTabs = (
   <div className="lg:hidden flex items-center gap-2 px-4 py-2 bg-neutral-950/90 border-b border-neutral-800">
     <button
@@ -12727,6 +12764,21 @@ React.useEffect(() => {
 React.useEffect(() => {
   if (!mobileControlsOpen) return;
   const onScroll = () => setFloatingEditorVisible(false);
+  window.addEventListener("scroll", onScroll, { passive: true });
+  return () => window.removeEventListener("scroll", onScroll);
+}, [mobileControlsOpen]);
+
+React.useEffect(() => {
+  if (activeAssetControls) {
+    setFloatingAssetVisible(true);
+  } else {
+    setFloatingAssetVisible(false);
+  }
+}, [activeAssetControls]);
+
+React.useEffect(() => {
+  if (!mobileControlsOpen) return;
+  const onScroll = () => setFloatingAssetVisible(false);
   window.addEventListener("scroll", onScroll, { passive: true });
   return () => window.removeEventListener("scroll", onScroll);
 }, [mobileControlsOpen]);
@@ -13977,12 +14029,14 @@ style={{ minHeight: 'calc(100vh - 96px)' }}
 id="mobile-controls-panel"
 className={clsx(
   "order-2 lg:sticky self-start max-h-none lg:max-h-[calc(100vh-120px)] overflow-visible lg:overflow-y-auto space-y-3 px-3 lg:px-0 lg:pr-1",
-  mobileControlsOpen && mobileControlsTab === "design" ? "block" : "hidden",
+  mobileControlsOpen && mobileControlsTab === "design" && uiMode === "design"
+    ? "block"
+    : "hidden",
   "lg:block"
 )}
 style={{ top: STICKY_TOP }}
 >               
-  {mobileControlsOpen && mobileControlsTabs}
+  {uiMode === "design" && mobileControlsOpen && mobileControlsTabs}
 
   
   <div className={uiMode === "design" ? "space-y-3" : "hidden"}>
@@ -15318,9 +15372,6 @@ style={{ top: STICKY_TOP }}
           return;
         }
 
-        if (typeof window !== "undefined" && window.innerWidth < 1024) {
-          setMobileControlsOpen(false);
-        }
         if (!el.closest('[data-portrait-area="true"]') && !el.closest(".panel")) {
           clearSelection(e.nativeEvent);
         }
@@ -15350,12 +15401,12 @@ style={{ top: STICKY_TOP }}
     </filter>
   </svg>
   {/* ✅ FILTERED CONTENT ONLY (everything BELOW the flare) */}
-  <div
-    className="relative w-full flex justify-center items-center"
-    style={{
-      filter: isBgDragging ? "none" : `url(#master-grade) ${masterFilter}`,
-    }}
-  >
+    <div
+      className="relative w-full flex justify-center items-center"
+      style={{
+        filter: `url(#master-grade) ${masterFilter}`,
+      }}
+    >
 
     {/* --- LAYER 1: AMBIENT GLOWS --- */}
     <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none -z-10">
@@ -15653,6 +15704,47 @@ style={{ top: STICKY_TOP }}
             onChange={(e) => activeTextControls.onLine?.(Number(e.target.value))}
             className="accent-indigo-400"
           />
+        </div>
+      </div>
+    </div>
+  )}
+
+  {activeAssetControls && floatingAssetVisible && (
+    <div className="lg:hidden w-full flex justify-center px-3 pt-3">
+      <div
+        className="rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur px-3 py-2 shadow-[0_12px_30px_rgba(0,0,0,0.45)]"
+        style={{ width: scaledCanvasW, maxWidth: "100%" }}
+      >
+        <div className="flex items-center gap-2 text-[11px] font-semibold text-white">
+          <span className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</span>
+          <span className="text-neutral-300">•</span>
+          <span>{activeAssetControls.label}</span>
+        </div>
+        <div className="mt-2 grid grid-cols-2 gap-3 items-center">
+          <div>
+            <div className="text-[10px] text-neutral-400 mb-1">Scale</div>
+            <input
+              type="range"
+              min={0.1}
+              max={5}
+              step={0.05}
+              value={Number(activeAssetControls.scale || 0)}
+              onChange={(e) => activeAssetControls.onScale(Number(e.target.value))}
+              className="w-full accent-fuchsia-500"
+            />
+          </div>
+          <div>
+            <div className="text-[10px] text-neutral-400 mb-1">Opacity</div>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={Number(activeAssetControls.opacity || 0)}
+              onChange={(e) => activeAssetControls.onOpacity(Number(e.target.value))}
+              className="w-full accent-indigo-400"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -16125,7 +16217,7 @@ style={{ top: STICKY_TOP }}
             { key: "club", label: "Club" },
             { key: "tropical", label: "Tropical" },
             { key: "jazz_bar", label: "Jazz Bar" },
-            { key: "outdoor_summer", label: "Outdoor" },
+            { key: "outdoor_summer", label: "Daytime" },
           ].map((s) => {
             const active = blendStyle === s.key;
             return (
@@ -16753,6 +16845,27 @@ titleClassName={
 
             <div className="mb-3">
               <div className="text-[11px] text-neutral-400 mb-1 flex justify-between">
+                <span>Opacity</span>
+                <span>{Math.round((sel.opacity ?? 1) * 100)}%</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={sel.opacity ?? 1}
+                onChange={(e) => {
+                  useFlyerState.getState().updateEmoji(format, sel.id, {
+                    opacity: Number(e.target.value),
+                  });
+                }}
+                className="w-full accent-blue-500 h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer"
+                disabled={locked}
+              />
+            </div>
+
+            <div className="mb-3">
+              <div className="text-[11px] text-neutral-400 mb-1 flex justify-between">
                 <span>Rotation</span>
                 <span>{Math.round(sel.rotation ?? 0)}°</span>
               </div>
@@ -16946,11 +17059,11 @@ titleClassName={
           }}
         >
           {[
-            { id: "fire", src: "https://cdn-icons-png.flaticon.com/512/785/785116.png", name: "Fire" },
+            { id: "mezcal_bottle", src: "https://cdn-icons-png.flaticon.com/512/8091/8091033.png", name: "Mezcal" },
             { id: "drink", src: "https://cdn-icons-png.flaticon.com/512/920/920587.png", name: "Drink" },
-            { id: "crown", src: "https://cdn-icons-png.flaticon.com/512/6941/6941697.png", name: "Crown" },
-            { id: "star", src: "https://cdn-icons-png.flaticon.com/512/1828/1828884.png", name: "Star" },
-            { id: "heart", src: "https://cdn-icons-png.flaticon.com/512/833/833472.png", name: "Heart" },
+            { id: "tequila_bottle", src: "https://cdn-icons-png.flaticon.com/512/7215/7215911.png", name: "Tequila" },
+            { id: "maracas", src: "https://cdn-icons-png.flaticon.com/512/6654/6654969.png", name: "Maracas" },
+            { id: "mardi_gras", src: "https://cdn-icons-png.flaticon.com/512/4924/4924300.png", name: "Mardi Gras" },
             { id: "pin", src: "https://cdn-icons-png.flaticon.com/512/149/149059.png", name: "Pin" },
             { id: "vinyl2", src: "https://cdn-icons-png.flaticon.com/512/1834/1834342.png", name: "Vinyl Record" },
             { id: "margarita", src: "https://cdn-icons-png.flaticon.com/512/362/362504.png", name: "Margarita" },
@@ -17073,6 +17186,27 @@ titleClassName={
           onChange={(e) =>
             useFlyerState.getState().updatePortrait(format, sel.id, {
               scale: Number(e.target.value),
+            })
+          }
+          className="w-full h-1 rounded-lg appearance-none cursor-pointer bg-neutral-700 accent-blue-500"
+        />
+      </div>
+
+      <div className="mb-4">
+        <div className="text-[11px] text-neutral-400 mb-1 flex justify-between">
+          <span>Opacity</span>
+          <span>{Math.round(((sel as any).opacity ?? 1) * 100)}%</span>
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.05}
+          value={(sel as any).opacity ?? 1}
+          disabled={locked}
+          onChange={(e) =>
+            useFlyerState.getState().updatePortrait(format, sel.id, {
+              opacity: Number(e.target.value),
             })
           }
           className="w-full h-1 rounded-lg appearance-none cursor-pointer bg-neutral-700 accent-blue-500"
@@ -17283,9 +17417,19 @@ titleClassName={
     storageKey="p:portrait"
     isOpen={selectedPanel === "portrait"}
     onToggle={() =>
-      useFlyerState
-        .getState()
-        .setSelectedPanel(selectedPanel === "portrait" ? null : "portrait")
+      (() => {
+        const store = useFlyerState.getState();
+        const next = selectedPanel === "portrait" ? null : "portrait";
+        if (next === "portrait") {
+          const list = store.portraits?.[format] || [];
+          const sel = list.find((p: any) => p.id === store.selectedPortraitId);
+          if (sel?.isFlare || sel?.isSticker) {
+            store.setSelectedPortraitId(null);
+          }
+          store.setMoveTarget("portrait");
+        }
+        store.setSelectedPanel(next);
+      })()
     }
     titleClassName={
       selectedPanel === "portrait"
@@ -18060,40 +18204,28 @@ titleClassName={
 </aside>
 
 {/* --- MOBILE ACTION BAR --- */}
-<div className="lg:hidden fixed inset-x-0 bottom-0 z-[90] pb-[calc(env(safe-area-inset-bottom,0px)+8px)]">
-  <div className="mx-auto max-w-7xl px-4">
-    <div className="flex items-center gap-2 rounded-xl border border-neutral-800 bg-neutral-950/90 backdrop-blur px-2 py-2">
-      {uiMode === "design" ? (
-        <>
-          <button
-            type="button"
-            onClick={() => setMobileControlsOpen((v) => !v)}
-            className="flex-1 text-[11px] font-semibold uppercase tracking-wider px-3 py-2 rounded bg-neutral-900 border border-neutral-700"
-          >
-            Controls
-          </button>
-        </>
-      ) : (
-        <>
-          <button
-            type="button"
-            onClick={() => setUiMode("design")}
-            className="flex-1 text-[11px] font-semibold uppercase tracking-wider px-3 py-2 rounded bg-neutral-900 border border-neutral-700"
-          >
-            Back
-          </button>
-          <button
-            type="button"
-            onClick={() => exportArtboardClean(artRef.current!, exportType as "png" | "jpg")}
-            className="flex-1 text-[11px] font-semibold uppercase tracking-wider px-3 py-2 rounded bg-fuchsia-600 hover:bg-fuchsia-500"
-          >
-            Export
-          </button>
-        </>
-      )}
+{uiMode === "finish" && (
+  <div className="lg:hidden fixed inset-x-0 bottom-0 z-[90] pb-[calc(env(safe-area-inset-bottom,0px)+8px)]">
+    <div className="mx-auto max-w-7xl px-4">
+      <div className="flex items-center gap-2 rounded-xl border border-neutral-800 bg-neutral-950/90 backdrop-blur px-2 py-2">
+        <button
+          type="button"
+          onClick={() => setUiMode("design")}
+          className="flex-1 text-[11px] font-semibold uppercase tracking-wider px-3 py-2 rounded bg-neutral-900 border border-neutral-700"
+        >
+          Back
+        </button>
+        <button
+          type="button"
+          onClick={() => exportArtboardClean(artRef.current!, exportType as "png" | "jpg")}
+          className="flex-1 text-[11px] font-semibold uppercase tracking-wider px-3 py-2 rounded bg-fuchsia-600 hover:bg-fuchsia-500"
+        >
+          Export
+        </button>
+      </div>
     </div>
   </div>
-</div>
+)}
       </section>
       {/* ===== UI: MAIN 3-COL LAYOUT (END) ===== */}
 
