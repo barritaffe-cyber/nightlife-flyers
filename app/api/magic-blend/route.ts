@@ -64,6 +64,8 @@ const STYLE_SUFFIX: Record<MagicBlendStyle, string> = {
 - cyan and magenta neon tube lighting with bright accents
 - visible atmospheric haze so beams and light cones read clearly (medium+ density)
 - 50mm lens, pronounced depth of field with background bokeh; subject stays sharp
+- overhead blue/cyan key light (club spot) with warm side rim from practicals
+- visible light cones in haze; moody contrast with bright highlights
 - strong directional rim light from neon sources (clearly visible on hair/shoulders)
 - stronger key/fill contrast with deep shadow pockets (avoid flat lighting)
 - colored rim light and floor bounce should match background lights and feel energetic
