@@ -40,6 +40,7 @@ Lighting interaction:
 - if there are no beams, do not add beams
 - atmosphere allowed when requested by the style; avoid heavy fog
 - subject should block light beams and receive color spill from the scene
+- no studio lighting, no beauty lighting, no flat fill
 
 Look:
 - strong contrast with clean blacks/highlights
@@ -128,6 +129,8 @@ Lighting integration:
 - shallow depth of field with warm bokeh; subject stays sharp
 - subtle atmospheric smoke in front and behind the subject for depth
 - slightly stronger smoke around legs, lighter smoke around waist
+- intensify practical lighting so the subject clearly picks up warm highlights
+- stronger rim light from practicals; visible edge lighting on hair/shoulders/arms
 
 Color & lighting modifiers:
 - warm golds, ambers, and candlelight orange
