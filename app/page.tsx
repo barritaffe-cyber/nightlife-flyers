@@ -18061,6 +18061,15 @@ titleClassName={
         />
 
         <SliderRow
+          label="Opacity"
+          value={Number((sel as any).opacity ?? 1)}
+          min={0}
+          max={1}
+          step={0.05}
+          onChange={(v) => update({ opacity: v })}
+        />
+
+        <SliderRow
           label="Drop Shadow"
           value={shadowBlur}
           min={0}
