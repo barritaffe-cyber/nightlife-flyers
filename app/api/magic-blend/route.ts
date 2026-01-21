@@ -487,11 +487,51 @@ export async function POST(req: Request) {
 
     async function buildComposite(subjInput: Buffer) {
       const subjPng = await sharp(subjInput)
-        .resize(subjSize, subjSize, { fit: "contain" })
+        .resize(subjSize, subjSize, {
+          fit: "contain",
+          background: { r: 0, g: 0, b: 0, alpha: 0 },
+        })
         .png()
         .toBuffer();
+
+      const bgCrop = await sharp(bgCanvas)
+        .extract({ left: subjLeft, top: subjTop, width: subjSize, height: subjSize })
+        .png()
+        .toBuffer();
+
+      // Edge spill: blur background and mask with a softened subject alpha.
+      const edgeAlpha = await sharp(subjPng)
+        .ensureAlpha()
+        .extractChannel("alpha")
+        .blur(6)
+        .linear(0.35)
+        .toBuffer();
+      const spill = await sharp(bgCrop)
+        .blur(10)
+        .joinChannel(edgeAlpha)
+        .png()
+        .toBuffer();
+      const subjWithSpill = await sharp(subjPng)
+        .composite([{ input: spill, blend: "over" }])
+        .png()
+        .toBuffer();
+
+      // Soft contact shadow under subject.
+      const shadowSvg = `<svg width="${subjSize}" height="${subjSize}">
+  <ellipse cx="${Math.round(subjSize * 0.5)}" cy="${Math.round(subjSize * 0.92)}"
+    rx="${Math.round(subjSize * 0.28)}" ry="${Math.round(subjSize * 0.09)}"
+    fill="black" fill-opacity="0.45"/>
+</svg>`;
+      const shadow = await sharp(Buffer.from(shadowSvg))
+        .blur(12)
+        .png()
+        .toBuffer();
+
       return await sharp(bgCanvas)
-        .composite([{ input: subjPng, left: subjLeft, top: subjTop }])
+        .composite([
+          { input: shadow, left: subjLeft, top: subjTop },
+          { input: subjWithSpill, left: subjLeft, top: subjTop },
+        ])
         .png()
         .toBuffer();
     }
