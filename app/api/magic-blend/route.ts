@@ -485,7 +485,7 @@ export async function POST(req: Request) {
       }
     }
 
-    async function buildComposite(subjInput: Buffer) {
+    async function buildComposite(subjInput: Buffer, withEdgeSpill: boolean) {
       const subjPng = await sharp(subjInput)
         .resize(subjSize, subjSize, {
           fit: "contain",
@@ -493,8 +493,35 @@ export async function POST(req: Request) {
         })
         .png()
         .toBuffer();
+
+      if (!withEdgeSpill) {
+        return await sharp(bgCanvas)
+          .composite([{ input: subjPng, left: subjLeft, top: subjTop }])
+          .png()
+          .toBuffer();
+      }
+
+      const bgCrop = await sharp(bgCanvas)
+        .extract({ left: subjLeft, top: subjTop, width: subjSize, height: subjSize })
+        .png()
+        .toBuffer();
+      const edgeAlpha = await sharp(subjPng)
+        .ensureAlpha()
+        .extractChannel("alpha")
+        .blur(6)
+        .linear(0.35)
+        .toBuffer();
+      const spill = await sharp(bgCrop)
+        .blur(10)
+        .joinChannel(edgeAlpha)
+        .png()
+        .toBuffer();
+      const subjWithSpill = await sharp(subjPng)
+        .composite([{ input: spill, blend: "over" }])
+        .png()
+        .toBuffer();
       return await sharp(bgCanvas)
-        .composite([{ input: subjPng, left: subjLeft, top: subjTop }])
+        .composite([{ input: subjWithSpill, left: subjLeft, top: subjTop }])
         .png()
         .toBuffer();
     }
@@ -503,7 +530,10 @@ export async function POST(req: Request) {
     stage = "safe-crop";
     const safeSubjBuf = await safeCropSubject(subjBuf);
     stage = "build-composite";
-    const preCompositeBuf = await buildComposite(safeSubjBuf);
+    const preCompositeBuf = await buildComposite(
+      safeSubjBuf,
+      safeStyle === "jazz_bar"
+    );
 
     // 4) Convert both images to data URLs (order matters)
     stage = "data-urls";
@@ -543,7 +573,10 @@ ${backgroundLock}`;
     if (provider === "replicate") {
       stage = "replicate:prep";
       const safeSubjBuf = await safeCropSubject(subjBuf);
-      const safeCompositeBuf = await buildComposite(safeSubjBuf);
+      const safeCompositeBuf = await buildComposite(
+        safeSubjBuf,
+        safeStyle === "jazz_bar"
+      );
       const safeCompositeDataUrl = bufferToDataUrlPng(safeCompositeBuf);
       try {
         stage = "replicate:run";
@@ -566,7 +599,10 @@ ${backgroundLock}`;
           .blur(0.3)
           .png()
           .toBuffer();
-        const safeCompositeBuf2 = await buildComposite(softenedSubj);
+        const safeCompositeBuf2 = await buildComposite(
+          softenedSubj,
+          safeStyle === "jazz_bar"
+        );
         const safeCompositeDataUrl2 = bufferToDataUrlPng(safeCompositeBuf2);
         const safePrompt =
           `Preserve the exact subject identity from Image 1 (face, skin tone, hair, clothing). ` +
