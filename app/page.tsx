@@ -12989,6 +12989,7 @@ React.useEffect(() => {
 React.useEffect(() => {
   if (!mobileControlsOpen) return;
   const onScroll = () => {
+    if (floatingAssetVisible) return;
     if (
       typeof document !== "undefined" &&
       (assetFocusLockRef.current ||
@@ -13001,7 +13002,7 @@ React.useEffect(() => {
   };
   window.addEventListener("scroll", onScroll, { passive: true });
   return () => window.removeEventListener("scroll", onScroll);
-}, [mobileControlsOpen]);
+}, [mobileControlsOpen, floatingAssetVisible]);
 
 React.useEffect(() => {
   if (!mobileControlsOpen) return;
