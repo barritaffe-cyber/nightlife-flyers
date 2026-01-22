@@ -1530,6 +1530,7 @@ const Artboard = React.forwardRef<HTMLDivElement, {
   onShapeMove?: (id: string, x: number, y: number) => void;
   onIconMove?: (id: string, x: number, y: number) => void;
   onIconResize?: (id: string, size: number) => void;
+  onIconDragStart?: (id: string, x: number, y: number) => void;
 
   onClearIconSelection?: () => void;
   onDeleteShape?: (id: string) => void;
@@ -1589,7 +1590,7 @@ const Artboard = React.forwardRef<HTMLDivElement, {
 
     // movers
     onPortraitMove, onPortraitScale, onDeletePortrait, onLogoMove, onHeadMove, onDetailsMove, onVenueMove, onSubtagMove, 
-    onBgMove, onHead2Move, onDetails2Move, onShapeMove, onBgScale, onIconMove, onIconResize, onDeleteIcon,
+    onBgMove, onHead2Move, onDetails2Move, onShapeMove, onBgScale, onIconMove, onIconResize, onIconDragStart, onDeleteIcon,
     portraitBoxW, portraitBoxH,
     emojis,
     onEmojiMove,
@@ -2888,6 +2889,7 @@ return (
         }}
         onPointerDown={(e) => {
           if (clickThrough) return;
+          p.onIconDragStart?.(ic.id, ic.x, ic.y);
           onSelectIcon?.(ic.id);
           beginDrag(
             e as any,
@@ -8173,8 +8175,8 @@ async function injectGoogleFontsForExport(hostEl: HTMLElement, families: string[
   setSelShapeId(prev => (prev === id ? null : prev));
 };
 
-  const [selIconId, setSelIconId] = useState<string | null>(null);
-  const [iconList, setIconList] = useState<Icon[]>([]);
+const [selIconId, setSelIconId] = useState<string | null>(null);
+const [iconList, setIconList] = useState<Icon[]>([]);
 
 
 
@@ -10970,6 +10972,13 @@ const portraitCanvas = React.useMemo(() => {
             const finalX = Number(el.dataset.sx || "0") + (dx / cw) * 100;
             const finalY = Number(el.dataset.sy || "0") + (dy / ch) * 100;
 
+            setLastAssetPos({
+              kind: "portrait",
+              id: p.id,
+              x: Number(el.dataset.sx || "0"),
+              y: Number(el.dataset.sy || "0"),
+            });
+
             useFlyerState.getState().updatePortrait(format, p.id, {
               x: finalX,
               y: finalY,
@@ -12438,6 +12447,12 @@ const [uiMode, setUiMode] = React.useState<"design" | "finish">("design");
 const [floatingEditorVisible, setFloatingEditorVisible] = React.useState(false);
 const [floatingAssetVisible, setFloatingAssetVisible] = React.useState(false);
 const [floatingBgVisible, setFloatingBgVisible] = React.useState(false);
+const [lastAssetPos, setLastAssetPos] = React.useState<{
+  kind: "icon" | "emoji" | "portrait";
+  id: string;
+  x: number;
+  y: number;
+} | null>(null);
 //const [isMobileView, setIsMobileView] = React.useState(false);
 const activeTextTarget = React.useMemo(() => {
   const byPanel = selectedPanel && ["headline", "head2", "details", "details2", "venue", "subtag"].includes(selectedPanel)
@@ -12634,6 +12649,10 @@ const activeAssetControls = React.useMemo(() => {
       scale: sel.scale ?? 1,
       opacity: sel.opacity ?? 1,
       locked: !!sel.locked,
+      showLabel: !!(sel as any).showLabel,
+      labelValue: String((sel as any).label ?? ""),
+      onLabel: (v: string) =>
+        useFlyerState.getState().updatePortrait(format, sel.id, { label: v }),
       onScale: (v: number) =>
         useFlyerState.getState().updatePortrait(format, sel.id, { scale: v }),
       onOpacity: (v: number) =>
@@ -12663,6 +12682,24 @@ const activeBgControls = React.useMemo(() => {
   };
 }, [selectedPanel, moveTarget, bgScale, bgBlur]);
 
+const undoAssetPosition = React.useCallback(() => {
+  if (!lastAssetPos) return;
+  if (lastAssetPos.kind === "icon") {
+    updateIcon(lastAssetPos.id, { x: lastAssetPos.x, y: lastAssetPos.y });
+  } else if (lastAssetPos.kind === "emoji") {
+    updateEmoji(format, lastAssetPos.id, {
+      x: lastAssetPos.x,
+      y: lastAssetPos.y,
+    });
+  } else if (lastAssetPos.kind === "portrait") {
+    updatePortrait(format, lastAssetPos.id, {
+      x: lastAssetPos.x,
+      y: lastAssetPos.y,
+    });
+  }
+  setLastAssetPos(null);
+}, [lastAssetPos, format, updateIcon, updateEmoji, updatePortrait]);
+
 const mobileControlsTabs = (
   <div className="lg:hidden flex items-center gap-2 px-4 py-2 bg-neutral-950/90 border-b border-neutral-800">
     <button
@@ -12687,12 +12724,26 @@ const mobileControlsTabs = (
     >
       Assets
     </button>
+    <button
+      type="button"
+      onClick={undoAssetPosition}
+      disabled={!lastAssetPos}
+      className={`px-3 py-1 rounded text-[11px] font-semibold border ${
+        lastAssetPos
+          ? "border-emerald-400 text-emerald-200 bg-emerald-500/10"
+          : "border-neutral-700 text-neutral-500 bg-neutral-900/60 cursor-not-allowed"
+      }`}
+      title="Undo last asset position"
+    >
+      Undo Pos
+    </button>
   </div>
 );
 
 React.useEffect(() => {
   if (activeTextControls) {
     setFloatingEditorVisible(true);
+    setFloatingAssetVisible(false);
   } else {
     setFloatingEditorVisible(false);
   }
@@ -12732,6 +12783,7 @@ React.useEffect(() => {
 React.useEffect(() => {
   if (activeBgControls) {
     setFloatingBgVisible(true);
+    setFloatingAssetVisible(false);
   } else {
     setFloatingBgVisible(false);
   }
@@ -13598,6 +13650,13 @@ const emojiCanvas = React.useMemo(() => {
 
     const finalPctX = startLeft + (dx / cw) * 100;
     const finalPctY = startTop + (dy / ch) * 100;
+
+    setLastAssetPos({
+      kind: "emoji",
+      id: eid,
+      x: startLeft,
+      y: startTop,
+    });
 
     // ✅ MOVE ONLY (no add). Use your existing move hook.
     onEmojiMove?.(eid, finalPctX, finalPctY);
@@ -15562,6 +15621,9 @@ style={{ top: STICKY_TOP }}
             selIconId={selIconId}
             onSelectIcon={handleSelectIcon}
             onIconMove={onIconMoveRaf}
+            onIconDragStart={(id, x, y) =>
+              setLastAssetPos({ kind: "icon", id, x, y })
+            }
             onEmojiMove={onEmojiMove}
             onIconResize={onIconResize}
             onDeleteIcon={deleteIcon}
@@ -15799,6 +15861,18 @@ style={{ top: STICKY_TOP }}
             />
           </div>
         </div>
+        {activeAssetControls.showLabel && (
+          <div className="mt-2">
+            <div className="text-[10px] text-neutral-400 mb-1">Label</div>
+            <input
+              value={activeAssetControls.labelValue || ""}
+              onChange={(e) => activeAssetControls.onLabel?.(e.target.value)}
+              className="w-full rounded-md bg-neutral-900 border border-neutral-700 text-[11px] px-2 py-1.5 text-white"
+              placeholder="Label"
+              disabled={activeAssetControls.locked}
+            />
+          </div>
+        )}
         <div className="mt-2 grid grid-cols-2 gap-2">
           <button
             type="button"
