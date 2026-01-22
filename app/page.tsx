@@ -2165,8 +2165,9 @@ const onMoveImmediate = (() => {
     const clientX = ev.clientX - rect.left;
     const clientY = ev.clientY - rect.top;
 
-    // 1. Throttle slightly
-    if (Math.abs(clientX - lastX) < 0.7 && Math.abs(clientY - lastY) < 0.7) return;
+    // 1. Throttle slightly (skip threshold for touch so drag feels 1:1)
+    const isTouch = ev.pointerType === "touch";
+    if (!isTouch && Math.abs(clientX - lastX) < 0.7 && Math.abs(clientY - lastY) < 0.7) return;
     lastX = clientX;
     lastY = clientY;
 
@@ -2638,6 +2639,7 @@ return (
         zIndex: 18,
         pointerEvents: 'auto',
         cursor: moveMode && moveTarget === 'shape' ? 'grab' : 'default',
+        touchAction: 'none',
       }}
     >
       {shapesProp.map((sh) => (
@@ -2877,6 +2879,7 @@ return (
           outlineOffset: 4,
           width: `${ic.size * 5.4}px`,
           height: `${ic.size * 5.4}px`,
+          touchAction: 'none',
         }}
         onPointerDown={(e) => {
           if (clickThrough) return;
@@ -13586,6 +13589,7 @@ const emojiCanvas = React.useMemo(() => {
     pointerEvents: locked ? "none" : "auto",
 
     borderRadius: 8,
+    touchAction: "none",
   }}
 >
   {/* THE EMOJI */}
