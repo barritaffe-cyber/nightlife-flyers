@@ -3308,6 +3308,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 
 
 {/* HEADLINE 2 (BEGIN) - FIXED SMOOTH DRAG */}
+{head2Enabled && (
 <div
   ref={(el) => {
     canvasRefs.headline2 = el;
@@ -3454,6 +3455,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     {renderWithDoubleBreaks(head2Text)}
   </div>
 </div>
+)}
 {/* HEADLINE 2 (END) */}
 
 
