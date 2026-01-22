@@ -8103,7 +8103,11 @@ React.useEffect(() => {
     if (!viewport.w || !viewport.h) return 1;
     const maxW = Math.max(320, viewport.w - 16);
     const maxH = Math.max(320, viewport.h - 220);
-    return Math.min(1, maxW / canvasSize.w, maxH / canvasSize.h);
+    const widthScale = maxW / canvasSize.w;
+    const heightScale = maxH / canvasSize.h;
+    return format === "story"
+      ? Math.min(1, widthScale)
+      : Math.min(1, widthScale, heightScale);
   }, [viewport.w, viewport.h, canvasSize.w, canvasSize.h]);
   const scaledCanvasW = Math.round(canvasSize.w * canvasScale);
   const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
@@ -10462,7 +10466,11 @@ async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
       webkitFilter: exportStyle.filter,
       backdropFilter: (exportStyle as any).backdropFilter,
       WebkitBackdropFilter: (exportStyle as any).backdropFilter || (exportStyle as any).WebkitBackdropFilter,
-      transform: exportStyle.transform,
+      transform: "none",
+      left: "0px",
+      top: "0px",
+      margin: "0",
+      position: "relative",
     };
 
     // 4️⃣ Render artboard with forced styles
