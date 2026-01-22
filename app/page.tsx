@@ -10523,7 +10523,18 @@ async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
     a.href = dataUrl;
     a.download = `nightlife_export_${stamp}.${format}`;
-    a.click();
+    a.rel = 'noopener';
+    const isIOS =
+      /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    if (isIOS) {
+      const win = window.open(dataUrl, '_blank');
+      if (!win) window.location.href = dataUrl;
+    } else {
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
     
   } catch (err) {
     (window as any).__HIDE_UI_EXPORT__ = false;
@@ -11457,7 +11468,18 @@ const doExport = async (exportType: 'png' | 'jpg') => {
   const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
   a.href = dataUrl;
   a.download = `nightlife_export_${stamp}.${exportType}`;
-  a.click();
+  a.rel = 'noopener';
+  const isIOS =
+    /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+  if (isIOS) {
+    const win = window.open(dataUrl, '_blank');
+    if (!win) window.location.href = dataUrl;
+  } else {
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
 };
 
 const exportPNG = async () => { await doExport('png'); };
@@ -12441,7 +12463,7 @@ const handleTemplateSelect = React.useCallback(
       setTemplateBase(JSON.parse(JSON.stringify(tpl)));
 
       // ✅ Startup load should be authoritative (same as gallery apply)
-      const startupFormat: Format = "square";
+      const startupFormat: Format = format;
       setFormat(startupFormat);
       applyTemplateFromGallery(tpl, { targetFormat: startupFormat });
     } catch (err) {
@@ -14008,7 +14030,7 @@ return (
               <img
                 src="/branding/nf-logo.png"
                 alt="Nightlife Flyers"
-                className="h-11 w-11 rounded-full shadow-[0_8px_28px_rgba(0,0,0,.45)]"
+                className="h-12 w-12 rounded-full shadow-[0_8px_28px_rgba(0,0,0,.45)]"
                 draggable={false}
               />
               <div className="text-sm opacity-90">Nightlife Flyers — Studio</div>
@@ -14060,7 +14082,7 @@ return (
               <img
                 src="/branding/nf-logo.png"
                 alt="Nightlife Flyers"
-                className="lg:hidden h-9 w-9 mx-2"
+                className="lg:hidden h-10 w-10 mx-2"
                 draggable={false}
               />
 
