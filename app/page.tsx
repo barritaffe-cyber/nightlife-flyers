@@ -2223,10 +2223,6 @@ const onMoveImmediate = (() => {
 })();
 
 function onMove(ev: PointerEvent) {
-  if (ev.pointerType === "touch") {
-    onMoveImmediate(ev);
-    return;
-  }
   scheduleDragFrame(onMoveImmediate, ev);
 }
 
@@ -12438,6 +12434,7 @@ const [mobileControlsTab, setMobileControlsTab] = React.useState<"design" | "ass
 const [uiMode, setUiMode] = React.useState<"design" | "finish">("design");
 const [floatingEditorVisible, setFloatingEditorVisible] = React.useState(false);
 const [floatingAssetVisible, setFloatingAssetVisible] = React.useState(false);
+const [floatingBgVisible, setFloatingBgVisible] = React.useState(false);
 //const [isMobileView, setIsMobileView] = React.useState(false);
 const activeTextTarget = React.useMemo(() => {
   const byPanel = selectedPanel && ["headline", "head2", "details", "details2", "venue", "subtag"].includes(selectedPanel)
@@ -12652,6 +12649,17 @@ const activeAssetControls = React.useMemo(() => {
   return null;
 }, [selectedEmojiId, selectedPortraitId, emojis, portraits, format]);
 
+const activeBgControls = React.useMemo(() => {
+  if (selectedPanel !== "background" && moveTarget !== "background") return null;
+  return {
+    label: "Background",
+    scale: bgScale,
+    blur: bgBlur,
+    onScale: (v: number) => setBgScale(v),
+    onBlur: (v: number) => setBgBlur(v),
+  };
+}, [selectedPanel, moveTarget, bgScale, bgBlur]);
+
 const mobileControlsTabs = (
   <div className="lg:hidden flex items-center gap-2 px-4 py-2 bg-neutral-950/90 border-b border-neutral-800">
     <button
@@ -12719,8 +12727,23 @@ React.useEffect(() => {
 }, [activeAssetControls]);
 
 React.useEffect(() => {
+  if (activeBgControls) {
+    setFloatingBgVisible(true);
+  } else {
+    setFloatingBgVisible(false);
+  }
+}, [activeBgControls]);
+
+React.useEffect(() => {
   if (!mobileControlsOpen) return;
   const onScroll = () => setFloatingAssetVisible(false);
+  window.addEventListener("scroll", onScroll, { passive: true });
+  return () => window.removeEventListener("scroll", onScroll);
+}, [mobileControlsOpen]);
+
+React.useEffect(() => {
+  if (!mobileControlsOpen) return;
+  const onScroll = () => setFloatingBgVisible(false);
   window.addEventListener("scroll", onScroll, { passive: true });
   return () => window.removeEventListener("scroll", onScroll);
 }, [mobileControlsOpen]);
@@ -15749,6 +15772,47 @@ style={{ top: STICKY_TOP }}
           >
             Delete
           </button>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {activeBgControls && floatingBgVisible && (
+    <div className="lg:hidden w-full flex justify-center px-3 pt-3">
+      <div
+        className="rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur px-3 py-2 shadow-[0_12px_30px_rgba(0,0,0,0.45)]"
+        style={{ width: scaledCanvasW, maxWidth: "100%" }}
+      >
+        <div className="flex items-center gap-2 text-[11px] font-semibold text-white">
+          <span className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</span>
+          <span className="text-neutral-300">•</span>
+          <span>{activeBgControls.label}</span>
+        </div>
+        <div className="mt-2 grid grid-cols-2 gap-3 items-center">
+          <div>
+            <div className="text-[10px] text-neutral-400 mb-1">Scale</div>
+            <input
+              type="range"
+              min={1}
+              max={5}
+              step={0.1}
+              value={Number(activeBgControls.scale || 1)}
+              onChange={(e) => activeBgControls.onScale(Number(e.target.value))}
+              className="w-full accent-fuchsia-500"
+            />
+          </div>
+          <div>
+            <div className="text-[10px] text-neutral-400 mb-1">Blur</div>
+            <input
+              type="range"
+              min={0}
+              max={20}
+              step={0.5}
+              value={Number(activeBgControls.blur || 0)}
+              onChange={(e) => activeBgControls.onBlur(Number(e.target.value))}
+              className="w-full accent-indigo-400"
+            />
+          </div>
         </div>
       </div>
     </div>
