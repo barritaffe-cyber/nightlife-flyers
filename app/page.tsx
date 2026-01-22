@@ -1530,7 +1530,7 @@ const Artboard = React.forwardRef<HTMLDivElement, {
   onShapeMove?: (id: string, x: number, y: number) => void;
   onIconMove?: (id: string, x: number, y: number) => void;
   onIconResize?: (id: string, size: number) => void;
-  onIconDragStart?: (id: string, x: number, y: number) => void;
+  onRecordMove?: (kind: any, x: number, y: number, id?: string) => void;
 
   onClearIconSelection?: () => void;
   onDeleteShape?: (id: string) => void;
@@ -1590,7 +1590,7 @@ const Artboard = React.forwardRef<HTMLDivElement, {
 
     // movers
     onPortraitMove, onPortraitScale, onDeletePortrait, onLogoMove, onHeadMove, onDetailsMove, onVenueMove, onSubtagMove, 
-    onBgMove, onHead2Move, onDetails2Move, onShapeMove, onBgScale, onIconMove, onIconResize, onIconDragStart, onDeleteIcon,
+    onBgMove, onHead2Move, onDetails2Move, onShapeMove, onBgScale, onIconMove, onIconResize, onRecordMove, onDeleteIcon,
     portraitBoxW, portraitBoxH,
     emojis,
     onEmojiMove,
@@ -2063,6 +2063,33 @@ function beginDrag(
 
   const elForOffset = node ?? (e.currentTarget as Element);
   const { offX, offY, wPct, hPct } = getOff(elForOffset);
+  if (onRecordMove) {
+    let startX = 0;
+    let startY = 0;
+    let shouldRecord = true;
+    switch (target) {
+      case "headline":
+        startX = headX; startY = headY; break;
+      case "headline2":
+        startX = head2X; startY = head2Y; break;
+      case "details":
+        startX = detailsX; startY = detailsY; break;
+      case "details2":
+        startX = details2X; startY = details2Y; break;
+      case "venue":
+        startX = venueX; startY = venueY; break;
+      case "subtag":
+        startX = subtagX; startY = subtagY; break;
+      case "logo":
+        startX = logoX; startY = logoY; break;
+      case "background":
+        startX = bgX; startY = bgY; break;
+      default:
+        shouldRecord = false;
+        break;
+    }
+    if (shouldRecord) onRecordMove(target, startX, startY, String(target));
+  }
 
   // 4. INIT DRAG REF
   drag.current = {
@@ -2447,6 +2474,8 @@ return (
 
         const store = useFlyerState.getState();
 
+        onRecordMove?.("background", bgX, bgY, "background");
+
         // ✅ PATCH: background interaction clears any active element halo immediately
         store.setSelectedPortraitId(null);
         store.setDragging(null);
@@ -2654,6 +2683,7 @@ return (
           onPointerDown={(e) => {
             if (isLockedFn?.('shape', sh.id)) return;
             onSelectShape?.(sh.id);
+            onRecordMove?.("shape", sh.x, sh.y, sh.id);
             beginDrag(
               e as unknown as React.PointerEvent,
               'shape',
@@ -2889,7 +2919,7 @@ return (
         }}
         onPointerDown={(e) => {
           if (clickThrough) return;
-          p.onIconDragStart?.(ic.id, ic.x, ic.y);
+          onRecordMove?.("icon", ic.x, ic.y, ic.id);
           onSelectIcon?.(ic.id);
           beginDrag(
             e as any,
@@ -10925,6 +10955,13 @@ const portraitCanvas = React.useMemo(() => {
             if (locked) return;
             if (!canDrag(p)) return;
 
+            setLastMovePos({
+              kind: "portrait",
+              id: p.id,
+              x: p.x,
+              y: p.y,
+            });
+
             const el = e.currentTarget as HTMLElement;
             try {
               el.setPointerCapture(e.pointerId);
@@ -10971,13 +11008,6 @@ const portraitCanvas = React.useMemo(() => {
 
             const finalX = Number(el.dataset.sx || "0") + (dx / cw) * 100;
             const finalY = Number(el.dataset.sy || "0") + (dy / ch) * 100;
-
-            setLastAssetPos({
-              kind: "portrait",
-              id: p.id,
-              x: Number(el.dataset.sx || "0"),
-              y: Number(el.dataset.sy || "0"),
-            });
 
             useFlyerState.getState().updatePortrait(format, p.id, {
               x: finalX,
@@ -12447,8 +12477,21 @@ const [uiMode, setUiMode] = React.useState<"design" | "finish">("design");
 const [floatingEditorVisible, setFloatingEditorVisible] = React.useState(false);
 const [floatingAssetVisible, setFloatingAssetVisible] = React.useState(false);
 const [floatingBgVisible, setFloatingBgVisible] = React.useState(false);
-const [lastAssetPos, setLastAssetPos] = React.useState<{
-  kind: "icon" | "emoji" | "portrait";
+const floatingAssetRef = React.useRef<HTMLDivElement | null>(null);
+const [lastMovePos, setLastMovePos] = React.useState<{
+  kind:
+    | "icon"
+    | "emoji"
+    | "portrait"
+    | "shape"
+    | "headline"
+    | "headline2"
+    | "details"
+    | "details2"
+    | "venue"
+    | "subtag"
+    | "logo"
+    | "background";
   id: string;
   x: number;
   y: number;
@@ -12683,25 +12726,99 @@ const activeBgControls = React.useMemo(() => {
 }, [selectedPanel, moveTarget, bgScale, bgBlur]);
 
 const undoAssetPosition = React.useCallback(() => {
-  if (!lastAssetPos) return;
-  if (lastAssetPos.kind === "icon") {
-    updateIcon(lastAssetPos.id, { x: lastAssetPos.x, y: lastAssetPos.y });
-  } else if (lastAssetPos.kind === "emoji") {
-    updateEmoji(format, lastAssetPos.id, {
-      x: lastAssetPos.x,
-      y: lastAssetPos.y,
-    });
-  } else if (lastAssetPos.kind === "portrait") {
-    updatePortrait(format, lastAssetPos.id, {
-      x: lastAssetPos.x,
-      y: lastAssetPos.y,
-    });
+  if (!lastMovePos) return;
+  switch (lastMovePos.kind) {
+    case "icon":
+      updateIcon(lastMovePos.id, { x: lastMovePos.x, y: lastMovePos.y });
+      break;
+    case "emoji":
+      updateEmoji(format, lastMovePos.id, {
+        x: lastMovePos.x,
+        y: lastMovePos.y,
+      });
+      break;
+    case "portrait":
+      updatePortrait(format, lastMovePos.id, {
+        x: lastMovePos.x,
+        y: lastMovePos.y,
+      });
+      break;
+    case "shape":
+      updateShape(lastMovePos.id, { x: lastMovePos.x, y: lastMovePos.y });
+      break;
+    case "headline":
+      setHeadX(lastMovePos.x);
+      setHeadY(lastMovePos.y);
+      break;
+    case "headline2":
+      setHead2X(lastMovePos.x);
+      setHead2Y(lastMovePos.y);
+      break;
+    case "details":
+      setDetailsX(lastMovePos.x);
+      setDetailsY(lastMovePos.y);
+      break;
+    case "details2":
+      setDetails2X(lastMovePos.x);
+      setDetails2Y(lastMovePos.y);
+      break;
+    case "venue":
+      setVenueX(lastMovePos.x);
+      setVenueY(lastMovePos.y);
+      break;
+    case "subtag":
+      setSubtagX(lastMovePos.x);
+      setSubtagY(lastMovePos.y);
+      break;
+    case "logo":
+      setLogoX(lastMovePos.x);
+      setLogoY(lastMovePos.y);
+      break;
+    case "background":
+      setBgX(lastMovePos.x);
+      setBgY(lastMovePos.y);
+      setBgPosX(lastMovePos.x);
+      setBgPosY(lastMovePos.y);
+      break;
   }
-  setLastAssetPos(null);
-}, [lastAssetPos, format, updateIcon, updateEmoji, updatePortrait]);
+  setLastMovePos(null);
+}, [
+  lastMovePos,
+  format,
+  updateIcon,
+  updateEmoji,
+  updatePortrait,
+  updateShape,
+  setHeadX,
+  setHeadY,
+  setHead2X,
+  setHead2Y,
+  setDetailsX,
+  setDetailsY,
+  setDetails2X,
+  setDetails2Y,
+  setVenueX,
+  setVenueY,
+  setSubtagX,
+  setSubtagY,
+  setLogoX,
+  setLogoY,
+  setBgX,
+  setBgY,
+  setBgPosX,
+  setBgPosY,
+]);
 
 const mobileControlsTabs = (
-  <div className="lg:hidden flex items-center gap-2 px-4 py-2 bg-neutral-950/90 border-b border-neutral-800">
+  <div
+    className="lg:hidden flex items-center gap-2 px-4 py-2 bg-neutral-950/90 border-b border-neutral-800"
+    onPointerDownCapture={(e) => {
+      if (floatingAssetRef.current && floatingAssetRef.current.contains(e.target as Node)) {
+        return;
+      }
+      setFloatingAssetVisible(false);
+    }}
+  >
     <button
       type="button"
       onClick={() => setMobileControlsTab("design")}
@@ -12727,15 +12844,15 @@ const mobileControlsTabs = (
     <button
       type="button"
       onClick={undoAssetPosition}
-      disabled={!lastAssetPos}
+      disabled={!lastMovePos}
       className={`px-3 py-1 rounded text-[11px] font-semibold border ${
-        lastAssetPos
+        lastMovePos
           ? "border-emerald-400 text-emerald-200 bg-emerald-500/10"
           : "border-neutral-700 text-neutral-500 bg-neutral-900/60 cursor-not-allowed"
       }`}
-      title="Undo last asset position"
+      title="Undo last position"
     >
-      Undo Pos
+      Undo Move
     </button>
   </div>
 );
@@ -12791,7 +12908,16 @@ React.useEffect(() => {
 
 React.useEffect(() => {
   if (!mobileControlsOpen) return;
-  const onScroll = () => setFloatingAssetVisible(false);
+  const onScroll = () => {
+    if (
+      typeof document !== "undefined" &&
+      floatingAssetRef.current &&
+      floatingAssetRef.current.contains(document.activeElement)
+    ) {
+      return;
+    }
+    setFloatingAssetVisible(false);
+  };
   window.addEventListener("scroll", onScroll, { passive: true });
   return () => window.removeEventListener("scroll", onScroll);
 }, [mobileControlsOpen]);
@@ -13586,6 +13712,13 @@ const emojiCanvas = React.useMemo(() => {
 
     const store = useFlyerState.getState();
 
+    setLastMovePos({
+      kind: "emoji",
+      id: em.id,
+      x: em.x,
+      y: em.y,
+    });
+
     // ✅ SAME AS FLARES: select + route FIRST
     store.setSelectedEmojiId(em.id);
     setSelectedEmojiId(em.id);
@@ -13650,13 +13783,6 @@ const emojiCanvas = React.useMemo(() => {
 
     const finalPctX = startLeft + (dx / cw) * 100;
     const finalPctY = startTop + (dy / ch) * 100;
-
-    setLastAssetPos({
-      kind: "emoji",
-      id: eid,
-      x: startLeft,
-      y: startTop,
-    });
 
     // ✅ MOVE ONLY (no add). Use your existing move hook.
     onEmojiMove?.(eid, finalPctX, finalPctY);
@@ -15621,9 +15747,10 @@ style={{ top: STICKY_TOP }}
             selIconId={selIconId}
             onSelectIcon={handleSelectIcon}
             onIconMove={onIconMoveRaf}
-            onIconDragStart={(id, x, y) =>
-              setLastAssetPos({ kind: "icon", id, x, y })
-            }
+            onRecordMove={(kind, x, y, id) => {
+              if (!id) return;
+              setLastMovePos({ kind, id, x, y });
+            }}
             onEmojiMove={onEmojiMove}
             onIconResize={onIconResize}
             onDeleteIcon={deleteIcon}
@@ -15827,6 +15954,7 @@ style={{ top: STICKY_TOP }}
       <div
         className="rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur px-3 py-2 shadow-[0_12px_30px_rgba(0,0,0,0.45)]"
         style={{ width: scaledCanvasW, maxWidth: "100%" }}
+        ref={floatingAssetRef}
       >
         <div className="flex items-center gap-2 text-[11px] font-semibold text-white">
           <span className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</span>
@@ -15867,6 +15995,7 @@ style={{ top: STICKY_TOP }}
             <input
               value={activeAssetControls.labelValue || ""}
               onChange={(e) => activeAssetControls.onLabel?.(e.target.value)}
+              onFocus={() => setFloatingAssetVisible(true)}
               className="w-full rounded-md bg-neutral-900 border border-neutral-700 text-[11px] px-2 py-1.5 text-white"
               placeholder="Label"
               disabled={activeAssetControls.locked}
