@@ -12483,7 +12483,7 @@ const handleTemplateSelect = React.useCallback(
 }, 1200);
 
   },
-  []
+  [format]
 );
 // === /STARTUP SCREEN ===
 
