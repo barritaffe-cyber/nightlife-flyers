@@ -14137,6 +14137,11 @@ style={{ top: STICKY_TOP }}
       return;
     }
 
+    if (active === "background") {
+      setBgPosX(0);
+      return;
+    }
+
     // Root must exist
     const root = canvasRefs.root;
     if (!root) {
@@ -14185,6 +14190,11 @@ style={{ top: STICKY_TOP }}
 
     if (!active) {
       alert("❌ Nothing selected");
+      return;
+    }
+
+    if (active === "background") {
+      setBgPosX(50);
       return;
     }
 
@@ -14238,6 +14248,11 @@ style={{ top: STICKY_TOP }}
 
     if (!active) {
       alert("❌ Nothing selected");
+      return;
+    }
+
+    if (active === "background") {
+      setBgPosX(100);
       return;
     }
 
@@ -14385,21 +14400,33 @@ style={{ top: STICKY_TOP }}
         <Chip
           small
           active={textStyles.headline[format].align === "left"}
-          onClick={() => setTextStyle("headline", format, { align: "left" })}
+          onClick={() => {
+            setTextStyle("headline", format, { align: "left" });
+            setHeadAlign("left");
+            setAlign("left");
+          }}
         >
           L
         </Chip>
         <Chip
           small
           active={textStyles.headline[format].align === "center"}
-          onClick={() => setTextStyle("headline", format, { align: "center" })}
+          onClick={() => {
+            setTextStyle("headline", format, { align: "center" });
+            setHeadAlign("center");
+            setAlign("center");
+          }}
         >
           C
         </Chip>
         <Chip
           small
           active={textStyles.headline[format].align === "right"}
-          onClick={() => setTextStyle("headline", format, { align: "right" })}
+          onClick={() => {
+            setTextStyle("headline", format, { align: "right" });
+            setHeadAlign("right");
+            setAlign("right");
+          }}
         >
           R
         </Chip>
@@ -14539,7 +14566,10 @@ style={{ top: STICKY_TOP }}
         <Chip
           small
           active={textStyles.headline2[format].align === "left"}
-          onClick={() => setTextStyle("headline2", format, { align: "left" })}
+          onClick={() => {
+            setTextStyle("headline2", format, { align: "left" });
+            setHead2Align("left");
+          }}
         >
           L
         </Chip>
@@ -14547,7 +14577,10 @@ style={{ top: STICKY_TOP }}
         <Chip
           small
           active={textStyles.headline2[format].align === "center"}
-          onClick={() => setTextStyle("headline2", format, { align: "center" })}
+          onClick={() => {
+            setTextStyle("headline2", format, { align: "center" });
+            setHead2Align("center");
+          }}
         >
           C
         </Chip>
@@ -14555,7 +14588,10 @@ style={{ top: STICKY_TOP }}
         <Chip
           small
           active={textStyles.headline2[format].align === "right"}
-          onClick={() => setTextStyle("headline2", format, { align: "right" })}
+          onClick={() => {
+            setTextStyle("headline2", format, { align: "right" });
+            setHead2Align("right");
+          }}
         >
           R
         </Chip>
@@ -14791,13 +14827,14 @@ style={{ top: STICKY_TOP }}
         </div>
 
         {/* ---------- SHADOW + STRENGTH ---------- */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-4 pt-3 border-t border-neutral-800">
-          <Chip small active={subtagUppercase} onClick={() => setSubtagUppercase((v) => !v)}>Upper</Chip>
-          <Chip small active={subtagBold} onClick={() => setSubtagBold((v) => !v)}>Bold</Chip>
-          <Chip small active={subtagItalic} onClick={() => setSubtagItalic((v) => !v)}>Italic</Chip>
-          <Chip small active={subtagShadow} onClick={() => setSubtagShadow(!subtagShadow)}>Shadow</Chip>
-
-          <div className="flex items-center gap-2 text-[11px] sm:ml-auto w-full sm:w-auto">
+        <div className="mt-4 pt-3 border-t border-neutral-800">
+          <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
+            <Chip small active={subtagUppercase} onClick={() => setSubtagUppercase((v) => !v)}>Upper</Chip>
+            <Chip small active={subtagBold} onClick={() => setSubtagBold((v) => !v)}>Bold</Chip>
+            <Chip small active={subtagItalic} onClick={() => setSubtagItalic((v) => !v)}>Italic</Chip>
+            <Chip small active={subtagShadow} onClick={() => setSubtagShadow(!subtagShadow)}>Shadow</Chip>
+          </div>
+          <div className="mt-2 flex items-center gap-2 text-[11px]">
             <span className="opacity-80">Strength</span>
             <div className="w-full sm:w-[110px]">
               <Stepper label="" value={subtagShadowStrength} setValue={setSubtagShadowStrength} min={0} max={5} step={0.1} />
@@ -14892,13 +14929,14 @@ style={{ top: STICKY_TOP }}
       </div>
 
       {/* ---------- FORMATTING + SHADOW ---------- */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-5 pt-3 border-t border-neutral-800">
-        <Chip small active={bodyUppercase} onClick={() => setBodyUppercase((v) => !v)}>Upper</Chip>
-        <Chip small active={bodyBold} onClick={() => setBodyBold((v) => !v)}>Bold</Chip>
-        <Chip small active={bodyItalic} onClick={() => setBodyItalic((v) => !v)}>Italic</Chip>
-        <Chip small active={detailsShadow} onClick={() => setDetailsShadow(!detailsShadow)}>Shadow</Chip>
-
-        <div className="flex items-center gap-2 sm:ml-auto w-full sm:w-auto">
+      <div className="mt-5 pt-3 border-t border-neutral-800">
+        <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
+          <Chip small active={bodyUppercase} onClick={() => setBodyUppercase((v) => !v)}>Upper</Chip>
+          <Chip small active={bodyBold} onClick={() => setBodyBold((v) => !v)}>Bold</Chip>
+          <Chip small active={bodyItalic} onClick={() => setBodyItalic((v) => !v)}>Italic</Chip>
+          <Chip small active={detailsShadow} onClick={() => setDetailsShadow(!detailsShadow)}>Shadow</Chip>
+        </div>
+        <div className="mt-2 flex items-center gap-2">
           <span className="text-[11px] opacity-80">Strength</span>
           <div className="w-full sm:w-[110px]">
             <Stepper value={detailsShadowStrength} setValue={setDetailsShadowStrength} min={0} max={5} step={0.1} />
@@ -14999,14 +15037,14 @@ style={{ top: STICKY_TOP }}
         </div>
 
         {/* ---------- FORMATTING + SHADOW ---------- */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-5 pt-3 border-t border-neutral-800">
-          <Chip small active={details2Uppercase} onClick={() => setDetails2Uppercase((v) => !v)}>Upper</Chip>
-          <Chip small active={details2Bold} onClick={() => setDetails2Bold((v) => !v)}>Bold</Chip>
-          <Chip small active={details2Italic} onClick={() => setDetails2Italic((v) => !v)}>Italic</Chip>
-
-          <Chip small active={details2Shadow} onClick={() => setDetails2Shadow(!details2Shadow)}>Shadow</Chip>
-
-          <div className="flex items-center gap-2 text-[11px] sm:ml-auto w-full sm:w-auto">
+        <div className="mt-5 pt-3 border-t border-neutral-800">
+          <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
+            <Chip small active={details2Uppercase} onClick={() => setDetails2Uppercase((v) => !v)}>Upper</Chip>
+            <Chip small active={details2Bold} onClick={() => setDetails2Bold((v) => !v)}>Bold</Chip>
+            <Chip small active={details2Italic} onClick={() => setDetails2Italic((v) => !v)}>Italic</Chip>
+            <Chip small active={details2Shadow} onClick={() => setDetails2Shadow(!details2Shadow)}>Shadow</Chip>
+          </div>
+          <div className="mt-2 flex items-center gap-2 text-[11px]">
             <span className="opacity-80">Strength</span>
             <div className="w-full sm:w-[110px]">
               <Stepper value={details2ShadowStrength} setValue={setDetails2ShadowStrength} min={0} max={5} step={0.1} />
@@ -15100,13 +15138,14 @@ style={{ top: STICKY_TOP }}
       </div>
 
       {/* ---------- FORMATTING + SHADOW ---------- */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-5 pt-3 border-t border-neutral-800">
-        <Chip small active={venueUppercase} onClick={() => setVenueUppercase((v) => !v)}>Upper</Chip>
-        <Chip small active={venueBold} onClick={() => setVenueBold((v) => !v)}>Bold</Chip>
-        <Chip small active={venueItalic} onClick={() => setVenueItalic((v) => !v)}>Italic</Chip>
-        <Chip small active={venueShadow} onClick={() => setVenueShadow(!venueShadow)}>Shadow</Chip>
-
-        <div className="flex items-center gap-2 text-[11px] sm:ml-auto w-full sm:w-auto">
+      <div className="mt-5 pt-3 border-t border-neutral-800">
+        <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
+          <Chip small active={venueUppercase} onClick={() => setVenueUppercase((v) => !v)}>Upper</Chip>
+          <Chip small active={venueBold} onClick={() => setVenueBold((v) => !v)}>Bold</Chip>
+          <Chip small active={venueItalic} onClick={() => setVenueItalic((v) => !v)}>Italic</Chip>
+          <Chip small active={venueShadow} onClick={() => setVenueShadow(!venueShadow)}>Shadow</Chip>
+        </div>
+        <div className="mt-2 flex items-center gap-2 text-[11px]">
           <span className="opacity-80">Strength</span>
           <div className="w-full sm:w-[110px]">
             <Stepper value={venueShadowStrength} setValue={setVenueShadowStrength} min={0} max={5} step={0.1} />
