@@ -12621,7 +12621,7 @@ const activeAssetControls = React.useMemo(() => {
     const list = portraits?.[format] || [];
     const sel = list.find((p: any) => p.id === selectedPortraitId);
     if (!sel) return null;
-    const isLogo = String(sel.id || "").startsWith("logo_") || !!sel.isLogo;
+    const isLogo = String(sel.id || "").startsWith("logo_") || !!(sel as any).isLogo;
     if (!sel.isFlare && !sel.isSticker && !isLogo) return null;
     return {
       label: sel.isFlare ? "Flare" : sel.isSticker ? "Graphic" : "3D Text",
