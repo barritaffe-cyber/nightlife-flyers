@@ -14451,7 +14451,16 @@ style={{ top: STICKY_TOP }}
         <Stepper label="Shadow" value={headShadowStrength} setValue={setHeadShadowStrength} min={0} max={5} step={0.1} />
         <div className="text-[11px] flex flex-col gap-1 items-end">
           <span className="opacity-80">Color</span>
-          <ColorDot value={textFx.color} onChange={(c) => setTextFx((prev) => ({ ...prev, color: c }))} />
+          <ColorDot
+            value={textFx.color}
+            onChange={(c) =>
+              setTextFx((prev) => {
+                const next = { ...prev, color: c };
+                setSessionValue(format, "textFx", next);
+                return next;
+              })
+            }
+          />
         </div>
       </div>
     </div>
@@ -14636,7 +14645,14 @@ style={{ top: STICKY_TOP }}
       <div className="flex items-end mt-2 flex-wrap w-full">
         <div className="ml-auto flex flex-wrap items-center gap-2 justify-end text-[11px]">
           <span className="opacity-80">Fill</span>
-          <ColorDot title="Fill color" value={head2Color} onChange={setHead2Color} />
+          <ColorDot
+            title="Fill color"
+            value={head2Color}
+            onChange={(c) => {
+              setHead2Color(c);
+              setSessionValue(format, "head2Color", c);
+            }}
+          />
         </div>
       </div>
     </div>
@@ -14718,9 +14734,23 @@ style={{ top: STICKY_TOP }}
 
           <div className="flex items-end justify-end text-[11px] gap-1">
             <span className="opacity-80">Pill</span>
-            <ColorDot value={subtagBgColor} onChange={setSubtagBgColor} title="Pill color" />
+            <ColorDot
+              value={subtagBgColor}
+              onChange={(c) => {
+                setSubtagBgColor(c);
+                setSessionValue(format, "subtagBgColor", c);
+              }}
+              title="Pill color"
+            />
             <span className="opacity-80 ml-2">Text</span>
-            <ColorDot value={subtagTextColor} onChange={setSubtagTextColor} title="Text color" />
+            <ColorDot
+              value={subtagTextColor}
+              onChange={(c) => {
+                setSubtagTextColor(c);
+                setSessionValue(format, "subtagTextColor", c);
+              }}
+              title="Text color"
+            />
           </div>
         </div>
 
@@ -14807,7 +14837,14 @@ style={{ top: STICKY_TOP }}
       <div className="flex justify-end mt-3">
         <div className="flex items-center gap-2 text-[11px]">
           <span className="opacity-80">Color</span>
-          <ColorDot value={bodyColor} onChange={setBodyColor} />
+          <ColorDot
+            value={bodyColor}
+            onChange={(c) => {
+              setBodyColor(c);
+              setSessionValue(format, "bodyColor", c);
+              setSessionValue(format, "detailsColor", c);
+            }}
+          />
         </div>
       </div>
 
@@ -14890,7 +14927,13 @@ style={{ top: STICKY_TOP }}
         <div className="flex justify-between items-center mt-3">
           <div className="flex items-center gap-2 text-[11px]">
             <span className="opacity-80">Color</span>
-            <ColorDot value={details2Color} onChange={setDetails2Color} />
+            <ColorDot
+              value={details2Color}
+              onChange={(c) => {
+                setDetails2Color(c);
+                setSessionValue(format, "details2Color", c);
+              }}
+            />
           </div>
 
           <div className="flex items-center gap-2 text-[11px]">
@@ -15003,7 +15046,13 @@ style={{ top: STICKY_TOP }}
       <div className="flex justify-end mt-3">
         <div className="flex items-center gap-2 text-[11px]">
           <span className="opacity-80">Color</span>
-          <ColorDot value={venueColor} onChange={setVenueColor} />
+          <ColorDot
+            value={venueColor}
+            onChange={(c) => {
+              setVenueColor(c);
+              setSessionValue(format, "venueColor", c);
+            }}
+          />
         </div>
       </div>
 

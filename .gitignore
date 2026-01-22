@@ -9,3 +9,5 @@ pnpm-debug.log*
 dist
 out
 tsconfig.tsbuildinfo
+.vercel
+.env*.local
