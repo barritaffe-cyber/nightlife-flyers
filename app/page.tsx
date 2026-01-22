@@ -10973,7 +10973,7 @@ const portraitCanvas = React.useMemo(() => {
             if (locked) return;
             if (!canDrag(p)) return;
 
-            setLastMovePos({
+            recordMove({
               kind: "portrait",
               id: p.id,
               x: p.x,
@@ -12431,6 +12431,15 @@ const applySessionForFormat = (fmt: Format) => {
 // === STARTUP SCREEN (CHOOSE A VIBE) ===
 const [showStartup, setShowStartup] = React.useState(true);
 const [loadingStartup, setLoadingStartup] = React.useState(false);
+const didInitCleanRef = React.useRef(false);
+
+React.useEffect(() => {
+  if (didInitCleanRef.current) return;
+  didInitCleanRef.current = true;
+  const store = useFlyerState.getState();
+  store.setSession({ square: {}, story: {} });
+  store.setSessionDirty({ square: false, story: false });
+}, []);
 
 
 // keep this new state near the other useStates at the top of your component
@@ -12464,6 +12473,9 @@ const handleTemplateSelect = React.useCallback(
 
       // ✅ Startup load should be authoritative (same as gallery apply)
       const startupFormat: Format = format;
+      const store = useFlyerState.getState();
+      store.setSession((prev) => ({ ...prev, square: {}, story: {} }));
+      store.setSessionDirty((prev) => ({ ...prev, square: false, story: false }));
       setFormat(startupFormat);
       applyTemplateFromGallery(tpl, { targetFormat: startupFormat });
     } catch (err) {
@@ -12508,7 +12520,7 @@ const [floatingAssetVisible, setFloatingAssetVisible] = React.useState(false);
 const [floatingBgVisible, setFloatingBgVisible] = React.useState(false);
 const floatingAssetRef = React.useRef<HTMLDivElement | null>(null);
 const assetFocusLockRef = React.useRef(false);
-const [lastMovePos, setLastMovePos] = React.useState<{
+const [lastMoveStack, setLastMoveStack] = React.useState<{
   kind:
     | "icon"
     | "emoji"
@@ -12525,7 +12537,7 @@ const [lastMovePos, setLastMovePos] = React.useState<{
   id: string;
   x: number;
   y: number;
-} | null>(null);
+}[]>([]);
 //const [isMobileView, setIsMobileView] = React.useState(false);
 const activeTextTarget = React.useMemo(() => {
   const byPanel = selectedPanel && ["headline", "head2", "details", "details2", "venue", "subtag"].includes(selectedPanel)
@@ -12755,8 +12767,36 @@ const activeBgControls = React.useMemo(() => {
   };
 }, [selectedPanel, moveTarget, bgScale, bgBlur]);
 
+const recordMove = React.useCallback(
+  (move: {
+    kind:
+      | "icon"
+      | "emoji"
+      | "portrait"
+      | "shape"
+      | "headline"
+      | "headline2"
+      | "details"
+      | "details2"
+      | "venue"
+      | "subtag"
+      | "logo"
+      | "background";
+    id: string;
+    x: number;
+    y: number;
+  }) => {
+    setLastMoveStack((prev) => {
+      const next = [...prev, move];
+      return next.length > 3 ? next.slice(-3) : next;
+    });
+  },
+  []
+);
+
 const undoAssetPosition = React.useCallback(() => {
-  if (!lastMovePos) return;
+  if (!lastMoveStack.length) return;
+  const lastMovePos = lastMoveStack[lastMoveStack.length - 1];
   switch (lastMovePos.kind) {
     case "icon":
       updateIcon(lastMovePos.id, { x: lastMovePos.x, y: lastMovePos.y });
@@ -12811,9 +12851,9 @@ const undoAssetPosition = React.useCallback(() => {
       setBgPosY(lastMovePos.y);
       break;
   }
-  setLastMovePos(null);
+  setLastMoveStack((prev) => prev.slice(0, -1));
 }, [
-  lastMovePos,
+  lastMoveStack,
   format,
   updateIcon,
   updateEmoji,
@@ -12874,9 +12914,9 @@ const mobileControlsTabs = (
     <button
       type="button"
       onClick={undoAssetPosition}
-      disabled={!lastMovePos}
+      disabled={!lastMoveStack.length}
       className={`px-3 py-1 rounded text-[11px] font-semibold border ${
-        lastMovePos
+        lastMoveStack.length
           ? "border-emerald-400 text-emerald-200 bg-emerald-500/10"
           : "border-neutral-700 text-neutral-500 bg-neutral-900/60 cursor-not-allowed"
       }`}
@@ -13743,7 +13783,7 @@ const emojiCanvas = React.useMemo(() => {
 
     const store = useFlyerState.getState();
 
-    setLastMovePos({
+    recordMove({
       kind: "emoji",
       id: em.id,
       x: em.x,
@@ -13955,6 +13995,9 @@ return (
 
               <button
                 onClick={() => {
+                  const store = useFlyerState.getState();
+                  store.setSession({ square: {}, story: {} });
+                  store.setSessionDirty({ square: false, story: false });
                   setHasSavedDesign(false);
                   setShowStartup(true);
                 }}
@@ -14044,6 +14087,19 @@ return (
               >
                 Pricing
               </Link>
+              <button
+                type="button"
+                onClick={undoAssetPosition}
+                disabled={!lastMoveStack.length}
+                className={`ml-1 text-[12px] px-2 py-[2px] rounded-md border hidden lg:inline-flex ${
+                  lastMoveStack.length
+                    ? "border-emerald-400/60 text-emerald-200 bg-emerald-500/10 hover:bg-emerald-500/20"
+                    : "border-neutral-700 text-neutral-500 bg-neutral-900/60 cursor-not-allowed"
+                }`}
+                aria-label="Undo last move"
+              >
+                Undo
+              </button>
             </div>
 
 {/* === FORMAT TOGGLE & VIEW SETTINGS === */}
@@ -14598,6 +14654,20 @@ style={{ top: STICKY_TOP }}
 
 {/* === /PATCH === */}
 
+{/* UI: CINEMATIC HEADLINE (BEGIN) */}
+<div className="relative rounded-xl border border-neutral-700 transition">
+  <div className="p-3">
+    <div className="text-[12px] font-semibold text-neutral-200">Cinematic Headline</div>
+    <button
+      onClick={() => setCinematicModalOpen(true)}
+      className="w-full mt-3 py-2 rounded-lg bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:from-indigo-500 hover:to-fuchsia-500 text-white text-xs font-bold shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95"
+    >
+      <span>✨</span> Create Cinematic 3D
+    </button>
+  </div>
+</div>
+{/* UI: CINEMATIC HEADLINE (END) */}
+
 {/* UI: HEADLINE (BEGIN) */}
 <div
   className={
@@ -14729,14 +14799,6 @@ style={{ top: STICKY_TOP }}
         <Chip small active={headShadow} onClick={() => setHeadShadow(!headShadow)}>Shadow</Chip>
         <Chip small active={headBehindPortrait} onClick={() => setHeadBehindPortrait((v) => !v)}>Behind Portrait</Chip>
       </div>
-
-      {/* 🔥 CINEMATIC CTA */}
-      <button
-        onClick={() => setCinematicModalOpen(true)}
-        className="w-full mt-3 py-2 rounded-lg bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:from-indigo-500 hover:to-fuchsia-500 text-white text-xs font-bold shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95"
-      >
-        <span>✨</span> Create Cinematic 3D
-      </button>
 
       {/* ROTATION & SHADOW */}
       <div className="mt-2 grid grid-cols-3 gap-3 w-full items-end">
@@ -15791,7 +15853,7 @@ style={{ top: STICKY_TOP }}
             onIconMove={onIconMoveRaf}
             onRecordMove={(kind, x, y, id) => {
               if (!id) return;
-              setLastMovePos({ kind, id, x, y });
+              recordMove({ kind, id, x, y });
             }}
             onEmojiMove={onEmojiMove}
             onIconResize={onIconResize}
