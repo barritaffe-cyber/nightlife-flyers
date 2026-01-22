@@ -7694,7 +7694,9 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
     ].join(' ');
   }, [exp, contrast, saturation, warmth, hue, tint, gamma, vibrance]);
 
-  const [isMobileView, setIsMobileView] = React.useState(false);
+const [isMobileView, setIsMobileView] = React.useState(
+  typeof window !== "undefined" && window.innerWidth < 1024
+);
 
   const masterFilterCss = React.useMemo(() => {
     const base = masterFilter;
