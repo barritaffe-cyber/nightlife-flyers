@@ -3169,6 +3169,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
   // 2. DRAG START
   onPointerDown={(e) => {
     e.preventDefault(); e.stopPropagation();
+    onRecordMove?.("headline", headX, headY, "headline");
     const el = e.currentTarget as HTMLElement;
     try { el.setPointerCapture(e.pointerId); } catch {}
 
@@ -3358,6 +3359,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
   // 2. DRAG START
   onPointerDown={(e) => {
     e.preventDefault(); e.stopPropagation();
+    onRecordMove?.("headline2", head2X, head2Y, "headline2");
     const el = e.currentTarget as HTMLElement;
     try { el.setPointerCapture(e.pointerId); } catch {}
 
@@ -3510,6 +3512,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
   // 2. DRAG START
   onPointerDown={(e) => {
     e.preventDefault(); e.stopPropagation();
+    onRecordMove?.("details", detailsX, detailsY, "details");
     const el = e.currentTarget as HTMLElement;
     try { el.setPointerCapture(e.pointerId); } catch {}
 
@@ -3657,6 +3660,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
   // 2. DRAG START
   onPointerDown={(e) => {
     e.preventDefault(); e.stopPropagation();
+    onRecordMove?.("details2", details2X, details2Y, "details2");
     const el = e.currentTarget as HTMLElement;
     try { el.setPointerCapture(e.pointerId); } catch {}
 
@@ -3801,6 +3805,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
   // 2. DRAG START
   onPointerDown={(e) => {
     e.preventDefault(); e.stopPropagation();
+    onRecordMove?.("venue", venueX, venueY, "venue");
     const el = e.currentTarget as HTMLElement;
     try { el.setPointerCapture(e.pointerId); } catch {}
 
@@ -3947,6 +3952,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
   // 2. DRAG START
   onPointerDown={(e) => {
     e.preventDefault(); e.stopPropagation();
+    onRecordMove?.("subtag", subtagX, subtagY, "subtag");
     const el = e.currentTarget as HTMLElement;
     try { el.setPointerCapture(e.pointerId); } catch {}
 
@@ -12478,6 +12484,7 @@ const [floatingEditorVisible, setFloatingEditorVisible] = React.useState(false);
 const [floatingAssetVisible, setFloatingAssetVisible] = React.useState(false);
 const [floatingBgVisible, setFloatingBgVisible] = React.useState(false);
 const floatingAssetRef = React.useRef<HTMLDivElement | null>(null);
+const assetFocusLockRef = React.useRef(false);
 const [lastMovePos, setLastMovePos] = React.useState<{
   kind:
     | "icon"
@@ -12911,8 +12918,9 @@ React.useEffect(() => {
   const onScroll = () => {
     if (
       typeof document !== "undefined" &&
-      floatingAssetRef.current &&
-      floatingAssetRef.current.contains(document.activeElement)
+      (assetFocusLockRef.current ||
+        (floatingAssetRef.current &&
+          floatingAssetRef.current.contains(document.activeElement)))
     ) {
       return;
     }
@@ -15955,6 +15963,10 @@ style={{ top: STICKY_TOP }}
         className="rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur px-3 py-2 shadow-[0_12px_30px_rgba(0,0,0,0.45)]"
         style={{ width: scaledCanvasW, maxWidth: "100%" }}
         ref={floatingAssetRef}
+        onPointerDownCapture={(e) => {
+          assetFocusLockRef.current = true;
+          e.stopPropagation();
+        }}
       >
         <div className="flex items-center gap-2 text-[11px] font-semibold text-white">
           <span className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</span>
@@ -15996,6 +16008,9 @@ style={{ top: STICKY_TOP }}
               value={activeAssetControls.labelValue || ""}
               onChange={(e) => activeAssetControls.onLabel?.(e.target.value)}
               onFocus={() => setFloatingAssetVisible(true)}
+              onBlur={() => {
+                assetFocusLockRef.current = false;
+              }}
               className="w-full rounded-md bg-neutral-900 border border-neutral-700 text-[11px] px-2 py-1.5 text-white"
               placeholder="Label"
               disabled={activeAssetControls.locked}
