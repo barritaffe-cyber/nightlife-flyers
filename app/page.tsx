@@ -13782,23 +13782,12 @@ return (
         <div className="mx-auto max-w-7xl px-4 py-2 lg:h-14 grid grid-cols-1 lg:grid-cols-[clamp(260px,22vw,360px)_minmax(560px,1fr)_clamp(260px,22vw,360px)] gap-2 lg:gap-4 items-center">
           {/* LEFT: Brand */}
              <div className="hidden lg:flex items-center gap-3">
-              <svg
-                width="28"
-                height="28"
-                viewBox="0 0 64 64"
-                className="rounded-[10px] shadow-[0_8px_28px_rgba(0,0,0,.45)]"
-              >
-                <defs>
-                  <linearGradient id="lg" x1="0" y1="1" x2="1" y2="0">
-                    <stop offset="0" stopColor="#6366F1"/><stop offset="1" stopColor="#EC4899"/>
-                  </linearGradient>
-                  <linearGradient id="lg2" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0" stopColor="#22D3EE"/><stop offset="1" stopColor="#A78BFA"/>
-                  </linearGradient>
-                </defs>
-                <rect x="0" y="0" width="64" height="64" rx="14" fill="url(#lg)"/>
-                <path d="M16 40 L28 20 L36 32 L48 20" fill="none" stroke="url(#lg2)" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              <img
+                src="/branding/nf-logo.png"
+                alt="Nightlife Flyers"
+                className="h-8 w-8 rounded-full shadow-[0_8px_28px_rgba(0,0,0,.45)]"
+                draggable={false}
+              />
               <div className="text-sm opacity-90">Nightlife Flyers — Studio</div>
 
               {/* ALWAYS-SHOW PRICING LINK */}
@@ -13845,7 +13834,12 @@ return (
                 Story
               </Chip>
 
-              <span className="opacity-20 mx-1">|</span>
+              <img
+                src="/branding/nf-logo.png"
+                alt="Nightlife Flyers"
+                className="lg:hidden h-6 w-6 mx-2"
+                draggable={false}
+              />
 
               {/* ✅ GUIDES TOGGLE */}
               <Chip 
