@@ -1933,6 +1933,7 @@ const drag = useRef<{
   shapeId?: string;
   offX: number;
   offY: number;
+  anchor?: "center" | "topleft";
   wPct?: number;
   hPct?: number;
   curX?: number;
@@ -2048,9 +2049,12 @@ function beginDrag(
   const getOff = (el: Element | null) => {
     if (!el) return { offX: 0, offY: 0, wPct: 0, hPct: 0 };
     const r = el.getBoundingClientRect();
+    const isCenterAnchor = target === "icon";
+    const anchorLeft = isCenterAnchor ? (r.left - rect.left + r.width / 2) : (r.left - rect.left);
+    const anchorTop = isCenterAnchor ? (r.top - rect.top + r.height / 2) : (r.top - rect.top);
     return {
-      offX: pointerX - (r.left - rect.left),
-      offY: pointerY - (r.top - rect.top),
+      offX: pointerX - anchorLeft,
+      offY: pointerY - anchorTop,
       wPct: (r.width / rect.width) * 100,
       hPct: (r.height / rect.height) * 100,
     };
@@ -2065,6 +2069,7 @@ function beginDrag(
     shapeId,
     offX, // Mouse position relative to element start
     offY,
+    anchor: target === "icon" ? "center" : "topleft",
     wPct,
     hPct,
     baseX: bgPosX, // Snapshot current positions
@@ -2218,6 +2223,10 @@ const onMoveImmediate = (() => {
 })();
 
 function onMove(ev: PointerEvent) {
+  if (ev.pointerType === "touch") {
+    onMoveImmediate(ev);
+    return;
+  }
   scheduleDragFrame(onMoveImmediate, ev);
 }
 
