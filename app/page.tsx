@@ -10469,6 +10469,7 @@ async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
     const pngData = await htmlToImage.toPng(exportRoot, {
       cacheBust: true,
       backgroundColor: '#000',
+      pixelRatio: exportScale,
       style: forcedStyle, // ✅ Injects grading into the renderer
       filter: (node: HTMLElement) => {
         const el = node as HTMLElement;
@@ -14007,7 +14008,7 @@ return (
               <img
                 src="/branding/nf-logo.png"
                 alt="Nightlife Flyers"
-                className="h-9 w-9 rounded-full shadow-[0_8px_28px_rgba(0,0,0,.45)]"
+                className="h-11 w-11 rounded-full shadow-[0_8px_28px_rgba(0,0,0,.45)]"
                 draggable={false}
               />
               <div className="text-sm opacity-90">Nightlife Flyers — Studio</div>
@@ -14059,7 +14060,7 @@ return (
               <img
                 src="/branding/nf-logo.png"
                 alt="Nightlife Flyers"
-                className="lg:hidden h-7 w-7 mx-2"
+                className="lg:hidden h-9 w-9 mx-2"
                 draggable={false}
               />
 
