@@ -1531,6 +1531,7 @@ const Artboard = React.forwardRef<HTMLDivElement, {
   onIconMove?: (id: string, x: number, y: number) => void;
   onIconResize?: (id: string, size: number) => void;
   onRecordMove?: (kind: any, x: number, y: number, id?: string) => void;
+  isMobileView?: boolean;
 
   onClearIconSelection?: () => void;
   onDeleteShape?: (id: string) => void;
@@ -1594,6 +1595,7 @@ const Artboard = React.forwardRef<HTMLDivElement, {
     portraitBoxW, portraitBoxH,
     emojis,
     onEmojiMove,
+    isMobileView,
 
     /** ✅ alias shapes prop to a local name that won’t collide with any state */
     shapes: shapesProp = [],
@@ -2402,7 +2404,7 @@ return (
     width: size.w,
     height: size.h,
     background: `linear-gradient(180deg, ${palette.bgFrom}, ${palette.bgTo})`,
-    touchAction: "none",
+    touchAction: isMobileView ? "pan-y" : "none",
     isolation: "isolate",
     contain: "layout paint",
     backfaceVisibility: "hidden",
@@ -2444,7 +2446,7 @@ return (
 
         pointerEvents: "auto",
         cursor: moveTarget === "background" ? "grabbing" : "grab",
-        touchAction: "none",
+        touchAction: isMobileView && moveTarget !== "background" ? "pan-y" : "none",
         filter: `hue-rotate(${hue}deg) contrast(${1 + clarity * 0.2}) saturate(${1 + clarity * 0.4}) blur(${bgBlur}px)`,
       }}
 
@@ -12906,7 +12908,7 @@ const mobileControlsTabs = (
           : "border-neutral-700 text-neutral-300 bg-neutral-900/60"
       }`}
     >
-      Design
+      Text
     </button>
     <button
       type="button"
@@ -12917,7 +12919,7 @@ const mobileControlsTabs = (
           : "border-neutral-700 text-neutral-300 bg-neutral-900/60"
       }`}
     >
-      Assets
+      Design
     </button>
     <button
       type="button"
@@ -14275,29 +14277,28 @@ style={{ top: STICKY_TOP }}
            {/* === GETTING STARTED — REPLACEMENT CONTENT === */}
             <div className="space-y-3 text-[13px] text-neutral-100">
               <div className="text-[12px] text-neutral-300">
-                Quick map of the app: click anything on the canvas to edit it, then use the left
-                panel for fine controls and the top bar for export.
+                Think of it like a flyer on a desk — tap what you want to change, then tweak it in the panel.
+                You can’t break anything, just keep adjusting until it feels right.
               </div>
 
               <ol className="list-decimal list-inside space-y-2">
                 <li>
-                  <b>Pick a base</b> — Open <b>Starter Templates</b> for a full layout you can edit.
+                  <b>Start with a vibe</b> — Pick a template and use it as your base.
                 </li>
                 <li>
-                  <b>Background</b> — Open <b>Background</b> (or tap empty canvas) to upload or AI-generate,
-                  then use the floating controls to scale/blur.
+                  <b>Set the scene</b> — Background → upload your image or generate one.
                 </li>
                 <li>
-                  <b>Edit text</b> — Tap any text on the canvas to open its controls (Headline, Details, Venue, Subtag).
+                  <b>Tap to edit</b> — Tap any text block to edit it (Headline, Details, Venue, Subtag).
                 </li>
                 <li>
-                  <b>Add assets</b> — Go to <b>Library</b> for graphics, flares, emojis, and logos.
+                  <b>Add flavor</b> — Library has graphics, flares, emojis, and logos.
                 </li>
                 <li>
-                  <b>Move & align</b> — Use <b>Move</b>, <b>Snap</b>, and <b>Guides</b> for placement.
+                  <b>Place things cleanly</b> — Use Move, Snap, and Guides.
                 </li>
                 <li>
-                  <b>Export</b> — Top bar: PNG/JPG at 2x/4x, or save project JSON.
+                  <b>Export when it looks right</b> — Top bar: PNG/JPG at 2x/4x.
                 </li>
               </ol>
 
@@ -15984,6 +15985,7 @@ style={{ top: STICKY_TOP }}
             onDeleteShape={deleteShape}
             onClearIconSelection={() => setSelIconId(null)}
             onBgScale={setBgScale}
+            isMobileView={isMobileView}
           />
           
           {/* 🔥 FIXED: Elements moved INSIDE motion.div so they fade out */}
@@ -16007,7 +16009,7 @@ style={{ top: STICKY_TOP }}
         <div className="flex items-center gap-2 text-[11px] font-semibold text-white">
           <span className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</span>
           <span className="text-neutral-300">•</span>
-          <span>{activeTextControls.label}</span>
+          <span>{activeTextControls.label === "Details 2" ? "More Details" : activeTextControls.label}</span>
         </div>
         <div className="mt-2 grid grid-cols-[minmax(120px,1fr)_80px] gap-2 items-center">
           <select
@@ -16090,7 +16092,14 @@ style={{ top: STICKY_TOP }}
           </div>
         </div>
         {activeAssetControls.showLabel && (
-          <div className="mt-2">
+          <div
+            className="mt-2"
+            onPointerDownCapture={(e) => {
+              assetFocusLockRef.current = true;
+              setFloatingAssetVisible(true);
+              e.stopPropagation();
+            }}
+          >
             <div className="text-[10px] text-neutral-400 mb-1">Label</div>
             <input
               value={activeAssetControls.labelValue || ""}
@@ -18737,12 +18746,12 @@ titleClassName={
                 <label className="text-[10px] uppercase tracking-wider text-neutral-500 font-bold">
                   Or Upload Reference
                 </label>
-                <label className="mt-2 flex flex-col items-center justify-center w-full h-14 rounded border border-dashed border-neutral-700 bg-black/20 hover:bg-black/30 cursor-pointer text-[11px] text-neutral-400">
+                <label className="relative mt-2 flex flex-col items-center justify-center w-full h-14 rounded border border-dashed border-neutral-700 bg-black/20 hover:bg-black/30 cursor-pointer text-[11px] text-neutral-400">
                   <span>Click to upload a reference image</span>
                   <input
                     type="file"
                     accept="image/*"
-                    className="hidden"
+                    className="absolute inset-0 opacity-0 cursor-pointer"
                     onChange={(e) => {
                       const f = e.target.files?.[0];
                       if (!f) return;
