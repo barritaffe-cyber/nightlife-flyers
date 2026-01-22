@@ -13009,24 +13009,8 @@ React.useEffect(() => {
 }, [mobileControlsOpen]);
 
 React.useEffect(() => {
-  const saved = localStorage.getItem("nf:lastDesign");
-  if (saved) setHasSavedDesign(true);
+  setHasSavedDesign(false);
 }, []);
-
-React.useEffect(() => {
-  try {
-    const design = {
-      format,
-      headline,
-      details,
-      venue,
-      subtag,
-    };
-    localStorage.setItem("nf:lastDesign", JSON.stringify(design));
-  } catch (err) {
-
-  }
-}, [format, headline, details, venue, subtag]);
 /* ===== AUTOSAVE: SMART SAVE/LOAD (END) ===== */
 
 // =========================================================
