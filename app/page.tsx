@@ -11893,12 +11893,12 @@ const applyTemplate = React.useCallback(
 
     // 2) MERGE
     const merged: Partial<TemplateBase> = opts?.initialLoad
-      ? { ...variant }
+      ? { ...variant, ...existing }
       : { ...existing, ...variant };
 
     // 3) SESSION: initialLoad should be authoritative and non-dirty
     if (opts?.initialLoad) {
-      store.setSession((prev) => ({ ...prev, [fmt]: { ...variant } }));
+      store.setSession((prev) => ({ ...prev, [fmt]: { ...merged } }));
       store.setSessionDirty((prev) => ({ ...prev, [fmt]: false }));
     } else {
       store.setSession((prev) => ({ ...prev, [fmt]: merged }));
