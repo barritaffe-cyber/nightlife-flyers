@@ -15295,6 +15295,8 @@ style={{ top: STICKY_TOP }}
         top: 0,
         transform: `translateX(-50%) scale(${canvasScale})`,
         transformOrigin: "top center",
+        filter: isMobileView ? masterFilter : undefined,
+        WebkitFilter: isMobileView ? masterFilter : undefined,
       }}
       onMouseDownCapture={(e) => {
         if (suppressCloseRef.current) return;
