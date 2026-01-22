@@ -14204,25 +14204,29 @@ style={{ top: STICKY_TOP }}
            {/* === GETTING STARTED — REPLACEMENT CONTENT === */}
             <div className="space-y-3 text-[13px] text-neutral-100">
               <div className="text-[12px] text-neutral-300">
-                Build a full flyer in minutes: choose a template, generate or upload a background,
-                then style text and add media layers.
+                Quick map of the app: click anything on the canvas to edit it, then use the left
+                panel for fine controls and the top bar for export.
               </div>
 
               <ol className="list-decimal list-inside space-y-2">
                 <li>
-                  <b>Start with a template</b> — Open <b>Starter Templates</b> to load a full layout.
+                  <b>Pick a base</b> — Open <b>Starter Templates</b> for a full layout you can edit.
                 </li>
                 <li>
-                  <b>Background</b> — Use <b>AI Background</b> or <b>Upload</b> your own image.
+                  <b>Background</b> — Open <b>Background</b> (or tap empty canvas) to upload or AI-generate,
+                  then use the floating controls to scale/blur.
                 </li>
                 <li>
-                  <b>Subject + blend</b> — Add a portrait or use <b>Magic Blend</b> to fuse subject + scene.
+                  <b>Edit text</b> — Tap any text on the canvas to open its controls (Headline, Details, Venue, Subtag).
                 </li>
                 <li>
-                  <b>Details + accents</b> — Edit text, then add flares/graphics/emojis in <b>Library</b>.
+                  <b>Add assets</b> — Go to <b>Library</b> for graphics, flares, emojis, and logos.
                 </li>
                 <li>
-                  <b>Export or Save</b> — Top bar: PNG/JPG at 2x/4x, or save the project JSON.
+                  <b>Move & align</b> — Use <b>Move</b>, <b>Snap</b>, and <b>Guides</b> for placement.
+                </li>
+                <li>
+                  <b>Export</b> — Top bar: PNG/JPG at 2x/4x, or save project JSON.
                 </li>
               </ol>
 
@@ -14230,18 +14234,25 @@ style={{ top: STICKY_TOP }}
                 <Chip small onClick={() => setSelectedPanel("template")} title="Open starter templates">
                   Open templates
                 </Chip>
+                <Chip small onClick={() => setSelectedPanel("background")} title="Open background controls">
+                  Background
+                </Chip>
                 <Chip small onClick={quickGenerate} title="Generate a background now">
                   Generate background
                 </Chip>
                 <Chip small onClick={triggerUpload} title="Upload your own background">
                   Upload background
                 </Chip>
+                <Chip small onClick={() => setSelectedPanel("icons")} title="Open Library">
+                  Open Library
+                </Chip>
                 <Chip small onClick={() => setSelectedPanel("magic_blend")} title="Open Magic Blend">
-                  Open Magic Blend
+                  Magic Blend
                 </Chip>
               </div>
 
               <div className="grid gap-1 text-[12px] text-neutral-400">
+                <div>• Tap any element to focus it; its panel opens automatically.</div>
                 <div>• Use <b>Move</b> to pick a target, then drag on canvas.</div>
                 <div>• Turn <b>Snap</b> and <b>Guides</b> on for clean alignment.</div>
                 <div>• Lock items once placed to avoid accidental moves.</div>
