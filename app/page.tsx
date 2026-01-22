@@ -10880,6 +10880,8 @@ const portraitCanvas = React.useMemo(() => {
         ? `drop-shadow(0 ${shadowOffset}px ${shadowBlur}px rgba(0,0,0,${shadowAlpha}))`
         : "none";
     const unlocking = unlockingIds.includes(p.id);
+    const labelScale = Number(p.scale ?? 1);
+    const labelTop = Math.max(60, Math.min(90, 50 + 35 * labelScale));
 
     const triggerUnlock = () => {
       if (!locked) return;
@@ -11029,7 +11031,7 @@ const portraitCanvas = React.useMemo(() => {
               style={{
                 position: "absolute",
                 left: "50%",
-                top: "85%",
+                top: `${labelTop}%`,
                 transform: "translate(-50%, -6px)",
                 padding: "2px 6px",
                 borderRadius: 999,
@@ -17255,6 +17257,23 @@ titleClassName={
                 iconColor: value,
               });
             }}
+          />
+        </div>
+      )}
+      {(sel as any).showLabel && (
+        <div className="mb-3">
+          <label className="block text-[11px] text-neutral-300 mb-1">
+            Label
+          </label>
+          <input
+            value={String((sel as any).label ?? "")}
+            onChange={(e) =>
+              useFlyerState.getState().updatePortrait(format, sel.id, {
+                label: e.target.value,
+              })
+            }
+            className="w-full rounded-md bg-neutral-900 border border-neutral-700 px-2 py-1.5 text-[11px] text-white"
+            placeholder="Label"
           />
         </div>
       )}
