@@ -10882,6 +10882,7 @@ const portraitCanvas = React.useMemo(() => {
     const unlocking = unlockingIds.includes(p.id);
     const labelScale = Number(p.scale ?? 1);
     const labelTop = Math.max(60, Math.min(90, 50 + 35 * labelScale));
+    const labelGap = 8;
 
     const triggerUnlock = () => {
       if (!locked) return;
@@ -11032,7 +11033,7 @@ const portraitCanvas = React.useMemo(() => {
                 position: "absolute",
                 left: "50%",
                 top: `${labelTop}%`,
-                transform: "translate(-50%, -6px)",
+                transform: `translate(-50%, ${labelGap}px)`,
                 padding: "2px 6px",
                 borderRadius: 999,
                 fontSize: 10,
