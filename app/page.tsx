@@ -445,28 +445,18 @@ type ColorDotProps = {
 };
 
 const ColorDot: React.FC<ColorDotProps> = ({ value, onChange, title, disabled }) => {
-  const inputRef = React.useRef<HTMLInputElement | null>(null);
-
-  // Open the native color picker immediately on click
-  const openPicker = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (disabled) return;
-    inputRef.current?.click();
-  };
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value);
   };
 
   return (
-    <span className="inline-flex items-center">
+    <span
+      className="inline-flex items-center"
+      style={{ position: 'relative', width: 16, height: 16 }}
+    >
       {/* Visible dot */}
-      <button
-        type="button"
+      <span
         title={title || 'Pick color'}
-        onClick={openPicker}
-        disabled={!!disabled}
         style={{
           width: 16,
           height: 16,
@@ -475,29 +465,29 @@ const ColorDot: React.FC<ColorDotProps> = ({ value, onChange, title, disabled })
           boxShadow: '0 1px 2px rgba(0,0,0,0.35)',
           background: value || '#ffffff',
           cursor: disabled ? 'not-allowed' : 'pointer',
-          outline: 'none',
+          display: 'inline-block',
         }}
         className="align-middle"
       />
 
-      {/* Hidden native color input (invoked programmatically) */}
+      {/* Native color input overlaid for mobile tap support */}
       <input
-        ref={inputRef}
         type="color"
         value={value || '#ffffff'}
         onChange={handleChange}
+        disabled={!!disabled}
+        title={title || 'Pick color'}
         style={{
           position: 'absolute',
+          inset: 0,
           opacity: 0,
-          pointerEvents: 'none',
-          width: 0,
-          height: 0,
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          width: 16,
+          height: 16,
           padding: 0,
           margin: 0,
           border: 0,
         }}
-        tabIndex={-1}
-        aria-hidden="true"
       />
     </span>
   );
