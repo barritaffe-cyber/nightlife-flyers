@@ -13775,7 +13775,7 @@ return (
               <img
                 src="/branding/nf-logo.png"
                 alt="Nightlife Flyers"
-                className="h-8 w-8 rounded-full shadow-[0_8px_28px_rgba(0,0,0,.45)]"
+                className="h-9 w-9 rounded-full shadow-[0_8px_28px_rgba(0,0,0,.45)]"
                 draggable={false}
               />
               <div className="text-sm opacity-90">Nightlife Flyers — Studio</div>
@@ -13827,7 +13827,7 @@ return (
               <img
                 src="/branding/nf-logo.png"
                 alt="Nightlife Flyers"
-                className="lg:hidden h-6 w-6 mx-2"
+                className="lg:hidden h-7 w-7 mx-2"
                 draggable={false}
               />
 
