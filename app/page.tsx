@@ -8095,6 +8095,14 @@ React.useEffect(() => {
   /* export */
   const [exportType, setExportType] = useState<'png'|'jpg'>('png');
   const [exportScale, setExportScale] = useState(2); // allow control
+  const HISTORY_LIMIT = 10;
+  const historyRef = React.useRef<{
+    undo: string[];
+    redo: string[];
+    last: string | null;
+  }>({ undo: [], redo: [], last: null });
+  const historyPauseRef = React.useRef(false);
+  const historyDebounceRef = React.useRef<number | null>(null);
   const [designName, setDesignName] = useState('');
   const [hideUiForExport, setHideUiForExport] = useState<boolean>(false);
   const [viewport, setViewport] = React.useState({ w: 0, h: 0 });
@@ -10255,6 +10263,129 @@ function exportDesignJSON(): string {
 
   return JSON.stringify({ v: 1, state: designState }, null, 2);
 }
+
+function buildHistorySnapshot(): string {
+  const state: Record<string, unknown> = {
+    // core
+    format,
+
+    // headline
+    headline, headlineFamily, align, lineHeight, textColWidth,
+    headSizeAuto, headManualPx, headMaxPx, textFx, tallHeadline,
+    headX, headY, headRotate, headAlign,
+
+    // details (main)
+    details, bodyFamily, bodyColor, bodySize, bodyUppercase, bodyBold,
+    bodyItalic, bodyUnderline, bodyTracking, detailsLineHeight,
+    detailsAlign, detailsX, detailsY, detailsRotate, detailsFamily,
+
+    // venue
+    venue, venueFamily, venueColor, venueSize, venueAlign,
+    venueLineHeight, venueX, venueY, venueRotate,
+
+    // subtag
+    subtagEnabled, subtag, subtagFamily, subtagBgColor, subtagTextColor,
+    subtagAlpha, subtagUppercase, subtagBold, subtagItalic, subtagUnderline,
+    subtagSize, subtagX, subtagY, subtagRotate, subtagAlign,
+
+    // headline 2 (custom)
+    headline2Enabled, head2, head2Family, head2Align, head2LineHeight,
+    head2ColWidth, head2Fx, head2Alpha, head2SizePx, head2X, head2Y, head2Rotate,
+
+    // details 2 (more)
+    details2Enabled, details2,
+    details2LineHeight, details2Align, details2X, details2Y, details2Rotate,
+    details2Size, details2Color,
+
+    // background & FX
+    bgUrl, bgUploadUrl, hue, haze, grade, leak, vignette, bgPosX, bgPosY, bgScale, clarity,
+
+    // portrait
+    portraitUrl, portraitX, portraitY, portraitScale, portraitLocked, portraitSlots,
+
+    // logo
+    logoUrl, logoX, logoY, logoScale, logoRotate,
+    logoSlots,
+
+    // icons & shapes
+    iconList, shapes,
+
+    // store-backed layers
+    portraits, emojis,
+
+    // type tweaks
+    opticalMargin, leadTrackDelta, lastTrackDelta, kerningFix, headBehindPortrait,
+
+    // generation + palette
+    palette, variety, genStyle, genPrompt,
+  };
+
+  return JSON.stringify({ v: 1, state });
+}
+
+const historySnapshot = React.useMemo(() => buildHistorySnapshot(), [
+  format,
+  headline, headlineFamily, align, lineHeight, textColWidth,
+  headSizeAuto, headManualPx, headMaxPx, textFx, tallHeadline,
+  headX, headY, headRotate, headAlign,
+  details, bodyFamily, bodyColor, bodySize, bodyUppercase, bodyBold,
+  bodyItalic, bodyUnderline, bodyTracking, detailsLineHeight,
+  detailsAlign, detailsX, detailsY, detailsRotate, detailsFamily,
+  venue, venueFamily, venueColor, venueSize, venueAlign,
+  venueLineHeight, venueX, venueY, venueRotate,
+  subtagEnabled, subtag, subtagFamily, subtagBgColor, subtagTextColor,
+  subtagAlpha, subtagUppercase, subtagBold, subtagItalic, subtagUnderline,
+  subtagSize, subtagX, subtagY, subtagRotate, subtagAlign,
+  headline2Enabled, head2, head2Family, head2Align, head2LineHeight,
+  head2ColWidth, head2Fx, head2Alpha, head2SizePx, head2X, head2Y, head2Rotate,
+  details2Enabled, details2,
+  details2LineHeight, details2Align, details2X, details2Y, details2Rotate,
+  details2Size, details2Color,
+  bgUrl, bgUploadUrl, hue, haze, grade, leak, vignette, bgPosX, bgPosY, bgScale, clarity,
+  portraitUrl, portraitX, portraitY, portraitScale, portraitLocked, portraitSlots,
+  logoUrl, logoX, logoY, logoScale, logoRotate,
+  logoSlots,
+  iconList, shapes,
+  portraits, emojis,
+  opticalMargin, leadTrackDelta, lastTrackDelta, kerningFix, headBehindPortrait,
+  palette, variety, genStyle, genPrompt,
+]);
+
+React.useEffect(() => {
+  if (!historyRef.current.last) {
+    historyRef.current.last = historySnapshot;
+  }
+}, [historySnapshot]);
+
+React.useEffect(() => {
+  if (historyPauseRef.current) return;
+  if (isLiveDragging) return;
+  if (historyRef.current.last === historySnapshot) return;
+
+  if (historyDebounceRef.current) {
+    window.clearTimeout(historyDebounceRef.current);
+  }
+
+  historyDebounceRef.current = window.setTimeout(() => {
+    if (historyPauseRef.current) return;
+    const ref = historyRef.current;
+    if (ref.last === historySnapshot) return;
+    if (ref.last) {
+      ref.undo.push(ref.last);
+      if (ref.undo.length > HISTORY_LIMIT) {
+        ref.undo = ref.undo.slice(-HISTORY_LIMIT);
+      }
+    }
+    ref.last = historySnapshot;
+    ref.redo = [];
+  }, 300);
+
+  return () => {
+    if (historyDebounceRef.current) {
+      window.clearTimeout(historyDebounceRef.current);
+    }
+  };
+}, [historySnapshot, isLiveDragging]);
 //const [selectedPortraitId, setSelectedPortraitId] = useState<string | null>(null);
 
 /* ========= IS_RESCUE: ICON SLOTS (BEGIN) ========= */
@@ -11723,9 +11854,17 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
   };
 
  // ✅ LOAD FUNCTION (Updates UI + Global Store)
-  const importDesignJSON = (json: string) => {
+  const importDesignJSON = (
+    json: string,
+    opts?: {
+      preservePanel?: boolean;
+      skipTemplateOpen?: boolean;
+    }
+  ) => {
     // 1. Stop loading spinner
     setLoadingStartup(false);
+    const store = useFlyerState.getState();
+    const prevPanel = opts?.preservePanel ? store.selectedPanel : null;
 
     // ⚡️ HELPER: prevents crashing if a value is missing in the JSON
     // We define it here so it's available for the rest of the function
@@ -11880,8 +12019,6 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
 
       // Restore Zustand Objects (Portraits/Emojis)
       // Restore Zustand Objects ONLY if importDesign() did NOT already do it
-      const store = useFlyerState.getState();
-
       if (!store.importDesign) {
         if (data.portraits) {
           store.setPortraits("square", data.portraits.square || []);
@@ -11909,8 +12046,11 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       // 7. Finish
       // ✅ only auto-open Templates if NO panel is currently selected
   // (prevents "re-opening" after the user manually closes it)
-  if (useFlyerState.getState().selectedPanel == null) {
-    useFlyerState.getState().setSelectedPanel("template");
+  if (!opts?.skipTemplateOpen && store.selectedPanel == null) {
+    store.setSelectedPanel("template");
+  }
+  if (opts?.preservePanel) {
+    store.setSelectedPanel(prevPanel ?? null);
   }
 
     } catch (err) {
@@ -11919,6 +12059,77 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
     }
   };
 
+
+// 🧹 Clear large cached items (backgrounds, portraits, etc.)
+const applyHistorySnapshot = React.useCallback(
+  (snapshot: string) => {
+    const store = useFlyerState.getState();
+    const prevPanel = store.selectedPanel;
+    historyPauseRef.current = true;
+    importDesignJSON(snapshot, { preservePanel: true, skipTemplateOpen: true });
+    if (prevPanel !== null) {
+      store.setSelectedPanel(prevPanel);
+    }
+    requestAnimationFrame(() => {
+      historyPauseRef.current = false;
+    });
+  },
+  [importDesignJSON]
+);
+
+const undoHistory = React.useCallback(() => {
+  const ref = historyRef.current;
+  if (!ref.last || ref.undo.length === 0) return;
+  const current = ref.last;
+  const prev = ref.undo.pop() as string;
+  ref.redo.push(current);
+  ref.last = prev;
+  applyHistorySnapshot(prev);
+}, [applyHistorySnapshot]);
+
+const redoHistory = React.useCallback(() => {
+  const ref = historyRef.current;
+  if (!ref.last || ref.redo.length === 0) return;
+  const current = ref.last;
+  const next = ref.redo.pop() as string;
+  ref.undo.push(current);
+  if (ref.undo.length > HISTORY_LIMIT) {
+    ref.undo = ref.undo.slice(-HISTORY_LIMIT);
+  }
+  ref.last = next;
+  applyHistorySnapshot(next);
+}, [applyHistorySnapshot, HISTORY_LIMIT]);
+
+React.useEffect(() => {
+  const onKey = (e: KeyboardEvent) => {
+    const target = e.target as HTMLElement | null;
+    if (
+      target &&
+      (target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "SELECT" ||
+        target.isContentEditable)
+    ) {
+      return;
+    }
+
+    const isMod = e.metaKey || e.ctrlKey;
+    if (!isMod) return;
+
+    const key = e.key.toLowerCase();
+    if (key !== "z") return;
+
+    e.preventDefault();
+    if (e.shiftKey) {
+      redoHistory();
+    } else {
+      undoHistory();
+    }
+  };
+
+  window.addEventListener("keydown", onKey);
+  return () => window.removeEventListener("keydown", onKey);
+}, [undoHistory, redoHistory]);
 
 // 🧹 Clear large cached items (backgrounds, portraits, etc.)
 const clearHeavyStorage = () => {
