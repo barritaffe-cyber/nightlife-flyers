@@ -7836,8 +7836,17 @@ const clearSelection = (e?: any) => {
       const el = e.target as HTMLElement | null;
       if (!el) return;
       
-      // If clicking inside the portrait/canvas area, don't clear
-      if (el.closest('[data-portrait-area="true"]')) return;
+      const isUiClick =
+        el.closest(".panel") ||
+        el.closest("aside") ||
+        el.closest("button") ||
+        el.closest("input") ||
+        el.closest("select") ||
+        el.closest("textarea") ||
+        el.closest(".fixed") ||
+        el.closest('[data-portrait-area="true"]') ||
+        el.closest('[data-floating-controls="asset"]');
+      if (isUiClick) return;
       
       clearSelection(e); 
     };
@@ -16054,6 +16063,7 @@ style={{ top: STICKY_TOP }}
         className="rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur px-3 py-2 shadow-[0_12px_30px_rgba(0,0,0,0.45)]"
         style={{ width: scaledCanvasW, maxWidth: "100%" }}
         ref={floatingAssetRef}
+        data-floating-controls="asset"
         onPointerDownCapture={(e) => {
           assetFocusLockRef.current = true;
           e.stopPropagation();
