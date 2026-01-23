@@ -5,9 +5,15 @@ export const runtime = "nodejs";
 const SAM_ENDPOINT =
   process.env.REPLICATE_SAM_ENDPOINT ||
   "https://api.replicate.com/v1/models/meta/sam-2/predictions";
+const SAM_VERSION = process.env.REPLICATE_SAM_VERSION;
 const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN;
 
-async function runReplicate(endpoint: string, token: string, input: any) {
+async function runReplicate(
+  endpoint: string,
+  token: string,
+  input: any,
+  version?: string
+) {
   const res = await fetch(endpoint, {
     method: "POST",
     headers: {
@@ -15,7 +21,7 @@ async function runReplicate(endpoint: string, token: string, input: any) {
       Authorization: `Bearer ${token}`,
       Prefer: "wait",
     },
-    body: JSON.stringify({ input }),
+    body: JSON.stringify(version ? { version, input } : { input }),
   });
 
   const raw = await res.text();
@@ -56,9 +62,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ elements: [], error: "Missing REPLICATE_API_TOKEN" });
     }
 
-    const output = await runReplicate(SAM_ENDPOINT, REPLICATE_TOKEN, {
-      image,
-    });
+    const version =
+      SAM_ENDPOINT.includes("/models/") ? undefined : SAM_VERSION;
+    if (!SAM_ENDPOINT.includes("/models/") && !version) {
+      return NextResponse.json(
+        { elements: [], error: "Missing REPLICATE_SAM_VERSION" },
+        { status: 200 }
+      );
+    }
+    const output = await runReplicate(
+      SAM_ENDPOINT,
+      REPLICATE_TOKEN,
+      { image },
+      version
+    );
 
     const masks = Array.isArray(output)
       ? output

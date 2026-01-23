@@ -5,9 +5,15 @@ export const runtime = "nodejs";
 const INPAINT_ENDPOINT =
   process.env.REPLICATE_INPAINT_ENDPOINT ||
   "https://api.replicate.com/v1/models/stability-ai/sdxl-inpainting/predictions";
+const INPAINT_VERSION = process.env.REPLICATE_INPAINT_VERSION;
 const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN;
 
-async function runReplicate(endpoint: string, token: string, input: any) {
+async function runReplicate(
+  endpoint: string,
+  token: string,
+  input: any,
+  version?: string
+) {
   const res = await fetch(endpoint, {
     method: "POST",
     headers: {
@@ -15,7 +21,7 @@ async function runReplicate(endpoint: string, token: string, input: any) {
       Authorization: `Bearer ${token}`,
       Prefer: "wait",
     },
-    body: JSON.stringify({ input }),
+    body: JSON.stringify(version ? { version, input } : { input }),
   });
 
   const raw = await res.text();
@@ -67,14 +73,28 @@ export async function POST(req: Request) {
       );
     }
 
-    const output = await runReplicate(INPAINT_ENDPOINT, REPLICATE_TOKEN, {
-      image,
-      mask,
-      prompt,
-      num_outputs: count,
-      output_format: "png",
-      seed,
-    });
+    const version =
+      INPAINT_ENDPOINT.includes("/models/") ? undefined : INPAINT_VERSION;
+    if (!INPAINT_ENDPOINT.includes("/models/") && !version) {
+      return NextResponse.json(
+        { variants: [], error: "Missing REPLICATE_INPAINT_VERSION" },
+        { status: 200 }
+      );
+    }
+
+    const output = await runReplicate(
+      INPAINT_ENDPOINT,
+      REPLICATE_TOKEN,
+      {
+        image,
+        mask,
+        prompt,
+        num_outputs: count,
+        output_format: "png",
+        seed,
+      },
+      version
+    );
 
     const variants = Array.isArray(output)
       ? output
