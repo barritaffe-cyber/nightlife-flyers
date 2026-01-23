@@ -7698,7 +7698,19 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
   const [bgY, setBgY] = useState(50);
   const [bgPosX, setBgPosX] = useState(50);
   const [bgPosY, setBgPosY] = useState(50);
-  const [bgBlur, setBgBlur] = useState(0);
+const [bgBlur, setBgBlur] = useState(0);
+const [bgEditPrompt, setBgEditPrompt] = useState("");
+const [bgEditMode, setBgEditMode] = useState<"auto" | "box">("auto");
+const [bgEditMasks, setBgEditMasks] = useState<
+  { id: string; maskUrl: string }[]
+>([]);
+const [bgEditSelectedMaskId, setBgEditSelectedMaskId] = useState<string | null>(null);
+const [bgEditBox, setBgEditBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+const [bgEditVariants, setBgEditVariants] = useState<string[]>([]);
+const [bgEditLoading, setBgEditLoading] = useState(false);
+const [bgEditError, setBgEditError] = useState<string>("");
+const bgEditImageRef = useRef<HTMLImageElement | null>(null);
+const bgEditBoxRef = useRef<{ x: number; y: number } | null>(null);
   const [textureOpacity, setTextureOpacity] = useState(0);
 
   /* master grade (applies to whole poster) */
@@ -8755,6 +8767,103 @@ const generateBackground = async (opts: GenOpts = {}) => {
     }
   } finally {
     setGenLoading(false);
+  }
+};
+
+const buildBgBoxMask = (
+  naturalW: number,
+  naturalH: number,
+  box: { x: number; y: number; w: number; h: number }
+) => {
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(naturalW));
+  c.height = Math.max(1, Math.round(naturalH));
+  const ctx = c.getContext("2d");
+  if (!ctx) return null;
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, c.width, c.height);
+  ctx.fillStyle = "#fff";
+  const x = Math.max(0, Math.round(box.x * c.width));
+  const y = Math.max(0, Math.round(box.y * c.height));
+  const w = Math.max(1, Math.round(box.w * c.width));
+  const h = Math.max(1, Math.round(box.h * c.height));
+  ctx.fillRect(x, y, w, h);
+  return c.toDataURL("image/png");
+};
+
+const fetchBgElements = async () => {
+  const bgSrc = bgUploadUrl || bgUrl;
+  if (!bgSrc) return;
+  setBgEditLoading(true);
+  setBgEditError("");
+  try {
+    const res = await fetch("/api/bg-elements", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: bgSrc }),
+    });
+    const data = await res.json();
+    const masks = Array.isArray(data?.elements) ? data.elements : [];
+    setBgEditMasks(
+      masks.map((m: any, idx: number) => ({
+        id: String(m.id || idx),
+        maskUrl: String(m.maskUrl || m),
+      }))
+    );
+    setBgEditSelectedMaskId(null);
+  } catch (err: any) {
+    setBgEditError(String(err?.message || err || "Failed to detect elements."));
+  } finally {
+    setBgEditLoading(false);
+  }
+};
+
+const runBgEdit = async () => {
+  const bgSrc = bgUploadUrl || bgUrl;
+  if (!bgSrc) return;
+  if (!bgEditPrompt.trim()) {
+    setBgEditError("Add a short edit prompt.");
+    return;
+  }
+
+  let mask: string | null = null;
+  if (bgEditMode === "auto") {
+    const selected = bgEditMasks.find((m) => m.id === bgEditSelectedMaskId);
+    mask = selected?.maskUrl || null;
+  } else if (bgEditMode === "box" && bgEditBox && bgEditImageRef.current) {
+    mask = buildBgBoxMask(
+      bgEditImageRef.current.naturalWidth,
+      bgEditImageRef.current.naturalHeight,
+      bgEditBox
+    );
+  }
+
+  if (!mask) {
+    setBgEditError("Select an element or draw a box.");
+    return;
+  }
+
+  setBgEditLoading(true);
+  setBgEditError("");
+  try {
+    const res = await fetch("/api/bg-edit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        image: bgSrc,
+        mask,
+        prompt: bgEditPrompt.trim(),
+        seed,
+        count: 3,
+      }),
+    });
+    const data = await res.json();
+    const variants = Array.isArray(data?.variants) ? data.variants : [];
+    setBgEditVariants(variants.slice(0, 3));
+  } catch (err: any) {
+    setBgEditError(String(err?.message || err || "Edit failed."));
+  } finally {
+    setBgEditLoading(false);
   }
 };
 
@@ -17738,14 +17847,92 @@ style={{ top: STICKY_TOP }}
 
     {(bgUploadUrl || bgUrl) ? (
       <div className="space-y-2">
-        <div className="aspect-square w-full overflow-hidden rounded-lg border border-neutral-700 bg-neutral-900/60">
+        <div className="aspect-square w-full overflow-hidden rounded-lg border border-neutral-700 bg-neutral-900/60 relative">
           <img
+            ref={bgEditImageRef}
             src={bgUploadUrl || bgUrl!}
             alt="Background preview"
             className="w-full h-full object-cover"
             draggable={false}
           />
+          {bgEditMode === "auto" && bgEditSelectedMaskId && (
+            <img
+              src={
+                bgEditMasks.find((m) => m.id === bgEditSelectedMaskId)?.maskUrl ||
+                ""
+              }
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-60 pointer-events-none"
+            />
+          )}
+          {bgEditMode === "box" && (
+            <div
+              className="absolute inset-0 cursor-crosshair"
+              onPointerDown={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / rect.width;
+                const y = (e.clientY - rect.top) / rect.height;
+                bgEditBoxRef.current = { x, y };
+                setBgEditBox({ x, y, w: 0, h: 0 });
+                e.currentTarget.setPointerCapture(e.pointerId);
+              }}
+              onPointerMove={(e) => {
+                if (!bgEditBoxRef.current) return;
+                const rect = e.currentTarget.getBoundingClientRect();
+                const cx = (e.clientX - rect.left) / rect.width;
+                const cy = (e.clientY - rect.top) / rect.height;
+                const start = bgEditBoxRef.current;
+                const x = Math.max(0, Math.min(start.x, cx));
+                const y = Math.max(0, Math.min(start.y, cy));
+                const w = Math.min(1, Math.abs(cx - start.x));
+                const h = Math.min(1, Math.abs(cy - start.y));
+                setBgEditBox({ x, y, w, h });
+              }}
+              onPointerUp={(e) => {
+                bgEditBoxRef.current = null;
+                try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
+              }}
+            >
+              {bgEditBox && (
+                <div
+                  className="absolute border border-amber-400 bg-amber-400/10"
+                  style={{
+                    left: `${bgEditBox.x * 100}%`,
+                    top: `${bgEditBox.y * 100}%`,
+                    width: `${bgEditBox.w * 100}%`,
+                    height: `${bgEditBox.h * 100}%`,
+                  }}
+                />
+              )}
+            </div>
+          )}
         </div>
+
+        {bgEditVariants.length > 0 && (
+          <div className="flex gap-2">
+            {bgEditVariants.map((v, idx) => (
+              <button
+                key={`${v}-${idx}`}
+                type="button"
+                className="h-16 w-16 rounded border border-neutral-700 overflow-hidden bg-neutral-900/60"
+                onClick={() => {
+                  if (v.startsWith("data:image/")) {
+                    setBgUploadUrl(v);
+                    setBgUrl(null);
+                  } else {
+                    setBgUrl(v);
+                    setBgUploadUrl(null);
+                  }
+                  setBgEditSelectedMaskId(null);
+                  setBgEditBox(null);
+                }}
+                title="Apply this variant"
+              >
+                <img src={v} alt="" className="h-full w-full object-cover" />
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="flex gap-2 text-[11px]">
           <Chip small onClick={fitBackground}>Center / 100%</Chip>
@@ -17766,6 +17953,82 @@ style={{ top: STICKY_TOP }}
             Ctrl
           </span>
           + scroll to zoom.
+        </div>
+
+        <div className="rounded-lg border border-neutral-700 bg-neutral-900/40 p-3 space-y-3">
+          <div className="text-[11px] font-semibold text-neutral-200">
+            Edit Background
+          </div>
+          <div className="flex gap-2">
+            <Chip
+              small
+              active={bgEditMode === "auto"}
+              onClick={() => {
+                setBgEditMode("auto");
+                setBgEditBox(null);
+              }}
+            >
+              Auto elements
+            </Chip>
+            <Chip
+              small
+              active={bgEditMode === "box"}
+              onClick={() => {
+                setBgEditMode("box");
+                setBgEditSelectedMaskId(null);
+              }}
+            >
+              Box select
+            </Chip>
+            <Chip small onClick={fetchBgElements} disabled={bgEditLoading}>
+              Find elements
+            </Chip>
+          </div>
+
+          {bgEditMode === "auto" && bgEditMasks.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto py-1">
+              {bgEditMasks.map((m, i) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  className={[
+                    "h-16 w-16 rounded border overflow-hidden shrink-0 relative",
+                    bgEditSelectedMaskId === m.id
+                      ? "border-amber-400"
+                      : "border-neutral-700",
+                  ].join(" ")}
+                  onClick={() => setBgEditSelectedMaskId(m.id)}
+                  title={`Element ${i + 1}`}
+                >
+                  <img
+                    src={bgUploadUrl || bgUrl!}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover opacity-70"
+                  />
+                  <img
+                    src={m.maskUrl}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-70"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+
+          <input
+            value={bgEditPrompt}
+            onChange={(e) => setBgEditPrompt(e.target.value)}
+            placeholder="e.g. make the room blue, remove the lamp, add fog"
+            className="w-full rounded p-2 bg-[#17171b] text-white border border-neutral-700"
+          />
+          <div className="flex items-center gap-2">
+            <Chip small onClick={runBgEdit} disabled={bgEditLoading}>
+              {bgEditLoading ? "Editing..." : "Generate 3 variants"}
+            </Chip>
+            {bgEditError && (
+              <span className="text-[11px] text-red-300">{bgEditError}</span>
+            )}
+          </div>
         </div>
       </div>
     ) : (
