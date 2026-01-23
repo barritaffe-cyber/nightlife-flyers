@@ -8095,6 +8095,7 @@ React.useEffect(() => {
   /* export */
   const [exportType, setExportType] = useState<'png'|'jpg'>('png');
   const [exportScale, setExportScale] = useState(2); // allow control
+  const [isGenerating, setIsGenerating] = useState(false);
   const HISTORY_LIMIT = 10;
   const historyRef = React.useRef<{
     undo: string[];
@@ -10557,14 +10558,12 @@ function twoRaf(): Promise<void> {
 }
 // ===== EXPORT BEGIN (used by top-right Export button) =====
 async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
-  // Determine the root element that holds the CSS filters/grading
   const exportRoot =
     (art.closest?.('[data-export-root="true"]') as HTMLElement) ||
     (document.getElementById('export-root') as HTMLElement) ||
     art;
   const isIOS =
     /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-  const iosWindow = isIOS ? window.open('about:blank', '_blank') : null;
 
   try {
     if (!art) {
@@ -10572,16 +10571,12 @@ async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
       return;
     }
 
-    // 1️⃣ Hide all UI / bounding boxes / grids / handles
-   (window as any).__HIDE_UI_EXPORT__ = true;
+    const iosTab = isIOS ? window.open('about:blank', '_blank') : null;
+    setIsGenerating(true);
 
-// ✅ DO NOT toggle hideUiForExport here.
-// In your app, hideUiForExport is hiding real layers (flares/graphics/3D/effects),
-// not just UI. We'll rely on the filter() to remove UI instead.
-  await new Promise(r => setTimeout(r, 150));
- 
+    (window as any).__HIDE_UI_EXPORT__ = true;
+    await new Promise((r) => setTimeout(r, 150));
 
-    // 2️⃣ Ensure local fonts load
     const families = [
       headlineFamily,
       head2Family,
@@ -10589,28 +10584,26 @@ async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
       subtagFamily,
       venueFamily,
     ].filter(Boolean);
-    
+
     try {
       const uniq = Array.from(new Set(families));
       await Promise.all(
-        uniq.flatMap(f => [
+        uniq.flatMap((f) => [
           (document as any).fonts?.load?.(`400 16px "${f}"`),
           (document as any).fonts?.load?.(`700 16px "${f}"`),
         ])
       );
       await (document as any).fonts?.ready;
-    } catch (e) {
+    } catch {}
 
-    }
-
-    // 3️⃣ 🔥 CAPTURE COMPUTED STYLES (Type-Safe Version)
-    // We cast to 'any' to allow 'WebkitBackdropFilter' which isn't in the standard TS Declaration type
     const exportStyle = getComputedStyle(exportRoot);
     const forcedStyle: any = {
       filter: exportStyle.filter,
       webkitFilter: exportStyle.filter,
       backdropFilter: (exportStyle as any).backdropFilter,
-      WebkitBackdropFilter: (exportStyle as any).backdropFilter || (exportStyle as any).WebkitBackdropFilter,
+      WebkitBackdropFilter:
+        (exportStyle as any).backdropFilter ||
+        (exportStyle as any).WebkitBackdropFilter,
       transform: "none",
       left: "0px",
       top: "0px",
@@ -10618,123 +10611,98 @@ async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
       position: "relative",
     };
 
-    // 4️⃣ Render artboard with forced styles
-    const pngBlob = await htmlToImage.toBlob(exportRoot, {
-      cacheBust: true,
-      backgroundColor: '#000',
-      pixelRatio: exportScale,
-      style: forcedStyle, // ✅ Injects grading into the renderer
-      filter: (node: HTMLElement) => {
-        const el = node as HTMLElement;
-        if (!el) return true;
+    const dataUrl = await withExternalStylesDisabled(async () => {
+      if (format === 'jpg') {
+        return await htmlToImage.toJpeg(exportRoot, {
+          cacheBust: true,
+          backgroundColor: '#000',
+          pixelRatio: exportScale,
+          style: forcedStyle,
+          filter: (node: HTMLElement) => {
+            const el = node as HTMLElement;
+            if (!el) return true;
+            const skip =
+              el.dataset?.nonexport === 'true' ||
+              el.classList?.contains('debug-grid') ||
+              el.classList?.contains('bounding-box') ||
+              el.classList?.contains('text-bounding') ||
+              el.classList?.contains('text-outline') ||
+              el.classList?.contains('highlight-box') ||
+              el.classList?.contains('drag-handle') ||
+              el.classList?.contains('resize-handle') ||
+              el.classList?.contains('portrait-handle') ||
+              el.classList?.contains('portrait-bounding') ||
+              el.classList?.contains('portrait-outline') ||
+              el.classList?.contains('portrait-border') ||
+              el.classList?.contains('portrait-slot') ||
+              el.classList?.contains('overlay-grid') ||
+              el.tagName === 'BUTTON' ||
+              el.tagName === 'INPUT' ||
+              el.tagName === 'TEXTAREA';
+            return !skip;
+          },
+        });
+      }
 
-        const skip =
-          el.dataset?.nonexport === 'true' ||
-          el.classList?.contains('debug-grid') ||
-          el.classList?.contains('bounding-box') ||
-          el.classList?.contains('text-bounding') ||
-          el.classList?.contains('text-outline') ||
-          el.classList?.contains('highlight-box') ||
-          el.classList?.contains('drag-handle') ||
-          el.classList?.contains('resize-handle') ||
-          el.classList?.contains('portrait-handle') ||
-          el.classList?.contains('portrait-bounding') ||
-          el.classList?.contains('portrait-outline') ||
-          el.classList?.contains('portrait-border') ||
-          el.classList?.contains('portrait-slot') ||
-          el.classList?.contains('overlay-grid') ||
-          el.tagName === 'BUTTON' ||
-          el.tagName === 'INPUT' ||
-          el.tagName === 'TEXTAREA';
-
-        return !skip;
-      },
+      return await htmlToImage.toPng(exportRoot, {
+        cacheBust: true,
+        backgroundColor: '#000',
+        pixelRatio: exportScale,
+        style: forcedStyle,
+        filter: (node: HTMLElement) => {
+          const el = node as HTMLElement;
+          if (!el) return true;
+          const skip =
+            el.dataset?.nonexport === 'true' ||
+            el.classList?.contains('debug-grid') ||
+            el.classList?.contains('bounding-box') ||
+            el.classList?.contains('text-bounding') ||
+            el.classList?.contains('text-outline') ||
+            el.classList?.contains('highlight-box') ||
+            el.classList?.contains('drag-handle') ||
+            el.classList?.contains('resize-handle') ||
+            el.classList?.contains('portrait-handle') ||
+            el.classList?.contains('portrait-bounding') ||
+            el.classList?.contains('portrait-outline') ||
+            el.classList?.contains('portrait-border') ||
+            el.classList?.contains('portrait-slot') ||
+            el.classList?.contains('overlay-grid') ||
+            el.tagName === 'BUTTON' ||
+            el.tagName === 'INPUT' ||
+            el.tagName === 'TEXTAREA';
+          return !skip;
+        },
+      });
     });
 
-    if (!pngBlob) {
-      throw new Error('Export failed: no blob generated');
-    }
-
-    // 5️⃣ Convert to JPG if needed
-    let outBlob = pngBlob;
-    if (format === 'jpg') {
-      const imgUrl = URL.createObjectURL(pngBlob);
-      const img = new Image();
-      img.src = imgUrl;
-      await new Promise((res, rej) => {
-        img.onload = () => res(null);
-        img.onerror = () => rej(new Error('Failed to load export image'));
-      });
-      const c = document.createElement('canvas');
-      c.width = img.width;
-      c.height = img.height;
-      const ctx = c.getContext('2d');
-      if (!ctx) throw new Error('No canvas context');
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, c.width, c.height);
-      ctx.drawImage(img, 0, 0);
-      outBlob = await new Promise<Blob>((res, rej) => {
-        c.toBlob(
-          (b) => (b ? res(b) : rej(new Error('Failed to encode JPG'))),
-          'image/jpeg',
-          0.95
-        );
-      });
-      URL.revokeObjectURL(imgUrl);
-    }
-
-    // 6️⃣ Restore UI
     (window as any).__HIDE_UI_EXPORT__ = false;
-    //setHideUiForExport(prevHide);
 
-    // 7️⃣ Trigger download
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
     if (isIOS) {
-      const filename = `nightlife_export_${stamp}.${format}`;
-      const file = new File([outBlob], filename, {
-        type: outBlob.type || (format === "jpg" ? "image/jpeg" : "image/png"),
-      });
-      const canShareFiles =
-        typeof navigator !== "undefined" &&
-        typeof (navigator as any).share === "function" &&
-        typeof (navigator as any).canShare === "function" &&
-        (navigator as any).canShare({ files: [file] });
-      if (canShareFiles) {
-        try {
-          await (navigator as any).share({
-            files: [file],
-            title: "Nightlife Flyers Export",
-            text: "Save to Photos",
-          });
-          return;
-        } catch {}
-      }
-
-      const url = URL.createObjectURL(outBlob);
-      if (iosWindow && !iosWindow.closed) {
-        try {
-          iosWindow.document.title = `nightlife_export_${stamp}`;
-          iosWindow.document.body.style.margin = '0';
-          iosWindow.document.body.innerHTML = `<img src="${url}" style="width:100%;height:auto;display:block" />`;
-        } catch {
-          iosWindow.location.href = url;
-        }
+      if (iosTab) {
+        iosTab.document.body.style.margin = '0';
+        iosTab.document.body.innerHTML = `
+          <div style="background:#000; min-height:100vh; margin:0; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#fff; font-family:system-ui, sans-serif;">
+            <img src="${dataUrl}" style="width:100%; max-width:520px; height:auto; display:block; box-shadow:0 0 20px rgba(0,0,0,0.5);" />
+            <p style="margin:18px 16px 0; font-size:16px; text-align:center;">Hold down on the image to <b>Save to Photos</b></p>
+            <button onclick="window.close()" style="margin:14px 0 24px; background:#222; color:#fff; border:none; padding:10px 18px; border-radius:10px;">Back to Editor</button>
+          </div>
+        `;
       } else {
-        window.location.href = url;
+        window.location.href = dataUrl;
       }
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-    } else {
-      downloadBlob(`nightlife_export_${stamp}.${format}`, outBlob);
+      return;
     }
-    
+
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = `nightlife_export_${stamp}.${format}`;
+    link.click();
   } catch (err) {
     (window as any).__HIDE_UI_EXPORT__ = false;
-    try {
-      if (iosWindow && !iosWindow.closed) iosWindow.close();
-    } catch {}
-
-    // ✅ no-op: we never changed hideUiForExport
-    alert('Export failed — check console.');
+    alert("iOS Save Failed: Try long-pressing the image or use 'Save to Files' in Safari settings.");
+  } finally {
+    setIsGenerating(false);
   }
 }
 // ===== EXPORT END (used by top-right Export button) =====
@@ -14577,16 +14545,16 @@ style={{ top: STICKY_TOP }}
                   <b>Set the scene</b> — Background → upload your image or generate one.
                 </li>
                 <li>
-                  <b>Magic Blend</b> — Blend your subject into the background for a seamless look.
+                  <b>Magic Blend</b> — Blend your subject into any background for a seamless integration, no copy and paste look.
                 </li>
                 <li>
                   <b>Tap to edit</b> — Tap any text block to edit it (Headline, Details, Venue, Subtag).
                 </li>
                 <li>
-                  <b>3D text on the fly</b> — Logo / 3D → open the 3D Render Studio and place it.
+                  <b>3D text on the fly</b> — click cinematic 3D, add your text and boom, all done, your render will be stored in your logo/3D slot.
                 </li>
                 <li>
-                  <b>Add flavor</b> — Library has graphics, flares, emojis, and logos.
+                  <b>Add flavor</b> — Library has nightlife graphics, flares, emojis you can use to make your design fun.
                 </li>
                 <li>
                   <b>Place things cleanly</b> — Use Move, Snap, and Guides.
