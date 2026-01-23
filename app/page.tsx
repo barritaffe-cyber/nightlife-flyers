@@ -16058,6 +16058,7 @@ style={{ top: STICKY_TOP }}
           assetFocusLockRef.current = true;
           e.stopPropagation();
         }}
+        onClickCapture={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2 text-[11px] font-semibold text-white">
           <span className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</span>
