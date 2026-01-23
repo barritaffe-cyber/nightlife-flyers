@@ -14491,7 +14491,13 @@ return (
                   small
                   onClick={() => {
                     setUiMode("finish");
-                    setSelectedPanel("cinema");
+                    setSelectedPanel("mastergrade");
+                    setMobileControlsTab("design");
+                    requestAnimationFrame(() => {
+                      document
+                        .getElementById("mastergrade-panel")
+                        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    });
                   }}
                 >
                   Next: Finish
@@ -15945,6 +15951,7 @@ style={{ top: STICKY_TOP }}
 
 {/* UI: MASTER COLOR GRADE (BEGIN) */}
 <div
+  id="mastergrade-panel"
   className={
     selectedPanel === "mastergrade"
       ? "relative rounded-xl border border-blue-400 transition"
