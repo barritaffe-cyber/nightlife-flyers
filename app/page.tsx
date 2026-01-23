@@ -8096,6 +8096,8 @@ React.useEffect(() => {
   const [exportType, setExportType] = useState<'png'|'jpg'>('png');
   const [exportScale, setExportScale] = useState(2); // allow control
   const [isGenerating, setIsGenerating] = useState(false);
+  const [exportPreviewUrl, setExportPreviewUrl] = useState<string | null>(null);
+  const [exportPreviewOpen, setExportPreviewOpen] = useState(false);
   const HISTORY_LIMIT = 10;
   const historyRef = React.useRef<{
     undo: string[];
@@ -10571,7 +10573,6 @@ async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
       return;
     }
 
-    const iosTab = isIOS ? window.open('about:blank', '_blank') : null;
     setIsGenerating(true);
 
     (window as any).__HIDE_UI_EXPORT__ = true;
@@ -10679,18 +10680,8 @@ async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
 
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
     if (isIOS) {
-      if (iosTab) {
-        iosTab.document.body.style.margin = '0';
-        iosTab.document.body.innerHTML = `
-          <div style="background:#000; min-height:100vh; margin:0; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#fff; font-family:system-ui, sans-serif;">
-            <img src="${dataUrl}" style="width:100%; max-width:520px; height:auto; display:block; box-shadow:0 0 20px rgba(0,0,0,0.5);" />
-            <p style="margin:18px 16px 0; font-size:16px; text-align:center;">Hold down on the image to <b>Save to Photos</b></p>
-            <button onclick="window.close()" style="margin:14px 0 24px; background:#222; color:#fff; border:none; padding:10px 18px; border-radius:10px;">Back to Editor</button>
-          </div>
-        `;
-      } else {
-        window.location.href = dataUrl;
-      }
+      setExportPreviewUrl(dataUrl);
+      setExportPreviewOpen(true);
       return;
     }
 
@@ -14500,6 +14491,39 @@ return (
             </div>
           </div>
 )}     
+
+{/* --- EXPORT PREVIEW (iOS SAVE) --- */}
+{exportPreviewOpen && exportPreviewUrl && (
+  <div className="fixed inset-0 z-[2000] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="bg-neutral-950 border border-neutral-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+      <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
+        <div className="text-sm font-semibold text-white">Save to Photos</div>
+        <button
+          type="button"
+          onClick={() => {
+            setExportPreviewOpen(false);
+            setExportPreviewUrl(null);
+          }}
+          className="text-neutral-400 hover:text-white"
+        >
+          ✕
+        </button>
+      </div>
+      <div className="p-4 space-y-3">
+        <div className="rounded-lg overflow-hidden border border-neutral-800 bg-black">
+          <img
+            src={exportPreviewUrl}
+            alt="Export preview"
+            className="w-full h-auto block"
+          />
+        </div>
+        <div className="text-[12px] text-neutral-300 text-center">
+          Hold down on the image and tap <b>Save to Photos</b>.
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
 {/* ===== UI: MAIN 3-COL LAYOUT (BEGIN) ===== */}
 <section
