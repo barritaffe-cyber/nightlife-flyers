@@ -8111,10 +8111,24 @@ React.useEffect(() => {
   const [viewport, setViewport] = React.useState({ w: 0, h: 0 });
 
   React.useEffect(() => {
-    const update = () => setViewport({ w: window.innerWidth, h: window.innerHeight });
+    const update = () => {
+      const vv = window.visualViewport;
+      const w = vv?.width ?? window.innerWidth;
+      const h = vv?.height ?? window.innerHeight;
+      setViewport({ w: Math.round(w), h: Math.round(h) });
+    };
     update();
+    const vv = window.visualViewport;
     window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
+    window.addEventListener("orientationchange", update);
+    vv?.addEventListener("resize", update);
+    vv?.addEventListener("scroll", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
+      vv?.removeEventListener("resize", update);
+      vv?.removeEventListener("scroll", update);
+    };
   }, []);
 
   const canvasSize = React.useMemo(
@@ -8123,7 +8137,7 @@ React.useEffect(() => {
   );
   const canvasScale = React.useMemo(() => {
     if (!viewport.w || !viewport.h) return 1;
-    const maxW = Math.max(320, viewport.w - 16);
+    const maxW = Math.max(320, viewport.w - 32);
     const maxH = Math.max(320, viewport.h - 220);
     const widthScale = maxW / canvasSize.w;
     const heightScale = maxH / canvasSize.h;
