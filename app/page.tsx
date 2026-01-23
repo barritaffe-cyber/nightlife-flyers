@@ -10690,6 +10690,26 @@ async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
     // 7️⃣ Trigger download
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
     if (isIOS) {
+      const filename = `nightlife_export_${stamp}.${format}`;
+      const file = new File([outBlob], filename, {
+        type: outBlob.type || (format === "jpg" ? "image/jpeg" : "image/png"),
+      });
+      const canShareFiles =
+        typeof navigator !== "undefined" &&
+        typeof (navigator as any).share === "function" &&
+        typeof (navigator as any).canShare === "function" &&
+        (navigator as any).canShare({ files: [file] });
+      if (canShareFiles) {
+        try {
+          await (navigator as any).share({
+            files: [file],
+            title: "Nightlife Flyers Export",
+            text: "Save to Photos",
+          });
+          return;
+        } catch {}
+      }
+
       const url = URL.createObjectURL(outBlob);
       if (iosWindow && !iosWindow.closed) {
         try {
@@ -12772,6 +12792,29 @@ const [uiMode, setUiMode] = React.useState<"design" | "finish">("design");
 const [floatingEditorVisible, setFloatingEditorVisible] = React.useState(false);
 const [floatingAssetVisible, setFloatingAssetVisible] = React.useState(false);
 const [floatingBgVisible, setFloatingBgVisible] = React.useState(false);
+
+const openGettingStartedPanel = React.useCallback(
+  (
+    panel: string,
+    targetId: string,
+    opts?: { after?: () => void; openModal?: boolean; tab?: "design" | "assets" }
+  ) => {
+    setSelectedPanel(panel);
+    if (opts?.tab) {
+      setMobileControlsTab(opts.tab);
+    } else {
+      setMobileControlsTab("assets");
+    }
+    requestAnimationFrame(() => {
+      document
+        .getElementById(targetId)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      opts?.after?.();
+      if (opts?.openModal) setCinematicModalOpen(true);
+    });
+  },
+  [setSelectedPanel, setMobileControlsTab, setCinematicModalOpen]
+);
 const floatingAssetRef = React.useRef<HTMLDivElement | null>(null);
 const assetFocusLockRef = React.useRef(false);
 const [lastMoveStack, setLastMoveStack] = React.useState<{
@@ -14534,7 +14577,13 @@ style={{ top: STICKY_TOP }}
                   <b>Set the scene</b> — Background → upload your image or generate one.
                 </li>
                 <li>
+                  <b>Magic Blend</b> — Blend your subject into the background for a seamless look.
+                </li>
+                <li>
                   <b>Tap to edit</b> — Tap any text block to edit it (Headline, Details, Venue, Subtag).
+                </li>
+                <li>
+                  <b>3D text on the fly</b> — Logo / 3D → open the 3D Render Studio and place it.
                 </li>
                 <li>
                   <b>Add flavor</b> — Library has graphics, flares, emojis, and logos.
@@ -14548,23 +14597,63 @@ style={{ top: STICKY_TOP }}
               </ol>
 
               <div className="grid grid-cols-2 gap-2">
-                <Chip small onClick={() => setSelectedPanel("template")} title="Open starter templates">
+                <Chip
+                  small
+                  onClick={() =>
+                    openGettingStartedPanel("template", "template-panel", {
+                      tab: "design",
+                    })
+                  }
+                  title="Open starter templates"
+                >
                   Open templates
                 </Chip>
-                <Chip small onClick={() => setSelectedPanel("background")} title="Open background controls">
+                <Chip
+                  small
+                  onClick={() => openGettingStartedPanel("background", "background-panel")}
+                  title="Open background controls"
+                >
                   Background
                 </Chip>
-                <Chip small onClick={quickGenerate} title="Generate a background now">
+                <Chip
+                  small
+                  onClick={() =>
+                    openGettingStartedPanel("background", "background-panel", {
+                      after: quickGenerate,
+                    })
+                  }
+                  title="Generate a background now"
+                >
                   Generate background
                 </Chip>
-                <Chip small onClick={triggerUpload} title="Upload your own background">
+                <Chip
+                  small
+                  onClick={() =>
+                    openGettingStartedPanel("background", "background-panel", {
+                      after: triggerUpload,
+                    })
+                  }
+                  title="Upload your own background"
+                >
                   Upload background
                 </Chip>
-                <Chip small onClick={() => setSelectedPanel("icons")} title="Open Library">
-                  Open Library
-                </Chip>
-                <Chip small onClick={() => setSelectedPanel("magic_blend")} title="Open Magic Blend">
+                <Chip
+                  small
+                  onClick={() => openGettingStartedPanel("magic_blend", "magic-blend-panel")}
+                  title="Open Magic Blend"
+                >
                   Magic Blend
+                </Chip>
+                <Chip
+                  small
+                  onClick={() =>
+                    openGettingStartedPanel("logo", "logo-panel", {
+                      openModal: true,
+                    })
+                  }
+                  title="Open 3D Render Studio"
+                >
+                  3D Text
                 </Chip>
               </div>
 
@@ -14592,7 +14681,7 @@ style={{ top: STICKY_TOP }}
 
 {/* UI: STARTER TEMPLATES (BEGIN) */}
 
-<div className="mb-3">
+<div className="mb-3" id="template-panel">
   <div
     className={
       selectedPanel === "template"
@@ -16847,7 +16936,7 @@ style={{ top: STICKY_TOP }}
 
 
 {/* UI: MAGIC BLEND PANEL (BEGIN) */}
-<div className="mt-3">
+<div className="mt-3" id="magic-blend-panel">
   <div
     className={
       selectedPanel === "magic_blend"
@@ -17127,6 +17216,7 @@ style={{ top: STICKY_TOP }}
 
 {/* UI: UPLOAD BACKGROUND (BEGIN) */}
 <div
+  id="background-panel"
   className={
     selectedPanel === "background"
       ? "relative rounded-xl border border-blue-400"
@@ -17349,7 +17439,7 @@ style={{ top: STICKY_TOP }}
 
 
 {/* UI: LIBRARY (BEGIN) */}
-<div className="mt-3">
+<div className="mt-3" id="library-panel">
   <div
     className={
       selectedPanel === "icons"
