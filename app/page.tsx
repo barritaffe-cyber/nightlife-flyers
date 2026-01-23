@@ -10431,6 +10431,9 @@ async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
     (art.closest?.('[data-export-root="true"]') as HTMLElement) ||
     (document.getElementById('export-root') as HTMLElement) ||
     art;
+  const isIOS =
+    /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+  const iosWindow = isIOS ? window.open('about:blank', '_blank') : null;
 
   try {
     if (!art) {
@@ -10543,11 +10546,12 @@ async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
     a.href = dataUrl;
     a.download = `nightlife_export_${stamp}.${format}`;
     a.rel = 'noopener';
-    const isIOS =
-      /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     if (isIOS) {
-      const win = window.open(dataUrl, '_blank');
-      if (!win) window.location.href = dataUrl;
+      if (iosWindow && !iosWindow.closed) {
+        iosWindow.location.href = dataUrl;
+      } else {
+        window.location.href = dataUrl;
+      }
     } else {
       a.style.display = 'none';
       document.body.appendChild(a);
@@ -10557,6 +10561,9 @@ async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
     
   } catch (err) {
     (window as any).__HIDE_UI_EXPORT__ = false;
+    try {
+      if (iosWindow && !iosWindow.closed) iosWindow.close();
+    } catch {}
 
     // ✅ no-op: we never changed hideUiForExport
     alert('Export failed — check console.');
@@ -16066,9 +16073,7 @@ style={{ top: STICKY_TOP }}
         data-floating-controls="asset"
         onPointerDownCapture={(e) => {
           assetFocusLockRef.current = true;
-          e.stopPropagation();
         }}
-        onClickCapture={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2 text-[11px] font-semibold text-white">
           <span className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</span>
@@ -16109,7 +16114,6 @@ style={{ top: STICKY_TOP }}
             onPointerDownCapture={(e) => {
               assetFocusLockRef.current = true;
               setFloatingAssetVisible(true);
-              e.stopPropagation();
             }}
           >
             <div className="text-[10px] text-neutral-400 mb-1">Label</div>
