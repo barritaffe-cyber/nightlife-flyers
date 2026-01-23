@@ -8803,6 +8803,9 @@ const fetchBgElements = async () => {
       body: JSON.stringify({ image: bgSrc }),
     });
     const data = await res.json();
+    if (data?.error && (!Array.isArray(data?.elements) || data.elements.length === 0)) {
+      setBgEditError(String(data.error));
+    }
     const masks = Array.isArray(data?.elements) ? data.elements : [];
     setBgEditMasks(
       masks.map((m: any, idx: number) => ({
@@ -8858,6 +8861,9 @@ const runBgEdit = async () => {
       }),
     });
     const data = await res.json();
+    if (data?.error) {
+      setBgEditError(String(data.error));
+    }
     const variants = Array.isArray(data?.variants) ? data.variants : [];
     setBgEditVariants(variants.slice(0, 3));
   } catch (err: any) {
@@ -17980,8 +17986,12 @@ style={{ top: STICKY_TOP }}
             >
               Box select
             </Chip>
-            <Chip small onClick={fetchBgElements} disabled={bgEditLoading}>
-              Find elements
+            <Chip
+              small
+              onClick={fetchBgElements}
+              disabled={bgEditLoading || bgEditMode !== "auto"}
+            >
+              {bgEditLoading && bgEditMode === "auto" ? "Finding..." : "Find elements"}
             </Chip>
           </div>
 
