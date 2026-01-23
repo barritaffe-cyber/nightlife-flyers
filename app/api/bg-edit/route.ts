@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 
 const INPAINT_ENDPOINT =
+  process.env.REPLICATE_INPAINT_ENDPOINT ||
   "https://api.replicate.com/v1/models/stability-ai/sdxl-inpainting/predictions";
 const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN;
 

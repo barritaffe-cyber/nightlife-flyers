@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-const SAM_ENDPOINT = "https://api.replicate.com/v1/models/meta/sam-2/predictions";
+const SAM_ENDPOINT =
+  process.env.REPLICATE_SAM_ENDPOINT ||
+  "https://api.replicate.com/v1/models/meta/sam-2/predictions";
 const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN;
 
 async function runReplicate(endpoint: string, token: string, input: any) {
