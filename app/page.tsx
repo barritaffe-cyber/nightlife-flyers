@@ -15085,6 +15085,334 @@ style={{ top: STICKY_TOP }}
 </div>
 {/* UI: CINEMATIC HEADLINE (END) */}
 
+{/* UI: LOGO — MIRROR OF PORTRAIT LOGIC (BEGIN) */}
+<div
+  id="logo-panel"
+  className={
+    selectedPanel === "logo"
+      ? "relative rounded-xl border border-blue-400 transition"
+      : "relative rounded-xl border border-neutral-700 transition"
+  }
+>
+  <Collapsible
+    title="Logo / 3D"
+    storageKey="p:media"
+    defaultOpen={false}
+    isOpen={selectedPanel === "logo"}
+    onToggle={() => {
+      // ✅ toggle uses subscribed value, not getState()
+      setSelectedPanel(selectedPanel === "logo" ? null : "logo");
+
+      // ✅ if opening, scroll to the logo slots area next tick
+      if (selectedPanel !== "logo") {
+        setTimeout(() => {
+          const el = document.getElementById("logo-panel");
+          el?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 0);
+      }
+    }}
+    titleClassName={
+      selectedPanel === "logo"
+        ? "text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]"
+        : ""
+    }
+  >
+    <div className="text-[12px] text-neutral-300 mb-2">
+      Manage logos and 3D text. Upload or generate, then place.
+    </div>
+
+    {/* --- SLOTS GRID --- */}
+    <div className="grid grid-cols-2 gap-2 mb-4">
+      {[0, 1, 2, 3].map((i) => {
+        const src = logoSlots[i] || "";
+        const list = portraits[format] || [];
+        const onCanvas = list.find((p) => p.url === src);
+        const isActive = !!(onCanvas && selectedPortraitId === onCanvas.id);
+
+        return (
+          <div
+            key={i}
+            className={`border rounded-lg p-2 transition-colors ${
+              isActive
+                ? "border-indigo-500 bg-indigo-900/10"
+                : "border-neutral-700 bg-neutral-900/50"
+            }`}
+          >
+            {/* Thumbnail */}
+            <div className="h-20 rounded overflow-hidden border border-neutral-700 bg-neutral-900 grid place-items-center relative">
+              {src ? (
+                <img
+                  src={src}
+                  className="w-full h-full object-contain bg-[length:10px_10px] bg-[url('https://t3.ftcdn.net/jpg/02/03/90/58/360_F_203905816_kpsw9G2a6e02a0a256a5061695669046.jpg')]"
+                  draggable={false}
+                  alt=""
+                />
+              ) : (
+                <div className="text-[11px] text-neutral-500">Empty {i + 1}</div>
+              )}
+              {isActive && (
+                <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-green-500 shadow-[0_0_5px_#22c55e]" />
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="mt-2 grid grid-cols-3 gap-1">
+              {/* Upload */}
+              <button
+                type="button"
+                className="text-[10px] px-1 py-1.5 rounded-md bg-neutral-800 border border-neutral-600 hover:bg-neutral-700 text-neutral-300 truncate"
+                onClick={() => {
+                  const input = document.createElement("input");
+                  input.type = "file";
+                  input.accept = "image/*";
+                  input.onchange = (e: any) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const r = new FileReader();
+                    r.onload = () => {
+                      const next = [...logoSlots];
+                      next[i] = String(r.result);
+
+                      setLogoSlots(next);
+                      try {
+                        localStorage.setItem("nf:logoSlots", JSON.stringify(next));
+                      } catch {}
+
+                      // ✅ after upload, open the logo panel + scroll to it
+                      setSelectedPanel("logo");
+                      setTimeout(() => {
+                        document
+                          .getElementById("logo-panel")
+                          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }, 0);
+                    };
+                    r.readAsDataURL(file);
+                  };
+                  input.click();
+                }}
+              >
+                {src ? "Rep" : "Up"}
+              </button>
+
+              {/* Place */}
+              <button
+                type="button"
+                disabled={!src}
+                className="text-[10px] px-1 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 truncate"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (!src) return;
+
+                  const id = `logo_${Date.now()}_${Math.random()
+                    .toString(36)
+                    .slice(2, 7)}`;
+
+                  // ✅ add as "logo_" item (so controls show)
+                  addPortrait(format, {
+                    id,
+                    url: src,
+                    x: 50,
+                    y: 50,
+                    scale: 1.0,
+                    locked: false,
+                    shadowBlur: 0,
+                    shadowAlpha: 0.5,
+                    cleanup: DEFAULT_CLEANUP,
+                  });
+
+                  // ✅ selection + move target should be portrait (same system as everything else)
+                  setSelectedPortraitId(id);
+                  setMoveTarget("portrait");
+
+                  // ✅ keep panel open
+                  setSelectedPanel("logo");
+                }}
+              >
+                Place
+              </button>
+
+              {/* Clear */}
+              <button
+                type="button"
+                disabled={!src}
+                className="text-[10px] px-1 py-1.5 rounded-md bg-neutral-800 border border-neutral-600 hover:bg-neutral-700 text-neutral-300 disabled:opacity-50 truncate"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+
+                  const next = [...logoSlots];
+                  next[i] = "";
+                  setLogoSlots(next);
+                  try {
+                    localStorage.setItem("nf:logoSlots", JSON.stringify(next));
+                  } catch {}
+
+                  // (optional) if the cleared slot was on-canvas, remove that instance too
+                  if (onCanvas?.id) {
+                    removePortrait(format, onCanvas.id);
+                    if (selectedPortraitId === onCanvas.id) {
+                      setSelectedPortraitId(null);
+                    }
+                  }
+                }}
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+
+   {/* --- ⚡️ ACTIVE ITEM CONTROLS (Only shows if a logo is selected) --- */}
+{(() => {
+  const store = useFlyerState.getState();
+  const list = store.portraits?.[format] || [];
+  const sel = list.find((p: any) => p.id === selectedPortraitId);
+
+  // Only show controls if selection exists AND it's a logo/3D text
+  if (!sel || !String(sel.id || "").startsWith("logo_")) return null;
+
+  const shadowBlur = Number((sel as any).shadowBlur ?? 0);
+  const shadowAlpha = Number((sel as any).shadowAlpha ?? 0.5);
+  const locked = !!sel.locked;
+
+  // ✅ Authoritative updater (always hits Zustand store)
+  const update = (patch: any) => {
+    const s = useFlyerState.getState();
+    s.updatePortrait(format, sel.id, patch);
+    // keep selection stable + ensure logo panel stays active
+    s.setSelectedPortraitId(sel.id);
+    s.setSelectedPanel("logo");
+    s.setMoveTarget("logo");
+  };
+
+  return (
+    <div
+      className="mt-4 pt-4 border-t border-white/10"
+      data-portrait-area="true"
+      onMouseDownCapture={(e) => e.stopPropagation()}
+      onPointerDownCapture={(e) => e.stopPropagation()}
+    >
+      <div className="text-[12px] font-bold text-indigo-300 mb-3 flex items-center gap-2">
+        <span>✨ 3D / Logo Controls</span>
+      </div>
+
+      {/* 1. SCALE & SHADOW */}
+      <div className="space-y-4 mb-6">
+        <SliderRow
+          label="Scale"
+          value={Number(sel.scale ?? 1)}
+          min={0.2}
+          max={3}
+          step={0.05}
+          onChange={(v) => update({ scale: v })}
+        />
+
+        <SliderRow
+          label="Opacity"
+          value={Number((sel as any).opacity ?? 1)}
+          min={0}
+          max={1}
+          step={0.05}
+          onChange={(v) => update({ opacity: v })}
+        />
+
+        <SliderRow
+          label="Drop Shadow"
+          value={shadowBlur}
+          min={0}
+          max={100}
+          step={1}
+          onChange={(v) => update({ shadowBlur: v })}
+        />
+
+        {shadowBlur > 0 && (
+          <SliderRow
+            label="Shadow Opacity"
+            value={shadowAlpha}
+            min={0}
+            max={1}
+            step={0.05}
+            onChange={(v) => update({ shadowAlpha: v })}
+          />
+        )}
+      </div>
+
+      {/* 2. CLEANUP TOOLS */}
+      <div className="bg-black/20 p-3 rounded-lg border border-white/5">
+        <div className="text-[11px] font-semibold text-neutral-400 mb-3 uppercase tracking-wider">
+          Cutout Refinement
+        </div>
+
+        <div className="space-y-3">
+          <SliderRow
+            label="Shrink Edge"
+            value={cleanupParams.shrinkPx}
+            min={0}
+            max={10}
+            step={0.5}
+            onChange={(v) => setCleanupAndRun({ ...cleanupParams, shrinkPx: v })}
+          />
+          <SliderRow
+            label="Feather"
+            value={cleanupParams.featherPx}
+            min={0}
+            max={10}
+            step={0.5}
+            onChange={(v) => setCleanupAndRun({ ...cleanupParams, featherPx: v })}
+          />
+          <SliderRow
+            label="Decontaminate"
+            value={cleanupParams.decontaminate}
+            min={0}
+            max={1}
+            step={0.05}
+            onChange={(v) => setCleanupAndRun({ ...cleanupParams, decontaminate: v })}
+          />
+        </div>
+      </div>
+
+      {/* 3. ACTIONS */}
+      <div className="flex gap-2 mt-4">
+        <button
+          type="button"
+          onClick={() => update({ locked: !locked })}
+          className="flex-1 py-2 rounded bg-neutral-800 border border-neutral-600 text-xs text-neutral-300 hover:bg-neutral-700"
+        >
+          {locked ? "Unlock Position" : "Lock Position"}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            const s = useFlyerState.getState();
+
+            // ✅ actually remove the logo render from the canvas list
+            s.removePortrait(format, sel.id);
+
+            // ✅ clear selection/drag so UI doesn't ghost-select
+            s.setSelectedPortraitId(null);
+            s.setDragging?.(null);
+
+            // ✅ keep the sidebar in Logo / 3D
+            s.setSelectedPanel("logo");
+            s.setMoveTarget("logo");
+          }}
+          className="flex-1 py-2 rounded bg-red-900/20 border border-red-900/40 text-xs text-red-400 hover:bg-red-900/30"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  );
+})()}
+
+  </Collapsible>
+</div>
+{/* UI: LOGO — MIRROR OF PORTRAIT LOGIC (END) */}
+
 {/* UI: HEADLINE (BEGIN) */}
 <div
   className={
@@ -18750,333 +19078,6 @@ titleClassName={
 {/* UI: PORTRAITS — COMBINED SLOTS (END) */}
 
 
-{/* UI: LOGO — MIRROR OF PORTRAIT LOGIC (BEGIN) */}
-<div
-  id="logo-panel"
-  className={
-    selectedPanel === "logo"
-      ? "relative rounded-xl border border-blue-400 transition"
-      : "relative rounded-xl border border-neutral-700 transition"
-  }
->
-  <Collapsible
-    title="Logo / 3D"
-    storageKey="p:media"
-    defaultOpen={false}
-    isOpen={selectedPanel === "logo"}
-    onToggle={() => {
-      // ✅ toggle uses subscribed value, not getState()
-      setSelectedPanel(selectedPanel === "logo" ? null : "logo");
-
-      // ✅ if opening, scroll to the logo slots area next tick
-      if (selectedPanel !== "logo") {
-        setTimeout(() => {
-          const el = document.getElementById("logo-panel");
-          el?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }, 0);
-      }
-    }}
-    titleClassName={
-      selectedPanel === "logo"
-        ? "text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]"
-        : ""
-    }
-  >
-    <div className="text-[12px] text-neutral-300 mb-2">
-      Manage logos and 3D text. Upload or generate, then place.
-    </div>
-
-    {/* --- SLOTS GRID --- */}
-    <div className="grid grid-cols-2 gap-2 mb-4">
-      {[0, 1, 2, 3].map((i) => {
-        const src = logoSlots[i] || "";
-        const list = portraits[format] || [];
-        const onCanvas = list.find((p) => p.url === src);
-        const isActive = !!(onCanvas && selectedPortraitId === onCanvas.id);
-
-        return (
-          <div
-            key={i}
-            className={`border rounded-lg p-2 transition-colors ${
-              isActive
-                ? "border-indigo-500 bg-indigo-900/10"
-                : "border-neutral-700 bg-neutral-900/50"
-            }`}
-          >
-            {/* Thumbnail */}
-            <div className="h-20 rounded overflow-hidden border border-neutral-700 bg-neutral-900 grid place-items-center relative">
-              {src ? (
-                <img
-                  src={src}
-                  className="w-full h-full object-contain bg-[length:10px_10px] bg-[url('https://t3.ftcdn.net/jpg/02/03/90/58/360_F_203905816_kpsw9G2a6e02a0a256a5061695669046.jpg')]"
-                  draggable={false}
-                  alt=""
-                />
-              ) : (
-                <div className="text-[11px] text-neutral-500">Empty {i + 1}</div>
-              )}
-              {isActive && (
-                <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-green-500 shadow-[0_0_5px_#22c55e]" />
-              )}
-            </div>
-
-            {/* Action Buttons */}
-            <div className="mt-2 grid grid-cols-3 gap-1">
-              {/* Upload */}
-              <button
-                type="button"
-                className="text-[10px] px-1 py-1.5 rounded-md bg-neutral-800 border border-neutral-600 hover:bg-neutral-700 text-neutral-300 truncate"
-                onClick={() => {
-                  const input = document.createElement("input");
-                  input.type = "file";
-                  input.accept = "image/*";
-                  input.onchange = (e: any) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    const r = new FileReader();
-                    r.onload = () => {
-                      const next = [...logoSlots];
-                      next[i] = String(r.result);
-
-                      setLogoSlots(next);
-                      try {
-                        localStorage.setItem("nf:logoSlots", JSON.stringify(next));
-                      } catch {}
-
-                      // ✅ after upload, open the logo panel + scroll to it
-                      setSelectedPanel("logo");
-                      setTimeout(() => {
-                        document
-                          .getElementById("logo-panel")
-                          ?.scrollIntoView({ behavior: "smooth", block: "start" });
-                      }, 0);
-                    };
-                    r.readAsDataURL(file);
-                  };
-                  input.click();
-                }}
-              >
-                {src ? "Rep" : "Up"}
-              </button>
-
-              {/* Place */}
-              <button
-                type="button"
-                disabled={!src}
-                className="text-[10px] px-1 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 truncate"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (!src) return;
-
-                  const id = `logo_${Date.now()}_${Math.random()
-                    .toString(36)
-                    .slice(2, 7)}`;
-
-                  // ✅ add as "logo_" item (so controls show)
-                  addPortrait(format, {
-                    id,
-                    url: src,
-                    x: 50,
-                    y: 50,
-                    scale: 1.0,
-                    locked: false,
-                    shadowBlur: 0,
-                    shadowAlpha: 0.5,
-                    cleanup: DEFAULT_CLEANUP,
-                  });
-
-                  // ✅ selection + move target should be portrait (same system as everything else)
-                  setSelectedPortraitId(id);
-                  setMoveTarget("portrait");
-
-                  // ✅ keep panel open
-                  setSelectedPanel("logo");
-                }}
-              >
-                Place
-              </button>
-
-              {/* Clear */}
-              <button
-                type="button"
-                disabled={!src}
-                className="text-[10px] px-1 py-1.5 rounded-md bg-neutral-800 border border-neutral-600 hover:bg-neutral-700 text-neutral-300 disabled:opacity-50 truncate"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-
-                  const next = [...logoSlots];
-                  next[i] = "";
-                  setLogoSlots(next);
-                  try {
-                    localStorage.setItem("nf:logoSlots", JSON.stringify(next));
-                  } catch {}
-
-                  // (optional) if the cleared slot was on-canvas, remove that instance too
-                  if (onCanvas?.id) {
-                    removePortrait(format, onCanvas.id);
-                    if (selectedPortraitId === onCanvas.id) {
-                      setSelectedPortraitId(null);
-                    }
-                  }
-                }}
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-
-   {/* --- ⚡️ ACTIVE ITEM CONTROLS (Only shows if a logo is selected) --- */}
-{(() => {
-  const store = useFlyerState.getState();
-  const list = store.portraits?.[format] || [];
-  const sel = list.find((p: any) => p.id === selectedPortraitId);
-
-  // Only show controls if selection exists AND it's a logo/3D text
-  if (!sel || !String(sel.id || "").startsWith("logo_")) return null;
-
-  const shadowBlur = Number((sel as any).shadowBlur ?? 0);
-  const shadowAlpha = Number((sel as any).shadowAlpha ?? 0.5);
-  const locked = !!sel.locked;
-
-  // ✅ Authoritative updater (always hits Zustand store)
-  const update = (patch: any) => {
-    const s = useFlyerState.getState();
-    s.updatePortrait(format, sel.id, patch);
-    // keep selection stable + ensure logo panel stays active
-    s.setSelectedPortraitId(sel.id);
-    s.setSelectedPanel("logo");
-    s.setMoveTarget("logo");
-  };
-
-  return (
-    <div
-      className="mt-4 pt-4 border-t border-white/10"
-      data-portrait-area="true"
-      onMouseDownCapture={(e) => e.stopPropagation()}
-      onPointerDownCapture={(e) => e.stopPropagation()}
-    >
-      <div className="text-[12px] font-bold text-indigo-300 mb-3 flex items-center gap-2">
-        <span>✨ 3D / Logo Controls</span>
-      </div>
-
-      {/* 1. SCALE & SHADOW */}
-      <div className="space-y-4 mb-6">
-        <SliderRow
-          label="Scale"
-          value={Number(sel.scale ?? 1)}
-          min={0.2}
-          max={3}
-          step={0.05}
-          onChange={(v) => update({ scale: v })}
-        />
-
-        <SliderRow
-          label="Opacity"
-          value={Number((sel as any).opacity ?? 1)}
-          min={0}
-          max={1}
-          step={0.05}
-          onChange={(v) => update({ opacity: v })}
-        />
-
-        <SliderRow
-          label="Drop Shadow"
-          value={shadowBlur}
-          min={0}
-          max={100}
-          step={1}
-          onChange={(v) => update({ shadowBlur: v })}
-        />
-
-        {shadowBlur > 0 && (
-          <SliderRow
-            label="Shadow Opacity"
-            value={shadowAlpha}
-            min={0}
-            max={1}
-            step={0.05}
-            onChange={(v) => update({ shadowAlpha: v })}
-          />
-        )}
-      </div>
-
-      {/* 2. CLEANUP TOOLS */}
-      <div className="bg-black/20 p-3 rounded-lg border border-white/5">
-        <div className="text-[11px] font-semibold text-neutral-400 mb-3 uppercase tracking-wider">
-          Cutout Refinement
-        </div>
-
-        <div className="space-y-3">
-          <SliderRow
-            label="Shrink Edge"
-            value={cleanupParams.shrinkPx}
-            min={0}
-            max={10}
-            step={0.5}
-            onChange={(v) => setCleanupAndRun({ ...cleanupParams, shrinkPx: v })}
-          />
-          <SliderRow
-            label="Feather"
-            value={cleanupParams.featherPx}
-            min={0}
-            max={10}
-            step={0.5}
-            onChange={(v) => setCleanupAndRun({ ...cleanupParams, featherPx: v })}
-          />
-          <SliderRow
-            label="Decontaminate"
-            value={cleanupParams.decontaminate}
-            min={0}
-            max={1}
-            step={0.05}
-            onChange={(v) => setCleanupAndRun({ ...cleanupParams, decontaminate: v })}
-          />
-        </div>
-      </div>
-
-      {/* 3. ACTIONS */}
-      <div className="flex gap-2 mt-4">
-        <button
-          type="button"
-          onClick={() => update({ locked: !locked })}
-          className="flex-1 py-2 rounded bg-neutral-800 border border-neutral-600 text-xs text-neutral-300 hover:bg-neutral-700"
-        >
-          {locked ? "Unlock Position" : "Lock Position"}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            const s = useFlyerState.getState();
-
-            // ✅ actually remove the logo render from the canvas list
-            s.removePortrait(format, sel.id);
-
-            // ✅ clear selection/drag so UI doesn't ghost-select
-            s.setSelectedPortraitId(null);
-            s.setDragging?.(null);
-
-            // ✅ keep the sidebar in Logo / 3D
-            s.setSelectedPanel("logo");
-            s.setMoveTarget("logo");
-          }}
-          className="flex-1 py-2 rounded bg-red-900/20 border border-red-900/40 text-xs text-red-400 hover:bg-red-900/30"
-        >
-          Delete
-        </button>
-      </div>
-    </div>
-  );
-})()}
-
-  </Collapsible>
-</div>
-{/* UI: LOGO — MIRROR OF PORTRAIT LOGIC (END) */}
 </aside>
 
 {/* --- MOBILE ACTION BAR --- */}
