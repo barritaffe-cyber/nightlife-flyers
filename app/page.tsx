@@ -10488,7 +10488,7 @@ async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
     };
 
     // 4️⃣ Render artboard with forced styles
-    const pngData = await htmlToImage.toPng(exportRoot, {
+    const pngBlob = await htmlToImage.toBlob(exportRoot, {
       cacheBust: true,
       backgroundColor: '#000',
       pixelRatio: exportScale,
@@ -10520,20 +10520,36 @@ async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
       },
     });
 
+    if (!pngBlob) {
+      throw new Error('Export failed: no blob generated');
+    }
+
     // 5️⃣ Convert to JPG if needed
-    let dataUrl = pngData;
+    let outBlob = pngBlob;
     if (format === 'jpg') {
+      const imgUrl = URL.createObjectURL(pngBlob);
       const img = new Image();
-      img.src = pngData;
-      await new Promise(res => (img.onload = res));
+      img.src = imgUrl;
+      await new Promise((res, rej) => {
+        img.onload = () => res(null);
+        img.onerror = () => rej(new Error('Failed to load export image'));
+      });
       const c = document.createElement('canvas');
       c.width = img.width;
       c.height = img.height;
-      const ctx = c.getContext('2d')!;
+      const ctx = c.getContext('2d');
+      if (!ctx) throw new Error('No canvas context');
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, c.width, c.height);
       ctx.drawImage(img, 0, 0);
-      dataUrl = c.toDataURL('image/jpeg', 0.95);
+      outBlob = await new Promise<Blob>((res, rej) => {
+        c.toBlob(
+          (b) => (b ? res(b) : rej(new Error('Failed to encode JPG'))),
+          'image/jpeg',
+          0.95
+        );
+      });
+      URL.revokeObjectURL(imgUrl);
     }
 
     // 6️⃣ Restore UI
@@ -10541,22 +10557,23 @@ async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
     //setHideUiForExport(prevHide);
 
     // 7️⃣ Trigger download
-    const a = document.createElement('a');
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-    a.href = dataUrl;
-    a.download = `nightlife_export_${stamp}.${format}`;
-    a.rel = 'noopener';
     if (isIOS) {
+      const url = URL.createObjectURL(outBlob);
       if (iosWindow && !iosWindow.closed) {
-        iosWindow.location.href = dataUrl;
+        try {
+          iosWindow.document.title = `nightlife_export_${stamp}`;
+          iosWindow.document.body.style.margin = '0';
+          iosWindow.document.body.innerHTML = `<img src="${url}" style="width:100%;height:auto;display:block" />`;
+        } catch {
+          iosWindow.location.href = url;
+        }
       } else {
-        window.location.href = dataUrl;
+        window.location.href = url;
       }
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
     } else {
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      downloadBlob(`nightlife_export_${stamp}.${format}`, outBlob);
     }
     
   } catch (err) {
