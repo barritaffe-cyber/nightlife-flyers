@@ -7738,6 +7738,26 @@ const [isMobileView, setIsMobileView] = React.useState(
   typeof window !== "undefined" && window.innerWidth < 1024
 );
 
+React.useEffect(() => {
+  const update = () => {
+    const vv = window.visualViewport;
+    const w = vv?.width ?? window.innerWidth;
+    setIsMobileView(w < 1024);
+  };
+  update();
+  const vv = window.visualViewport;
+  window.addEventListener("resize", update);
+  window.addEventListener("orientationchange", update);
+  vv?.addEventListener("resize", update);
+  vv?.addEventListener("scroll", update);
+  return () => {
+    window.removeEventListener("resize", update);
+    window.removeEventListener("orientationchange", update);
+    vv?.removeEventListener("resize", update);
+    vv?.removeEventListener("scroll", update);
+  };
+}, []);
+
   const masterFilterCss = React.useMemo(() => {
     const base = masterFilter;
     return isMobileView ? base : `url(#master-grade) ${base}`;
@@ -10578,8 +10598,19 @@ async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
     (art.closest?.('[data-export-root="true"]') as HTMLElement) ||
     (document.getElementById('export-root') as HTMLElement) ||
     art;
+  const wrapper = artWrapRef.current || exportRoot;
   const isIOS =
     /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+  let originalStyle: {
+    transform: string;
+    position: string;
+    left: string;
+    top: string;
+    margin: string;
+    width: string;
+    height: string;
+    transition: string;
+  } | null = null;
 
   try {
     if (!art) {
@@ -10588,9 +10619,31 @@ async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
     }
 
     setIsGenerating(true);
+    setHideUiForExport(true);
+    clearAllSelections();
 
     (window as any).__HIDE_UI_EXPORT__ = true;
     await new Promise((r) => setTimeout(r, 150));
+
+    originalStyle = {
+      transform: wrapper.style.transform,
+      position: wrapper.style.position,
+      left: wrapper.style.left,
+      top: wrapper.style.top,
+      margin: wrapper.style.margin,
+      width: wrapper.style.width,
+      height: wrapper.style.height,
+      transition: wrapper.style.transition,
+    };
+
+    wrapper.style.transform = "none";
+    wrapper.style.position = "relative";
+    wrapper.style.left = "0";
+    wrapper.style.top = "0";
+    wrapper.style.margin = "0";
+    wrapper.style.transition = "none";
+
+    await new Promise((r) => setTimeout(r, 100));
 
     const families = [
       headlineFamily,
@@ -10610,6 +10663,9 @@ async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
       );
       await (document as any).fonts?.ready;
     } catch {}
+    try {
+      await (document as any).fonts?.ready;
+    } catch {}
 
     const exportStyle = getComputedStyle(exportRoot);
     const forcedStyle: any = {
@@ -10624,6 +10680,7 @@ async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
       top: "0px",
       margin: "0",
       position: "relative",
+      borderRadius: "0px",
     };
 
     const dataUrl = await withExternalStylesDisabled(async () => {
@@ -10691,6 +10748,16 @@ async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
     });
 
     (window as any).__HIDE_UI_EXPORT__ = false;
+    setHideUiForExport(false);
+
+    wrapper.style.transform = originalStyle.transform;
+    wrapper.style.position = originalStyle.position;
+    wrapper.style.left = originalStyle.left;
+    wrapper.style.top = originalStyle.top;
+    wrapper.style.margin = originalStyle.margin;
+    wrapper.style.width = originalStyle.width;
+    wrapper.style.height = originalStyle.height;
+    wrapper.style.transition = originalStyle.transition;
 
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
     if (isIOS) {
@@ -10708,6 +10775,17 @@ async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
     alert("iOS Save Failed: Try long-pressing the image or use 'Save to Files' in Safari settings.");
   } finally {
     setIsGenerating(false);
+    setHideUiForExport(false);
+    if (originalStyle) {
+      wrapper.style.transform = originalStyle.transform;
+      wrapper.style.position = originalStyle.position;
+      wrapper.style.left = originalStyle.left;
+      wrapper.style.top = originalStyle.top;
+      wrapper.style.margin = originalStyle.margin;
+      wrapper.style.width = originalStyle.width;
+      wrapper.style.height = originalStyle.height;
+      wrapper.style.transition = originalStyle.transition;
+    }
   }
 }
 // ===== EXPORT END (used by top-right Export button) =====
@@ -16030,8 +16108,6 @@ style={{ top: STICKY_TOP }}
         top: 0,
         transform: `translateX(-50%) scale(${canvasScale})`,
         transformOrigin: "top center",
-        filter: isMobileView ? masterFilter : undefined,
-        WebkitFilter: isMobileView ? masterFilter : undefined,
       }}
       onMouseDownCapture={(e) => {
         if (suppressCloseRef.current) return;
@@ -16077,7 +16153,8 @@ style={{ top: STICKY_TOP }}
     <div
       className="relative w-full flex justify-center items-center"
       style={{
-        filter: `url(#master-grade) ${masterFilter}`,
+        filter: masterFilterCss,
+        WebkitFilter: masterFilterCss,
       }}
     >
 
