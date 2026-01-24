@@ -8792,11 +8792,14 @@ const buildBgBoxMask = (
 };
 
 const fetchBgElements = async () => {
-  const bgSrc = bgUploadUrl || bgUrl;
+  let bgSrc = bgUploadUrl || bgUrl;
   if (!bgSrc) return;
   setBgEditLoading(true);
   setBgEditError("");
   try {
+    if (bgSrc.startsWith("blob:")) {
+      bgSrc = await blobUrlToDataUrl(bgSrc);
+    }
     const res = await fetch("/api/bg-elements", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -8822,7 +8825,7 @@ const fetchBgElements = async () => {
 };
 
 const runBgEdit = async () => {
-  const bgSrc = bgUploadUrl || bgUrl;
+  let bgSrc = bgUploadUrl || bgUrl;
   if (!bgSrc) return;
   if (!bgEditPrompt.trim()) {
     setBgEditError("Add a short edit prompt.");
@@ -8849,6 +8852,9 @@ const runBgEdit = async () => {
   setBgEditLoading(true);
   setBgEditError("");
   try {
+    if (bgSrc.startsWith("blob:")) {
+      bgSrc = await blobUrlToDataUrl(bgSrc);
+    }
     const res = await fetch("/api/bg-edit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -8872,6 +8878,17 @@ const runBgEdit = async () => {
     setBgEditLoading(false);
   }
 };
+
+async function blobUrlToDataUrl(blobUrl: string): Promise<string> {
+  const res = await fetch(blobUrl);
+  const blob = await res.blob();
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(String(fr.result));
+    fr.onerror = () => reject(fr.error);
+    fr.readAsDataURL(blob);
+  });
+}
 
   /* dark inputs + slim scrollbars */
   useEffect(() => {
