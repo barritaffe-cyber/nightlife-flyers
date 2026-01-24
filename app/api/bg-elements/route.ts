@@ -62,8 +62,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ elements: [], error: "Missing REPLICATE_API_TOKEN" });
     }
 
-    const version =
-      SAM_ENDPOINT.includes("/models/") ? undefined : SAM_VERSION;
+    const version = SAM_ENDPOINT.includes("/models/") ? undefined : SAM_VERSION;
     if (!SAM_ENDPOINT.includes("/models/") && !version) {
       return NextResponse.json(
         { elements: [], error: "Missing REPLICATE_SAM_VERSION" },
@@ -93,7 +92,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ elements });
   } catch (err: any) {
     return NextResponse.json(
-      { elements: [], error: String(err?.message || err) },
+      {
+        elements: [],
+        error: String(err?.message || err),
+        endpoint: SAM_ENDPOINT,
+        version: SAM_ENDPOINT.includes("/models/") ? undefined : SAM_VERSION,
+      },
       { status: 200 }
     );
   }

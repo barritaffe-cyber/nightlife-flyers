@@ -73,8 +73,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const version =
-      INPAINT_ENDPOINT.includes("/models/") ? undefined : INPAINT_VERSION;
+    const version = INPAINT_ENDPOINT.includes("/models/") ? undefined : INPAINT_VERSION;
     if (!INPAINT_ENDPOINT.includes("/models/") && !version) {
       return NextResponse.json(
         { variants: [], error: "Missing REPLICATE_INPAINT_VERSION" },
@@ -102,7 +101,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ variants });
   } catch (err: any) {
     return NextResponse.json(
-      { variants: [], error: String(err?.message || err) },
+      {
+        variants: [],
+        error: String(err?.message || err),
+        endpoint: INPAINT_ENDPOINT,
+        version: INPAINT_ENDPOINT.includes("/models/") ? undefined : INPAINT_VERSION,
+      },
       { status: 200 }
     );
   }
