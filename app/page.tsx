@@ -8796,7 +8796,11 @@ const runBgEdit = async () => {
 
   let mask: string | null = null;
   if (bgEditLassoPoints.length >= 3 && bgEditImageRef.current) {
-    mask = buildEdgeAwareLassoMask(bgEditImageRef.current, bgEditLassoPoints);
+    const fallbackMask = buildEdgeAwareLassoMask(
+      bgEditImageRef.current,
+      bgEditLassoPoints
+    );
+    mask = fallbackMask;
   }
 
   if (!mask) {
@@ -8809,10 +8813,20 @@ const runBgEdit = async () => {
   try {
     bgSrc = await normalizeBgForEdit(bgSrc);
     const color = extractColorName(bgEditPrompt);
+    let refinedMask = mask;
+    if (bgEditImageRef.current) {
+      const refine = await refineMaskWithSam(
+        bgSrc,
+        bgEditImageRef.current,
+        bgEditLassoPoints
+      );
+      if (refine) refinedMask = refine;
+    }
+
     if (color && bgEditImageRef.current) {
       const variants = await buildColorEditVariants(
         bgEditImageRef.current,
-        mask,
+        refinedMask,
         color
       );
       setBgEditVariants(variants.slice(0, 3));
@@ -8822,7 +8836,7 @@ const runBgEdit = async () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           image: bgSrc,
-          mask,
+          mask: refinedMask,
           prompt: bgEditPrompt.trim(),
           seed,
           count: 3,
@@ -9042,6 +9056,7 @@ function hslToRgb(h: number, s: number, l: number) {
 function parseMaskDataUrl(maskDataUrl: string) {
   return new Promise<ImageData>((resolve, reject) => {
     const img = new Image();
+    img.crossOrigin = "anonymous";
     img.onload = () => {
       const c = document.createElement("canvas");
       c.width = img.naturalWidth;
@@ -9103,6 +9118,52 @@ async function buildColorEditVariants(
     cctx.putImageData(imgData, 0, 0);
     return c.toDataURL("image/png");
   });
+}
+
+async function refineMaskWithSam(
+  imageSrc: string,
+  img: HTMLImageElement,
+  points: { x: number; y: number }[]
+) {
+  if (points.length < 3) return null;
+  const box = computeLassoBox(points);
+  try {
+    const res = await fetch("/api/bg-refine", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        image: imageSrc,
+        box,
+        width: img.naturalWidth,
+        height: img.naturalHeight,
+        point: box.center,
+      }),
+    });
+    const data = await res.json();
+    if (data?.maskUrl) return String(data.maskUrl);
+  } catch {}
+  return null;
+}
+
+function computeLassoBox(points: { x: number; y: number }[]) {
+  let minX = 1, minY = 1, maxX = 0, maxY = 0;
+  points.forEach((p) => {
+    minX = Math.min(minX, p.x);
+    minY = Math.min(minY, p.y);
+    maxX = Math.max(maxX, p.x);
+    maxY = Math.max(maxY, p.y);
+  });
+  minX = Math.max(0, Math.min(1, minX));
+  minY = Math.max(0, Math.min(1, minY));
+  maxX = Math.max(0, Math.min(1, maxX));
+  maxY = Math.max(0, Math.min(1, maxY));
+  return {
+    x1: minX,
+    y1: minY,
+    x2: maxX,
+    y2: maxY,
+    center: { x: (minX + maxX) / 2, y: (minY + maxY) / 2 },
+  };
 }
 
   /* dark inputs + slim scrollbars */
