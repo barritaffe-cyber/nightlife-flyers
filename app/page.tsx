@@ -8796,11 +8796,7 @@ const runBgEdit = async () => {
 
   let mask: string | null = null;
   if (bgEditLassoPoints.length >= 3 && bgEditImageRef.current) {
-    mask = buildLassoMask(
-      bgEditImageRef.current.naturalWidth,
-      bgEditImageRef.current.naturalHeight,
-      bgEditLassoPoints
-    );
+    mask = buildEdgeAwareLassoMask(bgEditImageRef.current, bgEditLassoPoints);
   }
 
   if (!mask) {
@@ -8812,23 +8808,33 @@ const runBgEdit = async () => {
   setBgEditError("");
   try {
     bgSrc = await normalizeBgForEdit(bgSrc);
-    const res = await fetch("/api/bg-edit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        image: bgSrc,
+    const color = extractColorName(bgEditPrompt);
+    if (color && bgEditImageRef.current) {
+      const variants = buildColorEditVariants(
+        bgEditImageRef.current,
         mask,
-        prompt: bgEditPrompt.trim(),
-        seed,
-        count: 3,
-      }),
-    });
-    const data = await res.json();
-    if (data?.error) {
-      setBgEditError(String(data.error));
+        color
+      );
+      setBgEditVariants(variants.slice(0, 3));
+    } else {
+      const res = await fetch("/api/bg-edit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          image: bgSrc,
+          mask,
+          prompt: bgEditPrompt.trim(),
+          seed,
+          count: 3,
+        }),
+      });
+      const data = await res.json();
+      if (data?.error) {
+        setBgEditError(String(data.error));
+      }
+      const variants = Array.isArray(data?.variants) ? data.variants : [];
+      setBgEditVariants(variants.slice(0, 3));
     }
-    const variants = Array.isArray(data?.variants) ? data.variants : [];
-    setBgEditVariants(variants.slice(0, 3));
   } catch (err: any) {
     setBgEditError(String(err?.message || err || "Edit failed."));
   } finally {
@@ -8852,31 +8858,252 @@ async function normalizeBgForEdit(src: string): Promise<string> {
   return blobUrlToDataUrl(src);
 }
 
-const buildLassoMask = (
-  naturalW: number,
-  naturalH: number,
+const buildEdgeAwareLassoMask = (
+  img: HTMLImageElement,
   points: { x: number; y: number }[]
 ) => {
   if (points.length < 3) return null;
   const c = document.createElement("canvas");
-  c.width = Math.max(1, Math.round(naturalW));
-  c.height = Math.max(1, Math.round(naturalH));
+  const w = Math.max(1, Math.round(img.naturalWidth));
+  const h = Math.max(1, Math.round(img.naturalHeight));
+  c.width = w;
+  c.height = h;
   const ctx = c.getContext("2d");
   if (!ctx) return null;
   ctx.fillStyle = "#000";
-  ctx.fillRect(0, 0, c.width, c.height);
+  ctx.fillRect(0, 0, w, h);
   ctx.beginPath();
   points.forEach((p, i) => {
-    const x = Math.max(0, Math.min(1, p.x)) * c.width;
-    const y = Math.max(0, Math.min(1, p.y)) * c.height;
+    const x = Math.max(0, Math.min(1, p.x)) * w;
+    const y = Math.max(0, Math.min(1, p.y)) * h;
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   });
   ctx.closePath();
   ctx.fillStyle = "#fff";
   ctx.fill();
+
+  // Edge-aware refine (best-effort; falls back if image is not readable).
+  try {
+    const imgCanvas = document.createElement("canvas");
+    imgCanvas.width = w;
+    imgCanvas.height = h;
+    const imgCtx = imgCanvas.getContext("2d");
+    if (!imgCtx) return c.toDataURL("image/png");
+    imgCtx.drawImage(img, 0, 0, w, h);
+    const imgData = imgCtx.getImageData(0, 0, w, h).data;
+
+    const edge = new Uint8Array(w * h);
+    const getGray = (ix: number) => {
+      const r = imgData[ix];
+      const g = imgData[ix + 1];
+      const b = imgData[ix + 2];
+      return (r * 0.299 + g * 0.587 + b * 0.114) | 0;
+    };
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const i = (y * w + x) * 4;
+        const tl = getGray(i - 4 - w * 4);
+        const tc = getGray(i - w * 4);
+        const tr = getGray(i + 4 - w * 4);
+        const ml = getGray(i - 4);
+        const mr = getGray(i + 4);
+        const bl = getGray(i - 4 + w * 4);
+        const bc = getGray(i + w * 4);
+        const br = getGray(i + 4 + w * 4);
+        const gx = -tl - 2 * ml - bl + tr + 2 * mr + br;
+        const gy = -tl - 2 * tc - tr + bl + 2 * bc + br;
+        const mag = Math.min(255, Math.abs(gx) + Math.abs(gy));
+        if (mag > 80) edge[y * w + x] = 1;
+      }
+    }
+
+    const edgeNear = new Uint8Array(w * h);
+    const r = 3;
+    for (let y = r; y < h - r; y++) {
+      for (let x = r; x < w - r; x++) {
+        if (!edge[y * w + x]) continue;
+        for (let yy = -r; yy <= r; yy++) {
+          for (let xx = -r; xx <= r; xx++) {
+            edgeNear[(y + yy) * w + (x + xx)] = 1;
+          }
+        }
+      }
+    }
+
+    const maskData = ctx.getImageData(0, 0, w, h);
+    const m = maskData.data;
+    const band = new Uint8Array(w * h);
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const idx = (y * w + x) * 4;
+        const isMask = m[idx] > 0;
+        if (!isMask) continue;
+        for (let yy = -2; yy <= 2; yy++) {
+          for (let xx = -2; xx <= 2; xx++) {
+            band[(y + yy) * w + (x + xx)] = 1;
+          }
+        }
+      }
+    }
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const idx = (y * w + x) * 4;
+        if (m[idx] === 0 && band[y * w + x] && edgeNear[y * w + x]) {
+          m[idx] = 255;
+          m[idx + 1] = 255;
+          m[idx + 2] = 255;
+          m[idx + 3] = 255;
+        }
+      }
+    }
+    ctx.putImageData(maskData, 0, 0);
+  } catch {}
+
   return c.toDataURL("image/png");
 };
+
+const COLOR_MAP: Record<string, { h: number }> = {
+  red: { h: 0 },
+  orange: { h: 28 },
+  yellow: { h: 55 },
+  green: { h: 120 },
+  teal: { h: 170 },
+  cyan: { h: 190 },
+  blue: { h: 210 },
+  purple: { h: 275 },
+  magenta: { h: 300 },
+  pink: { h: 330 },
+  brown: { h: 25 },
+  beige: { h: 40 },
+  gold: { h: 45 },
+  silver: { h: 0 },
+  white: { h: 0 },
+  black: { h: 0 },
+  gray: { h: 0 },
+  grey: { h: 0 },
+};
+
+function extractColorName(prompt: string): string | null {
+  const lower = prompt.toLowerCase();
+  for (const key of Object.keys(COLOR_MAP)) {
+    if (lower.includes(key)) return key;
+  }
+  return null;
+}
+
+function rgbToHsl(r: number, g: number, b: number) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  return { h: h * 360, s, l };
+}
+
+function hslToRgb(h: number, s: number, l: number) {
+  h /= 360;
+  let r: number, g: number, b: number;
+  if (s === 0) {
+    r = g = b = l;
+  } else {
+    const hue2rgb = (p: number, q: number, t: number) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1 / 3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1 / 3);
+  }
+  return {
+    r: Math.round(r * 255),
+    g: Math.round(g * 255),
+    b: Math.round(b * 255),
+  };
+}
+
+function parseMaskDataUrl(maskDataUrl: string) {
+  return new Promise<ImageData>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = img.naturalWidth;
+      c.height = img.naturalHeight;
+      const ctx = c.getContext("2d");
+      if (!ctx) return reject(new Error("No canvas ctx"));
+      ctx.drawImage(img, 0, 0);
+      resolve(ctx.getImageData(0, 0, c.width, c.height));
+    };
+    img.onerror = reject;
+    img.src = maskDataUrl;
+  });
+}
+
+async function buildColorEditVariants(
+  img: HTMLImageElement,
+  maskDataUrl: string,
+  colorName: string
+) {
+  const maskData = await parseMaskDataUrl(maskDataUrl);
+  const w = img.naturalWidth;
+  const h = img.naturalHeight;
+  const baseCanvas = document.createElement("canvas");
+  baseCanvas.width = w;
+  baseCanvas.height = h;
+  const ctx = baseCanvas.getContext("2d");
+  if (!ctx) return [];
+  ctx.drawImage(img, 0, 0, w, h);
+  const src = ctx.getImageData(0, 0, w, h);
+  const out = src.data;
+  const mask = maskData.data;
+  const targetHue = COLOR_MAP[colorName]?.h ?? 120;
+
+  const variants = [
+    { sat: 0.9, light: 1.0 },
+    { sat: 1.1, light: 0.95 },
+    { sat: 1.2, light: 1.05 },
+  ];
+
+  return variants.map((v) => {
+    const data = new Uint8ClampedArray(out);
+    for (let i = 0; i < data.length; i += 4) {
+      if (mask[i] < 10) continue;
+      const r = data[i], g = data[i + 1], b = data[i + 2];
+      const { h, s, l } = rgbToHsl(r, g, b);
+      const newS = Math.min(1, s * v.sat);
+      const newL = Math.min(1, Math.max(0, l * v.light));
+      const { r: nr, g: ng, b: nb } = hslToRgb(targetHue, newS, newL);
+      data[i] = nr;
+      data[i + 1] = ng;
+      data[i + 2] = nb;
+    }
+    const c = document.createElement("canvas");
+    c.width = w;
+    c.height = h;
+    const cctx = c.getContext("2d");
+    if (!cctx) return "";
+    const imgData = new ImageData(data, w, h);
+    cctx.putImageData(imgData, 0, 0);
+    return c.toDataURL("image/png");
+  });
+}
 
   /* dark inputs + slim scrollbars */
   useEffect(() => {
