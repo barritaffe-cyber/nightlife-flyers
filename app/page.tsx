@@ -7702,6 +7702,10 @@ const [bgBlur, setBgBlur] = useState(0);
 const [bgEditPrompt, setBgEditPrompt] = useState("");
 const [bgEditVariants, setBgEditVariants] = useState<string[]>([]);
 const [bgEditBaseUrl, setBgEditBaseUrl] = useState<string | null>(null);
+const [bgEditMasks, setBgEditMasks] = useState<
+  { id: string; maskUrl: string }[]
+>([]);
+const [bgEditSelectedMaskId, setBgEditSelectedMaskId] = useState<string | null>(null);
 const [bgEditLoading, setBgEditLoading] = useState(false);
 const [bgEditError, setBgEditError] = useState<string>("");
 const bgEditImageRef = useRef<HTMLImageElement | null>(null);
@@ -8786,6 +8790,37 @@ const buildBgBoxMask = (
   return c.toDataURL("image/png");
 };
 
+const fetchBgElements = async () => {
+  let bgSrc = bgUploadUrl || bgUrl;
+  if (!bgSrc) return;
+  setBgEditLoading(true);
+  setBgEditError("");
+  try {
+    bgSrc = await normalizeBgForEdit(bgSrc);
+    const res = await fetch("/api/bg-elements", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: bgSrc }),
+    });
+    const data = await res.json();
+    if (data?.error && (!Array.isArray(data?.elements) || data.elements.length === 0)) {
+      setBgEditError(String(data.error));
+    }
+    const masks = Array.isArray(data?.elements) ? data.elements : [];
+    setBgEditMasks(
+      masks.map((m: any, idx: number) => ({
+        id: String(m.id || idx),
+        maskUrl: String(m.maskUrl || m),
+      }))
+    );
+    setBgEditSelectedMaskId(null);
+  } catch (err: any) {
+    setBgEditError(String(err?.message || err || "Failed to detect objects."));
+  } finally {
+    setBgEditLoading(false);
+  }
+};
+
 const runBgEdit = async () => {
   let bgSrc = bgUploadUrl || bgUrl;
   if (!bgSrc) return;
@@ -8798,22 +8833,23 @@ const runBgEdit = async () => {
     setBgEditError("Background image not ready yet.");
     return;
   }
+  const selected = bgEditMasks.find((m) => m.id === bgEditSelectedMaskId);
+  if (!selected?.maskUrl) {
+    setBgEditError("Tap an object to select it.");
+    return;
+  }
 
   setBgEditLoading(true);
   setBgEditError("");
   try {
     bgSrc = await normalizeBgForEdit(bgSrc);
-    const fullMask = buildFullMask(bgEditImageRef.current);
-    if (!fullMask) {
-      setBgEditError("Failed to build background mask.");
-      return;
-    }
+    const mask = selected.maskUrl;
     const res = await fetch("/api/bg-edit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         image: bgSrc,
-        mask: fullMask,
+        mask,
         prompt: bgEditPrompt.trim(),
         seed,
         count: 3,
@@ -8849,18 +8885,6 @@ async function normalizeBgForEdit(src: string): Promise<string> {
   return blobUrlToDataUrl(src);
 }
 
-function buildFullMask(img: HTMLImageElement) {
-  const w = Math.max(1, Math.round(img.naturalWidth));
-  const h = Math.max(1, Math.round(img.naturalHeight));
-  const c = document.createElement("canvas");
-  c.width = w;
-  c.height = h;
-  const ctx = c.getContext("2d");
-  if (!ctx) return null;
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 0, w, h);
-  return c.toDataURL("image/png");
-}
 
 const buildEdgeAwareLassoMask = (
   img: HTMLImageElement,
@@ -18286,9 +18310,48 @@ style={{ top: STICKY_TOP }}
           <div className="text-[11px] font-semibold text-neutral-200">
             Edit Background
           </div>
-          <div className="text-[11px] text-neutral-400">
-            Describe the change you want. We’ll generate 3 variations.
+          <div className="flex items-center gap-2">
+            <div className="text-[11px] text-neutral-400">
+              Find objects, tap one, then describe the change.
+            </div>
+            <Chip
+              small
+              onClick={fetchBgElements}
+              disabled={bgEditLoading}
+            >
+              {bgEditLoading ? "Finding..." : "Find objects"}
+            </Chip>
           </div>
+
+          {bgEditMasks.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto py-1">
+              {bgEditMasks.map((m, i) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  className={[
+                    "h-16 w-16 rounded border overflow-hidden shrink-0 relative",
+                    bgEditSelectedMaskId === m.id
+                      ? "border-amber-400"
+                      : "border-neutral-700",
+                  ].join(" ")}
+                  onClick={() => setBgEditSelectedMaskId(m.id)}
+                  title={`Object ${i + 1}`}
+                >
+                  <img
+                    src={bgUploadUrl || bgUrl!}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover opacity-70"
+                  />
+                  <img
+                    src={m.maskUrl}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-70"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
 
           <input
             value={bgEditPrompt}
