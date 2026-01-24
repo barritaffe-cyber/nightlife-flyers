@@ -7703,9 +7703,24 @@ const [bgEditPrompt, setBgEditPrompt] = useState("");
 const [bgEditVariants, setBgEditVariants] = useState<string[]>([]);
 const [bgEditBaseUrl, setBgEditBaseUrl] = useState<string | null>(null);
 const [bgEditMasks, setBgEditMasks] = useState<
-  { id: string; maskUrl: string }[]
+  { id: string; maskUrl: string; area?: number; box?: { x: number; y: number; w: number; h: number } }[]
 >([]);
 const [bgEditSelectedMaskId, setBgEditSelectedMaskId] = useState<string | null>(null);
+const [bgEditHighlightId, setBgEditHighlightId] = useState<string | null>(null);
+
+React.useEffect(() => {
+  if (!bgEditMasks.length) {
+    setBgEditHighlightId(null);
+    return;
+  }
+  let idx = 0;
+  setBgEditHighlightId(bgEditMasks[0]?.id || null);
+  const id = window.setInterval(() => {
+    idx = (idx + 1) % bgEditMasks.length;
+    setBgEditHighlightId(bgEditMasks[idx]?.id || null);
+  }, 1200);
+  return () => window.clearInterval(id);
+}, [bgEditMasks]);
 const [bgEditLoading, setBgEditLoading] = useState(false);
 const [bgEditError, setBgEditError] = useState<string>("");
 const bgEditImageRef = useRef<HTMLImageElement | null>(null);
@@ -8807,13 +8822,20 @@ const fetchBgElements = async () => {
       setBgEditError(String(data.error));
     }
     const masks = Array.isArray(data?.elements) ? data.elements : [];
-    setBgEditMasks(
-      masks.map((m: any, idx: number) => ({
-        id: String(m.id || idx),
-        maskUrl: String(m.maskUrl || m),
+    const base = masks.map((m: any, idx: number) => ({
+      id: String(m.id || idx),
+      maskUrl: String(m.maskUrl || m),
+    }));
+    const withMeta = await Promise.all(
+      base.map(async (m: { id: string; maskUrl: string }) => ({
+        ...m,
+        ...(await getMaskMeta(m.maskUrl)),
       }))
     );
+    const ordered = orderMasks(withMeta);
+    setBgEditMasks(ordered);
     setBgEditSelectedMaskId(null);
+    setBgEditHighlightId(ordered[0]?.id || null);
   } catch (err: any) {
     setBgEditError(String(err?.message || err || "Failed to detect objects."));
   } finally {
@@ -9083,6 +9105,52 @@ function parseMaskDataUrl(maskDataUrl: string) {
     img.onerror = reject;
     img.src = maskDataUrl;
   });
+}
+
+async function getMaskMeta(maskUrl: string) {
+  try {
+    const imgData = await parseMaskDataUrl(maskUrl);
+    const w = imgData.width;
+    const h = imgData.height;
+    const data = imgData.data;
+    let minX = w, minY = h, maxX = 0, maxY = 0;
+    let area = 0;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        const m = data[i + 3] > 0 ? data[i + 3] : data[i];
+        if (m > 10) {
+          area++;
+          if (x < minX) minX = x;
+          if (y < minY) minY = y;
+          if (x > maxX) maxX = x;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+    if (area === 0) return { area: 0, box: { x: 0, y: 0, w: 0, h: 0 } };
+    return {
+      area,
+      box: { x: minX / w, y: minY / h, w: (maxX - minX) / w, h: (maxY - minY) / h },
+    };
+  } catch {
+    return { area: 0, box: { x: 0, y: 0, w: 0, h: 0 } };
+  }
+}
+
+function isPersonLikeMask(m: { area?: number; box?: { w: number; h: number } }) {
+  if (!m.box) return false;
+  const ar = m.box.h / Math.max(0.01, m.box.w);
+  const area = m.area ?? 0;
+  return ar > 1.2 && ar < 4 && area > 5000;
+}
+
+function orderMasks(
+  masks: { id: string; maskUrl: string; area?: number; box?: { x: number; y: number; w: number; h: number } }[]
+) {
+  const people = masks.filter(isPersonLikeMask).sort((a, b) => (b.area ?? 0) - (a.area ?? 0));
+  const objs = masks.filter((m) => !isPersonLikeMask(m)).sort((a, b) => (b.area ?? 0) - (a.area ?? 0));
+  return [...people, ...objs].slice(0, 8);
 }
 
 async function buildColorEditVariants(
@@ -18241,6 +18309,22 @@ style={{ top: STICKY_TOP }}
             className="w-full h-full object-cover"
             draggable={false}
           />
+          {bgEditHighlightId && (
+            <button
+              type="button"
+              className="absolute inset-0"
+              onClick={() => setBgEditSelectedMaskId(bgEditHighlightId)}
+              title="Select highlighted object"
+            >
+              <img
+                src={
+                  bgEditMasks.find((m) => m.id === bgEditHighlightId)?.maskUrl || ""
+                }
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-60"
+              />
+            </button>
+          )}
         </div>
 
         {bgEditVariants.length > 0 && (
