@@ -7721,6 +7721,18 @@ React.useEffect(() => {
   }, 1200);
   return () => window.clearInterval(id);
 }, [bgEditMasks]);
+const cycleBgHighlight = React.useCallback(
+  (direction: 1 | -1 = 1) => {
+    if (!bgEditMasks.length) return;
+    const idx = Math.max(
+      0,
+      bgEditMasks.findIndex((m) => m.id === bgEditHighlightId)
+    );
+    const next = (idx + direction + bgEditMasks.length) % bgEditMasks.length;
+    setBgEditHighlightId(bgEditMasks[next]?.id || null);
+  },
+  [bgEditMasks, bgEditHighlightId]
+);
 const [bgEditLoading, setBgEditLoading] = useState(false);
 const [bgEditError, setBgEditError] = useState<string>("");
 const bgEditImageRef = useRef<HTMLImageElement | null>(null);
@@ -18321,7 +18333,8 @@ style={{ top: STICKY_TOP }}
                   bgEditMasks.find((m) => m.id === bgEditHighlightId)?.maskUrl || ""
                 }
                 alt=""
-                className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-60"
+                className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-80"
+                style={{ filter: "drop-shadow(0 0 8px rgba(255,193,7,0.9))" }}
               />
             </button>
           )}
@@ -18406,6 +18419,26 @@ style={{ top: STICKY_TOP }}
               {bgEditLoading ? "Finding..." : "Find objects"}
             </Chip>
           </div>
+
+          {bgEditMasks.length > 0 && (
+            <div className="flex items-center gap-2 text-[11px] text-neutral-300">
+              <span>
+                Highlighted object{" "}
+                <b>
+                  {Math.max(1, bgEditMasks.findIndex((m) => m.id === bgEditHighlightId) + 1)}
+                </b>
+                /{bgEditMasks.length}
+              </span>
+              <Chip small onClick={() => cycleBgHighlight(-1)}>Prev</Chip>
+              <Chip small onClick={() => cycleBgHighlight(1)}>Next</Chip>
+              <Chip
+                small
+                onClick={() => setBgEditSelectedMaskId(bgEditHighlightId)}
+              >
+                Select
+              </Chip>
+            </div>
+          )}
 
           {bgEditMasks.length > 0 && (
             <div className="flex gap-2 overflow-x-auto py-1">
