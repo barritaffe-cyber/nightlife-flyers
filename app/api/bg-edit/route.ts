@@ -149,12 +149,19 @@ export async function POST(req: Request) {
     }
 
     stage = "predict";
+    const colorWords =
+      /\b(red|blue|green|yellow|orange|purple|pink|black|white|gray|grey|teal|cyan|magenta|brown|beige|gold|silver)\b/i;
+    const colorLockPrompt = colorWords.test(prompt)
+      ? "Change only the color as requested. Preserve the exact shape, folds, texture, fabric, and lighting. No restyle, no pattern change."
+      : "";
     const safetyPrompt =
       "Preserve the original photo. Keep all unmasked areas identical. " +
       "Only apply the requested change inside the mask. " +
       "No new objects, no new people, no horror, no gore, no distortions. " +
       "Maintain natural lighting, realistic textures, and original perspective.";
-    const fullPrompt = `${prompt}. ${safetyPrompt}`;
+    const fullPrompt = [prompt, colorLockPrompt, safetyPrompt]
+      .filter(Boolean)
+      .join(" ");
 
     const output = await runReplicate(
       INPAINT_ENDPOINT,
@@ -166,7 +173,8 @@ export async function POST(req: Request) {
         negative_prompt:
           "horror, creepy, gore, blood, monster, deformed, distorted, " +
           "extra limbs, extra faces, low quality, blurry, artifacts, " +
-          "text, watermark, logo, glitch",
+          "text, watermark, logo, glitch, pattern change, fabric change, " +
+          "shape change, silhouette change",
         num_inference_steps: 20,
         guidance_scale: 5,
         strength: 0.35,
