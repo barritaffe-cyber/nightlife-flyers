@@ -149,13 +149,27 @@ export async function POST(req: Request) {
     }
 
     stage = "predict";
+    const safetyPrompt =
+      "Preserve the original photo. Keep all unmasked areas identical. " +
+      "Only apply the requested change inside the mask. " +
+      "No new objects, no new people, no horror, no gore, no distortions. " +
+      "Maintain natural lighting, realistic textures, and original perspective.";
+    const fullPrompt = `${prompt}. ${safetyPrompt}`;
+
     const output = await runReplicate(
       INPAINT_ENDPOINT,
       REPLICATE_TOKEN,
       {
         image,
         mask,
-        prompt,
+        prompt: fullPrompt,
+        negative_prompt:
+          "horror, creepy, gore, blood, monster, deformed, distorted, " +
+          "extra limbs, extra faces, low quality, blurry, artifacts, " +
+          "text, watermark, logo, glitch",
+        num_inference_steps: 20,
+        guidance_scale: 5,
+        strength: 0.35,
         num_outputs: count,
         output_format: "png",
         seed,
