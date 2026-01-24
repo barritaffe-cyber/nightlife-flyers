@@ -156,10 +156,10 @@ export async function POST(req: Request) {
       ? "Change only the color as requested. Shift the hue to the requested color. Preserve the exact shape, folds, texture, fabric, and lighting. No restyle, no pattern change."
       : "";
     const safetyPrompt =
-      "Preserve the original photo. Keep all unmasked areas identical. " +
-      "Only apply the requested change inside the mask. " +
-      "No new objects, no new people, no horror, no gore, no distortions. " +
-      "Maintain natural lighting, realistic textures, and original perspective.";
+      "Preserve the original photo. Keep the composition, lighting, and perspective unchanged. " +
+      "Do not change faces or bodies. No new people, no new objects. " +
+      "Avoid horror/creepy artifacts, distortions, or stylization. " +
+      "Maintain realistic textures and natural color continuity.";
     const fullPrompt = [prompt, colorLockPrompt, safetyPrompt]
       .filter(Boolean)
       .join(" ");
@@ -176,9 +176,9 @@ export async function POST(req: Request) {
           "extra limbs, extra faces, low quality, blurry, artifacts, " +
           "text, watermark, logo, glitch, pattern change, fabric change, " +
           "shape change, silhouette change",
-        num_inference_steps: 22,
+        num_inference_steps: 24,
         guidance_scale: isColorEdit ? 7 : 5,
-        strength: isColorEdit ? 0.55 : 0.35,
+        strength: isColorEdit ? 0.55 : 0.3,
         num_outputs: count,
         output_format: "png",
         seed,

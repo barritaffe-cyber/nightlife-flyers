@@ -7701,6 +7701,7 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
 const [bgBlur, setBgBlur] = useState(0);
 const [bgEditPrompt, setBgEditPrompt] = useState("");
 const [bgEditVariants, setBgEditVariants] = useState<string[]>([]);
+const [bgEditBaseUrl, setBgEditBaseUrl] = useState<string | null>(null);
 const [bgEditLoading, setBgEditLoading] = useState(false);
 const [bgEditError, setBgEditError] = useState<string>("");
 const bgEditImageRef = useRef<HTMLImageElement | null>(null);
@@ -8823,6 +8824,7 @@ const runBgEdit = async () => {
       setBgEditError(String(data.error));
     }
     const variants = Array.isArray(data?.variants) ? data.variants : [];
+    setBgEditBaseUrl(bgSrc);
     setBgEditVariants(variants.slice(0, 3));
   } catch (err: any) {
     setBgEditError(String(err?.message || err || "Edit failed."));
@@ -18218,7 +18220,25 @@ style={{ top: STICKY_TOP }}
         </div>
 
         {bgEditVariants.length > 0 && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
+            {bgEditBaseUrl && (
+              <button
+                type="button"
+                className="h-16 w-16 rounded border border-neutral-700 overflow-hidden bg-neutral-900/60"
+                onClick={() => {
+                  if (bgEditBaseUrl.startsWith("data:image/")) {
+                    setBgUploadUrl(bgEditBaseUrl);
+                    setBgUrl(null);
+                  } else {
+                    setBgUrl(bgEditBaseUrl);
+                    setBgUploadUrl(null);
+                  }
+                }}
+                title="Original"
+              >
+                <img src={bgEditBaseUrl} alt="" className="h-full w-full object-cover" />
+              </button>
+            )}
             {bgEditVariants.map((v, idx) => (
               <button
                 key={`${v}-${idx}`}
@@ -18232,7 +18252,6 @@ style={{ top: STICKY_TOP }}
                     setBgUrl(v);
                     setBgUploadUrl(null);
                   }
-                  setBgEditVariants([]);
                 }}
                 title="Apply this variant"
               >
