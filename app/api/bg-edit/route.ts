@@ -16,7 +16,7 @@ async function runReplicate(
   version?: string
 ) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 25000);
+  const timeout = setTimeout(() => controller.abort(), 55000);
   const res = await fetch(endpoint, {
     method: "POST",
     headers: {
