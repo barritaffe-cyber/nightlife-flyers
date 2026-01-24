@@ -8824,16 +8824,32 @@ const fetchBgElements = async () => {
   setBgEditError("");
   try {
     bgSrc = await normalizeBgForEdit(bgSrc);
-    const res = await fetch("/api/bg-elements", {
+    const resPeople = await fetch("/api/bg-people", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ image: bgSrc }),
     });
-    const data = await res.json();
-    if (data?.error && (!Array.isArray(data?.elements) || data.elements.length === 0)) {
-      setBgEditError(String(data.error));
+    const dataPeople = await resPeople.json();
+    const peopleMasks = Array.isArray(dataPeople?.elements)
+      ? dataPeople.elements
+      : [];
+
+    let masks: any[] = [];
+    if (peopleMasks.length > 0) {
+      masks = peopleMasks;
+    } else {
+      const res = await fetch("/api/bg-elements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: bgSrc }),
+      });
+      const data = await res.json();
+      if (data?.error && (!Array.isArray(data?.elements) || data.elements.length === 0)) {
+        setBgEditError(String(data.error));
+      }
+      masks = Array.isArray(data?.elements) ? data.elements : [];
     }
-    const masks = Array.isArray(data?.elements) ? data.elements : [];
+
     const base = masks.map((m: any, idx: number) => ({
       id: String(m.id || idx),
       maskUrl: String(m.maskUrl || m),
