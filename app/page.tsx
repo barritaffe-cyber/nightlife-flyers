@@ -7700,8 +7700,6 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
   const [bgPosY, setBgPosY] = useState(50);
 const [bgBlur, setBgBlur] = useState(0);
 const [bgEditPrompt, setBgEditPrompt] = useState("");
-const [bgEditLassoPoints, setBgEditLassoPoints] = useState<{ x: number; y: number }[]>([]);
-const [bgEditLassoDrawing, setBgEditLassoDrawing] = useState(false);
 const [bgEditVariants, setBgEditVariants] = useState<string[]>([]);
 const [bgEditLoading, setBgEditLoading] = useState(false);
 const [bgEditError, setBgEditError] = useState<string>("");
@@ -8205,13 +8203,14 @@ React.useEffect(() => {
     return next;
   });
 
-  // 2) Open the Logo/3D panel (IMPORTANT: use the GLOBAL store)
-  useFlyerState.getState().setSelectedPanel("media");
+  // 2) Open the Logo/3D panel
+  useFlyerState.getState().setSelectedPanel("logo");
+  setMobileControlsTab("design");
 
   // 3) Scroll the Logo panel into view (optional but nice)
-  setTimeout(() => {
+  requestAnimationFrame(() => {
     logoPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, 0);
+  });
 }
 function clearAllSelections() {
   const store = useFlyerState.getState();
@@ -8794,18 +8793,8 @@ const runBgEdit = async () => {
     return;
   }
 
-  let mask: string | null = null;
-  let localMask: string | null = null;
-  if (bgEditLassoPoints.length >= 3 && bgEditImageRef.current) {
-    localMask = buildEdgeAwareLassoMask(
-      bgEditImageRef.current,
-      bgEditLassoPoints
-    );
-    mask = localMask;
-  }
-
-  if (!mask) {
-    setBgEditError("Draw a lasso selection on the background.");
+  if (!bgEditImageRef.current) {
+    setBgEditError("Background image not ready yet.");
     return;
   }
 
@@ -8813,44 +8802,28 @@ const runBgEdit = async () => {
   setBgEditError("");
   try {
     bgSrc = await normalizeBgForEdit(bgSrc);
-    const color = extractColorName(bgEditPrompt);
-    let refinedMask = mask;
-    if (bgEditImageRef.current) {
-      const refine = await refineMaskWithSam(
-        bgSrc,
-        bgEditImageRef.current,
-        bgEditLassoPoints
-      );
-      if (refine) refinedMask = refine;
+    const fullMask = buildFullMask(bgEditImageRef.current);
+    if (!fullMask) {
+      setBgEditError("Failed to build background mask.");
+      return;
     }
-
-    if (color && bgEditImageRef.current) {
-      const maskForColor = localMask || refinedMask;
-      const variants = await buildColorEditVariants(
-        bgEditImageRef.current,
-        maskForColor || refinedMask,
-        color
-      );
-      setBgEditVariants(variants.slice(0, 3));
-    } else {
-      const res = await fetch("/api/bg-edit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          image: bgSrc,
-          mask: refinedMask,
-          prompt: bgEditPrompt.trim(),
-          seed,
-          count: 3,
-        }),
-      });
-      const data = await res.json();
-      if (data?.error) {
-        setBgEditError(String(data.error));
-      }
-      const variants = Array.isArray(data?.variants) ? data.variants : [];
-      setBgEditVariants(variants.slice(0, 3));
+    const res = await fetch("/api/bg-edit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        image: bgSrc,
+        mask: fullMask,
+        prompt: bgEditPrompt.trim(),
+        seed,
+        count: 3,
+      }),
+    });
+    const data = await res.json();
+    if (data?.error) {
+      setBgEditError(String(data.error));
     }
+    const variants = Array.isArray(data?.variants) ? data.variants : [];
+    setBgEditVariants(variants.slice(0, 3));
   } catch (err: any) {
     setBgEditError(String(err?.message || err || "Edit failed."));
   } finally {
@@ -8872,6 +8845,19 @@ async function blobUrlToDataUrl(blobUrl: string): Promise<string> {
 async function normalizeBgForEdit(src: string): Promise<string> {
   if (src.startsWith("data:") || src.startsWith("http")) return src;
   return blobUrlToDataUrl(src);
+}
+
+function buildFullMask(img: HTMLImageElement) {
+  const w = Math.max(1, Math.round(img.naturalWidth));
+  const h = Math.max(1, Math.round(img.naturalHeight));
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const ctx = c.getContext("2d");
+  if (!ctx) return null;
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, w, h);
+  return c.toDataURL("image/png");
 }
 
 const buildEdgeAwareLassoMask = (
@@ -13497,20 +13483,49 @@ const activeAssetControls = React.useMemo(() => {
     const sel = list.find((p: any) => p.id === selectedPortraitId);
     if (!sel) return null;
     const isLogo = String(sel.id || "").startsWith("logo_") || !!(sel as any).isLogo;
-    if (!sel.isFlare && !sel.isSticker && !isLogo) return null;
+    const isAsset = sel.isFlare || sel.isSticker || isLogo;
+
+    if (isAsset) {
+      return {
+        label: sel.isFlare ? "Flare" : sel.isSticker ? "Graphic" : "3D Text",
+        scale: sel.scale ?? 1,
+        opacity: sel.opacity ?? 1,
+        locked: !!sel.locked,
+        showLabel: !!(sel as any).showLabel,
+        labelValue: String((sel as any).label ?? ""),
+        onLabel: (v: string) =>
+          useFlyerState.getState().updatePortrait(format, sel.id, { label: v }),
+        onScale: (v: number) =>
+          useFlyerState.getState().updatePortrait(format, sel.id, { scale: v }),
+        onOpacity: (v: number) =>
+          useFlyerState.getState().updatePortrait(format, sel.id, { opacity: v }),
+        onToggleLock: () =>
+          useFlyerState.getState().updatePortrait(format, sel.id, {
+            locked: !sel.locked,
+          }),
+        onDelete: () => {
+          removePortrait(format, sel.id);
+          useFlyerState.getState().setSelectedPortraitId(null);
+        },
+      };
+    }
+
     return {
-      label: sel.isFlare ? "Flare" : sel.isSticker ? "Graphic" : "3D Text",
+      label: "Portrait",
       scale: sel.scale ?? 1,
       opacity: sel.opacity ?? 1,
       locked: !!sel.locked,
-      showLabel: !!(sel as any).showLabel,
-      labelValue: String((sel as any).label ?? ""),
-      onLabel: (v: string) =>
-        useFlyerState.getState().updatePortrait(format, sel.id, { label: v }),
+      showOpacity: false,
+      cleanup: {
+        shrinkPx: cleanupParams.shrinkPx,
+        featherPx: cleanupParams.featherPx,
+        onShrink: (v: number) =>
+          setCleanupAndRun({ ...cleanupParams, shrinkPx: v }),
+        onFeather: (v: number) =>
+          setCleanupAndRun({ ...cleanupParams, featherPx: v }),
+      },
       onScale: (v: number) =>
         useFlyerState.getState().updatePortrait(format, sel.id, { scale: v }),
-      onOpacity: (v: number) =>
-        useFlyerState.getState().updatePortrait(format, sel.id, { opacity: v }),
       onToggleLock: () =>
         useFlyerState.getState().updatePortrait(format, sel.id, {
           locked: !sel.locked,
@@ -13523,7 +13538,7 @@ const activeAssetControls = React.useMemo(() => {
   }
 
   return null;
-}, [selectedEmojiId, selectedPortraitId, emojis, portraits, format]);
+}, [selectedEmojiId, selectedPortraitId, emojis, portraits, format, cleanupParams]);
 
 const activeBgControls = React.useMemo(() => {
   if (selectedPanel !== "background" && moveTarget !== "background") return null;
@@ -15509,6 +15524,7 @@ style={{ top: STICKY_TOP }}
 {/* UI: LOGO — MIRROR OF PORTRAIT LOGIC (BEGIN) */}
 <div
   id="logo-panel"
+  ref={logoPanelRef}
   className={
     selectedPanel === "logo"
       ? "relative rounded-xl border border-blue-400 transition"
@@ -17250,20 +17266,52 @@ style={{ top: STICKY_TOP }}
               disabled={activeAssetControls.locked}
             />
           </div>
-          <div>
-            <div className="text-[10px] text-neutral-400 mb-1">Opacity</div>
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.05}
-              value={Number(activeAssetControls.opacity || 0)}
-              onChange={(e) => activeAssetControls.onOpacity(Number(e.target.value))}
-              className="w-full accent-indigo-400"
-              disabled={activeAssetControls.locked}
-            />
-          </div>
+          {activeAssetControls.showOpacity !== false && (
+            <div>
+              <div className="text-[10px] text-neutral-400 mb-1">Opacity</div>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={Number(activeAssetControls.opacity || 0)}
+                onChange={(e) => activeAssetControls.onOpacity(Number(e.target.value))}
+                className="w-full accent-indigo-400"
+                disabled={activeAssetControls.locked}
+              />
+            </div>
+          )}
         </div>
+        {activeAssetControls.cleanup && (
+          <div className="mt-2 grid grid-cols-2 gap-3 items-center">
+            <div>
+              <div className="text-[10px] text-neutral-400 mb-1">Shrink edge</div>
+              <input
+                type="range"
+                min={0}
+                max={10}
+                step={0.5}
+                value={Number(activeAssetControls.cleanup.shrinkPx || 0)}
+                onChange={(e) => activeAssetControls.cleanup?.onShrink?.(Number(e.target.value))}
+                className="w-full accent-amber-400"
+                disabled={activeAssetControls.locked}
+              />
+            </div>
+            <div>
+              <div className="text-[10px] text-neutral-400 mb-1">Feather</div>
+              <input
+                type="range"
+                min={0}
+                max={10}
+                step={0.5}
+                value={Number(activeAssetControls.cleanup.featherPx || 0)}
+                onChange={(e) => activeAssetControls.cleanup?.onFeather?.(Number(e.target.value))}
+                className="w-full accent-emerald-400"
+                disabled={activeAssetControls.locked}
+              />
+            </div>
+          </div>
+        )}
         {activeAssetControls.showLabel && (
           <div
             className="mt-2"
@@ -18167,53 +18215,6 @@ style={{ top: STICKY_TOP }}
             className="w-full h-full object-cover"
             draggable={false}
           />
-          <div
-            className="absolute inset-0 cursor-crosshair touch-none"
-            onPointerDown={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              const x = (e.clientX - rect.left) / rect.width;
-              const y = (e.clientY - rect.top) / rect.height;
-              setBgEditLassoDrawing(true);
-              setBgEditLassoPoints([{ x, y }]);
-              e.currentTarget.setPointerCapture(e.pointerId);
-            }}
-            onPointerMove={(e) => {
-              if (!bgEditLassoDrawing) return;
-              const rect = e.currentTarget.getBoundingClientRect();
-              const x = (e.clientX - rect.left) / rect.width;
-              const y = (e.clientY - rect.top) / rect.height;
-              setBgEditLassoPoints((prev) => {
-                const last = prev[prev.length - 1];
-                const dx = Math.abs(x - (last?.x ?? x));
-                const dy = Math.abs(y - (last?.y ?? y));
-                if (dx + dy < 0.005) return prev;
-                return [...prev, { x, y }];
-              });
-            }}
-            onPointerUp={(e) => {
-              setBgEditLassoDrawing(false);
-              try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
-            }}
-          >
-            {bgEditLassoPoints.length > 1 && (
-              <svg
-                className="absolute inset-0 w-full h-full pointer-events-none"
-                viewBox="0 0 100 100"
-                preserveAspectRatio="none"
-              >
-                <path
-                  d={[
-                    `M ${bgEditLassoPoints[0].x * 100} ${bgEditLassoPoints[0].y * 100}`,
-                    ...bgEditLassoPoints.slice(1).map((p) => `L ${p.x * 100} ${p.y * 100}`),
-                    "Z",
-                  ].join(" ")}
-                  fill="rgba(255, 193, 7, 0.2)"
-                  stroke="rgba(255, 193, 7, 0.9)"
-                  strokeWidth="1"
-                />
-              </svg>
-            )}
-          </div>
         </div>
 
         {bgEditVariants.length > 0 && (
@@ -18231,7 +18232,7 @@ style={{ top: STICKY_TOP }}
                     setBgUrl(v);
                     setBgUploadUrl(null);
                   }
-                  setBgEditLassoPoints([]);
+                  setBgEditVariants([]);
                 }}
                 title="Apply this variant"
               >
@@ -18266,13 +18267,8 @@ style={{ top: STICKY_TOP }}
           <div className="text-[11px] font-semibold text-neutral-200">
             Edit Background
           </div>
-          <div className="flex items-center gap-2">
-            <div className="text-[11px] text-neutral-400">
-              Draw a lasso around the area you want to change.
-            </div>
-            <Chip small onClick={() => setBgEditLassoPoints([])}>
-              Clear selection
-            </Chip>
+          <div className="text-[11px] text-neutral-400">
+            Describe the change you want. We’ll generate 3 variations.
           </div>
 
           <input
