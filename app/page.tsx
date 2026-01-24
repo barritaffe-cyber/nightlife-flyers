@@ -17275,7 +17275,7 @@ style={{ top: STICKY_TOP }}
                 max={1}
                 step={0.05}
                 value={Number(activeAssetControls.opacity || 0)}
-                onChange={(e) => activeAssetControls.onOpacity(Number(e.target.value))}
+                onChange={(e) => activeAssetControls.onOpacity?.(Number(e.target.value))}
                 className="w-full accent-indigo-400"
                 disabled={activeAssetControls.locked}
               />
