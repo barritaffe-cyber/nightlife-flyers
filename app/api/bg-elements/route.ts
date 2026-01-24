@@ -139,8 +139,12 @@ export async function POST(req: Request) {
       ? output
       : Array.isArray(output?.masks)
       ? output.masks
+      : output?.combined_mask
+      ? [output.combined_mask]
       : output?.mask
       ? [output.mask]
+      : output?.masks && typeof output.masks === "string"
+      ? [output.masks]
       : [];
 
     const elements = masks.slice(0, 6).map((maskUrl: string, idx: number) => ({
@@ -148,6 +152,15 @@ export async function POST(req: Request) {
       maskUrl,
     }));
 
+    if (elements.length === 0) {
+      return NextResponse.json({
+        elements,
+        debug:
+          output && typeof output === "object"
+            ? { keys: Object.keys(output), type: "object" }
+            : { type: typeof output },
+      });
+    }
     return NextResponse.json({ elements });
   } catch (err: any) {
     return NextResponse.json(
