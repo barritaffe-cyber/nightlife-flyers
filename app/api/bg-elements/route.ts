@@ -15,6 +15,8 @@ async function runReplicate(
   input: any,
   version?: string
 ) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25000);
   const res = await fetch(endpoint, {
     method: "POST",
     headers: {
@@ -23,7 +25,9 @@ async function runReplicate(
       Prefer: "wait",
     },
     body: JSON.stringify(version ? { version, input } : { input }),
+    signal: controller.signal,
   });
+  clearTimeout(timeout);
 
   const raw = await res.text();
   if (!res.ok) throw new Error(raw || "Replicate request failed");
@@ -77,11 +81,15 @@ async function uploadToReplicate(
   const blob = new Blob([buf], { type: mime });
   form.append("content", blob, "upload.png");
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25000);
   const res = await fetch(REPLICATE_FILES_ENDPOINT, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
     body: form,
+    signal: controller.signal,
   });
+  clearTimeout(timeout);
   const raw = await res.text();
   if (!res.ok) throw new Error(raw || "Replicate file upload failed");
   const data = JSON.parse(raw);
@@ -91,6 +99,7 @@ async function uploadToReplicate(
 }
 
 export async function POST(req: Request) {
+  let stage = "start";
   try {
     const body = await req.json();
     let image = String(body?.image || "");
@@ -108,6 +117,7 @@ export async function POST(req: Request) {
         { status: 200 }
       );
     }
+    stage = "upload";
     if (isDataUrl(image)) {
       image = await uploadToReplicate(image, REPLICATE_TOKEN);
     }
@@ -118,6 +128,7 @@ export async function POST(req: Request) {
       );
     }
 
+    stage = "predict";
     const output = await runReplicate(
       SAM_ENDPOINT,
       REPLICATE_TOKEN,
@@ -146,6 +157,7 @@ export async function POST(req: Request) {
         error: String(err?.message || err),
         endpoint: SAM_ENDPOINT,
         version: SAM_ENDPOINT.includes("/models/") ? undefined : SAM_VERSION,
+        stage,
       },
       { status: 200 }
     );
