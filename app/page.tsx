@@ -8795,12 +8795,13 @@ const runBgEdit = async () => {
   }
 
   let mask: string | null = null;
+  let localMask: string | null = null;
   if (bgEditLassoPoints.length >= 3 && bgEditImageRef.current) {
-    const fallbackMask = buildEdgeAwareLassoMask(
+    localMask = buildEdgeAwareLassoMask(
       bgEditImageRef.current,
       bgEditLassoPoints
     );
-    mask = fallbackMask;
+    mask = localMask;
   }
 
   if (!mask) {
@@ -8824,9 +8825,10 @@ const runBgEdit = async () => {
     }
 
     if (color && bgEditImageRef.current) {
+      const maskForColor = localMask || refinedMask;
       const variants = await buildColorEditVariants(
         bgEditImageRef.current,
-        refinedMask,
+        maskForColor || refinedMask,
         color
       );
       setBgEditVariants(variants.slice(0, 3));
