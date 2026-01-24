@@ -16,13 +16,12 @@ async function runReplicate(
   version?: string
 ) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 55000);
+  const timeout = setTimeout(() => controller.abort(), 20000);
   const res = await fetch(endpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
-      Prefer: "wait",
     },
     body: JSON.stringify(version ? { version, input } : { input }),
     signal: controller.signal,
