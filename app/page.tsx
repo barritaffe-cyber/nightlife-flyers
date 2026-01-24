@@ -8810,7 +8810,7 @@ const runBgEdit = async () => {
     bgSrc = await normalizeBgForEdit(bgSrc);
     const color = extractColorName(bgEditPrompt);
     if (color && bgEditImageRef.current) {
-      const variants = buildColorEditVariants(
+      const variants = await buildColorEditVariants(
         bgEditImageRef.current,
         mask,
         color
