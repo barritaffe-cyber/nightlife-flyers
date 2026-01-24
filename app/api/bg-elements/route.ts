@@ -56,6 +56,10 @@ function isDataUrl(value: string) {
   return value.startsWith("data:");
 }
 
+function isHttpUrl(value: string) {
+  return /^https?:\/\//i.test(value);
+}
+
 function dataUrlToBuffer(dataUrl: string) {
   const match = dataUrl.match(/^data:(.+?);base64,(.+)$/);
   if (!match) throw new Error("Invalid data URL");
@@ -106,6 +110,12 @@ export async function POST(req: Request) {
     }
     if (isDataUrl(image)) {
       image = await uploadToReplicate(image, REPLICATE_TOKEN);
+    }
+    if (!isHttpUrl(image)) {
+      return NextResponse.json(
+        { elements: [], error: "Background image must be a public URL or data URL." },
+        { status: 200 }
+      );
     }
 
     const output = await runReplicate(
