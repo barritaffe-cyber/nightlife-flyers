@@ -75,7 +75,7 @@ async function uploadToReplicate(
   const { mime, buf } = dataUrlToBuffer(dataUrl);
   const form = new FormData();
   const blob = new Blob([buf], { type: mime });
-  form.append("file", blob, "upload");
+  form.append("content", blob, "upload.png");
 
   const res = await fetch(REPLICATE_FILES_ENDPOINT, {
     method: "POST",
