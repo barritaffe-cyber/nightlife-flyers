@@ -9090,6 +9090,15 @@ async function buildColorEditVariants(
   const mask = maskData.data;
   const targetHue = COLOR_MAP[colorName]?.h ?? 120;
 
+  let maskHits = 0;
+  const maskPixels = w * h;
+  for (let i = 0; i < mask.length; i += 4) {
+    const m = mask[i + 3] > 0 ? mask[i + 3] : mask[i];
+    if (m > 10) maskHits++;
+  }
+  const maskRatio = maskHits / Math.max(1, maskPixels);
+  const invertMask = maskRatio > 0.6;
+
   const variants = [
     { sat: 0.9, light: 1.0 },
     { sat: 1.1, light: 0.95 },
@@ -9099,7 +9108,9 @@ async function buildColorEditVariants(
   return variants.map((v) => {
     const data = new Uint8ClampedArray(out);
     for (let i = 0; i < data.length; i += 4) {
-      if (mask[i] < 10) continue;
+      const m = mask[i + 3] > 0 ? mask[i + 3] : mask[i];
+      const inside = invertMask ? m <= 10 : m > 10;
+      if (!inside) continue;
       const r = data[i], g = data[i + 1], b = data[i + 2];
       const { h, s, l } = rgbToHsl(r, g, b);
       const newS = Math.min(1, s * v.sat);
