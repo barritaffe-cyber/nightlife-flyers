@@ -151,8 +151,9 @@ export async function POST(req: Request) {
     stage = "predict";
     const colorWords =
       /\b(red|blue|green|yellow|orange|purple|pink|black|white|gray|grey|teal|cyan|magenta|brown|beige|gold|silver)\b/i;
-    const colorLockPrompt = colorWords.test(prompt)
-      ? "Change only the color as requested. Preserve the exact shape, folds, texture, fabric, and lighting. No restyle, no pattern change."
+    const isColorEdit = colorWords.test(prompt);
+    const colorLockPrompt = isColorEdit
+      ? "Change only the color as requested. Shift the hue to the requested color. Preserve the exact shape, folds, texture, fabric, and lighting. No restyle, no pattern change."
       : "";
     const safetyPrompt =
       "Preserve the original photo. Keep all unmasked areas identical. " +
@@ -175,9 +176,9 @@ export async function POST(req: Request) {
           "extra limbs, extra faces, low quality, blurry, artifacts, " +
           "text, watermark, logo, glitch, pattern change, fabric change, " +
           "shape change, silhouette change",
-        num_inference_steps: 20,
-        guidance_scale: 5,
-        strength: 0.35,
+        num_inference_steps: 22,
+        guidance_scale: isColorEdit ? 7 : 5,
+        strength: isColorEdit ? 0.55 : 0.35,
         num_outputs: count,
         output_format: "png",
         seed,
