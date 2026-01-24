@@ -7700,17 +7700,12 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
   const [bgPosY, setBgPosY] = useState(50);
 const [bgBlur, setBgBlur] = useState(0);
 const [bgEditPrompt, setBgEditPrompt] = useState("");
-const [bgEditMode, setBgEditMode] = useState<"auto" | "box">("auto");
-const [bgEditMasks, setBgEditMasks] = useState<
-  { id: string; maskUrl: string }[]
->([]);
-const [bgEditSelectedMaskId, setBgEditSelectedMaskId] = useState<string | null>(null);
-const [bgEditBox, setBgEditBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+const [bgEditLassoPoints, setBgEditLassoPoints] = useState<{ x: number; y: number }[]>([]);
+const [bgEditLassoDrawing, setBgEditLassoDrawing] = useState(false);
 const [bgEditVariants, setBgEditVariants] = useState<string[]>([]);
 const [bgEditLoading, setBgEditLoading] = useState(false);
 const [bgEditError, setBgEditError] = useState<string>("");
 const bgEditImageRef = useRef<HTMLImageElement | null>(null);
-const bgEditBoxRef = useRef<{ x: number; y: number } | null>(null);
   const [textureOpacity, setTextureOpacity] = useState(0);
 
   /* master grade (applies to whole poster) */
@@ -8791,37 +8786,6 @@ const buildBgBoxMask = (
   return c.toDataURL("image/png");
 };
 
-const fetchBgElements = async () => {
-  let bgSrc = bgUploadUrl || bgUrl;
-  if (!bgSrc) return;
-  setBgEditLoading(true);
-  setBgEditError("");
-  try {
-    bgSrc = await normalizeBgForEdit(bgSrc);
-    const res = await fetch("/api/bg-elements", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ image: bgSrc }),
-    });
-    const data = await res.json();
-    if (data?.error && (!Array.isArray(data?.elements) || data.elements.length === 0)) {
-      setBgEditError(String(data.error));
-    }
-    const masks = Array.isArray(data?.elements) ? data.elements : [];
-    setBgEditMasks(
-      masks.map((m: any, idx: number) => ({
-        id: String(m.id || idx),
-        maskUrl: String(m.maskUrl || m),
-      }))
-    );
-    setBgEditSelectedMaskId(null);
-  } catch (err: any) {
-    setBgEditError(String(err?.message || err || "Failed to detect elements."));
-  } finally {
-    setBgEditLoading(false);
-  }
-};
-
 const runBgEdit = async () => {
   let bgSrc = bgUploadUrl || bgUrl;
   if (!bgSrc) return;
@@ -8831,19 +8795,16 @@ const runBgEdit = async () => {
   }
 
   let mask: string | null = null;
-  if (bgEditMode === "auto") {
-    const selected = bgEditMasks.find((m) => m.id === bgEditSelectedMaskId);
-    mask = selected?.maskUrl || null;
-  } else if (bgEditMode === "box" && bgEditBox && bgEditImageRef.current) {
-    mask = buildBgBoxMask(
+  if (bgEditLassoPoints.length >= 3 && bgEditImageRef.current) {
+    mask = buildLassoMask(
       bgEditImageRef.current.naturalWidth,
       bgEditImageRef.current.naturalHeight,
-      bgEditBox
+      bgEditLassoPoints
     );
   }
 
   if (!mask) {
-    setBgEditError("Select an element or draw a box.");
+    setBgEditError("Draw a lasso selection on the background.");
     return;
   }
 
@@ -8890,6 +8851,32 @@ async function normalizeBgForEdit(src: string): Promise<string> {
   if (src.startsWith("data:") || src.startsWith("http")) return src;
   return blobUrlToDataUrl(src);
 }
+
+const buildLassoMask = (
+  naturalW: number,
+  naturalH: number,
+  points: { x: number; y: number }[]
+) => {
+  if (points.length < 3) return null;
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(naturalW));
+  c.height = Math.max(1, Math.round(naturalH));
+  const ctx = c.getContext("2d");
+  if (!ctx) return null;
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, c.width, c.height);
+  ctx.beginPath();
+  points.forEach((p, i) => {
+    const x = Math.max(0, Math.min(1, p.x)) * c.width;
+    const y = Math.max(0, Math.min(1, p.y)) * c.height;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.closePath();
+  ctx.fillStyle = "#fff";
+  ctx.fill();
+  return c.toDataURL("image/png");
+};
 
   /* dark inputs + slim scrollbars */
   useEffect(() => {
@@ -17879,57 +17866,53 @@ style={{ top: STICKY_TOP }}
             className="w-full h-full object-cover"
             draggable={false}
           />
-          {bgEditMode === "auto" && bgEditSelectedMaskId && (
-            <img
-              src={
-                bgEditMasks.find((m) => m.id === bgEditSelectedMaskId)?.maskUrl ||
-                ""
-              }
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-60 pointer-events-none"
-            />
-          )}
-          {bgEditMode === "box" && (
-            <div
-              className="absolute inset-0 cursor-crosshair"
-              onPointerDown={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const x = (e.clientX - rect.left) / rect.width;
-                const y = (e.clientY - rect.top) / rect.height;
-                bgEditBoxRef.current = { x, y };
-                setBgEditBox({ x, y, w: 0, h: 0 });
-                e.currentTarget.setPointerCapture(e.pointerId);
-              }}
-              onPointerMove={(e) => {
-                if (!bgEditBoxRef.current) return;
-                const rect = e.currentTarget.getBoundingClientRect();
-                const cx = (e.clientX - rect.left) / rect.width;
-                const cy = (e.clientY - rect.top) / rect.height;
-                const start = bgEditBoxRef.current;
-                const x = Math.max(0, Math.min(start.x, cx));
-                const y = Math.max(0, Math.min(start.y, cy));
-                const w = Math.min(1, Math.abs(cx - start.x));
-                const h = Math.min(1, Math.abs(cy - start.y));
-                setBgEditBox({ x, y, w, h });
-              }}
-              onPointerUp={(e) => {
-                bgEditBoxRef.current = null;
-                try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
-              }}
-            >
-              {bgEditBox && (
-                <div
-                  className="absolute border border-amber-400 bg-amber-400/10"
-                  style={{
-                    left: `${bgEditBox.x * 100}%`,
-                    top: `${bgEditBox.y * 100}%`,
-                    width: `${bgEditBox.w * 100}%`,
-                    height: `${bgEditBox.h * 100}%`,
-                  }}
+          <div
+            className="absolute inset-0 cursor-crosshair touch-none"
+            onPointerDown={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const x = (e.clientX - rect.left) / rect.width;
+              const y = (e.clientY - rect.top) / rect.height;
+              setBgEditLassoDrawing(true);
+              setBgEditLassoPoints([{ x, y }]);
+              e.currentTarget.setPointerCapture(e.pointerId);
+            }}
+            onPointerMove={(e) => {
+              if (!bgEditLassoDrawing) return;
+              const rect = e.currentTarget.getBoundingClientRect();
+              const x = (e.clientX - rect.left) / rect.width;
+              const y = (e.clientY - rect.top) / rect.height;
+              setBgEditLassoPoints((prev) => {
+                const last = prev[prev.length - 1];
+                const dx = Math.abs(x - (last?.x ?? x));
+                const dy = Math.abs(y - (last?.y ?? y));
+                if (dx + dy < 0.005) return prev;
+                return [...prev, { x, y }];
+              });
+            }}
+            onPointerUp={(e) => {
+              setBgEditLassoDrawing(false);
+              try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
+            }}
+          >
+            {bgEditLassoPoints.length > 1 && (
+              <svg
+                className="absolute inset-0 w-full h-full pointer-events-none"
+                viewBox="0 0 100 100"
+                preserveAspectRatio="none"
+              >
+                <path
+                  d={[
+                    `M ${bgEditLassoPoints[0].x * 100} ${bgEditLassoPoints[0].y * 100}`,
+                    ...bgEditLassoPoints.slice(1).map((p) => `L ${p.x * 100} ${p.y * 100}`),
+                    "Z",
+                  ].join(" ")}
+                  fill="rgba(255, 193, 7, 0.2)"
+                  stroke="rgba(255, 193, 7, 0.9)"
+                  strokeWidth="1"
                 />
-              )}
-            </div>
-          )}
+              </svg>
+            )}
+          </div>
         </div>
 
         {bgEditVariants.length > 0 && (
@@ -17947,8 +17930,7 @@ style={{ top: STICKY_TOP }}
                     setBgUrl(v);
                     setBgUploadUrl(null);
                   }
-                  setBgEditSelectedMaskId(null);
-                  setBgEditBox(null);
+                  setBgEditLassoPoints([]);
                 }}
                 title="Apply this variant"
               >
@@ -17983,65 +17965,14 @@ style={{ top: STICKY_TOP }}
           <div className="text-[11px] font-semibold text-neutral-200">
             Edit Background
           </div>
-          <div className="flex gap-2">
-            <Chip
-              small
-              active={bgEditMode === "auto"}
-              onClick={() => {
-                setBgEditMode("auto");
-                setBgEditBox(null);
-              }}
-            >
-              Auto elements
-            </Chip>
-            <Chip
-              small
-              active={bgEditMode === "box"}
-              onClick={() => {
-                setBgEditMode("box");
-                setBgEditSelectedMaskId(null);
-              }}
-            >
-              Box select
-            </Chip>
-            <Chip
-              small
-              onClick={fetchBgElements}
-              disabled={bgEditLoading || bgEditMode !== "auto"}
-            >
-              {bgEditLoading && bgEditMode === "auto" ? "Finding..." : "Find elements"}
+          <div className="flex items-center gap-2">
+            <div className="text-[11px] text-neutral-400">
+              Draw a lasso around the area you want to change.
+            </div>
+            <Chip small onClick={() => setBgEditLassoPoints([])}>
+              Clear selection
             </Chip>
           </div>
-
-          {bgEditMode === "auto" && bgEditMasks.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto py-1">
-              {bgEditMasks.map((m, i) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  className={[
-                    "h-16 w-16 rounded border overflow-hidden shrink-0 relative",
-                    bgEditSelectedMaskId === m.id
-                      ? "border-amber-400"
-                      : "border-neutral-700",
-                  ].join(" ")}
-                  onClick={() => setBgEditSelectedMaskId(m.id)}
-                  title={`Element ${i + 1}`}
-                >
-                  <img
-                    src={bgUploadUrl || bgUrl!}
-                    alt=""
-                    className="absolute inset-0 w-full h-full object-cover opacity-70"
-                  />
-                  <img
-                    src={m.maskUrl}
-                    alt=""
-                    className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-70"
-                  />
-                </button>
-              ))}
-            </div>
-          )}
 
           <input
             value={bgEditPrompt}
