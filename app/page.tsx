@@ -8797,9 +8797,7 @@ const fetchBgElements = async () => {
   setBgEditLoading(true);
   setBgEditError("");
   try {
-    if (bgSrc.startsWith("blob:")) {
-      bgSrc = await blobUrlToDataUrl(bgSrc);
-    }
+    bgSrc = await normalizeBgForEdit(bgSrc);
     const res = await fetch("/api/bg-elements", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -8852,9 +8850,7 @@ const runBgEdit = async () => {
   setBgEditLoading(true);
   setBgEditError("");
   try {
-    if (bgSrc.startsWith("blob:")) {
-      bgSrc = await blobUrlToDataUrl(bgSrc);
-    }
+    bgSrc = await normalizeBgForEdit(bgSrc);
     const res = await fetch("/api/bg-edit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -8888,6 +8884,11 @@ async function blobUrlToDataUrl(blobUrl: string): Promise<string> {
     fr.onerror = () => reject(fr.error);
     fr.readAsDataURL(blob);
   });
+}
+
+async function normalizeBgForEdit(src: string): Promise<string> {
+  if (src.startsWith("data:") || src.startsWith("http")) return src;
+  return blobUrlToDataUrl(src);
 }
 
   /* dark inputs + slim scrollbars */
