@@ -16546,27 +16546,23 @@ style={{ top: STICKY_TOP }}
         .setSelectedPanel(selectedPanel === "details" ? null : "details")
     }
     right={
-      <div className="w-44">
-        <FontPicker
-          value={detailsFamily}
-          options={BODY_FONTS_LOCAL}
-          onChange={(v) => setDetailsFamily(v)}
-          className="text-[11px]"
-          label="Font"
-        />
+      <div className="flex items-center gap-2 text-[11px]">
+        <span className="opacity-80">Align</span>
+        <Chip small active={detailsAlign === "left"} onClick={() => setDetailsAlign("left")}>L</Chip>
+        <Chip small active={detailsAlign === "center"} onClick={() => setDetailsAlign("center")}>C</Chip>
+        <Chip small active={detailsAlign === "right"} onClick={() => setDetailsAlign("right")}>R</Chip>
       </div>
     }
   >
     {/* ⭐ INNER NEON ACTIVE WRAPPER */}
     <div className="p-0">
-      {/* ---------- ALIGN (RIGHT-ALIGNED BELOW FONT) ---------- */}
-      <div className="flex justify-end mt-3">
-        <div className="flex items-center gap-2 text-[11px]">
-          <span className="opacity-80">Align</span>
-          <Chip small active={detailsAlign === "left"} onClick={() => setDetailsAlign("left")}>L</Chip>
-          <Chip small active={detailsAlign === "center"} onClick={() => setDetailsAlign("center")}>C</Chip>
-          <Chip small active={detailsAlign === "right"} onClick={() => setDetailsAlign("right")}>R</Chip>
-        </div>
+      <div className="mt-3">
+        <FontPicker
+          label="Font"
+          value={detailsFamily}
+          options={BODY_FONTS_LOCAL}
+          onChange={(v) => setDetailsFamily(v)}
+        />
       </div>
 
       {/* ---------- TEXT FIELD ---------- */}
@@ -16650,17 +16646,10 @@ style={{ top: STICKY_TOP }}
         >
           {details2Enabled[format] ? "On" : "Off"}
         </Chip>
-
-        <div className="w-44">
-          <FontPicker
-            label="Font"
-            value={details2Family ?? bodyFamily}
-            options={BODY_FONTS2_LOCAL}
-            onChange={(v) => setDetails2Family(v)}
-            disabled={!details2Enabled[format]}
-            className="text-[11px]"
-          />
-        </div>
+        <span className="opacity-80">Align</span>
+        <Chip small active={details2Align === "left"} onClick={() => setDetails2Align("left")}>L</Chip>
+        <Chip small active={details2Align === "center"} onClick={() => setDetails2Align("center")}>C</Chip>
+        <Chip small active={details2Align === "right"} onClick={() => setDetails2Align("right")}>R</Chip>
       </div>
     }
   >
@@ -16668,6 +16657,15 @@ style={{ top: STICKY_TOP }}
     <div className="p-0">
       {/* Disable all controls when off */}
       <div className={details2Enabled[format] ? "" : "opacity-50 pointer-events-none"}>
+        <div className="mt-3">
+          <FontPicker
+            label="Font"
+            value={details2Family ?? bodyFamily}
+            options={BODY_FONTS2_LOCAL}
+            onChange={(v) => setDetails2Family(v)}
+            disabled={!details2Enabled[format]}
+          />
+        </div>
         {/* ---------- ALIGN + COLOR ---------- */}
         <div className="flex justify-between items-center mt-3">
           <div className="flex items-center gap-2 text-[11px]">
@@ -16681,12 +16679,6 @@ style={{ top: STICKY_TOP }}
             />
           </div>
 
-          <div className="flex items-center gap-2 text-[11px]">
-            <span className="opacity-80">Align</span>
-            <Chip small active={details2Align === "left"} onClick={() => setDetails2Align("left")}>L</Chip>
-            <Chip small active={details2Align === "center"} onClick={() => setDetails2Align("center")}>C</Chip>
-            <Chip small active={details2Align === "right"} onClick={() => setDetails2Align("right")}>R</Chip>
-          </div>
         </div>
 
         {/* ---------- TEXT FIELD ---------- */}
@@ -16748,27 +16740,23 @@ style={{ top: STICKY_TOP }}
         .setSelectedPanel(selectedPanel === "venue" ? null : "venue")
     }
     right={
-      <div className="w-44">
-        <FontPicker
-          label="Font"
-          value={venueFamily}
-          options={VENUE_FONTS_LOCAL}
-          onChange={(v) => setVenueFamily(v)}
-          className="text-[11px]"
-        />
+      <div className="flex items-center gap-2 text-[11px]">
+        <span className="opacity-80">Align</span>
+        <Chip small active={venueAlign === "left"} onClick={() => setVenueAlign("left")}>L</Chip>
+        <Chip small active={venueAlign === "center"} onClick={() => setVenueAlign("center")}>C</Chip>
+        <Chip small active={venueAlign === "right"} onClick={() => setVenueAlign("right")}>R</Chip>
       </div>
     }
   >
     {/* ⭐ INNER NEON ACTIVE WRAPPER */}
     <div className="p-0">
-      {/* ---------- ALIGN ---------- */}
-      <div className="flex justify-end mt-3">
-        <div className="flex items-center gap-2 text-[11px]">
-          <span className="opacity-80">Align</span>
-          <Chip small active={venueAlign === "left"} onClick={() => setVenueAlign("left")}>L</Chip>
-          <Chip small active={venueAlign === "center"} onClick={() => setVenueAlign("center")}>C</Chip>
-          <Chip small active={venueAlign === "right"} onClick={() => setVenueAlign("right")}>R</Chip>
-        </div>
+      <div className="mt-3">
+        <FontPicker
+          label="Font"
+          value={venueFamily}
+          options={VENUE_FONTS_LOCAL}
+          onChange={(v) => setVenueFamily(v)}
+        />
       </div>
 
       {/* ---------- TEXT FIELD ---------- */}
