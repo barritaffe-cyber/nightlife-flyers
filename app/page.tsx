@@ -11306,6 +11306,51 @@ function twoRaf(): Promise<void> {
   );
 }
 
+function extractCssUrls(input: string): string[] {
+  const urls: string[] = [];
+  const re = /url\((['"]?)(.*?)\1\)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(input))) {
+    if (m[2]) urls.push(m[2]);
+  }
+  return urls;
+}
+
+async function waitForImageUrl(url?: string | null) {
+  if (!url) return;
+  try {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = url;
+    if ((img as any).decode) {
+      await (img as any).decode();
+    } else {
+      await new Promise<void>((resolve) => {
+        img.onload = () => resolve();
+        img.onerror = () => resolve();
+      });
+    }
+  } catch {
+    // ignore
+  }
+}
+
+async function waitForBackgroundImages(root: HTMLElement) {
+  const urls = new Set<string>();
+  try {
+    const nodes = Array.from(root.querySelectorAll('*')) as HTMLElement[];
+    for (const el of nodes) {
+      const bg = getComputedStyle(el).backgroundImage;
+      if (!bg || bg === 'none') continue;
+      if (bg.includes('gradient')) continue;
+      extractCssUrls(bg).forEach((u) => urls.add(u));
+    }
+  } catch {
+    // ignore
+  }
+  await Promise.all(Array.from(urls).map((u) => waitForImageUrl(u)));
+}
+
 function getScrollParent(el: HTMLElement): HTMLElement | null {
   let p: HTMLElement | null = el.parentElement;
   while (p) {
@@ -11451,7 +11496,10 @@ async function renderExportDataUrl(
     };
 
     const dataUrl = await withExternalStylesDisabled(async () => {
+      await waitForImageUrl(bgUploadUrl || bgUrl);
+      await waitForImageUrl(logoUrl);
       await waitForImages(exportRoot);
+      await waitForBackgroundImages(exportRoot);
       if (format === 'jpg') {
         return await htmlToImage.toJpeg(exportRoot, {
           cacheBust: true,
@@ -13551,9 +13599,9 @@ const handleTemplateSelect = React.useCallback(
       // ✅ Map each vibe to a real template index
       const vibeToTemplateId: Record<string, string> = {
         club: TEMPLATE_GALLERY[0]?.id ?? "edm_neon",
-        tropical: "hiphop_graffiti",
+        tropical: "hiphop_lowrider",
         luxury: "rnb_velvet",
-        urban: "hiphop_lowrider",
+        urban: "hiphop_graffiti",
       };
 
       const tplId = vibeToTemplateId[key] ?? TEMPLATE_GALLERY[0]?.id;

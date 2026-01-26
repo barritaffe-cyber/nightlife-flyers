@@ -366,6 +366,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                       setSelectedPortraitId(id);
                       setSelectedPanel('icons');
                       setMoveTarget('icon');
+                      onPlaceToCanvas?.();
                     }}
                   >
                     <img
@@ -560,6 +561,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                       setSelectedPortraitId(id);
                       setSelectedPanel('icons');
                       setMoveTarget('icon');
+                      onPlaceToCanvas?.();
                     }}
                   >
                     <img

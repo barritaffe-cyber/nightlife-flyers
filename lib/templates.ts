@@ -955,8 +955,8 @@ export const TEMPLATE_GALLERY: TemplateSpec[] = [
         pillAlpha: 0,
         subtagShadow: false,
 
-        bgPosX: 61.4,
-        bgPosY: 32.2,
+        bgPosX: 16.4,
+        bgPosY: 100,
         bgScale: 1.4,
         vignetteStrength:.1,
 
@@ -1020,7 +1020,7 @@ export const TEMPLATE_GALLERY: TemplateSpec[] = [
         pillAlpha: 0,
         subtagShadow: false,
 
-        bgPosX: 23.3,
+        bgPosX: 80.1,
         bgPosY: 50.7,
         vignetteStrength:.1,
 
@@ -1337,8 +1337,8 @@ export const TEMPLATE_GALLERY: TemplateSpec[] = [
         pillAlpha: 0,
         subtagShadow: false,
 
-        bgPosX: 30.3,
-        bgPosY: 67.7,        
+        bgPosX: 80.3,
+        bgPosY: 9.7,        
         bgScale: 1.5,
         vignetteStrength:.1,
 
@@ -1574,8 +1574,8 @@ export const TEMPLATE_GALLERY: TemplateSpec[] = [
         pillAlpha: 0,
         subtagShadow: false,
 
-        bgPosX: 64.6,
-        bgPosY: 70.9,
+        bgPosX: 11.7,
+        bgPosY: 9.9,
         bgScale: 1.5,
         vignetteStrength:.1,
 
