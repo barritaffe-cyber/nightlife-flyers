@@ -6923,7 +6923,7 @@ const openTourPanel = React.useCallback(
     const scrollToTarget = () => {
       const el = document.getElementById(targetId);
       if (!el) return;
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      scrollToEl(el, "center");
     };
     window.setTimeout(() => {
       setSelectedPanel(panel);
@@ -6936,9 +6936,7 @@ const openTourPanel = React.useCallback(
 const scrollToArtboard = React.useCallback(() => {
   const el = document.getElementById("artboard");
   if (!el) return;
-  const rect = el.getBoundingClientRect();
-  const top = window.scrollY + rect.top + rect.height / 2 - window.innerHeight / 2;
-  window.scrollTo({ top, behavior: "smooth" });
+  scrollToEl(el, "center");
 }, []);
 
 const TOUR_STEPS = [
@@ -11282,6 +11280,38 @@ function twoRaf(): Promise<void> {
   return new Promise((r) =>
     requestAnimationFrame(() => requestAnimationFrame(() => r()))
   );
+}
+
+function getScrollParent(el: HTMLElement): HTMLElement | null {
+  let p: HTMLElement | null = el.parentElement;
+  while (p) {
+    const style = window.getComputedStyle(p);
+    const overflowY = style.overflowY;
+    if ((overflowY === "auto" || overflowY === "scroll") && p.scrollHeight > p.clientHeight) {
+      return p;
+    }
+    p = p.parentElement;
+  }
+  return null;
+}
+
+function scrollToEl(el: HTMLElement, align: "center" | "start" = "center") {
+  const parent = getScrollParent(el);
+  const rect = el.getBoundingClientRect();
+  if (!parent) {
+    const top =
+      align === "center"
+        ? window.scrollY + rect.top + rect.height / 2 - window.innerHeight / 2
+        : window.scrollY + rect.top - 12;
+    window.scrollTo({ top, behavior: "smooth" });
+    return;
+  }
+  const parentRect = parent.getBoundingClientRect();
+  const top =
+    align === "center"
+      ? parent.scrollTop + (rect.top - parentRect.top) + rect.height / 2 - parent.clientHeight / 2
+      : parent.scrollTop + (rect.top - parentRect.top) - 12;
+  parent.scrollTo({ top, behavior: "smooth" });
 }
 
 async function waitForImages(root: HTMLElement) {
