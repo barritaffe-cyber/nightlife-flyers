@@ -6,8 +6,34 @@ export const maxDuration = 60;
 type Format = 'square' | 'story';
 
 function sizeFor(format: Format) {
-  // gpt-image-1 supports: 1024x1024, 1024x1792 (portrait), 1792x1024 (landscape)
-  return format === 'story' ? '1024x1792' : '1024x1024';
+  // gpt-image-1 supports: 1024x1024, 1024x1536 (portrait), 1536x1024 (landscape), auto
+  return format === 'story' ? '1024x1536' : '1024x1024';
+}
+
+const dataUrlToBuffer = (dataUrl: string) => {
+  const commaIndex = dataUrl.indexOf(",");
+  if (commaIndex === -1) throw new Error("Invalid data URL");
+  return Buffer.from(dataUrl.slice(commaIndex + 1), "base64");
+};
+
+async function toBufferFromAnyImage(input: string, origin: string): Promise<Buffer> {
+  if (typeof input !== "string") throw new Error("Invalid image input");
+  if (input.startsWith("data:image/")) return dataUrlToBuffer(input);
+  if (input.startsWith("/")) {
+    const res = await fetch(`${origin}${input}`);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch image URL: ${res.status} ${res.statusText}`);
+    }
+    return Buffer.from(await res.arrayBuffer());
+  }
+  if (input.startsWith("http")) {
+    const res = await fetch(input);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch image URL: ${res.status} ${res.statusText}`);
+    }
+    return Buffer.from(await res.arrayBuffer());
+  }
+  throw new Error("Invalid image input. Expected data URL or http(s) URL.");
 }
 
 // tiny SVG gradient as a safe placeholder
@@ -31,7 +57,12 @@ function placeholderDataURL(format: Format, note = 'placeholder') {
   return `data:image/svg+xml;base64,${b64}`;
 }
 
-async function genWithOpenAI(prompt: string, format: Format) {
+async function genWithOpenAI(
+  prompt: string,
+  format: Format,
+  reference?: string,
+  origin?: string
+) {
   const key = process.env.OPENAI_API_KEY;
   if (!key) {
     return {
@@ -43,19 +74,44 @@ async function genWithOpenAI(prompt: string, format: Format) {
 
   const size = sizeFor(format);
 
-  const res = await fetch('https://api.openai.com/v1/images/generations', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${key}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-image-1',
-      prompt,
-      size,            // <- 1024x1024 or 1024x1792 (for story)
-      // no "response_format" (causes error)
-    }),
-  });
+  let res: Response;
+  try {
+    if (reference && origin) {
+      const refBuf = await toBufferFromAnyImage(reference, origin);
+      const form = new FormData();
+      const blob = new Blob([new Uint8Array(refBuf)], { type: "image/png" });
+      form.append("image", blob, "reference.png");
+      form.append("model", "gpt-image-1");
+      form.append("prompt", prompt);
+      form.append("size", size);
+      res = await fetch("https://api.openai.com/v1/images/edits", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}` },
+        body: form,
+      });
+    } else {
+      res = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${key}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-image-1',
+          prompt,
+          size,            // <- 1024x1024 or 1024x1536 (for story)
+          // no "response_format" (causes error)
+        }),
+      });
+    }
+  } catch (err: any) {
+    const msg = `OpenAI request failed: ${String(err?.message || err)}`;
+    return {
+      ok: false,
+      error: msg,
+      placeholder: placeholderDataURL(format, 'OpenAI request failed'),
+    };
+  }
 
   const j = await res.json().catch(() => ({} as any));
 
@@ -90,6 +146,7 @@ export async function POST(req: NextRequest) {
     const prompt = String(body?.prompt || '').trim();
     const provider = (body?.provider || 'auto') as 'auto' | 'nano' | 'openai' | 'mock';
     const format = (body?.format || 'square') as Format;
+    const reference = typeof body?.reference === "string" ? body.reference : undefined;
 
     if (!prompt) {
       return NextResponse.json({ error: "Missing 'prompt'" }, { status: 400 });
@@ -102,7 +159,8 @@ export async function POST(req: NextRequest) {
 
     // For now, “nano” == fast OpenAI call. Swap this later for your local / alt service.
     if (provider === 'nano' || provider === 'auto' || provider === 'openai') {
-      const r = await genWithOpenAI(prompt, format);
+      const origin = new URL(req.url).origin;
+      const r = await genWithOpenAI(prompt, format, reference, origin);
       if (!r.ok) {
         // still return a placeholder so your UI can keep going
         return NextResponse.json({ error: r.error, placeholder: r.placeholder }, { status: 200 });

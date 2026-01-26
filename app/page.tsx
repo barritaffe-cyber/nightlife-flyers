@@ -6,9 +6,11 @@ import * as htmlToImage from 'html-to-image';
 import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import Link from 'next/link';
 import { createPortal } from "react-dom";
+import { useShallow } from "zustand/react/shallow";
 import { TEMPLATE_GALLERY } from '../lib/templates';
 import type { TemplateSpec } from '../lib/templates';
 import { motion, AnimatePresence } from "framer-motion"; 
+import dynamic from "next/dynamic";
 import { alignHeadline } from "../lib/alignHeadline";
 import { isActiveUtil } from '../lib/isActiveUtil';
 import { sharedRootRef, setRootRef } from "../lib/rootRefUtil";
@@ -23,80 +25,54 @@ import { cleanupCutoutUrl } from "../lib/cleanupCutoutUrl";
 import * as Slider from "@radix-ui/react-slider";
 import type { CleanupParams } from "../lib/cleanupCutoutUrl";
 import { removeGreenScreen } from "./chromaKey";
+import { Collapsible, Chip, Stepper, ColorDot, SliderRow } from "../components/editor/controls";
+
+const AiBackgroundPanel = dynamic(() => import("../components/editor/AiBackgroundPanel"), {
+  ssr: false,
+});
+const MagicBlendPanel = dynamic(() => import("../components/editor/MagicBlendPanel"), {
+  ssr: false,
+});
+const BackgroundPanels = dynamic(() => import("../components/editor/BackgroundPanels"), {
+  ssr: false,
+});
+const LibraryPanel = dynamic(() => import("../components/editor/LibraryPanel"), {
+  ssr: false,
+});
 
 
-
-
-
-/* ==========================================================================
-   SLIDER ROW (Single Source of Truth)
-   - Emits a NUMBER (never an event)
-   - Guards NaN/undefined
-   - Optional precision display
-   - Optional disabled
-   - Stops bubbling so panels don’t collapse / canvas doesn’t steal clicks
-   ========================================================================== */
-
-type SliderRowProps = {
-  label: string;
-  value?: number;
-  min: number;
-  max: number;
-  step?: number;
-  precision?: number; // if provided, uses toFixed(precision)
-  disabled?: boolean;
-  onChange: (v: number) => void;
-};
-
-function SliderRow({
-  label,
-  value,
-  min,
-  max,
-  step = 0.05,
-  precision,
-  disabled = false,
-  onChange,
-}: SliderRowProps) {
-  const safeValue = Number.isFinite(value) ? (value as number) : min;
-
-  const displayValue =
-    precision != null ? safeValue.toFixed(precision) : String(Math.round(safeValue * 100) / 100);
-
-  return (
-    <div
-      className="select-none py-2"
-      onMouseDownCapture={(e) => e.stopPropagation()}
-      onPointerDownCapture={(e) => e.stopPropagation()}
-    >
-      <div className="mb-1 flex items-center justify-between text-[11px] text-neutral-400 px-0.5">
-        <span>{label}</span>
-        <span className="font-mono text-neutral-300">{displayValue}</span>
-      </div>
-
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={safeValue}
-        disabled={disabled}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className={`w-full h-1 rounded-lg appearance-none cursor-pointer transition-colors ${
-          disabled
-            ? "bg-neutral-800 accent-neutral-600"
-            : "bg-neutral-700 accent-indigo-500 hover:accent-indigo-400"
-        }`}
-      />
-    </div>
-  );
-}
 
 
 
 type TemplateWithFormats = TemplateSpec & {
   formats?: Record<string, TemplateBase>;
 };
+
+type GenGender = "any" | "man" | "woman";
+type GenEthnicity =
+  | "any"
+  | "black"
+  | "white"
+  | "latino"
+  | "east-asian"
+  | "indian"
+  | "middle-eastern"
+  | "mixed";
+type GenEnergy = "calm" | "vibe" | "wild";
+type GenAttire = "streetwear" | "club-glam" | "luxury" | "festival" | "all-white";
+type GenColorway = "neon" | "monochrome" | "warm" | "cool" | "gold-black";
+type GenAttireColor =
+  | "black"
+  | "white"
+  | "gold"
+  | "silver"
+  | "red"
+  | "blue"
+  | "emerald"
+  | "champagne";
+type GenPose = "dancing" | "hands-up" | "performance" | "dj";
+type GenShot = "full-body" | "three-quarter" | "waist-up" | "chest-up" | "close-up";
+type GenLighting = "strobe" | "softbox" | "backlit" | "flash";
 
 // ——— Template variant resolver (square/story with fallbacks) ———
 function getVariant(tpl: TemplateSpec, fmt: Format) {
@@ -260,11 +236,6 @@ function DecorBg() {
 }
 
 
-// ===== SHARED STYLES (TOP-LEVEL) =====
-const panelClass =
-  "panel min-w-0 p-4 rounded-lg border border-neutral-700 bg-neutral-900/70 space-y-3";
-
-
 /* ===== BLOCK: MINI-UTILS (BEGIN) ===== */
 function clsx(...a: (string | false | null | undefined)[]) {
   return a.filter(Boolean).join(' ');
@@ -287,212 +258,6 @@ function buildPremiumTextShadow(strength: number = 1, glow: number = 0) {
   return shadows.join(',');
 }
 
-type StepperProps = {
-  label?: string;
-  value: number;
-  setValue: (n: number) => void;
-  min: number;
-  max: number;
-  step?: number;
-  digits?: number; // formatting only
-  disabled?: boolean;
-  className?: string;
-};
-
-function Stepper({
-  label,
-  value,
-  setValue,
-  min,
-  max,
-  step = 1,
-  digits = 0,
-  disabled = false,
-  className = "",
-}: StepperProps) {
-  const fmt = (n: number) =>
-    Number.isFinite(n) ? n.toFixed(digits) : String(n ?? "");
-
-  const clamp = (n: number) => Math.min(max, Math.max(min, n));
-
-  const onRange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const n = clamp(parseFloat(e.target.value));
-    setValue(n);
-  };
-
-  const onNumber = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.trim();
-    if (raw === "" || raw === "-" || raw === "." || raw === "-.") return; // let user type
-    const n = clamp(parseFloat(raw));
-    if (!Number.isNaN(n)) setValue(n);
-  };
-
-  // wheel to fine-tune when focused
-  const onWheel = (e: React.WheelEvent<HTMLInputElement>) => {
-    if (disabled) return;
-    if (document.activeElement !== e.currentTarget) return;
-    e.preventDefault();
-    const dir = e.deltaY > 0 ? -1 : 1;
-    const next = clamp(
-      parseFloat((value + dir * step).toFixed(Math.max(0, digits)))
-    );
-    setValue(next);
-  };
-
-  // keyboard arrows on range
-  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (disabled) return;
-    let delta = 0;
-    if (e.key === "ArrowRight" || e.key === "ArrowUp") delta = step;
-    if (e.key === "ArrowLeft" || e.key === "ArrowDown") delta = -step;
-    if (delta !== 0) {
-      e.preventDefault();
-      const next = clamp(
-        parseFloat((value + delta).toFixed(Math.max(0, digits)))
-      );
-      setValue(next);
-    }
-  };
-
-  return (
-    <div className={`flex flex-col gap-1 ${className}`}>
-      {label && (
-        <label className="text-[11px] text-neutral-300">{label}</label>
-      )}
-
-     <div className="flex items-center gap-2 w-full">
-      {/* NUMBER FIELD — compact width */}
-      <input
-          type="number"
-          min={min}
-          max={max}
-          step={step}
-          value={Number.isFinite(value) ? value : 0}
-          onChange={onNumber}
-          disabled={disabled}
-          className="w-[44px] px-1 py-[2px] text-[11px] rounded bg-[#17171b] text-white border border-neutral-700 text-center"
-        />
-
-        {/* SLIDER — fills remaining space */}
-       <input
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={Number.isFinite(value as number) ? Number(value) : Number(min ?? 0)}
-          onChange={onRange}
-          onWheel={onWheel}
-          onKeyDown={onKeyDown}
-          disabled={disabled}
-          aria-label={label}
-          className="nf-range flex-1 h-2 appearance-none bg-transparent"
-        />
-      </div>
-
-      {/* value readout (optional) */}
-    
-    </div>
-  );
-}
-
-
-function Chip({ active, onClick, children, small, disabled, title, className }: {
-  active?: boolean; onClick?: () => void; children: React.ReactNode; small?: boolean; disabled?: boolean; title?: string; className?: string
-}) {
-  // Use a div with role="button" to avoid <button> nesting issues.
-  const handleKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (disabled) return;
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      onClick?.();
-    }
-  };
-
-  return (
-    <div
-      role="button"
-      tabIndex={disabled ? -1 : 0}
-      onClick={disabled ? undefined : onClick}
-      onKeyDown={handleKey}
-      title={title}
-      aria-pressed={!!active}
-      aria-disabled={disabled ? true : undefined}
-      className={clsx(
-        // base
-        'inline-flex items-center justify-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 select-none',
-        small ? 'px-2 py-[3px] text-[11px]' : 'px-3 py-1 text-xs',
-        // states
-        disabled
-          ? 'opacity-40 cursor-not-allowed bg-neutral-900/40 border-neutral-700 text-neutral-400'
-          : active
-          ? 'cursor-pointer bg-indigo-600 border-indigo-300 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.15)_inset,0_8px_16px_rgba(0,0,0,.35)]'
-          : 'cursor-pointer bg-neutral-900/70 border-neutral-700 hover:bg-neutral-800 text-neutral-200',
-        className
-      )}
-    >
-      {children}
-    </div>
-  );
-}
-
-/** Small color picker dot with side popover */
-// ===== ColorDot (FULL REPLACEMENT) =====
-type ColorDotProps = {
-  value: string;
-  onChange: (hex: string) => void;
-  title?: string;
-  disabled?: boolean;
-};
-
-const ColorDot: React.FC<ColorDotProps> = ({ value, onChange, title, disabled }) => {
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange(e.target.value);
-  };
-
-  return (
-    <span
-      className="inline-flex items-center"
-      style={{ position: 'relative', width: 16, height: 16 }}
-    >
-      {/* Visible dot */}
-      <span
-        title={title || 'Pick color'}
-        style={{
-          width: 16,
-          height: 16,
-          borderRadius: 999,
-          border: '1px solid rgba(255,255,255,0.35)',
-          boxShadow: '0 1px 2px rgba(0,0,0,0.35)',
-          background: value || '#ffffff',
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          display: 'inline-block',
-        }}
-        className="align-middle"
-      />
-
-      {/* Native color input overlaid for mobile tap support */}
-      <input
-        type="color"
-        value={value || '#ffffff'}
-        onChange={handleChange}
-        disabled={!!disabled}
-        title={title || 'Pick color'}
-        style={{
-          position: 'absolute',
-          inset: 0,
-          opacity: 0,
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          width: 16,
-          height: 16,
-          padding: 0,
-          margin: 0,
-          border: 0,
-        }}
-      />
-    </span>
-  );
-};
-// ===== /ColorDot =====
 
 /* ===== BLOCK: MINI-UTILS (END) ===== */
 
@@ -579,101 +344,137 @@ function installKeyboardNudge(getters: {
 
 
 
-/* ===== BLOCK: COLLAPSIBLE (FIXED) ===== */
-const Collapsible: React.FC<{
-  title: string;
-  storageKey: string;
-  defaultOpen?: boolean;
-  isOpen?: boolean;      // 👈 Controlled by parent
-  onToggle?: () => void; // 👈 Controlled handler
-  right?: React.ReactNode;
-  children: React.ReactNode;
-  titleClassName?: string;
-}> = ({ title, storageKey, defaultOpen = false, isOpen, onToggle, right, children, titleClassName }) => {
-  const STORAGE_VERSION = 'v1';
-  const key = `${storageKey}:${STORAGE_VERSION}`;
+const CINEMATIC_REF_LIBRARY = [
+  { id: "glass-blue", label: "Glass Blue", src: "/cinematic-refs/glass-blue.png" },
+  { id: "chrome-purple", label: "Chrome Purple", src: "/cinematic-refs/chrome-purple.png" },
+  { id: "gold-smoke", label: "Gold Smoke", src: "/cinematic-refs/gold-smoke.png" },
+  { id: "spicy", label: "Spicy Hot", src: "/cinematic-refs/spicy.png" },
+  { id: "frozen", label: "Frozen", src: "/cinematic-refs/frozen.png" },
+  { id: "white-gold", label: "White Gold", src: "/cinematic-refs/white-gold.png" },
+] as const;
 
-  // Internal state (fallback if not controlled)
-  const [internalOpen, setInternalOpen] = React.useState<boolean>(!!defaultOpen);
-  const mountedRef = React.useRef(false);
+const WRAP_LIBRARY = [
+  { id: "none", label: "None", src: "" },
+  { id: "zebra", label: "Zebra Print", src: encodeURI("/wraps/Zebra Print.jpg") },
+  { id: "tiger", label: "Tiger Stripes", src: encodeURI("/wraps/Tiger Stripes.jpg") },
+  { id: "carbon_fiber", label: "Carbon Fiber", src: encodeURI("/wraps/Carbon Fiber.jpg") },
+  { id: "snakeskin", label: "Snake Skin", src: encodeURI("/wraps/Snake Skin.jpg") },
+  { id: "geometric", label: "Geometric Pattern", src: encodeURI("/wraps/Geometric Pattern.jpg") },
+] as const;
 
-  // 1. Determine if we are controlled (props) or uncontrolled (local state)
-  const isControlled = typeof isOpen === 'boolean';
-  const open = isControlled ? isOpen : internalOpen;
+const NIGHTLIFE_GRAPHICS = [
+  {
+    id: "hookah",
+    label: "Hookah",
+    paths: [
+      "M58 14L70 14L70 26L58 26Z",
+      "M54 26L74 26L80 40L74 52L54 52L48 40Z",
+      "M64 52L64 78",
+      "M52 86L76 86L76 98L52 98Z",
+      "M80 36H92Q104 36 104 48V66",
+      "M100 66L110 66",
+    ],
+  },
+  {
+    id: "bottle",
+    label: "Bottle Service",
+    paths: [
+      "M54 14H74V24H54Z",
+      "M58 24H70V36",
+      "M58 36Q58 32 62 32H66Q70 32 70 36V88Q70 98 64 100Q58 98 58 88Z",
+      "M58 88H70",
+      "M58 96H70",
+      "M80 54H96V80H80Z",
+      "M88 80V98",
+      "M82 98H94",
+    ],
+  },
+  {
+    id: "bucket",
+    label: "Bucket Deals",
+    paths: [
+      "M32 44H96L90 108Q64 116 38 108L32 44Z",
+      "M38 50H90",
+      "M34 60Q22 76 26 100Q30 116 50 112",
+      "M94 60Q106 76 102 100Q98 116 78 112",
+      "M44 44L52 36L62 44L54 52Z",
+      "M56 44L64 36L74 44L66 52Z",
+      "M68 44L76 36L86 44L78 52Z",
+      "M74 18L86 30L80 36L68 24Z",
+      "M70 24L80 34L76 72L66 66Z",
+    ],
+  },
+  {
+    id: "drink",
+    label: "Drink Specials",
+    paths: [
+      "M28 8A14 14 0 1 1 27.99 8Z",
+      "M40 18L100 18L74 52L66 52Z",
+      "M48 32L92 32",
+      "M70 52L70 86",
+      "M52 98L88 98",
+      "M34 58A20 20 0 1 1 33.99 58Z",
+      "M34 78L34 64",
+      "M34 78L24 84",
+      "M34 56L34 60",
+      "M34 96L34 92",
+      "M12 78L16 78",
+      "M56 78L52 78",
+    ],
+  },
+  {
+    id: "venue",
+    label: "Venue",
+    paths: [
+      "M64 20C46 20 32 34 32 52C32 76 64 108 64 108C64 108 96 76 96 52C96 34 82 20 64 20Z",
+      "M64 52A10 10 0 1 0 64 32A10 10 0 0 0 64 52Z",
+    ],
+  },
+  {
+    id: "music",
+    label: "Music",
+    paths: [
+      "M56 32L96 24V80",
+      "M56 32V88",
+      "M56 88A8 8 0 1 0 48 80A8 8 0 0 0 56 88Z",
+      "M96 80A8 8 0 1 0 88 72A8 8 0 0 0 96 80Z",
+    ],
+  },
+  {
+    id: "time",
+    label: "Time",
+    paths: [
+      "M64 28V60L82 70",
+      "M64 112A48 48 0 1 0 64 16A48 48 0 0 0 64 112Z",
+    ],
+  },
+] as const;
 
-  // 2. Initial mount / localStorage read (Only if NOT controlled)
-  React.useEffect(() => {
-    mountedRef.current = true;
-    if (isControlled) return; 
+const GRAPHIC_STICKERS = [
+  { id: "mezcal_bottle", src: "https://cdn-icons-png.flaticon.com/512/8091/8091033.png", name: "Mezcal" },
+  { id: "drink", src: "https://cdn-icons-png.flaticon.com/512/920/920587.png", name: "Drink" },
+  { id: "tequila_bottle", src: "https://cdn-icons-png.flaticon.com/512/7215/7215911.png", name: "Tequila" },
+  { id: "maracas", src: "https://cdn-icons-png.flaticon.com/512/6654/6654969.png", name: "Maracas" },
+  { id: "mardi_gras", src: "https://cdn-icons-png.flaticon.com/512/4924/4924300.png", name: "Mardi Gras" },
+  { id: "pin", src: "https://cdn-icons-png.flaticon.com/512/149/149059.png", name: "Pin" },
+  { id: "vinyl2", src: "https://cdn-icons-png.flaticon.com/512/1834/1834342.png", name: "Vinyl Record" },
+  { id: "margarita", src: "https://cdn-icons-png.flaticon.com/512/362/362504.png", name: "Margarita" },
+] as const;
 
-    try {
-      const v = localStorage.getItem(key);
-      if (v === '1') setInternalOpen(true);
-      if (v === '0') setInternalOpen(false);
-    } catch {}
-    return () => { mountedRef.current = false; };
-  }, [key, isControlled]);
-
-  // 3. Persist to localStorage on change (just for history)
-  React.useEffect(() => {
-    if (!mountedRef.current) return;
-    try { localStorage.setItem(key, open ? '1' : '0'); } catch {}
-  }, [open, key]);
-
-  const handleToggle = () => {
-    if (onToggle) {
-      onToggle(); // Let parent handle it
-    } else {
-      setInternalOpen(o => !o); // Handle internally
-    }
-  };
-
-  return (
-    <section className={panelClass}>
-      <div className="w-full flex items-center gap-2">
-        <div className="flex-1">
-          <button
-            type="button"
-            onClick={handleToggle}
-            aria-expanded={open}
-            className="w-full flex items-center gap-2 px-2 py-1 rounded-md hover:bg-neutral-800/40 group focus:outline-none"
-          >
-            <span className={clsx('inline-block transition-transform text-neutral-300 group-hover:text-white', open ? 'rotate-90' : 'rotate-0')}>
-              ▸
-            </span>
-            <span className={clsx('text-xs uppercase tracking-wider group-hover:text-white', titleClassName ?? 'text-neutral-300')}>
-              {title}
-            </span>
-          </button>
-        </div>
-        {right && (
-          <div className="ml-auto flex items-center gap-2" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
-            {right}
-          </div>
-        )}
-      </div>
-
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            key="content"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.25, ease: "easeInOut" }}
-            className="mt-3 overflow-hidden px-2 pb-2"
-          >
-            {children}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </section>
-  );
-};
+const FLARE_LIBRARY = [
+  { id: "flare01", src: "/flares/flare01.png", name: "Warm Flare" },
+  { id: "flare02", src: "/flares/flare02.png", name: "Bright Flare" },
+  { id: "flareBlue01", src: "/flares/flareBlue01.png", name: "Blue Streak" },
+  { id: "flareBlue03", src: "/flares/flareBlue03.png", name: "Blue Glow" },
+  { id: "sun01", src: "/flares/sun01.png", name: "Warm Sun" },
+  { id: "sun02", src: "/flares/sun02.png", name: "Cool Sun" },
+  { id: "sun03", src: "/flares/sun03.png", name: "Red Sun" },
+  { id: "sun04", src: "/flares/sun04.png", name: "Green Sun" },
+] as const;
 
 /* ===== TEMPLATE GALLERY (UPDATED) ===== */
 /* ===== TEMPLATE GALLERY (LOCAL, SELF-CONTAINED) ===== */
-const TemplateGalleryPanel = ({
+const TemplateGalleryPanel = React.memo(({
   items,
   onApply,
   format,
@@ -687,7 +488,9 @@ const TemplateGalleryPanel = ({
   onToggle?: () => void;
 }) => {
   const [q, setQ] = React.useState('');
+  const deferredQ = React.useDeferredValue(q);
   const [tag, setTag] = React.useState<string>('All');
+  const [visibleCount, setVisibleCount] = React.useState(16);
 
   const allTags = React.useMemo(() => {
     const s = new Set<string>();
@@ -696,12 +499,21 @@ const TemplateGalleryPanel = ({
   }, [items]);
 
   const filtered = React.useMemo(() => {
-    return items.filter(t => {
+    return items.filter((t) => {
       const okTag = tag === 'All' || t.tags.includes(tag);
-      const okQ = !q || t.label.toLowerCase().includes(q.toLowerCase());
+      const okQ = !deferredQ || t.label.toLowerCase().includes(deferredQ.toLowerCase());
       return okTag && okQ;
     });
-  }, [items, q, tag]);
+  }, [items, deferredQ, tag]);
+
+  React.useEffect(() => {
+    setVisibleCount(16);
+  }, [tag, deferredQ]);
+
+  const visible = React.useMemo(
+    () => filtered.slice(0, visibleCount),
+    [filtered, visibleCount]
+  );
 
   return (
     <Collapsible
@@ -730,7 +542,7 @@ const TemplateGalleryPanel = ({
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        {filtered.map(t => (
+        {visible.map(t => (
           <div
             key={t.id}
             className="rounded-lg overflow-hidden border border-neutral-700 bg-neutral-900/60"
@@ -770,9 +582,21 @@ const TemplateGalleryPanel = ({
           </div>
         ))}
       </div>
+      {filtered.length > visibleCount && (
+        <div className="mt-3 grid place-items-center">
+          <button
+            type="button"
+            className="rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/80 hover:bg-white/10"
+            onClick={() => setVisibleCount((prev) => prev + 16)}
+          >
+            Show more
+          </button>
+        </div>
+      )}
     </Collapsible>
   );
-};
+});
+TemplateGalleryPanel.displayName = 'TemplateGalleryPanel';
 
 
 type Align = 'left' | 'center' | 'right';
@@ -1143,6 +967,169 @@ const PRESETS: PromptPreset[] = [
   },
 ];
 
+const AI_REFERENCE_SAMPLES: Record<
+  Exclude<GenGender, "any">,
+  Partial<Record<Exclude<GenEthnicity, "any">, string>>
+> = {
+  man: {
+    black: "/ai-reference/man/ethnicity/black-man.jpg",
+    white: "/ai-reference/man/ethnicity/white-man.jpg",
+    "east-asian": "/ai-reference/man/ethnicity/east-asian-man.jpg",
+    latino: "/ai-reference/man/ethnicity/latino-man.jpg",
+    indian: "/ai-reference/man/ethnicity/indian-man.jpg",
+    mixed: "/ai-reference/man/ethnicity/mixed-man.jpg",
+  },
+  woman: {
+    black: "/ai-reference/woman/ethnicity/black-woman.jpg",
+    white: "/ai-reference/woman/ethnicity/white-woman.jpg",
+    "east-asian": "/ai-reference/woman/ethnicity/east-asian-woman.jpg",
+    latino: "/ai-reference/woman/ethnicity/latina-woman.jpg",
+    indian: "/ai-reference/woman/ethnicity/indian-woman.jpg",
+    "middle-eastern": "/ai-reference/woman/ethnicity/middle-eastern-woman.jpg",
+    mixed: "/ai-reference/woman/ethnicity/mixed-woman.jpg",
+  },
+};
+
+const getReferenceSample = (gender: GenGender, ethnicity: GenEthnicity) => {
+  if (gender === "any" || ethnicity === "any") return null;
+  return AI_REFERENCE_SAMPLES[gender]?.[ethnicity] ?? null;
+};
+
+const NIGHTLIFE_SUBJECT_TOKENS = {
+  energy: {
+    calm: "cool, confident energy, subtle motion, poised charisma",
+    vibe: "bold nightlife energy, playful expression, magnetic presence",
+    wild: "explosive nightlife energy, motion blur, euphoric expression, hands up",
+  },
+  colorway: {
+    neon: "neon palette, saturated highlights, electric color pops",
+    monochrome: "monochrome palette, high contrast, minimal color variance",
+    warm: "warm palette, amber highlights, golden glow",
+    cool: "cool palette, cyan-blue highlights, icy accents",
+    "gold-black": "gold and black palette, high contrast, luxury accents",
+  },
+  fashionBoost:
+    "runway-ready, high fashion detail, couture craftsmanship, premium tailoring, realistic fabric weave, visible texture and seams, true-to-life lighting reflections",
+  attireColor: {
+    black: "black attire, glossy black accents",
+    white: "white attire, clean monochrome",
+    gold: "gold attire, metallic highlights",
+    silver: "silver attire, chrome accents",
+    red: "red attire, bold color pop",
+    blue: "cobalt blue attire, vivid contrast",
+    emerald: "emerald green attire, jewel-tone accents",
+    champagne: "champagne tone attire, warm metallic sheen",
+  },
+  pose: {
+    dancing: "dynamic dancing pose, fluid movement, motion blur",
+    "hands-up": "hands raised, crowd-hype gesture, celebratory motion",
+    performance: "stage performance stance, microphone energy, commanding presence",
+    dj: "dj at decks, hands on mixer, mid-drop intensity",
+  },
+  shot: {
+    "full-body": "full body shot, head-to-toe visible, entire outfit fully visible, balanced framing with space above head and below feet",
+    "three-quarter": "three-quarter shot, framed from mid-thigh up, outfit details clearly visible",
+    "waist-up": "waist-up shot, framed from waist to just above head, hands visible near waist or hips",
+    "chest-up": "chest-up portrait, framed from upper chest to top of head",
+    "close-up": "close-up portrait, face fills frame but not cropped",
+  },
+  lighting: {
+    strobe: "strobe lighting, sharp highlights, strong rim light, energetic contrast",
+    softbox: "softbox lighting, smooth shadows, subtle rim light, premium polish",
+    backlit: "backlit edges, pronounced rim light, dramatic glow, silhouette edges",
+    flash: "direct flash, crisp contrast, light falloff, nightlife snapshot vibe",
+  },
+} as const;
+
+const NIGHTLIFE_ATTIRE_BY_GENDER = {
+  man: {
+    streetwear: "premium streetwear, statement bomber or leather jacket, layered textures, designer sneakers, bold accessories, runway-ready styling",
+    "club-glam": "club glam menswear, fitted satin shirt, metallic accents, chain jewelry, polished shoes, editorial nightlife styling",
+    luxury: "luxury nightlife suit, tailored blazer, silk shirt, velvet or satin accents, upscale accessories, couture quality, no t-shirt",
+    festival: "festival menswear, bold patterns, layered accessories, expressive styling, statement jewelry, textured fabrics",
+    "all-white": "all-white tailored suit, crisp shirt, monochrome styling, premium textures, clean editorial finish",
+  },
+  woman: {
+    streetwear: "fashion streetwear, cropped leather jacket, sleek bodysuit, bold textures, statement heels, layered jewelry, flyer-ready nightlife styling",
+    "club-glam": "club glam mini dress or corset, sequins or metallic mesh, satin or latex accents, bold jewelry, strappy heels, flyer-ready nightlife styling, premium polish",
+    luxury: "luxury nightlife dress, silk or satin gown, structured blazer with metallic hardware, statement jewelry, elegant heels, couture quality, flyer-ready editorial look",
+    festival: "festival glam, crochet or fringe top, sequins, layered accessories, expressive styling, sparkling details, flyer-ready energy",
+    "all-white": "all-white luxury look, white satin blazer or silk slip dress, lace accents, minimal jewelry, premium fabric, flyer-ready editorial finish",
+  },
+  any: {
+    streetwear: "premium streetwear, statement jacket, layered textures, bold accents, runway-ready styling",
+    "club-glam": "club glam attire, metallic fabrics, shimmer accents, bold accessories, editorial nightlife styling",
+    luxury: "luxury nightlife outfit, tailored silhouette, premium materials, couture quality, no t-shirt",
+    festival: "festival styling, layered accessories, expressive styling, sparkle accents, textured fabrics",
+    "all-white": "all-white attire, clean monochrome styling, premium fabric, editorial finish",
+  },
+} as const;
+
+const getAttirePrompt = (gender: GenGender, attire: GenAttire) => {
+  if (gender === "man") return NIGHTLIFE_ATTIRE_BY_GENDER.man[attire];
+  if (gender === "woman") return NIGHTLIFE_ATTIRE_BY_GENDER.woman[attire];
+  return NIGHTLIFE_ATTIRE_BY_GENDER.any[attire];
+};
+
+const SUBJECT_MATCHERS = [
+  {
+    type: 'crowd',
+    keys: [
+      'crowd',
+      'rave',
+      'mosh',
+      'festival',
+      'audience',
+      'packed',
+      'hands up',
+      'confetti',
+      'dancefloor',
+      'party people',
+      'club crowd',
+    ],
+    prompt:
+      'Diverse crowd dancing and cheering, candid movement blur, strobe light, confetti, raw rave energy',
+  },
+  {
+    type: 'single',
+    keys: ['dj', 'turntable', 'decks', 'booth', 'mixing'],
+    prompt:
+      'Headliner DJ at the decks, hands raised, sweat and smoke, festival lighting, neon glow',
+  },
+  {
+    type: 'single',
+    keys: ['rapper', 'hip hop', 'hip-hop', 'mc', 'microphone', 'bars'],
+    prompt:
+      'Rapper gripping microphone mid-performance, raw energy, jewelry catching strobe light',
+  },
+  {
+    type: 'single',
+    keys: ['singer', 'vocalist', 'soul', 'jazz', 'crooner'],
+    prompt:
+      'Soul singer at a vintage microphone, emotive performance, soft spotlight, velvet backdrop',
+  },
+  {
+    type: 'single',
+    keys: ['fashion', 'model', 'editorial', 'vogue', 'runway'],
+    prompt:
+      'Editorial fashion model, flash photography, cinematic shadow, couture styling',
+  },
+  {
+    type: 'single',
+    keys: ['dancer', 'dance', 'choreography', 'salsa', 'performance'],
+    prompt:
+      'Dancer mid-spin with motion blur, warm stage light, energetic movement',
+  },
+] as const;
+
+const inferSubjectFromPrompt = (raw: string) => {
+  const prompt = raw.toLowerCase();
+  for (const matcher of SUBJECT_MATCHERS) {
+    if (matcher.keys.some((k) => prompt.includes(k))) return matcher;
+  }
+  return null;
+};
+
 
 // Drop-in: populate the gallery (previews can be any image URL you have)
 
@@ -1414,7 +1401,7 @@ type Icon = {
 
 /* ===== BLOCK: ARTBOARD (BEGIN) ===== */
 //ARTBOARD PROPS//
-const Artboard = React.forwardRef<HTMLDivElement, {
+const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
  
   palette: Palette; format: Format;
   portraitUrl: string | null; bgUrl: string | null; bgUploadUrl: string | null; logoUrl: string | null; opticalMargin: boolean; leadTrackDelta: number;
@@ -1440,6 +1427,7 @@ const Artboard = React.forwardRef<HTMLDivElement, {
   bgX: number;
   bgY: number;
   bgScale: number;
+  bgFitMode: boolean;
   setBgX: (v: number) => void;
   setBgY: (v: number) => void;
   bgBlur: number;
@@ -1540,8 +1528,10 @@ const Artboard = React.forwardRef<HTMLDivElement, {
   onSelectIcon?: (id: string) => void;
 
   //EMOJI
-   onEmojiMove?: (id: string, x: number, y: number) => void;
-  
+  onEmojiMove?: (id: string, x: number, y: number) => void;
+
+  mobileDragEnabled?: boolean;
+  onMobileDragEnd?: () => void;
 
   
 
@@ -1571,7 +1561,7 @@ const Artboard = React.forwardRef<HTMLDivElement, {
     head2Enabled, head2, head2X, head2Y, head2SizePx, head2Family, head2Align, head2LineHeight, head2ColWidth, head2Fx, head2Alpha, head2Color,
     // Subtag styles
     subtagBold, subtagItalic, subtagUnderline, subtagSize, subtagAlign, 
-    bgX, bgY, setBgX, setBgY, bgScale, bgBlur,
+    bgX, bgY, setBgX, setBgY, bgScale, bgFitMode, bgBlur,
 
      /* SHADOW ENABLE */
       headShadow,
@@ -1596,6 +1586,8 @@ const Artboard = React.forwardRef<HTMLDivElement, {
     emojis,
     onEmojiMove,
     isMobileView,
+    mobileDragEnabled = false,
+    onMobileDragEnd,
 
     /** ✅ alias shapes prop to a local name that won’t collide with any state */
     shapes: shapesProp = [],
@@ -2012,6 +2004,10 @@ function beginDrag(
   node?: Element | null,
   shapeId?: string
 ) {
+  if (isMobileView && !mobileDragEnabled) {
+    useFlyerState.getState().setMoveTarget(target);
+    return;
+  }
   // 1. STOP & CAPTURE IMMEDIATELY (Prevents Drop-out)
   e.preventDefault();
   e.stopPropagation();
@@ -2111,6 +2107,7 @@ function beginDrag(
   const end = () => {
     endDrag();
     setDragging(null); // Clear dragging state
+    if (isMobileView) onMobileDragEnd?.();
     window.removeEventListener("pointermove", onMove);
     window.removeEventListener("pointerup", end);
     window.removeEventListener("pointercancel", end);
@@ -2391,7 +2388,8 @@ return (
     const my = ((e.clientY - rect.top) / rect.height) * 100;
 
     const zoomFactor = e.deltaY < 0 ? 1.06 : 0.94;
-    const newScale = Math.max(1.0, Math.min(3.0, bgScale * zoomFactor));
+    const minScale = 0.5;
+    const newScale = Math.max(minScale, Math.min(3.0, bgScale * zoomFactor));
 
     const k = (newScale - bgScale) / newScale;
     onBgScale?.(newScale);
@@ -2466,6 +2464,7 @@ return (
         store.setMoveTarget("background");
       }}
       onPointerDown={(e) => {
+        if (isMobileView && !mobileDragEnabled) return;
         e.preventDefault();
         e.stopPropagation();
 
@@ -2533,6 +2532,7 @@ return (
         setBgY(finalY);
 
         if (onBgMove) onBgMove(finalX, finalY);
+        if (isMobileView) onMobileDragEnd?.();
       }}
     >
       <img
@@ -2561,11 +2561,15 @@ return (
           left: "50%",
           top: "50%",
           transform: "translate(-50%, -50%)",
-          // ✅ FIX: Smart Scaling (mimics 'cover' but keeps overflow)
-          width: bgIsLandscape ? "auto" : "100%",
-          height: bgIsLandscape ? "100%" : "auto",
-          minWidth: "100%",
-          minHeight: "100%",
+          // ✅ FIX: Fit mode shows full image; Fill mode covers canvas
+          width: bgFitMode
+            ? (bgIsLandscape ? "100%" : "auto")
+            : (bgIsLandscape ? "auto" : "100%"),
+          height: bgFitMode
+            ? (bgIsLandscape ? "auto" : "100%")
+            : (bgIsLandscape ? "100%" : "auto"),
+          minWidth: bgFitMode ? "0" : "100%",
+          minHeight: bgFitMode ? "0" : "100%",
           maxWidth: "none",
           maxHeight: "none",
         }}
@@ -3170,6 +3174,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 
   // 2. DRAG START
   onPointerDown={(e) => {
+    if (isMobileView && !mobileDragEnabled) return;
     e.preventDefault(); e.stopPropagation();
     onRecordMove?.("headline", headX, headY, "headline");
     const el = e.currentTarget as HTMLElement;
@@ -3256,6 +3261,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     onHeadMove?.(finalX, finalY);
 
     try { el.releasePointerCapture(e.pointerId); } catch {}
+    if (isMobileView) onMobileDragEnd?.();
   }}
 
   style={{
@@ -3360,6 +3366,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 
   // 2. DRAG START
   onPointerDown={(e) => {
+    if (isMobileView && !mobileDragEnabled) return;
     e.preventDefault(); e.stopPropagation();
     onRecordMove?.("headline2", head2X, head2Y, "headline2");
     const el = e.currentTarget as HTMLElement;
@@ -3432,6 +3439,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     onHead2Move?.(finalX, finalY);
 
     try { el.releasePointerCapture(e.pointerId); } catch {}
+    if (isMobileView) onMobileDragEnd?.();
   }}
 
   style={{
@@ -3513,6 +3521,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 
   // 2. DRAG START
   onPointerDown={(e) => {
+    if (isMobileView && !mobileDragEnabled) return;
     e.preventDefault(); e.stopPropagation();
     onRecordMove?.("details", detailsX, detailsY, "details");
     const el = e.currentTarget as HTMLElement;
@@ -3585,6 +3594,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     onDetailsMove?.(finalX, finalY);
 
     try { el.releasePointerCapture(e.pointerId); } catch {}
+    if (isMobileView) onMobileDragEnd?.();
   }}
 
   style={{
@@ -3661,6 +3671,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 
   // 2. DRAG START
   onPointerDown={(e) => {
+    if (isMobileView && !mobileDragEnabled) return;
     e.preventDefault(); e.stopPropagation();
     onRecordMove?.("details2", details2X, details2Y, "details2");
     const el = e.currentTarget as HTMLElement;
@@ -3733,6 +3744,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     onDetails2Move?.(finalX, finalY);
 
     try { el.releasePointerCapture(e.pointerId); } catch {}
+    if (isMobileView) onMobileDragEnd?.();
   }}
 
   style={{
@@ -3806,6 +3818,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 
   // 2. DRAG START
   onPointerDown={(e) => {
+    if (isMobileView && !mobileDragEnabled) return;
     e.preventDefault(); e.stopPropagation();
     onRecordMove?.("venue", venueX, venueY, "venue");
     const el = e.currentTarget as HTMLElement;
@@ -3878,6 +3891,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     onVenueMove?.(finalX, finalY);
 
     try { el.releasePointerCapture(e.pointerId); } catch {}
+    if (isMobileView) onMobileDragEnd?.();
   }}
 
   style={{
@@ -3953,6 +3967,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 
   // 2. DRAG START
   onPointerDown={(e) => {
+    if (isMobileView && !mobileDragEnabled) return;
     e.preventDefault(); e.stopPropagation();
     onRecordMove?.("subtag", subtagX, subtagY, "subtag");
     const el = e.currentTarget as HTMLElement;
@@ -4025,6 +4040,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     onSubtagMove?.(finalX, finalY);
 
     try { el.releasePointerCapture(e.pointerId); } catch {}
+    if (isMobileView) onMobileDragEnd?.();
   }}
 
   style={{
@@ -4153,8 +4169,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
       </div>
     </div>
     
-      )
-    });
+      );
+    }));
 Artboard.displayName = 'Artboard';
 /* ===== BLOCK: ARTBOARD (END) ===== */
 
@@ -5685,14 +5701,6 @@ export default function Page() {
     shape?: string;
     final?: string;
   } | null>(null);
-  const CINEMATIC_REF_LIBRARY = [
-    { id: "glass-blue", label: "Glass Blue", src: "/cinematic-refs/glass-blue.png" },
-    { id: "chrome-purple", label: "Chrome Purple", src: "/cinematic-refs/chrome-purple.png" },
-    { id: "gold-smoke", label: "Gold Smoke", src: "/cinematic-refs/gold-smoke.png" },
-    { id: "spicy", label: "Spicy Hot", src: "/cinematic-refs/spicy.png" },
-    { id: "frozen", label: "Frozen", src: "/cinematic-refs/frozen.png" },
-    { id: "white-gold", label: "White Gold", src: "/cinematic-refs/white-gold.png" },
-  ];
   const [cinematicRefUrl, setCinematicRefUrl] = useState<string | null>(
     CINEMATIC_REF_LIBRARY[0]?.src ?? null
   );
@@ -5722,15 +5730,6 @@ export default function Page() {
 
   const presetId = selectedMaterialId || "gold";
       const isMagma = presetId === "magma";
-
-  const WRAP_LIBRARY = [
-    { id: "none", label: "None", src: "" },
-    { id: "zebra", label: "Zebra Print", src: encodeURI("/wraps/Zebra Print.jpg") },
-    { id: "tiger", label: "Tiger Stripes", src: encodeURI("/wraps/Tiger Stripes.jpg") },
-    { id: "carbon_fiber", label: "Carbon Fiber", src: encodeURI("/wraps/Carbon Fiber.jpg") },
-    { id: "snakeskin", label: "Snake Skin", src: encodeURI("/wraps/Snake Skin.jpg") },
-    { id: "geometric", label: "Geometric Pattern", src: encodeURI("/wraps/Geometric Pattern.jpg") },
-  ] as const;
 
       // UI warmth value is:
       // - for magma: 0..1 (Warm..Hot)
@@ -6196,105 +6195,61 @@ const handleFadeAnimationComplete = () => {
 // ============================================================================
 
 const {
-  // ---------------------------------------------------------
-  // SESSION SYSTEM (ONLY WHAT EXISTS IN STORE)
-  // ---------------------------------------------------------
   session,
   sessionDirty,
   setSessionValue,
-
-  // ---------------------------------------------------------
-  // DRAG SYSTEM
-  // ---------------------------------------------------------
   isLiveDragging,
   setIsLiveDragging,
-
   moveTarget,
   setMoveTarget,
-
   dragging,
   setDragging,
-
-  // ---------------------------------------------------------
-  // UI PANEL
-  // ---------------------------------------------------------
   selectedPanel,
   setSelectedPanel,
-
-  // ---------------------------------------------------------
-  // HEADLINE2 LEGACY COLOR
-  // ---------------------------------------------------------
   head2Color,
   setHead2Color,
-
-  // ---------------------------------------------------------
-  // SHADOW FLAGS
-  // ---------------------------------------------------------
   headShadow,
   head2Shadow,
   detailsShadow,
   details2Shadow,
   venueShadow,
   subtagShadow,
-
-  // ---------------------------------------------------------
-  // SHADOW STRENGTH
-  // ---------------------------------------------------------
   headShadowStrength,
   head2ShadowStrength,
   detailsShadowStrength,
   details2ShadowStrength,
   venueShadowStrength,
   subtagShadowStrength,
-
   setHeadShadow,
   setHead2Shadow,
   setDetailsShadow,
   setDetails2Shadow,
   setVenueShadow,
   setSubtagShadow,
-
   setHeadShadowStrength,
   setHead2ShadowStrength,
   setDetailsShadowStrength,
   setDetails2ShadowStrength,
   setVenueShadowStrength,
   setSubtagShadowStrength,
-
-  // ---------------------------------------------------------
-  // ENABLE TOGGLES
-  // ---------------------------------------------------------
   detailsEnabled,
   setDetailsEnabled,
-
   details2Enabled,
   setDetails2Enabled,
-
   headline2Enabled,
   setHeadline2Enabled,
-
   subtagEnabled,
   setSubtagEnabled,
-
   venueEnabled,
   setVenueEnabled,
-
-  // ---------------------------------------------------------
-  // EMOJIS
-  // ---------------------------------------------------------
   emojis,
   setEmojis,
   addEmoji,
   updateEmoji,
   removeEmoji,
   moveEmoji,
-
   emojisEnabled,
   setEmojisEnabled,
-
-  // ---------------------------------------------------------
-  // PORTRAITS (NEW)
-  // ---------------------------------------------------------
   portraits,
   setPortraits,
   addPortrait,
@@ -6302,23 +6257,84 @@ const {
   removePortrait,
   selectedPortraitId,
   setSelectedPortraitId,
-
-  // ---------------------------------------------------------
-  // TEMPLATE SNAPSHOT
-  // ---------------------------------------------------------
   currentTemplate,
   setCurrentTemplate,
-
-  // ---------------------------------------------------------
-  // TEXT STYLES
-  // ---------------------------------------------------------
   textStyles,
   setTextStyle,
-
   setSession,
   setSessionDirty,
-
-} = useFlyerState();
+} = useFlyerState(
+  useShallow((s) => ({
+    session: s.session,
+    sessionDirty: s.sessionDirty,
+    setSessionValue: s.setSessionValue,
+    isLiveDragging: s.isLiveDragging,
+    setIsLiveDragging: s.setIsLiveDragging,
+    moveTarget: s.moveTarget,
+    setMoveTarget: s.setMoveTarget,
+    dragging: s.dragging,
+    setDragging: s.setDragging,
+    selectedPanel: s.selectedPanel,
+    setSelectedPanel: s.setSelectedPanel,
+    head2Color: s.head2Color,
+    setHead2Color: s.setHead2Color,
+    headShadow: s.headShadow,
+    head2Shadow: s.head2Shadow,
+    detailsShadow: s.detailsShadow,
+    details2Shadow: s.details2Shadow,
+    venueShadow: s.venueShadow,
+    subtagShadow: s.subtagShadow,
+    headShadowStrength: s.headShadowStrength,
+    head2ShadowStrength: s.head2ShadowStrength,
+    detailsShadowStrength: s.detailsShadowStrength,
+    details2ShadowStrength: s.details2ShadowStrength,
+    venueShadowStrength: s.venueShadowStrength,
+    subtagShadowStrength: s.subtagShadowStrength,
+    setHeadShadow: s.setHeadShadow,
+    setHead2Shadow: s.setHead2Shadow,
+    setDetailsShadow: s.setDetailsShadow,
+    setDetails2Shadow: s.setDetails2Shadow,
+    setVenueShadow: s.setVenueShadow,
+    setSubtagShadow: s.setSubtagShadow,
+    setHeadShadowStrength: s.setHeadShadowStrength,
+    setHead2ShadowStrength: s.setHead2ShadowStrength,
+    setDetailsShadowStrength: s.setDetailsShadowStrength,
+    setDetails2ShadowStrength: s.setDetails2ShadowStrength,
+    setVenueShadowStrength: s.setVenueShadowStrength,
+    setSubtagShadowStrength: s.setSubtagShadowStrength,
+    detailsEnabled: s.detailsEnabled,
+    setDetailsEnabled: s.setDetailsEnabled,
+    details2Enabled: s.details2Enabled,
+    setDetails2Enabled: s.setDetails2Enabled,
+    headline2Enabled: s.headline2Enabled,
+    setHeadline2Enabled: s.setHeadline2Enabled,
+    subtagEnabled: s.subtagEnabled,
+    setSubtagEnabled: s.setSubtagEnabled,
+    venueEnabled: s.venueEnabled,
+    setVenueEnabled: s.setVenueEnabled,
+    emojis: s.emojis,
+    setEmojis: s.setEmojis,
+    addEmoji: s.addEmoji,
+    updateEmoji: s.updateEmoji,
+    removeEmoji: s.removeEmoji,
+    moveEmoji: s.moveEmoji,
+    emojisEnabled: s.emojisEnabled,
+    setEmojisEnabled: s.setEmojisEnabled,
+    portraits: s.portraits,
+    setPortraits: s.setPortraits,
+    addPortrait: s.addPortrait,
+    updatePortrait: s.updatePortrait,
+    removePortrait: s.removePortrait,
+    selectedPortraitId: s.selectedPortraitId,
+    setSelectedPortraitId: s.setSelectedPortraitId,
+    currentTemplate: s.currentTemplate,
+    setCurrentTemplate: s.setCurrentTemplate,
+    textStyles: s.textStyles,
+    setTextStyle: s.setTextStyle,
+    setSession: s.setSession,
+    setSessionDirty: s.setSessionDirty,
+  }))
+);
 
 
 // --- Cutout cleanup UI state ---
@@ -6690,37 +6706,50 @@ function triggerUploadForPortraitSlot(i: number) {
 }
 
 
-// ===== PORTRAIT LIBRARY STATE (REPLACE ANY PRIOR VERSIONS) =====
-const MAX_PORTRAITS = 2;
+// ===== PORTRAIT LIBRARY STATE =====
+const MAX_PORTRAITS = 24;
 
-const [portraitLibrary, setPortraitLibrary] = useState<string[]>([]);
+const [portraitLibrary, setPortraitLibrary] = useState<string[]>(() => {
+  try {
+    const raw = localStorage.getItem('nf:portraitLibrary');
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+});
 
+function persistPortraitLibrary(next: string[]) {
+  const trimmed = next.slice(0, MAX_PORTRAITS);
+  setPortraitLibrary(trimmed);
+  try { localStorage.setItem('nf:portraitLibrary', JSON.stringify(trimmed)); } catch {}
+}
 
 function addToPortraitLibrary(src: string) {
+  ensureAssetMeta(src, 'portrait');
   setPortraitLibrary(prev => {
     if (prev.includes(src)) return prev;
     if (prev.length >= MAX_PORTRAITS) {
       alert(`You can only keep ${MAX_PORTRAITS} portraits in the library.`);
       return prev;
     }
-    return [...prev, src];
+    const next = [src, ...prev].slice(0, MAX_PORTRAITS);
+    try { localStorage.setItem('nf:portraitLibrary', JSON.stringify(next)); } catch {}
+    return next;
   });
 }
 
-
-
 // Add portrait to library (called after background removal)
-const addPortraitToLibrary = (src: string) => {
-  setPortraitLibrary(prev => {
-    if (prev.includes(src)) return prev;          // avoid duplicates
-    if (prev.length >= 2) return prev;            // max 2 allowed
-    return [...prev, src];
-  });
-};
+const addPortraitToLibrary = (src: string) => addToPortraitLibrary(src);
 
 // Remove from library
 const removePortraitFromLibrary = (src: string) => {
-  setPortraitLibrary(prev => prev.filter(p => p !== src));
+  removeAssetMeta(src);
+  setPortraitLibrary(prev => {
+    const next = prev.filter(p => p !== src);
+    try { localStorage.setItem('nf:portraitLibrary', JSON.stringify(next)); } catch {}
+    return next;
+  });
 };
 
 
@@ -6797,6 +6826,10 @@ const CREDITS_KEY = 'nf:bg.credits.v2';
 const INITIAL_CREDITS = 100;
 
 const [credits, setCredits] = React.useState<number>(INITIAL_CREDITS);
+const resetCredits = React.useCallback(() => {
+  setCredits(INITIAL_CREDITS);
+  try { localStorage.setItem(CREDITS_KEY, String(INITIAL_CREDITS)); } catch {}
+}, []);
 
 // read AFTER hydration
 React.useEffect(() => {
@@ -6865,6 +6898,7 @@ const onRightBgFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     setBgUploadUrl(String(r.result));
     setBgUrl(null);         // prefer the upload
     setFormat('square');    // safe default canvas size
+    setBgFitMode(false);
     setBgScale(1.3);        // slight “fill” zoom
     setBgPosX(50);          // center
     setBgPosY(50);          // center
@@ -6876,7 +6910,7 @@ const onRightBgFile = (e: React.ChangeEvent<HTMLInputElement>) => {
 
 // Quick actions for right-panel controls
 const clearBackground = () => { setBgUploadUrl(null); setBgUrl(null); };
-const fitBackground   = () => { setBgScale(1.0); setBgPosX(50); setBgPosY(50); };
+const fitBackground   = () => { setBgFitMode(true); setBgScale(1.0); setBgPosX(50); setBgPosY(50); };
 /* ===== RIGHT-PANEL BG UPLOAD HELPERS (END) ===== */
 
 // ===== LOGO PICKER (BEGIN) =====
@@ -7413,6 +7447,7 @@ function clearLogoSlot(i: number) {
 
 
 function addToLogoLibrary(url: string) {
+  ensureAssetMeta(url, 'logo');
   setLogoLibrary(prev => {
     const next = [url, ...prev.filter(u => u !== url)].slice(0, 60);
     try { localStorage.setItem('nf:logoLibrary', JSON.stringify(next)); } catch {}
@@ -7421,6 +7456,7 @@ function addToLogoLibrary(url: string) {
 }
 
 function removeFromLogoLibrary(url: string) {
+  removeAssetMeta(url);
   setLogoLibrary(prev => {
     const next = prev.filter(u => u !== url);
     try { localStorage.setItem('nf:logoLibrary', JSON.stringify(next)); } catch {}
@@ -7463,6 +7499,207 @@ const [logoLibrary, setLogoLibrary] = useState<string[]>(() => {
     return [];
   }
 });
+
+  /* guides / move */
+  const [showGuides, setShowGuides] = useState(false);
+  const [showFaceGuide, setShowFaceGuide] = useState(false);
+  const [moveMode, setMoveMode] = useState(false);
+  const [snap, setSnap] = useState(true);
+  const mobileDragEnabled = true;
+
+type AssetType = 'logo' | 'portrait';
+type AssetMeta = {
+  name: string;
+  tags: string[];
+  type: AssetType;
+  createdAt: number;
+};
+
+const ASSET_META_KEY = 'nf:assetMeta.v1';
+const [assetMeta, setAssetMeta] = useState<Record<string, AssetMeta>>(() => {
+  try {
+    const raw = localStorage.getItem(ASSET_META_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+});
+
+const saveAssetMeta = React.useCallback((next: Record<string, AssetMeta>) => {
+  setAssetMeta(next);
+  try { localStorage.setItem(ASSET_META_KEY, JSON.stringify(next)); } catch {}
+}, []);
+
+const ensureAssetMeta = React.useCallback(
+  (url: string, type: AssetType) => {
+    setAssetMeta((prev) => {
+      if (prev[url]) return prev;
+      const name =
+        type === 'logo'
+          ? `Logo ${Object.keys(prev).length + 1}`
+          : `Portrait ${Object.keys(prev).length + 1}`;
+      const next = {
+        ...prev,
+        [url]: {
+          name,
+          tags: [],
+          type,
+          createdAt: Date.now(),
+        },
+      };
+      try { localStorage.setItem(ASSET_META_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  },
+  []
+);
+
+const updateAssetMeta = React.useCallback(
+  (url: string, patch: Partial<AssetMeta>) => {
+    setAssetMeta((prev) => {
+      if (!prev[url]) return prev;
+      const next = { ...prev, [url]: { ...prev[url], ...patch } };
+      try { localStorage.setItem(ASSET_META_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  },
+  []
+);
+
+const removeAssetMeta = React.useCallback((url: string) => {
+  setAssetMeta((prev) => {
+    if (!prev[url]) return prev;
+    const next = { ...prev };
+    delete next[url];
+    try { localStorage.setItem(ASSET_META_KEY, JSON.stringify(next)); } catch {}
+    return next;
+  });
+}, []);
+
+React.useEffect(() => {
+  logoLibrary.forEach((url) => ensureAssetMeta(url, 'logo'));
+}, [logoLibrary, ensureAssetMeta]);
+
+React.useEffect(() => {
+  portraitLibrary.forEach((url) => ensureAssetMeta(url, 'portrait'));
+}, [portraitLibrary, ensureAssetMeta]);
+
+const [assetTab, setAssetTab] = useState<'logos' | 'portraits'>('logos');
+const [assetQuery, setAssetQuery] = useState('');
+const [assetTag, setAssetTag] = useState('All');
+const [selectedAssetUrl, setSelectedAssetUrl] = useState<string | null>(null);
+const [assetTagDraft, setAssetTagDraft] = useState('');
+
+const normalizeTags = React.useCallback(
+  (value: string) =>
+    value
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean)
+      .slice(0, 12),
+  []
+);
+
+const activeAssetList = assetTab === 'logos' ? logoLibrary : portraitLibrary;
+const activeAssetType: AssetType = assetTab === 'logos' ? 'logo' : 'portrait';
+
+const activeAssetTags = React.useMemo(() => {
+  const tags = new Set<string>();
+  activeAssetList.forEach((url) => {
+    const meta = assetMeta[url];
+    (meta?.tags || []).forEach((t) => tags.add(t));
+  });
+  return ['All', ...Array.from(tags).sort()];
+}, [activeAssetList, assetMeta]);
+
+const filteredAssets = React.useMemo(() => {
+  const q = assetQuery.trim().toLowerCase();
+  return activeAssetList.filter((url) => {
+    const meta = assetMeta[url];
+    const name = meta?.name || '';
+    const matchesQuery = !q || name.toLowerCase().includes(q);
+    const matchesTag =
+      assetTag === 'All' || (meta?.tags || []).includes(assetTag);
+    return matchesQuery && matchesTag;
+  });
+}, [activeAssetList, assetMeta, assetQuery, assetTag]);
+
+React.useEffect(() => {
+  if (selectedAssetUrl && !activeAssetList.includes(selectedAssetUrl)) {
+    setSelectedAssetUrl(null);
+  }
+}, [activeAssetList, selectedAssetUrl]);
+
+React.useEffect(() => {
+  const meta = selectedAssetUrl ? assetMeta[selectedAssetUrl] : null;
+  setAssetTagDraft(meta?.tags?.join(', ') ?? '');
+}, [selectedAssetUrl, assetMeta]);
+
+const assetStorageBytes = React.useMemo(
+  () =>
+    activeAssetList.reduce((sum, url) => sum + dataUrlBytes(url), 0),
+  [activeAssetList]
+);
+
+  const handleAssetUse = React.useCallback(() => {
+    if (!selectedAssetUrl) return;
+    if (activeAssetType === 'logo') {
+      setLogoUrl(selectedAssetUrl);
+    } else {
+      setPortraitUrl(selectedAssetUrl);
+      setPortraitLocked(false);
+      const store = useFlyerState.getState();
+      store.setMoveTarget('portrait');
+      store.setSelectedPanel('portrait');
+    }
+  }, [activeAssetType, selectedAssetUrl, setLogoUrl, setPortraitUrl, setPortraitLocked]);
+
+const handleAssetDelete = React.useCallback(
+  (url: string) => {
+    if (activeAssetType === 'logo') {
+      removeFromLogoLibrary(url);
+      if (logoUrl === url) setLogoUrl(null);
+    } else {
+      removePortraitFromLibrary(url);
+      if (portraitUrl === url) setPortraitUrl(null);
+    }
+    if (selectedAssetUrl === url) setSelectedAssetUrl(null);
+  },
+  [
+    activeAssetType,
+    logoUrl,
+    portraitUrl,
+    selectedAssetUrl,
+    removeFromLogoLibrary,
+    removePortraitFromLibrary,
+    setLogoUrl,
+    setPortraitUrl,
+  ]
+);
+
+const handleClearAssetType = React.useCallback(() => {
+  const label = activeAssetType === 'logo' ? 'logos' : 'portraits';
+  if (!confirm(`Remove all saved ${label}? This cannot be undone.`)) return;
+
+  if (activeAssetType === 'logo') {
+    setLogoLibrary([]);
+    try { localStorage.setItem('nf:logoLibrary', JSON.stringify([])); } catch {}
+  } else {
+    persistPortraitLibrary([]);
+  }
+  setSelectedAssetUrl(null);
+  saveAssetMeta(
+    Object.fromEntries(
+      Object.entries(assetMeta).filter(([, meta]) => meta.type !== activeAssetType)
+    )
+  );
+}, [activeAssetType, assetMeta, persistPortraitLibrary, saveAssetMeta, setLogoLibrary]);
+
+const commitAssetTags = React.useCallback(() => {
+  if (!selectedAssetUrl) return;
+  updateAssetMeta(selectedAssetUrl, { tags: normalizeTags(assetTagDraft) });
+}, [assetTagDraft, normalizeTags, selectedAssetUrl, updateAssetMeta]);
 
 
   /* headline 2 styles (independent) */
@@ -7694,48 +7931,12 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
   const [leak, setLeak]   = useState(0.25);  // light leaks intensity (0–1)
   const [hue, setHue] = useState(0);
   const [bgScale, setBgScale] = useState(1.0);
+  const [bgFitMode, setBgFitMode] = useState(false);
   const [bgX, setBgX] = useState(50);
   const [bgY, setBgY] = useState(50);
   const [bgPosX, setBgPosX] = useState(50);
   const [bgPosY, setBgPosY] = useState(50);
 const [bgBlur, setBgBlur] = useState(0);
-const [bgEditPrompt, setBgEditPrompt] = useState("");
-const [bgEditVariants, setBgEditVariants] = useState<string[]>([]);
-const [bgEditBaseUrl, setBgEditBaseUrl] = useState<string | null>(null);
-const [bgEditMasks, setBgEditMasks] = useState<
-  { id: string; maskUrl: string; area?: number; box?: { x: number; y: number; w: number; h: number } }[]
->([]);
-const [bgEditSelectedMaskId, setBgEditSelectedMaskId] = useState<string | null>(null);
-const [bgEditHighlightId, setBgEditHighlightId] = useState<string | null>(null);
-
-React.useEffect(() => {
-  if (!bgEditMasks.length) {
-    setBgEditHighlightId(null);
-    return;
-  }
-  let idx = 0;
-  setBgEditHighlightId(bgEditMasks[0]?.id || null);
-  const id = window.setInterval(() => {
-    idx = (idx + 1) % bgEditMasks.length;
-    setBgEditHighlightId(bgEditMasks[idx]?.id || null);
-  }, 1200);
-  return () => window.clearInterval(id);
-}, [bgEditMasks]);
-const cycleBgHighlight = React.useCallback(
-  (direction: 1 | -1 = 1) => {
-    if (!bgEditMasks.length) return;
-    const idx = Math.max(
-      0,
-      bgEditMasks.findIndex((m) => m.id === bgEditHighlightId)
-    );
-    const next = (idx + direction + bgEditMasks.length) % bgEditMasks.length;
-    setBgEditHighlightId(bgEditMasks[next]?.id || null);
-  },
-  [bgEditMasks, bgEditHighlightId]
-);
-const [bgEditLoading, setBgEditLoading] = useState(false);
-const [bgEditError, setBgEditError] = useState<string>("");
-const bgEditImageRef = useRef<HTMLImageElement | null>(null);
   const [textureOpacity, setTextureOpacity] = useState(0);
 
   /* master grade (applies to whole poster) */
@@ -7824,11 +8025,12 @@ React.useEffect(() => {
 
 
 
-  /* guides / move */
-  const [showGuides, setShowGuides] = useState(false);
-  const [showFaceGuide, setShowFaceGuide] = useState(false);
-  const [moveMode, setMoveMode] = useState(false);
-  const [snap, setSnap] = useState(true);
+  React.useEffect(() => {
+    if (!isMobileView) {
+      // no-op: mobile drag toggle removed
+    }
+  }, [isMobileView]);
+
 
   // === SELECT HELPERS (do not move) ===
  const selectPortrait = (target: MoveTarget = 'portrait') => {
@@ -8153,8 +8355,17 @@ React.useEffect(() => {
   const [exportType, setExportType] = useState<'png'|'jpg'>('png');
   const [exportScale, setExportScale] = useState(2); // allow control
   const [isGenerating, setIsGenerating] = useState(false);
-  const [exportPreviewUrl, setExportPreviewUrl] = useState<string | null>(null);
-  const [exportPreviewOpen, setExportPreviewOpen] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [exportStatus, setExportStatus] = useState<'idle' | 'rendering' | 'ready' | 'error'>('idle');
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [exportDataUrl, setExportDataUrl] = useState<string | null>(null);
+  const [exportMeta, setExportMeta] = useState<{
+    width: number;
+    height: number;
+    sizeBytes: number;
+    format: 'png' | 'jpg';
+    scale: number;
+  } | null>(null);
   const HISTORY_LIMIT = 10;
   const historyRef = React.useRef<{
     undo: string[];
@@ -8202,11 +8413,42 @@ React.useEffect(() => {
       ? Math.min(1, widthScale)
       : Math.min(1, widthScale, heightScale);
   }, [viewport.w, viewport.h, canvasSize.w, canvasSize.h]);
-  const scaledCanvasW = Math.round(canvasSize.w * canvasScale);
-  const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
+const scaledCanvasW = Math.round(canvasSize.w * canvasScale);
+const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
 
+  const handleClearIconSelection = React.useCallback(() => setSelIconId(null), []);
+  const handleMobileDragEnd = React.useCallback(() => {}, []);
+  const isIOS = React.useMemo(
+    () => /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream,
+    []
+  );
 
-  
+  function dataUrlBytes(dataUrl: string): number {
+    const base64 = dataUrl.split(",")[1] || "";
+    return Math.floor((base64.length * 3) / 4);
+  }
+
+  function formatBytes(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    const kb = bytes / 1024;
+    if (kb < 1024) return `${kb.toFixed(1)} KB`;
+    const mb = kb / 1024;
+    return `${mb.toFixed(2)} MB`;
+  }
+
+  function downloadExport(dataUrl: string, format: 'png' | 'jpg') {
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = `nightlife_export_${stamp}.${format}`;
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+    link.click();
+    requestAnimationFrame(() => {
+      try { document.body.removeChild(link); } catch {}
+    });
+  }
+
   const saveDebounce = useRef<number | null>(null);
   const [selectedDesign, setSelectedDesign] = useState<string>('');
   type ArtboardHandle = HTMLDivElement & {
@@ -8219,6 +8461,46 @@ React.useEffect(() => {
 
   // PORTRAIT: direct-drag ref (for smooth RAF dragging)
   const portraitFrameRef = React.useRef<HTMLDivElement | null>(null);
+
+  const handleExportStart = React.useCallback(async () => {
+    if (exportStatus === 'rendering') return;
+    if (!artRef.current) {
+      alert('Artboard not ready');
+      return;
+    }
+    setExportModalOpen(true);
+    setExportStatus('rendering');
+    setExportError(null);
+    setExportDataUrl(null);
+    setExportMeta(null);
+
+    const width = canvasSize.w * exportScale;
+    const height = canvasSize.h * exportScale;
+    try {
+      const dataUrl = await renderExportDataUrl(artRef.current, exportType, exportScale);
+      const sizeBytes = dataUrlBytes(dataUrl);
+      setExportDataUrl(dataUrl);
+      setExportMeta({
+        width,
+        height,
+        sizeBytes,
+        format: exportType,
+        scale: exportScale,
+      });
+      setExportStatus('ready');
+    } catch (err) {
+      setExportStatus('error');
+      setExportError('Export failed. Please try again.');
+    }
+  }, [artRef, canvasSize.h, canvasSize.w, exportScale, exportType, exportStatus]);
+
+  const handleExportClose = React.useCallback(() => {
+    setExportModalOpen(false);
+    setExportStatus('idle');
+    setExportError(null);
+    setExportDataUrl(null);
+    setExportMeta(null);
+  }, []);
 
   function storeRendered3DToLogoSlotsAndOpen(url: string) {
   // 1) Put into the first empty logo slot (or overwrite slot 0 if all full)
@@ -8316,7 +8598,7 @@ const [iconList, setIconList] = useState<Icon[]>([]);
 
   /* AI background state */
   const [genStyle, setGenStyle] = useState<GenStyle>('urban');
-  const [genPrompt, setGenPrompt] = useState('close-up portrait on the side, cinematic light, room for bold text');
+  const [genPrompt, setGenPrompt] = useState('nightlife subject on the side, cinematic light, room for bold text');
   const [genProvider, setGenProvider] = useState<'auto' | 'nano' | 'openai'>('auto');
   const [genLoading, setGenLoading] = useState(false);
   const [genError, setGenError] = useState<string>('');
@@ -8326,43 +8608,17 @@ const [iconList, setIconList] = useState<Icon[]>([]);
   const [seed, setSeed] = useState<number>(0);
   const [clarity, setClarity] = useState(0.15);
   const [presetKey, setPresetKey] = useState<string>('');
-  const [selectedSubject, setSelectedSubject] = useState<string>('none');
+  const [genGender, setGenGender] = useState<GenGender>("any");
+  const [genEthnicity, setGenEthnicity] = useState<GenEthnicity>("any");
+  const [genEnergy, setGenEnergy] = useState<GenEnergy>("vibe");
+  const [genAttire, setGenAttire] = useState<GenAttire>("club-glam");
+  const [genColorway, setGenColorway] = useState<GenColorway>("neon");
+  const [genAttireColor, setGenAttireColor] = useState<GenAttireColor>("black");
+  const [genPose, setGenPose] = useState<GenPose>("dancing");
+  const [genShot, setGenShot] = useState<GenShot>("three-quarter");
+  const [genLighting, setGenLighting] = useState<GenLighting>("strobe");
   const [energyLevel, setEnergyLevel] = useState<number>(3);
 
-
- // --- B. DEFINE SUBJECTS (Updated with "Party People") ---
-      const SUBJECTS = [
-        // --- CROWDS (WIDE SHOTS) ---
-        { 
-          key: 'party_crowd', type: 'crowd', label: 'Party People', 
-          demographics: ['neon', 'urban', 'tropical', 'vintage'], 
-          prompt: 'Diverse group of friends dancing and laughing, holding red cups and drinks, candid snapshot, authentic happiness, chaotic fun energy, movement blur, flash photography vibe, casual party attire' 
-        },
-        { 
-          key: 'crowd', type: 'crowd', label: 'Raging Crowd', 
-          demographics: ['neon', 'urban', 'tropical', 'vintage'], 
-          prompt: 'POV from the mosh pit, chaos and euphoria, hundreds of hands reaching up, confetti raining down, blurry faces screaming in joy, camera flash lighting, raw authentic rave energy, sweat and haze' 
-        },
-        { 
-          key: 'dancers', type: 'crowd', label: 'Club Dancers', 
-          demographics: ['neon', 'urban'], 
-          prompt: 'Silhouettes of go-go dancers on podiums, hair whipping in motion blur, backlit by blinding strobe lights, high contrast, mysterious and energetic club atmosphere' 
-        },
-
-        // --- SINGLES (PORTRAITS) ---
-        { key: 'dj', type: 'single', label: 'Festival DJ', demographics: ['neon'], prompt: 'Headliner DJ screaming in euphoria, hands raised high for the drop, sweat on brow, futuristic shield sunglasses, backlit by massive exploding cryo-jets' },
-        { key: 'hiphop_dj', type: 'single', label: 'Hip-Hop DJ', demographics: ['urban'], prompt: 'Legendary turntablist scratching on Technics 1200s, intense focus, smoke swirling around cap, low angle hero shot, authentic underground club grit' },
-        { key: 'rapper', type: 'single', label: 'Rapper', demographics: ['urban'], prompt: 'Rapper clutching microphone, veins showing, aggressive energetic delivery, heavy jewelry catching the strobe light, raw motion blur hand gesture, spitting bars' },
-        { key: 'singer', type: 'single', label: 'Soul Singer', demographics: ['vintage'], prompt: 'Elegant jazz singer in a sequined evening gown, singing into a vintage chrome ribbon microphone, eyes closed in emotion, soft spotlight, velvet curtain background' },
-        { key: 'fashion', type: 'single', label: 'High Fashion', demographics: ['vintage', 'urban'], prompt: 'Editorial fashion model leaning against a textured wall, aloof cool expression, wearing haute couture, flash photography style, cinematic shadow, vogue magazine aesthetic' },
-        { key: 'latin_performer', type: 'single', label: 'Salsa Dancer', demographics: ['tropical'], prompt: 'Salsa dancer mid-spin, fabric of red dress flowing in motion blur, passionate expression, warm golden backlight, festive energy' },
-        { key: 'afro_artist', type: 'single', label: 'Afrobeat Artist', demographics: ['tropical'], prompt: 'Afrobeat performer dancing with pure joy, bright patterned shirt, holding a drink, sunset rooftop party vibe, warm amber lighting' },
-        { key: 'kpop_idol', type: 'single', label: 'Pop Idol', demographics: ['neon'], prompt: 'K-Pop idol mid-choreography, perfect styling, tech-wear fashion, glowing skin, confident cool expression, sharp focus, music video aesthetic' },
-
-        // --- EMPTY ---
-        { key: 'empty_stage', type: 'empty', label: 'Empty Space', demographics: ['neon'], prompt: 'empty architectural space, interesting texture and lighting, no people, negative space for text' },
-        { key: 'none', type: 'empty', label: 'Just Vibe', demographics: ['neon'], prompt: '' },
-      ];
 
 
 
@@ -8641,6 +8897,9 @@ const generateBackground = async (opts: GenOpts = {}) => {
 
     const provider = (genProvider === 'auto' ? 'auto' : genProvider);
     const styleForThisRun = opts.style ?? genStyle;
+    const referenceSample = allowPeople
+      ? getReferenceSample(genGender, genEthnicity)
+      : null;
     
     // 3. The Generator
     const makeOne = async (s: number): Promise<string> => {
@@ -8661,50 +8920,120 @@ const generateBackground = async (opts: GenOpts = {}) => {
       let compositionRule = '';
       let negativePrompt = '';
       let qualityBooster = '';
+      const safeHumanPrompt = allowPeople
+        ? [
+            'photorealistic, real human proportions, natural facial anatomy, realistic skin texture',
+            'natural facial proportions, symmetrical but imperfect face, realistic eyes with natural sclera',
+            'normal pupil size, subtle facial expression, relaxed jaw, soft neutral gaze',
+            'natural skin texture, visible pores, no plastic skin, no waxy skin',
+            'soft diffused lighting on skin, natural shadows',
+            'high detail but not over-sharpened, professional photography quality',
+          ].join(', ')
+        : '';
+      const safeHumanNegatives =
+        'deformed face, distorted facial features, uncanny valley, creepy expression, over-sharpened face, exaggerated eyes, wide grin, asymmetrical eyes, mutated anatomy, doll-like skin';
+      const nightlifeSubjectPrompt = allowPeople
+        ? [
+            NIGHTLIFE_SUBJECT_TOKENS.energy[genEnergy],
+            getAttirePrompt(genGender, genAttire),
+            NIGHTLIFE_SUBJECT_TOKENS.attireColor[genAttireColor],
+            NIGHTLIFE_SUBJECT_TOKENS.colorway[genColorway],
+            NIGHTLIFE_SUBJECT_TOKENS.pose[genPose],
+            NIGHTLIFE_SUBJECT_TOKENS.shot[genShot],
+            NIGHTLIFE_SUBJECT_TOKENS.lighting[genLighting],
+            NIGHTLIFE_SUBJECT_TOKENS.fashionBoost,
+          ]
+            .filter(Boolean)
+            .join(', ')
+        : '';
+
+      const promptSource = [
+        PRESETS.find(p => p.key === presetKey)?.prompt ?? '',
+        (opts.prompt || '').trim(),
+        (genPrompt || '').trim(),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      const inferred = allowPeople ? inferSubjectFromPrompt(promptSource) : null;
 
       if (allowPeople) {
-         let subObj = SUBJECTS.find(subj => subj.key === selectedSubject);
-         // Fallback logic if subject not found
-         if (!subObj || subObj.key === 'none') {
-            // Default to "Party People" if style is ambiguous, otherwise specific defaults
-            if (styleForThisRun === 'tropical') subObj = SUBJECTS.find(s => s.key === 'party_crowd');
-            else if (styleForThisRun === 'neon') subObj = SUBJECTS.find(s => s.key === 'dj');
-            else if (styleForThisRun === 'urban') subObj = SUBJECTS.find(s => s.key === 'rapper');
-            else subObj = SUBJECTS.find(s => s.key === 'fashion');
-         }
+         if (inferred?.type === 'crowd') {
+            subjectPrompt = inferred.prompt;
 
-         if (subObj?.type === 'crowd') {
-            // [CROWD LOGIC]
-            subjectPrompt = subObj.prompt;
-            
-            // Camera: Action Cam / Flash / 35mm
             cameraSpec = 'shot on 35mm film, direct flash photography, motion blur, fisheye lens distortion, candid snapshot, grainy texture';
-            
-            // Composition: Wide & Full
+
             compositionRule = requestedFormat === 'story'
                ? 'crowd filling the bottom half, massive ceiling height, negative space at top'
                : 'immersive wide angle view from inside the crowd';
-            
+
             qualityBooster = 'high contrast, vibrant colors, authentic look, raw vibe, chaotic energy';
             negativePrompt = '|| static, posing, studio lighting, clean, smooth skin, 3d render, plastic, mannequin, boring, empty';
 
-         } else {
-            // [SINGLE SUBJECT LOGIC]
-            subjectPrompt = subObj?.prompt || 'cinematic portrait';
-            cameraSpec = 'portrait 85mm lens f/1.4, shallow depth of field, sharp focus on eyes, bokeh background';
-            
+         } else if (inferred?.type === 'single') {
+            subjectPrompt = inferred.prompt || 'cinematic portrait';
             const side = textSide === 'left' ? 'right' : 'left';
-            compositionRule = `subject anchored on the ${side} side, negative space on the ${textSide}`;
-            qualityBooster = '8k resolution, highly detailed, photorealistic, perfect skin texture, cinematic lighting, unreal engine 5 style';
-            negativePrompt = '|| low quality, blurry, text, watermark, signature, ugly, deformed, extra limbs, cartoon, painting, crowd, extra people';
+            const shotSpec = {
+              "full-body": {
+                camera:
+                  "35mm lens, eye-level camera, camera 10-15 feet away, full body shot, head-to-toe visible, natural proportions",
+                composition: `full body, balanced framing with space above head and below feet, subject anchored on the ${side} side, large negative space on the ${textSide}`,
+                negatives: "cropped limbs, cut-off head, distorted anatomy, close-up, tight crop",
+              },
+              "three-quarter": {
+                camera:
+                  "50mm lens, eye-level camera, camera 6-8 feet away, three-quarter shot framed from mid-thigh up",
+                composition: `three-quarter framing, outfit details clearly visible, subject anchored on the ${side} side, strong negative space on the ${textSide}`,
+                negatives: "full body, head-to-toe, close-up, tight crop, cropped limbs",
+              },
+              "waist-up": {
+                camera:
+                  "50-70mm lens, eye-level camera, camera 4-6 feet away, waist-up framing",
+                composition: `waist-up shot, framed from waist to just above head, hands visible near waist or hips, subject anchored on the ${side} side, negative space on the ${textSide}`,
+                negatives: "full body, head-to-toe, close-up, tight crop, cropped arms",
+              },
+              "chest-up": {
+                camera:
+                  "85mm portrait lens, eye-level camera, camera 3-4 feet away, chest-up framing",
+                composition: `chest-up portrait, framed from upper chest to top of head, subject anchored on the ${side} side, 60% negative space on the ${textSide}`,
+                negatives: "full body, wide shot, long shot, cropped head, distorted anatomy",
+              },
+              "close-up": {
+                camera:
+                  "85mm lens, eye-level camera, camera 2-3 feet away, close-up framing, face fills frame but not cropped",
+                composition: `close-up portrait, subject anchored on the ${side} side, generous negative space on the ${textSide}`,
+                negatives: "full body, wide shot, long shot, cropped head, distorted anatomy",
+              },
+            } as const;
+
+            const shot = shotSpec[genShot];
+            cameraSpec = `${shot.camera}, rim light, back light, no cropped limbs, no cut-off head`;
+            compositionRule = shot.composition;
+            const attireNegatives =
+              genAttire === "luxury" || genAttire === "club-glam"
+                ? "plain t-shirt, hoodie, casual jeans, gym wear, athletic shorts, cheap fabrics, sloppy fit, boring outfit"
+                : "plain t-shirt, gym wear, cheap fabrics, boring outfit";
+            const closeUpNegatives =
+              genShot === "close-up"
+                ? "exaggerated eyes, distorted face, uncanny valley, over-sharpened skin, wide grin, doll-like skin"
+                : "";
+            qualityBooster = '8k resolution, highly detailed, photorealistic, perfect skin texture, cinematic lighting';
+            negativePrompt = `|| low quality, blurry, text, watermark, signature, ugly, deformed, extra limbs, cartoon, painting, crowd, extra people, ${shot.negatives}, ${attireNegatives}, ${closeUpNegatives}, ${safeHumanNegatives}`;
+         } else {
+            subjectPrompt = '';
+            cameraSpec = 'cinematic wide shot, atmospheric lighting';
+            compositionRule = `balanced composition with negative space on the ${textSide} side`;
+            qualityBooster = 'high quality, cinematic lighting, depth, clean gradients';
+            negativePrompt = '';
          }
 
       } else {
          // [EMPTY LOGIC]
          subjectPrompt = 'no people, empty architectural space, background texture only';
-         cameraSpec = 'wide angle architectural photography';
+         cameraSpec = 'wide angle architectural photography, shallow depth of field, soft bokeh, cinematic atmosphere';
          compositionRule = `wide open negative space on the ${textSide} side`;
-         qualityBooster = '8k resolution, highly detailed, photorealistic';
+         qualityBooster = '8k resolution, highly detailed, photorealistic, depth of field';
          negativePrompt = '|| people, person, face, silhouette, crowd, man, woman, body, text, watermark';
       }
 
@@ -8714,15 +9043,38 @@ const generateBackground = async (opts: GenOpts = {}) => {
       const details = pickN([...S.locations, ...S.lighting, ...S.micro], 4, rng).join(', ');
 
       // --- E. FINAL ASSEMBLY ---
+      const referenceClause = referenceSample
+        ? (() => {
+            const base =
+              "preserve the reference face identity strictly (facial features, face shape, eyes, nose, mouth, skin tone). keep photorealistic skin texture and natural likeness; no stylization. do not copy clothing, body shape, or pose. match lighting, attire, and gesture to nightlife styling";
+            if (genShot === "full-body") {
+              return `${base}. full body visible, head-to-toe in frame, no cropped limbs`;
+            }
+            if (genShot === "three-quarter") {
+              return `${base}. framed mid-thigh up, no cropped limbs`;
+            }
+            if (genShot === "waist-up") {
+              return `${base}. framed from waist to just above head, no cropped limbs`;
+            }
+            if (genShot === "chest-up") {
+              return `${base}. framed upper chest to top of head, no cropped head`;
+            }
+            return `${base}. close-up face fills frame but not cropped`;
+          })()
+        : "";
+
       const finalPromptList = [
         PRESETS.find(p => p.key === presetKey)?.prompt ?? '',
         (opts.prompt || genPrompt || '').trim(),
         subjectPrompt,
+        nightlifeSubjectPrompt,
         genreMood,
+        safeHumanPrompt,
         details,
         cameraSpec,
         compositionRule,
         qualityBooster,
+        referenceClause,
         negativePrompt
       ];
 
@@ -8735,26 +9087,38 @@ const generateBackground = async (opts: GenOpts = {}) => {
         provider,
         sampler: "DPM++ 2M Karras",
         // Lower scale for crowds allows for more natural "messiness"
-        cfgScale: (allowPeople && (selectedSubject === 'crowd' || selectedSubject === 'party_crowd')) ? 5.5 : 6.5,
+        cfgScale: (allowPeople && inferred?.type === 'crowd') ? 5.5 : 6.5,
         steps: 30,
         refiner: true,
         hiresFix: true,
         denoiseStrength: 0.3,
+        reference: referenceSample,
       };
 
-      const res = await fetch('/api/gen-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      
-      const j = await res.json();
-      if (!res.ok) throw new Error(j?.error || `HTTP ${res.status}`);
+      const runOnce = async () => {
+        const res = await fetch('/api/gen-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
 
-      if (j?.b64) return `data:image/png;base64,${j.b64}`;
-      if (j?.url) return j.url;
-      if (j?.placeholder) return j.placeholder;
-      throw new Error('No image data returned');
+        const j = await res.json().catch(() => ({} as any));
+        if (!res.ok) throw new Error(j?.error || `HTTP ${res.status}`);
+        if (j?.error) throw new Error(j.error);
+
+        if (j?.b64) return `data:image/png;base64,${j.b64}`;
+        if (j?.url) return j.url;
+        if (j?.placeholder) throw new Error('Provider returned placeholder');
+        throw new Error('No image data returned');
+      };
+
+      try {
+        return await runOnce();
+      } catch (err) {
+        // auto retry once after a brief delay
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        return await runOnce();
+      }
     };
 
     // 4. Batch & State
@@ -8767,7 +9131,11 @@ const generateBackground = async (opts: GenOpts = {}) => {
         setBgUploadUrl(FALLBACK_BG); setBgUrl(null);
         setIsPlaceholder(true);
       }
-      throw new Error('All generations failed');
+      const firstErr = results.find(r => r.status === 'rejected') as PromiseRejectedResult | undefined;
+      const msg = firstErr?.reason instanceof Error
+        ? firstErr.reason.message
+        : String(firstErr?.reason || 'All generations failed');
+      throw new Error(msg);
     }
 
     if (genCount > 1) setGenCandidates(imgs);
@@ -8796,144 +9164,6 @@ const generateBackground = async (opts: GenOpts = {}) => {
   }
 };
 
-const buildBgBoxMask = (
-  naturalW: number,
-  naturalH: number,
-  box: { x: number; y: number; w: number; h: number }
-) => {
-  const c = document.createElement("canvas");
-  c.width = Math.max(1, Math.round(naturalW));
-  c.height = Math.max(1, Math.round(naturalH));
-  const ctx = c.getContext("2d");
-  if (!ctx) return null;
-  ctx.fillStyle = "#000";
-  ctx.fillRect(0, 0, c.width, c.height);
-  ctx.fillStyle = "#fff";
-  const x = Math.max(0, Math.round(box.x * c.width));
-  const y = Math.max(0, Math.round(box.y * c.height));
-  const w = Math.max(1, Math.round(box.w * c.width));
-  const h = Math.max(1, Math.round(box.h * c.height));
-  ctx.fillRect(x, y, w, h);
-  return c.toDataURL("image/png");
-};
-
-const fetchBgElements = async () => {
-  let bgSrc = bgUploadUrl || bgUrl;
-  if (!bgSrc) return;
-  setBgEditLoading(true);
-  setBgEditError("");
-  try {
-    bgSrc = await normalizeBgForEdit(bgSrc);
-    const resPeople = await fetch("/api/bg-people", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ image: bgSrc }),
-    });
-    const dataPeople = await resPeople.json();
-    const peopleMasks = Array.isArray(dataPeople?.elements)
-      ? dataPeople.elements
-      : [];
-
-    let masks: any[] = [];
-    if (peopleMasks.length > 0) {
-      masks = peopleMasks;
-    } else {
-      const res = await fetch("/api/bg-elements", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: bgSrc }),
-      });
-      const data = await res.json();
-      if (data?.error && (!Array.isArray(data?.elements) || data.elements.length === 0)) {
-        setBgEditError(String(data.error));
-      }
-      masks = Array.isArray(data?.elements) ? data.elements : [];
-    }
-
-    const base = masks.map((m: any, idx: number) => ({
-      id: String(m.id || idx),
-      maskUrl: String(m.maskUrl || m),
-    }));
-    const withMeta = await Promise.all(
-      base.map(async (m: { id: string; maskUrl: string }) => ({
-        ...m,
-        ...(await getMaskMeta(m.maskUrl)),
-      }))
-    );
-    const ordered = orderMasks(withMeta);
-    setBgEditMasks(ordered);
-    setBgEditSelectedMaskId(null);
-    setBgEditHighlightId(ordered[0]?.id || null);
-  } catch (err: any) {
-    setBgEditError(String(err?.message || err || "Failed to detect objects."));
-  } finally {
-    setBgEditLoading(false);
-  }
-};
-
-const runBgEdit = async () => {
-  let bgSrc = bgUploadUrl || bgUrl;
-  if (!bgSrc) return;
-  if (!bgEditPrompt.trim()) {
-    setBgEditError("Add a short edit prompt.");
-    return;
-  }
-
-  if (!bgEditImageRef.current) {
-    setBgEditError("Background image not ready yet.");
-    return;
-  }
-  const selected = bgEditMasks.find((m) => m.id === bgEditSelectedMaskId);
-  if (!selected?.maskUrl) {
-    setBgEditError("Tap an object to select it.");
-    return;
-  }
-
-  setBgEditLoading(true);
-  setBgEditError("");
-  try {
-    bgSrc = await normalizeBgForEdit(bgSrc);
-    const mask = selected.maskUrl;
-    const res = await fetch("/api/bg-edit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        image: bgSrc,
-        mask,
-        prompt: bgEditPrompt.trim(),
-        seed,
-        count: 3,
-      }),
-    });
-    const data = await res.json();
-    if (data?.error) {
-      setBgEditError(String(data.error));
-    }
-    const variants = Array.isArray(data?.variants) ? data.variants : [];
-    setBgEditBaseUrl(bgSrc);
-    setBgEditVariants(variants.slice(0, 3));
-  } catch (err: any) {
-    setBgEditError(String(err?.message || err || "Edit failed."));
-  } finally {
-    setBgEditLoading(false);
-  }
-};
-
-async function blobUrlToDataUrl(blobUrl: string): Promise<string> {
-  const res = await fetch(blobUrl);
-  const blob = await res.blob();
-  return new Promise((resolve, reject) => {
-    const fr = new FileReader();
-    fr.onload = () => resolve(String(fr.result));
-    fr.onerror = () => reject(fr.error);
-    fr.readAsDataURL(blob);
-  });
-}
-
-async function normalizeBgForEdit(src: string): Promise<string> {
-  if (src.startsWith("data:") || src.startsWith("http")) return src;
-  return blobUrlToDataUrl(src);
-}
 
 
 const buildEdgeAwareLassoMask = (
@@ -9041,251 +9271,6 @@ const buildEdgeAwareLassoMask = (
 
   return c.toDataURL("image/png");
 };
-
-const COLOR_MAP: Record<string, { h: number }> = {
-  red: { h: 0 },
-  orange: { h: 28 },
-  yellow: { h: 55 },
-  green: { h: 120 },
-  teal: { h: 170 },
-  cyan: { h: 190 },
-  blue: { h: 210 },
-  purple: { h: 275 },
-  magenta: { h: 300 },
-  pink: { h: 330 },
-  brown: { h: 25 },
-  beige: { h: 40 },
-  gold: { h: 45 },
-  silver: { h: 0 },
-  white: { h: 0 },
-  black: { h: 0 },
-  gray: { h: 0 },
-  grey: { h: 0 },
-};
-
-function extractColorName(prompt: string): string | null {
-  const lower = prompt.toLowerCase();
-  for (const key of Object.keys(COLOR_MAP)) {
-    if (lower.includes(key)) return key;
-  }
-  return null;
-}
-
-function rgbToHsl(r: number, g: number, b: number) {
-  r /= 255; g /= 255; b /= 255;
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  let h = 0, s = 0;
-  const l = (max + min) / 2;
-  if (max !== min) {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    switch (max) {
-      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-      case g: h = (b - r) / d + 2; break;
-      case b: h = (r - g) / d + 4; break;
-    }
-    h /= 6;
-  }
-  return { h: h * 360, s, l };
-}
-
-function hslToRgb(h: number, s: number, l: number) {
-  h /= 360;
-  let r: number, g: number, b: number;
-  if (s === 0) {
-    r = g = b = l;
-  } else {
-    const hue2rgb = (p: number, q: number, t: number) => {
-      if (t < 0) t += 1;
-      if (t > 1) t -= 1;
-      if (t < 1 / 6) return p + (q - p) * 6 * t;
-      if (t < 1 / 2) return q;
-      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-      return p;
-    };
-    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-    const p = 2 * l - q;
-    r = hue2rgb(p, q, h + 1 / 3);
-    g = hue2rgb(p, q, h);
-    b = hue2rgb(p, q, h - 1 / 3);
-  }
-  return {
-    r: Math.round(r * 255),
-    g: Math.round(g * 255),
-    b: Math.round(b * 255),
-  };
-}
-
-function parseMaskDataUrl(maskDataUrl: string) {
-  return new Promise<ImageData>((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      const c = document.createElement("canvas");
-      c.width = img.naturalWidth;
-      c.height = img.naturalHeight;
-      const ctx = c.getContext("2d");
-      if (!ctx) return reject(new Error("No canvas ctx"));
-      ctx.drawImage(img, 0, 0);
-      resolve(ctx.getImageData(0, 0, c.width, c.height));
-    };
-    img.onerror = reject;
-    img.src = maskDataUrl;
-  });
-}
-
-async function getMaskMeta(maskUrl: string) {
-  try {
-    const imgData = await parseMaskDataUrl(maskUrl);
-    const w = imgData.width;
-    const h = imgData.height;
-    const data = imgData.data;
-    let minX = w, minY = h, maxX = 0, maxY = 0;
-    let area = 0;
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const i = (y * w + x) * 4;
-        const m = data[i + 3] > 0 ? data[i + 3] : data[i];
-        if (m > 10) {
-          area++;
-          if (x < minX) minX = x;
-          if (y < minY) minY = y;
-          if (x > maxX) maxX = x;
-          if (y > maxY) maxY = y;
-        }
-      }
-    }
-    if (area === 0) return { area: 0, box: { x: 0, y: 0, w: 0, h: 0 } };
-    return {
-      area,
-      box: { x: minX / w, y: minY / h, w: (maxX - minX) / w, h: (maxY - minY) / h },
-    };
-  } catch {
-    return { area: 0, box: { x: 0, y: 0, w: 0, h: 0 } };
-  }
-}
-
-function isPersonLikeMask(m: { area?: number; box?: { w: number; h: number } }) {
-  if (!m.box) return false;
-  const ar = m.box.h / Math.max(0.01, m.box.w);
-  const area = m.area ?? 0;
-  return ar > 1.2 && ar < 4 && area > 5000;
-}
-
-function orderMasks(
-  masks: { id: string; maskUrl: string; area?: number; box?: { x: number; y: number; w: number; h: number } }[]
-) {
-  const people = masks.filter(isPersonLikeMask).sort((a, b) => (b.area ?? 0) - (a.area ?? 0));
-  const objs = masks.filter((m) => !isPersonLikeMask(m)).sort((a, b) => (b.area ?? 0) - (a.area ?? 0));
-  return [...people, ...objs].slice(0, 8);
-}
-
-async function buildColorEditVariants(
-  img: HTMLImageElement,
-  maskDataUrl: string,
-  colorName: string
-) {
-  const maskData = await parseMaskDataUrl(maskDataUrl);
-  const w = img.naturalWidth;
-  const h = img.naturalHeight;
-  const baseCanvas = document.createElement("canvas");
-  baseCanvas.width = w;
-  baseCanvas.height = h;
-  const ctx = baseCanvas.getContext("2d");
-  if (!ctx) return [];
-  ctx.drawImage(img, 0, 0, w, h);
-  const src = ctx.getImageData(0, 0, w, h);
-  const out = src.data;
-  const mask = maskData.data;
-  const targetHue = COLOR_MAP[colorName]?.h ?? 120;
-
-  let maskHits = 0;
-  const maskPixels = w * h;
-  for (let i = 0; i < mask.length; i += 4) {
-    const m = mask[i + 3] > 0 ? mask[i + 3] : mask[i];
-    if (m > 10) maskHits++;
-  }
-  const maskRatio = maskHits / Math.max(1, maskPixels);
-  const invertMask = maskRatio > 0.6;
-
-  const variants = [
-    { sat: 0.9, light: 1.0 },
-    { sat: 1.1, light: 0.95 },
-    { sat: 1.2, light: 1.05 },
-  ];
-
-  return variants.map((v) => {
-    const data = new Uint8ClampedArray(out);
-    for (let i = 0; i < data.length; i += 4) {
-      const m = mask[i + 3] > 0 ? mask[i + 3] : mask[i];
-      const inside = invertMask ? m <= 10 : m > 10;
-      if (!inside) continue;
-      const r = data[i], g = data[i + 1], b = data[i + 2];
-      const { h, s, l } = rgbToHsl(r, g, b);
-      const newS = Math.min(1, s * v.sat);
-      const newL = Math.min(1, Math.max(0, l * v.light));
-      const { r: nr, g: ng, b: nb } = hslToRgb(targetHue, newS, newL);
-      data[i] = nr;
-      data[i + 1] = ng;
-      data[i + 2] = nb;
-    }
-    const c = document.createElement("canvas");
-    c.width = w;
-    c.height = h;
-    const cctx = c.getContext("2d");
-    if (!cctx) return "";
-    const imgData = new ImageData(data, w, h);
-    cctx.putImageData(imgData, 0, 0);
-    return c.toDataURL("image/png");
-  });
-}
-
-async function refineMaskWithSam(
-  imageSrc: string,
-  img: HTMLImageElement,
-  points: { x: number; y: number }[]
-) {
-  if (points.length < 3) return null;
-  const box = computeLassoBox(points);
-  try {
-    const res = await fetch("/api/bg-refine", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        image: imageSrc,
-        box,
-        width: img.naturalWidth,
-        height: img.naturalHeight,
-        point: box.center,
-      }),
-    });
-    const data = await res.json();
-    if (data?.maskUrl) return String(data.maskUrl);
-  } catch {}
-  return null;
-}
-
-function computeLassoBox(points: { x: number; y: number }[]) {
-  let minX = 1, minY = 1, maxX = 0, maxY = 0;
-  points.forEach((p) => {
-    minX = Math.min(minX, p.x);
-    minY = Math.min(minY, p.y);
-    maxX = Math.max(maxX, p.x);
-    maxY = Math.max(maxY, p.y);
-  });
-  minX = Math.max(0, Math.min(1, minX));
-  minY = Math.max(0, Math.min(1, minY));
-  maxX = Math.max(0, Math.min(1, maxX));
-  maxY = Math.max(0, Math.min(1, maxY));
-  return {
-    x1: minX,
-    y1: minY,
-    x2: maxX,
-    y2: maxY,
-    center: { x: (minX + maxX) / 2, y: (minY + maxY) / 2 },
-  };
-}
 
   /* dark inputs + slim scrollbars */
   useEffect(() => {
@@ -10805,7 +10790,7 @@ function exportDesignJSON(): string {
     details2Size,
 
     // background & FX
-    bgUrl, bgUploadUrl, hue, haze, grade, leak, vignette, bgPosX, bgPosY, bgScale, clarity,
+    bgUrl, bgUploadUrl, hue, haze, grade, leak, vignette, bgPosX, bgPosY, bgScale, bgFitMode, clarity,
 
     // portrait
     portraitUrl, portraitX, portraitY, portraitScale, portraitLocked, portraitSlots,
@@ -10864,7 +10849,7 @@ function buildHistorySnapshot(): string {
     details2Size, details2Color,
 
     // background & FX
-    bgUrl, bgUploadUrl, hue, haze, grade, leak, vignette, bgPosX, bgPosY, bgScale, clarity,
+    bgUrl, bgUploadUrl, hue, haze, grade, leak, vignette, bgPosX, bgPosY, bgScale, bgFitMode, clarity,
 
     // portrait
     portraitUrl, portraitX, portraitY, portraitScale, portraitLocked, portraitSlots,
@@ -10883,7 +10868,8 @@ function buildHistorySnapshot(): string {
     opticalMargin, leadTrackDelta, lastTrackDelta, kerningFix, headBehindPortrait,
 
     // generation + palette
-    palette, variety, genStyle, genPrompt,
+    palette, variety, genStyle, genPrompt, genGender, genEthnicity,
+    genEnergy, genAttire, genColorway, genAttireColor, genPose, genShot, genLighting,
   };
 
   return JSON.stringify({ v: 1, state });
@@ -10907,14 +10893,15 @@ const historySnapshot = React.useMemo(() => buildHistorySnapshot(), [
   details2Enabled, details2,
   details2LineHeight, details2Align, details2X, details2Y, details2Rotate,
   details2Size, details2Color,
-  bgUrl, bgUploadUrl, hue, haze, grade, leak, vignette, bgPosX, bgPosY, bgScale, clarity,
+  bgUrl, bgUploadUrl, hue, haze, grade, leak, vignette, bgPosX, bgPosY, bgScale, bgFitMode, clarity,
   portraitUrl, portraitX, portraitY, portraitScale, portraitLocked, portraitSlots,
   logoUrl, logoX, logoY, logoScale, logoRotate,
   logoSlots,
   iconList, shapes,
   portraits, emojis,
   opticalMargin, leadTrackDelta, lastTrackDelta, kerningFix, headBehindPortrait,
-  palette, variety, genStyle, genPrompt,
+  palette, variety, genStyle, genPrompt, genGender, genEthnicity,
+  genEnergy, genAttire, genColorway, genAttireColor, genPose, genShot, genLighting,
 ]);
 
 React.useEffect(() => {
@@ -11121,15 +11108,17 @@ function twoRaf(): Promise<void> {
     requestAnimationFrame(() => requestAnimationFrame(() => r()))
   );
 }
-// ===== EXPORT BEGIN (used by top-right Export button) =====
-async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
+// ===== EXPORT BEGIN (used by Export modal) =====
+async function renderExportDataUrl(
+  art: HTMLElement,
+  format: 'png' | 'jpg',
+  scale: number
+) {
   const exportRoot =
     (art.closest?.('[data-export-root="true"]') as HTMLElement) ||
     (document.getElementById('export-root') as HTMLElement) ||
     art;
   const wrapper = artWrapRef.current || exportRoot;
-  const isIOS =
-    /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
   let originalStyle: {
     transform: string;
     position: string;
@@ -11142,10 +11131,7 @@ async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
   } | null = null;
 
   try {
-    if (!art) {
-      alert('Artboard not ready');
-      return;
-    }
+    if (!art) throw new Error('Artboard not ready');
 
     setIsGenerating(true);
     setHideUiForExport(true);
@@ -11217,7 +11203,7 @@ async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
         return await htmlToImage.toJpeg(exportRoot, {
           cacheBust: true,
           backgroundColor: '#000',
-          pixelRatio: exportScale,
+          pixelRatio: scale,
           style: forcedStyle,
           filter: (node: HTMLElement) => {
             const el = node as HTMLElement;
@@ -11248,7 +11234,7 @@ async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
       return await htmlToImage.toPng(exportRoot, {
         cacheBust: true,
         backgroundColor: '#000',
-        pixelRatio: exportScale,
+        pixelRatio: scale,
         style: forcedStyle,
         filter: (node: HTMLElement) => {
           const el = node as HTMLElement;
@@ -11288,20 +11274,10 @@ async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
     wrapper.style.height = originalStyle.height;
     wrapper.style.transition = originalStyle.transition;
 
-    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-    if (isIOS) {
-      setExportPreviewUrl(dataUrl);
-      setExportPreviewOpen(true);
-      return;
-    }
-
-    const link = document.createElement('a');
-    link.href = dataUrl;
-    link.download = `nightlife_export_${stamp}.${format}`;
-    link.click();
+    return dataUrl;
   } catch (err) {
     (window as any).__HIDE_UI_EXPORT__ = false;
-    alert("iOS Save Failed: Try long-pressing the image or use 'Save to Files' in Safari settings.");
+    throw err;
   } finally {
     setIsGenerating(false);
     setHideUiForExport(false);
@@ -11317,7 +11293,7 @@ async function exportArtboardClean(art: HTMLElement, format: 'png' | 'jpg') {
     }
   }
 }
-// ===== EXPORT END (used by top-right Export button) =====
+// ===== EXPORT END (used by Export modal) =====
 
 
 // ===== DESIGN STORAGE (END) =====
@@ -12384,7 +12360,8 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
   details2Enabled,      // Record<Format, boolean>
 
   // ✅ grading
-  hue, haze, grade, leak, vignette, clarity, variety, palette, genStyle, genPrompt,
+  hue, haze, grade, leak, vignette, bgFitMode, clarity, variety, palette, genStyle, genPrompt, genGender, genEthnicity,
+  genEnergy, genAttire, genColorway, genAttireColor, genPose, genShot, genLighting,
 
   // ✅ Zustand objects
   portraits: useFlyerState.getState().portraits,
@@ -12534,6 +12511,7 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       applyIfDefined(data.bgPosX ?? data.bgX, setBgPosX);
       applyIfDefined(data.bgPosY ?? data.bgY, setBgPosY);
       applyIfDefined(data.bgScale, setBgScale);
+      applyIfDefined(data.bgFitMode, setBgFitMode);
       applyIfDefined(data.bgBlur, setBgBlur);
 
       // ✅ restore positions/rotations
@@ -12612,6 +12590,15 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       applyIfDefined(data.palette, setPalette);
       applyIfDefined(data.genStyle, setGenStyle);
       applyIfDefined(data.genPrompt, setGenPrompt);
+      applyIfDefined(data.genGender, setGenGender);
+      applyIfDefined(data.genEthnicity, setGenEthnicity);
+      applyIfDefined(data.genEnergy, setGenEnergy);
+      applyIfDefined(data.genAttire, setGenAttire);
+      applyIfDefined(data.genColorway, setGenColorway);
+      applyIfDefined(data.genAttireColor, setGenAttireColor);
+      applyIfDefined(data.genPose, setGenPose);
+      applyIfDefined(data.genShot, setGenShot);
+      applyIfDefined(data.genLighting, setGenLighting);
 
       // =========================================================
       // 6. Restore Complex Objects (Arrays & Stores)
@@ -15088,9 +15075,12 @@ return (
               <div className="ml-auto">
                 <Chip
                   small
-                  onClick={() => exportArtboardClean(artRef.current!, exportType as 'png' | 'jpg')}
+                  onClick={handleExportStart}
+                  title="Preview and export"
                 >
-                  <span className="whitespace-nowrap">download {exportType}</span>
+                  <span className="whitespace-nowrap">
+                    {exportStatus === 'rendering' ? 'exporting…' : `export ${exportType}`}
+                  </span>
                 </Chip>
               </div>
             </>
@@ -15148,34 +15138,114 @@ return (
           </div>
 )}     
 
-{/* --- EXPORT PREVIEW (iOS SAVE) --- */}
-{exportPreviewOpen && exportPreviewUrl && (
+{/* --- EXPORT MODAL --- */}
+{exportModalOpen && (
   <div className="fixed inset-0 z-[2000] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-    <div className="bg-neutral-950 border border-neutral-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+    <div className="bg-neutral-950 border border-neutral-700 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
       <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
-        <div className="text-sm font-semibold text-white">Save to Photos</div>
+        <div className="text-sm font-semibold text-white">Export preview</div>
         <button
           type="button"
-          onClick={() => {
-            setExportPreviewOpen(false);
-            setExportPreviewUrl(null);
-          }}
+          onClick={handleExportClose}
           className="text-neutral-400 hover:text-white"
         >
           ✕
         </button>
       </div>
-      <div className="p-4 space-y-3">
-        <div className="rounded-lg overflow-hidden border border-neutral-800 bg-black">
-          <img
-            src={exportPreviewUrl}
-            alt="Export preview"
-            className="w-full h-auto block"
-          />
-        </div>
-        <div className="text-[12px] text-neutral-300 text-center">
-          Hold down on the image and tap <b>Save to Photos</b>.
-        </div>
+      <div className="p-4 space-y-4">
+        {exportStatus === "rendering" && (
+          <div className="grid place-items-center gap-3 py-8">
+            <div className="h-8 w-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+            <div className="text-sm text-white/80">Preparing your export…</div>
+            <div className="text-[12px] text-white/50">
+              Exporting clean output at {exportScale}x.
+            </div>
+          </div>
+        )}
+
+        {exportStatus === "error" && (
+          <div className="space-y-3">
+            <div className="text-sm text-red-300">{exportError ?? "Export failed."}</div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
+                onClick={handleExportStart}
+              >
+                Retry export
+              </button>
+              <button
+                type="button"
+                className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
+                onClick={handleExportClose}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+
+        {exportStatus === "ready" && exportDataUrl && exportMeta && (
+          <>
+            <div className="rounded-lg overflow-hidden border border-neutral-800 bg-black">
+              <img
+                src={exportDataUrl}
+                alt="Export preview"
+                className="w-full h-auto block"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-[12px] text-neutral-300">
+              <div>Format: {exportMeta.format.toUpperCase()}</div>
+              <div>Scale: {exportMeta.scale}x</div>
+              <div>
+                Resolution: {exportMeta.width} × {exportMeta.height}
+              </div>
+              <div>Size: {formatBytes(exportMeta.sizeBytes)}</div>
+            </div>
+            {isIOS ? (
+              <div className="text-[12px] text-neutral-300">
+                Hold down on the image and tap <b>Save to Photos</b>.
+              </div>
+            ) : (
+              <div className="text-[12px] text-neutral-300">
+                Your export is ready. Download the clean file below.
+              </div>
+            )}
+            <div className="flex flex-wrap items-center gap-2 pt-2">
+              {isIOS ? (
+                <button
+                  type="button"
+                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
+                  onClick={() => window.open(exportDataUrl, "_blank", "noopener")}
+                >
+                  Open image
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
+                  onClick={() => downloadExport(exportDataUrl, exportMeta.format)}
+                >
+                  Download
+                </button>
+              )}
+              <button
+                type="button"
+                className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
+                onClick={handleExportStart}
+              >
+                Re-render
+              </button>
+              <button
+                type="button"
+                className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
+                onClick={handleExportClose}
+              >
+                Close
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   </div>
@@ -17263,6 +17333,7 @@ style={{ top: STICKY_TOP }}
             clarity={clarity}
             detailsLineHeight={detailsLineHeight}
             bgScale={bgScale}
+            bgFitMode={bgFitMode}
             bgBlur={bgBlur}
             bgX={bgPosX}  // Pass the state variable
             bgY={bgPosY}
@@ -17294,9 +17365,11 @@ style={{ top: STICKY_TOP }}
             selShapeId={selShapeId}
             onSelectShape={onSelectShape}
             onDeleteShape={deleteShape}
-            onClearIconSelection={() => setSelIconId(null)}
+            onClearIconSelection={handleClearIconSelection}
             onBgScale={setBgScale}
             isMobileView={isMobileView}
+            mobileDragEnabled={mobileDragEnabled}
+            onMobileDragEnd={handleMobileDragEnd}
           />
           
           {/* 🔥 FIXED: Elements moved INSIDE motion.div so they fade out */}
@@ -17585,6 +17658,125 @@ style={{ top: STICKY_TOP }}
 </Collapsible>
 {/* UI: PROJECT PORTABLE SAVE (END) */}
 
+{/* UI: ASSET MANAGER (BEGIN) */}
+<Collapsible title="Asset Manager" storageKey="p:assets" defaultOpen={false}>
+  <div className="text-[12px] text-neutral-300 mb-2">
+    Organize your uploaded logos and cutouts. Rename, tag, and clean up storage.
+  </div>
+
+  <div className="flex flex-wrap items-center gap-2 text-[11px]">
+    <Chip small active={assetTab === "logos"} onClick={() => setAssetTab("logos")}>
+      Logos ({logoLibrary.length})
+    </Chip>
+    <Chip small active={assetTab === "portraits"} onClick={() => setAssetTab("portraits")}>
+      Portraits ({portraitLibrary.length})
+    </Chip>
+    <input
+      type="text"
+      placeholder="Search names..."
+      value={assetQuery}
+      onChange={(e) => setAssetQuery(e.target.value)}
+      className="ml-auto px-2 py-1 rounded-md text-xs border border-neutral-700 bg-neutral-900/80"
+      style={{ width: 160 }}
+    />
+  </div>
+
+  {activeAssetTags.length > 1 && (
+    <div className="mt-2 flex flex-wrap gap-2">
+      {activeAssetTags.map((tag) => (
+        <Chip key={tag} small active={assetTag === tag} onClick={() => setAssetTag(tag)}>
+          {tag}
+        </Chip>
+      ))}
+    </div>
+  )}
+
+  <div className="mt-3 grid grid-cols-4 gap-2 max-h-40 overflow-y-auto pr-1">
+    {filteredAssets.map((url) => {
+      const meta = assetMeta[url];
+      const isSelected = selectedAssetUrl === url;
+      return (
+        <button
+          key={url}
+          type="button"
+          onClick={() => setSelectedAssetUrl(url)}
+          className={clsx(
+            "relative aspect-square w-full rounded-md border bg-neutral-900/60 overflow-hidden",
+            isSelected ? "border-fuchsia-400" : "border-neutral-700 hover:border-neutral-500"
+          )}
+          title={meta?.name || "Asset"}
+        >
+          <img src={url} alt={meta?.name || "Asset"} className="absolute inset-0 h-full w-full object-contain p-1" />
+          {isSelected && (
+            <div className="absolute inset-x-0 bottom-0 bg-black/60 text-[9px] text-white px-1 py-0.5 truncate">
+              {meta?.name || "Asset"}
+            </div>
+          )}
+        </button>
+      );
+    })}
+  </div>
+
+  {filteredAssets.length === 0 && (
+    <div className="mt-3 text-[11px] text-neutral-500">
+      No assets yet. Upload a {assetTab === "logos" ? "logo" : "portrait"} to see it here.
+    </div>
+  )}
+
+  {selectedAssetUrl && (
+    <div className="mt-3 rounded-lg border border-neutral-800 bg-neutral-950/40 p-3">
+      <div className="text-[11px] text-neutral-400 mb-1">Name</div>
+      <input
+        value={assetMeta[selectedAssetUrl]?.name || ""}
+        onChange={(e) => updateAssetMeta(selectedAssetUrl, { name: e.target.value })}
+        className="w-full rounded-md bg-neutral-900 border border-neutral-700 text-[11px] px-2 py-1.5 text-white"
+      />
+      <div className="mt-2 text-[11px] text-neutral-400 mb-1">Tags (comma separated)</div>
+      <input
+        value={assetTagDraft}
+        onChange={(e) => setAssetTagDraft(e.target.value)}
+        onBlur={commitAssetTags}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            commitAssetTags();
+          }
+        }}
+        className="w-full rounded-md bg-neutral-900 border border-neutral-700 text-[11px] px-2 py-1.5 text-white"
+      />
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={handleAssetUse}
+          className="text-[11px] rounded-md border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 px-2 py-1.5"
+        >
+          {assetTab === "logos" ? "Use as Logo" : "Use as Portrait"}
+        </button>
+        <button
+          type="button"
+          onClick={() => handleAssetDelete(selectedAssetUrl)}
+          className="text-[11px] rounded-md border border-red-700 bg-red-900/30 text-red-200 hover:bg-red-900/40 px-2 py-1.5"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  )}
+
+  <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-neutral-400">
+    <span>Storage: {formatBytes(assetStorageBytes)}</span>
+    <button
+      type="button"
+      onClick={handleClearAssetType}
+      className="ml-auto rounded-md border border-neutral-700 bg-neutral-900/70 px-2 py-1 hover:bg-neutral-800 text-[11px]"
+      title="Remove all assets in this tab"
+    >
+      Clear {assetTab === "logos" ? "logos" : "portraits"}
+    </button>
+  </div>
+</Collapsible>
+{/* UI: ASSET MANAGER (END) */}
+
 {/* UI: BRAND KIT LITE (BEGIN) */}
 {/* =============================================================================
    BRAND KIT UI (COMMENTED OUT TEMPORARILY)
@@ -17715,1621 +17907,137 @@ style={{ top: STICKY_TOP }}
           
 
 {/* UI: AI BACKGROUND (BEGIN) */}
-<Collapsible
-  title="AI Background"
-  storageKey="p_ai_bg"
-  defaultOpen={true}
->
-  <div className="space-y-3">
-    {/* Style chips */}
-    <div className="flex gap-2 text-xs flex-wrap">
-      {(['urban','neon','vintage','tropical'] as GenStyle[]).map(s => (
-        <Chip key={s} active={s===genStyle} onClick={()=> setGenStyle(s)}>
-          {s.toUpperCase()}
-        </Chip>
-      ))}
-    </div>
-
-    {/* separator */}
-    <div className="pt-1" />
-
-    {/* Presets row */}
-    <div className="text-[13px]">
-      <div className="flex items-center gap-2">
-        <select
-          value={presetKey}
-          onChange={(e) => setPresetKey(e.target.value)}
-          aria-label="Preset"
-          className="w-44 px-3 py-[6px] text-[13px] rounded bg-[#17171b] text-white border border-neutral-700"
-        >
-          <option value="">preset</option>
-          {PRESETS.map((p) => (
-            <option key={p.key} value={p.key}>{p.label}</option>
-          ))}
-        </select>
-
-        <button
-          type="button"
-          onClick={() => {
-            const p = PRESETS.find((x) => x.key === presetKey);
-            if (!p) { alert('Pick a preset'); return; }
-            setGenStyle(p.style);
-            setGenPrompt(p.prompt);
-          }}
-          className="px-3 py-[6px] text-[13px] rounded bg-neutral-900/70 border border-neutral-700 hover:bg-neutral-800"
-          title="Load preset into the prompt box"
-        >
-          Use
-        </button>
-
-        <button
-          type="button"
-          onClick={randomPreset}
-          className="px-3 py-[6px] text-[13px] rounded bg-neutral-900/70 border border-neutral-700 hover:bg-neutral-800"
-          title="Pick a random preset"
-        >
-          Random
-        </button>
-      </div>
-    </div>
-
-    {/* separator */}
-    <div className="pt-1" />
-
-    {/* Prompt (adds to style) */}
-    <div className="text-xs">
-      <div className="mb-1">Prompt (adds to style)</div>
-      <textarea
-        value={genPrompt}
-        onChange={(e) => setGenPrompt(e.target.value)}
-        rows={3}
-        placeholder="subject, lighting, background, mood…"
-        className="mt-1 w-full rounded p-2 bg-[#17171b] text-white border border-neutral-700"
-      />
-    </div>
-
-    {/* Provider */}
-    <div className="flex items-center gap-2 text-[11px]">
-      <span>Provider</span>
-      <Chip small active={genProvider==='auto'}  onClick={()=> setGenProvider('auto')}>Auto</Chip>
-      <Chip small active={genProvider==='nano'}  onClick={()=> setGenProvider('nano')}>Nano</Chip>
-      <Chip small active={genProvider==='openai'} onClick={()=> setGenProvider('openai')}>OpenAI</Chip>
-    </div>
-
-    {/* Batch + Size */}
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2 text-[11px]">
-        <span>Batch</span>
-        <Chip small active={genCount===1} onClick={()=> setGenCount(1)}>1</Chip>
-        <Chip small active={genCount===2} onClick={()=> setGenCount(2)}>2</Chip>
-        <Chip small active={genCount===4} onClick={()=> setGenCount(4)}>4</Chip>
-      </div>
-      <div className="flex items-center gap-2 text-[11px]">
-        <span>Size</span>
-        <Chip small active={genSize==='1080'} onClick={()=> setGenSize('1080')}>1080</Chip>
-        <Chip small active={genSize==='2160'} onClick={()=> setGenSize('2160')}>2160</Chip>
-        <Chip small active={genSize==='3840'} onClick={()=> setGenSize('3840')}>3840</Chip>
-      </div>
-    </div>
-
-    {/* ONE ROW: People | Diversity | Clarity */}
-    <div className="grid grid-cols-[100px_110px_107px] justify-end items-end gap-4">
-      {/* People label + single toggle */}
-      <div className="flex items-end justify-end gap-2">
-        <span className="text-[10px] text-neutral-300 mb-[6px]">People</span>
-        <Chip
-          small
-          active={allowPeople}
-          onClick={()=> setAllowPeople(v => !v)}
-          title="Toggle people in generations"
-        >
-          {allowPeople ? 'On' : 'Off'}
-        </Chip>
-      </div>
-
-      {/* Diversity stepper */}
-      <div className="w-[110px]">
-        <Stepper
-          label="Diversity"
-          value={variety}
-          setValue={setVariety}
-          min={0}
-          max={6}
-          step={1}
-        />
-      </div>
-
-      {/* Clarity stepper */}
-      <div className="w-[118px]">
-        <Stepper
-          label="Clarity"
-          value={clarity}
-          setValue={setClarity}
-          min={0}
-          max={1}
-          step={0.05}
-          digits={2}
-        />
-      </div>
-    </div>
-
-    {/* Subject selection */}
-    <div className="flex items-center flex-wrap gap-2 text-[11px] pt-1">
-      <span className="text-neutral-300">Subject</span>
-      {SUBJECTS.map((s) => (
-        <Chip
-          key={s.key}
-          small
-          active={selectedSubject === s.key}
-          onClick={() => setSelectedSubject(s.key)}
-        >
-          {s.label}
-        </Chip>
-      ))}
-    </div>
-
-    {/* Actions */}
-    <div className="flex items-center gap-2">
-      <button
-        type="button"
-        onClick={() => generateBackground()}
-        disabled={genLoading}
-        className="flex-1 px-3 py-2 rounded bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
-      >
-        {genLoading ? (
-            <span className="inline-flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-gradient-to-r from-fuchsia-400 to-indigo-400 animate-pulse" />
-              Creating Magic…
-            </span>
-          ) : (
-            'Generate'
-          )}
-      </button>
-    </div>
-
-    {/* Placeholder notice */}
-    {isPlaceholder && (
-      <div className="text-[11px] p-2 rounded border border-amber-500/40 bg-amber-900/20">
-        <div className="font-semibold text-amber-300">Using placeholder background</div>
-        <div className="text-amber-200/90 mt-1">
-          Provider error{genError ? `: ${genError}` : ''}. You can keep designing and retry generation anytime.
-        </div>
-        <div className="mt-2 flex gap-2">
-          <button
-            type="button"
-            onClick={() => generateBackground()}
-            className="px-2 py-1 rounded bg-neutral-900/70 border border-neutral-700 hover:bg-neutral-800"
-          >
-            Retry
-          </button>
-          <button
-            type="button"
-            onClick={() => { setGenProvider('nano'); }}
-            className="px-2 py-1 rounded bg-neutral-900/70 border border-neutral-700 hover:bg-neutral-800"
-          >
-            Switch to Nano
-          </button>
-        </div>
-      </div>
-    )}
-
-    {/* Candidates tray */}
-    {genCandidates.length > 0 && (
-      <div className="space-y-2">
-        <div className="text-[11px] text-neutral-400">Select a background</div>
-        <div className="grid grid-cols-2 gap-2">
-          {genCandidates.map((src, i) => (
-            <button
-              key={i}
-              onClick={() => {
-                if (src.startsWith('data:image/')) { setBgUploadUrl(src); setBgUrl(null); }
-                else { setBgUrl(src); setBgUploadUrl(null); }
-              }}
-              className="relative group border border-neutral-700 rounded overflow-hidden hover:border-indigo-500"
-              title="Use this background"
-            >
-              <img src={src} alt={`candidate ${i+1}`} className="w-full h-28 object-cover" />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20" />
-            </button>
-          ))}
-        </div>
-      </div>
-    )}
-
-    {/* Error */}
-    {genError && <div className="text-xs text-red-400 break-words">{genError}</div>}
-  </div>
-</Collapsible>
+<AiBackgroundPanel
+  genStyle={genStyle}
+  setGenStyle={setGenStyle}
+  presetKey={presetKey}
+  setPresetKey={setPresetKey}
+  presets={PRESETS}
+  randomPreset={randomPreset}
+  genPrompt={genPrompt}
+  setGenPrompt={setGenPrompt}
+  genProvider={genProvider}
+  setGenProvider={setGenProvider}
+  genCount={genCount}
+  setGenCount={setGenCount}
+  genSize={genSize}
+  setGenSize={setGenSize}
+  allowPeople={allowPeople}
+  setAllowPeople={setAllowPeople}
+  variety={variety}
+  setVariety={setVariety}
+  clarity={clarity}
+  setClarity={setClarity}
+  genGender={genGender}
+  setGenGender={setGenGender}
+  genEthnicity={genEthnicity}
+  setGenEthnicity={setGenEthnicity}
+  genEnergy={genEnergy}
+  setGenEnergy={setGenEnergy}
+  genAttire={genAttire}
+  setGenAttire={setGenAttire}
+  genColorway={genColorway}
+  setGenColorway={setGenColorway}
+  genAttireColor={genAttireColor}
+  setGenAttireColor={setGenAttireColor}
+  genPose={genPose}
+  setGenPose={setGenPose}
+  genShot={genShot}
+  setGenShot={setGenShot}
+  genLighting={genLighting}
+  setGenLighting={setGenLighting}
+  resetCredits={resetCredits}
+  generateBackground={generateBackground}
+  genLoading={genLoading}
+  isPlaceholder={isPlaceholder}
+  genError={genError}
+  genCandidates={genCandidates}
+  setBgUploadUrl={setBgUploadUrl}
+  setBgUrl={setBgUrl}
+/>
 {/* UI: AI BACKGROUND (END) */}
 
 
 
 {/* UI: MAGIC BLEND PANEL (BEGIN) */}
-<div className="mt-3" id="magic-blend-panel">
-  <div
-    className={
-      selectedPanel === "magic_blend"
-        ? "relative rounded-xl border border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.1)] transition-all"
-        : "relative rounded-xl border border-neutral-700 transition-all"
-    }
-  >
-    <Collapsible
-      title="Magic Blend"
-      storageKey="p:magic_blend"
-      isOpen={selectedPanel === "magic_blend"}
-      onToggle={() =>
-        useFlyerState
-          .getState()
-          .setSelectedPanel(selectedPanel === "magic_blend" ? null : "magic_blend")
-      }
-      titleClassName={selectedPanel === "magic_blend" ? "text-amber-400" : ""}
-    >
-      <div className="text-[11px] text-neutral-400 mb-4 leading-relaxed">
-        Select a cinematic <b>Style</b>, upload your assets, and let AI fuse them into a unified photo.
-      </div>
-      <div className="mb-4 rounded-lg border border-amber-400/30 bg-amber-500/5 px-3 py-2 text-[10px] text-amber-200/90">
-        If Magic Blend is blocked for sensitive content, try a different subject/background,
-        crop tighter, or use less revealing imagery.
-      </div>
-
-      {/* --- STYLE SELECT --- */}
-      <div className="mb-4">
-        <label className="text-[10px] uppercase font-bold tracking-widest text-neutral-500 mb-2 block">
-          Cinematic Style
-        </label>
-
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            { key: "club", label: "Club" },
-            { key: "tropical", label: "Tropical" },
-            { key: "jazz_bar", label: "Jazz Bar" },
-            { key: "outdoor_summer", label: "Daytime" },
-          ].map((s) => {
-            const active = blendStyle === s.key;
-            return (
-              <button
-                key={s.key}
-                type="button"
-                onClick={() => setBlendStyle(s.key as any)}
-                className={[
-                  "rounded-md px-3 py-2 text-[10px] font-bold border transition-all uppercase tracking-wide",
-                  active
-                    ? "border-amber-500 bg-amber-500/10 text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.1)]"
-                    : "border-neutral-700 bg-neutral-900/40 text-neutral-400 hover:border-neutral-500 hover:text-neutral-200",
-                ].join(" ")}
-              >
-                {s.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* --- BACKGROUND PRIORITY TOGGLE --- */}
-      <div className="mb-4">
-        <label className="text-[10px] uppercase font-bold tracking-widest text-neutral-500 mb-2 block">
-          Background Priority
-        </label>
-        <div className="grid grid-cols-2 gap-2">
-          {[
-            { key: "upload", label: "Uploaded BG" },
-            { key: "canvas", label: "Canvas BG" },
-          ].map((s) => {
-            const active = blendBackgroundPriority === s.key;
-            return (
-              <button
-                key={s.key}
-                type="button"
-                onClick={() => setBlendBackgroundPriority(s.key as any)}
-                className={[
-                  "rounded-md px-3 py-2 text-[10px] font-bold border transition-all uppercase tracking-wide",
-                  active
-                    ? "border-amber-500 bg-amber-500/10 text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.1)]"
-                    : "border-neutral-700 bg-neutral-900/40 text-neutral-400 hover:border-neutral-500 hover:text-neutral-200",
-                ].join(" ")}
-              >
-                {s.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* --- UPLOAD SLOTS (Aligned) --- */}
-      <div className="grid grid-cols-2 gap-3 mb-3">
-        {/* Slot 1: Subject */}
-        <div className="space-y-1.5">
-          <label className="text-[9px] uppercase font-bold tracking-widest text-neutral-500 ml-1">
-            Subject
-          </label>
-          <label className="block aspect-[3/4] rounded-lg border border-dashed border-neutral-700 bg-neutral-900/30 hover:bg-neutral-800 hover:border-neutral-500 transition-all cursor-pointer overflow-hidden relative group">
-            {/* 🌀 LOADING STATE */}
-            {isCuttingOut ? (
-              <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm text-neutral-300">
-                <div className="w-5 h-5 border-2 border-white/10 border-t-amber-500 rounded-full animate-spin mb-2" />
-                <span className="text-[8px] uppercase font-bold tracking-widest text-amber-500 animate-pulse">
-                  Cutting...
-                </span>
-              </div>
-            ) : blendSubject ? (
-              <>
-                <img
-                  src={blendSubject}
-                  className="w-full h-full object-contain p-1"
-                  alt="Subject"
-                />
-                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity backdrop-blur-[1px]">
-                  <span className="text-[9px] font-bold text-white uppercase tracking-wider">
-                    Change
-                  </span>
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-neutral-600 group-hover:text-neutral-400 transition-colors">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="mb-2 opacity-60"
-                >
-                  <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
-                <span className="text-[9px] font-medium uppercase tracking-wider">
-                  Portrait
-                </span>
-              </div>
-            )}
-
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) =>
-                e.target.files?.[0] && handleBlendUpload("subject", e.target.files[0])
-              }
-            />
-          </label>
-        </div>
-
-        {/* Slot 2: Environment */}
-        <div className="space-y-1.5">
-          <label className="text-[9px] uppercase font-bold tracking-widest text-neutral-500 ml-1">
-            Environment
-          </label>
-          <label className="block aspect-[3/4] rounded-lg border border-dashed border-neutral-700 bg-neutral-900/30 hover:bg-neutral-800 hover:border-neutral-500 transition-all cursor-pointer overflow-hidden relative group">
-            {blendBackground ? (
-              <>
-                <img
-                  src={blendBackground}
-                  className="w-full h-full object-cover"
-                  alt="Background"
-                />
-                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity backdrop-blur-[1px]">
-                  <span className="text-[9px] font-bold text-white uppercase tracking-wider">
-                    Change
-                  </span>
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-neutral-600 group-hover:text-neutral-400 transition-colors">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="mb-2 opacity-60"
-                >
-                  <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
-                  <circle cx="9" cy="9" r="2" />
-                  <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-                </svg>
-                <span className="text-[9px] font-medium uppercase tracking-wider">
-                  Upload
-                </span>
-              </div>
-            )}
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) =>
-                e.target.files?.[0] && handleBlendUpload("bg", e.target.files[0])
-              }
-            />
-          </label>
-        </div>
-      </div>
-
-      {/* --- CANVAS ACTION (Full Width, Above Generate) --- */}
-      <div className="mb-3">
-        <button
-          type="button"
-          onClick={pushCanvasBgToBlend}
-          className="w-full h-9 flex items-center justify-center gap-2 rounded-md border border-neutral-700 bg-neutral-800/30 hover:bg-amber-500/10 hover:border-amber-500/30 hover:text-amber-400 text-neutral-400 transition-all text-[10px] font-bold uppercase tracking-wider group"
-          title="Capture the current background from your canvas"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="group-hover:-translate-x-0.5 transition-transform"
-          >
-            <path d="m12 19-7-7 7-7" />
-            <path d="M19 12H5" />
-          </svg>
-          <span>Capture Canvas Background</span>
-        </button>
-      </div>
-
-      {/* --- GENERATE BUTTON --- */}
-      <div className="pt-2 border-t border-white/5">
-        <button
-          onClick={handleMagicBlend}
-          disabled={isBlending || isCuttingOut || !blendSubject}
-          className={`w-full py-3 rounded-lg font-bold text-xs uppercase tracking-wider shadow-lg transition-all flex items-center justify-center gap-2 ${
-            isBlending
-              ? "bg-neutral-800 text-neutral-500 cursor-not-allowed border border-neutral-700"
-              : "bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-amber-900/20 hover:shadow-amber-900/40"
-          }`}
-        >
-          {isBlending ? (
-            <>
-              <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-              <span>Processing...</span>
-            </>
-          ) : (
-            <>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="m5 12 7-7 7 7" />
-                <path d="M12 19V5" />
-              </svg>
-              Generate Blend
-            </>
-          )}
-        </button>
-      </div>
-    </Collapsible>
-  </div>
-</div>
+<MagicBlendPanel
+  selectedPanel={selectedPanel}
+  onToggle={() =>
+    setSelectedPanel(selectedPanel === "magic_blend" ? null : "magic_blend")
+  }
+  blendStyle={blendStyle}
+  setBlendStyle={setBlendStyle}
+  blendBackgroundPriority={blendBackgroundPriority}
+  setBlendBackgroundPriority={setBlendBackgroundPriority}
+  isCuttingOut={isCuttingOut}
+  blendSubject={blendSubject}
+  blendBackground={blendBackground}
+  handleBlendUpload={handleBlendUpload}
+  pushCanvasBgToBlend={pushCanvasBgToBlend}
+  handleMagicBlend={handleMagicBlend}
+  isBlending={isBlending}
+/>
 {/* UI: MAGIC BLEND PANEL (END) */}
 
 
 
-{/* UI: UPLOAD BACKGROUND (BEGIN) */}
-<div
-  id="background-panel"
-  className={
-    selectedPanel === "background"
-      ? "relative rounded-xl border border-blue-400"
-      : "relative rounded-xl border border-neutral-700 transition"
-  }
->
-  <Collapsible
-    title="Background"
-    storageKey="p:bg"
-    isOpen={selectedPanel === "background"}
-    onToggle={() =>
-      useFlyerState
-        .getState()
-        .setSelectedPanel(selectedPanel === "background" ? null : "background")
-    }
-    titleClassName={
-      selectedPanel === "background"
-        ? "text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]"
-        : ""
-    }
-    right={
-      <div className="flex items-center gap-2 text-[11px]">
-        <Chip small onClick={triggerUpload}>Upload</Chip>
-        {(bgUploadUrl || bgUrl) && (
-          <>
-            <Chip small onClick={fitBackground} title="Center & 100%">
-              Fit
-            </Chip>
-            <Chip
-              small
-              onClick={() => {
-                setBgScale(1.3);
-                setBgPosX(50);
-                setBgPosY(50);
-              }}
-              title="Slight zoom"
-            >
-              Fill
-            </Chip>
-            <Chip small onClick={clearBackground}>Clear</Chip>
-          </>
-        )}
-      </div>
-    }
-  >
-    {/*HIDDEN INPUTS*/}
-    <input
-      ref={bgRightRef}
-      type="file"
-      accept="image/*"
-      onChange={onRightBgFile}
-      className="hidden"
-    />
-
-    <input
-      ref={logoPickerRef}
-      type="file"
-      accept="image/*"
-      multiple
-      onChange={onLogoFiles}
-      className="hidden"
-    />
-
-    <input
-      ref={logoSlotPickerRef}
-      type="file"
-      accept="image/*"
-      onChange={onLogoSlotFile}
-      // Must NOT be display:none; keep it off-screen & invisible instead
-      style={{
-        position: "fixed",
-        left: "-9999px",
-        width: 0,
-        height: 0,
-        opacity: 0,
-      }}
-    />
-
-    <input
-      ref={portraitSlotPickerRef}
-      type="file"
-      accept="image/*"
-      onChange={onPortraitSlotFile}
-      className="hidden"
-    />
-
-    <input
-      ref={vibeUploadInputRef}
-      type="file"
-      accept="application/json,.json"
-      style={{ display: "none" }}
-      onChange={async (e) => {
-        const file = e.target.files?.[0];
-        // reset so picking the same file twice still triggers change
-        e.target.value = "";
-        if (!file) return;
-
-        await handleUploadDesignFromVibe(file);
-      }}
-    />
-
-    {(bgUploadUrl || bgUrl) ? (
-      <div className="space-y-2">
-        <div className="aspect-square w-full overflow-hidden rounded-lg border border-neutral-700 bg-neutral-900/60 relative">
-          <img
-            ref={bgEditImageRef}
-            src={bgUploadUrl || bgUrl!}
-            alt="Background preview"
-            className="w-full h-full object-cover"
-            draggable={false}
-          />
-          {bgEditHighlightId && (
-            <button
-              type="button"
-              className="absolute inset-0"
-              onClick={() => setBgEditSelectedMaskId(bgEditHighlightId)}
-              title="Select highlighted object"
-            >
-              <img
-                src={
-                  bgEditMasks.find((m) => m.id === bgEditHighlightId)?.maskUrl || ""
-                }
-                alt=""
-                className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-80"
-                style={{ filter: "drop-shadow(0 0 8px rgba(255,193,7,0.9))" }}
-              />
-            </button>
-          )}
-        </div>
-
-        {bgEditVariants.length > 0 && (
-          <div className="flex flex-wrap gap-2 items-center">
-            {bgEditBaseUrl && (
-              <button
-                type="button"
-                className="h-16 w-16 rounded border border-neutral-700 overflow-hidden bg-neutral-900/60"
-                onClick={() => {
-                  if (bgEditBaseUrl.startsWith("data:image/")) {
-                    setBgUploadUrl(bgEditBaseUrl);
-                    setBgUrl(null);
-                  } else {
-                    setBgUrl(bgEditBaseUrl);
-                    setBgUploadUrl(null);
-                  }
-                }}
-                title="Original"
-              >
-                <img src={bgEditBaseUrl} alt="" className="h-full w-full object-cover" />
-              </button>
-            )}
-            {bgEditVariants.map((v, idx) => (
-              <button
-                key={`${v}-${idx}`}
-                type="button"
-                className="h-16 w-16 rounded border border-neutral-700 overflow-hidden bg-neutral-900/60"
-                onClick={() => {
-                  if (v.startsWith("data:image/")) {
-                    setBgUploadUrl(v);
-                    setBgUrl(null);
-                  } else {
-                    setBgUrl(v);
-                    setBgUploadUrl(null);
-                  }
-                }}
-                title="Apply this variant"
-              >
-                <img src={v} alt="" className="h-full w-full object-cover" />
-              </button>
-            ))}
-          </div>
-        )}
-
-        <div className="flex gap-2 text-[11px]">
-          <Chip small onClick={fitBackground}>Center / 100%</Chip>
-          <Chip small onClick={() => { setBgScale((s) => Math.min(3, s * 1.1)); }}>
-            Zoom +
-          </Chip>
-          <Chip small onClick={() => { setBgScale((s) => Math.max(1, s / 1.1)); }}>
-            Zoom −
-          </Chip>
-          <Chip small onClick={() => { setBgPosX(50); setBgPosY(50); }}>
-            Re-center
-          </Chip>
-        </div>
-
-        <div className="text-[11px] text-neutral-400">
-          Tip: In <b>Move</b> → <b>background</b> mode, drag to pan and
-          <span className="inline-block px-1 mx-1 rounded bg-neutral-800/70 border border-neutral-700">
-            Ctrl
-          </span>
-          + scroll to zoom.
-        </div>
-
-        <div className="rounded-lg border border-neutral-700 bg-neutral-900/40 p-3 space-y-3">
-          <div className="text-[11px] font-semibold text-neutral-200">
-            Edit Background
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="text-[11px] text-neutral-400">
-              Find objects, tap one, then describe the change.
-            </div>
-            <Chip
-              small
-              onClick={fetchBgElements}
-              disabled={bgEditLoading}
-            >
-              {bgEditLoading ? "Finding..." : "Find objects"}
-            </Chip>
-          </div>
-
-          {bgEditMasks.length > 0 && (
-            <div className="flex items-center gap-2 text-[11px] text-neutral-300">
-              <span>
-                Highlighted object{" "}
-                <b>
-                  {Math.max(1, bgEditMasks.findIndex((m) => m.id === bgEditHighlightId) + 1)}
-                </b>
-                /{bgEditMasks.length}
-              </span>
-              <Chip small onClick={() => cycleBgHighlight(-1)}>Prev</Chip>
-              <Chip small onClick={() => cycleBgHighlight(1)}>Next</Chip>
-              <Chip
-                small
-                onClick={() => setBgEditSelectedMaskId(bgEditHighlightId)}
-              >
-                Select
-              </Chip>
-            </div>
-          )}
-
-          {bgEditMasks.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto py-1">
-              {bgEditMasks.map((m, i) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  className={[
-                    "h-16 w-16 rounded border overflow-hidden shrink-0 relative",
-                    bgEditSelectedMaskId === m.id
-                      ? "border-amber-400"
-                      : "border-neutral-700",
-                  ].join(" ")}
-                  onClick={() => setBgEditSelectedMaskId(m.id)}
-                  title={`Object ${i + 1}`}
-                >
-                  <img
-                    src={bgUploadUrl || bgUrl!}
-                    alt=""
-                    className="absolute inset-0 w-full h-full object-cover opacity-70"
-                  />
-                  <img
-                    src={m.maskUrl}
-                    alt=""
-                    className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-70"
-                  />
-                </button>
-              ))}
-            </div>
-          )}
-
-          <input
-            value={bgEditPrompt}
-            onChange={(e) => setBgEditPrompt(e.target.value)}
-            placeholder="e.g. make the room blue, remove the lamp, add fog"
-            className="w-full rounded p-2 bg-[#17171b] text-white border border-neutral-700"
-          />
-          <div className="flex items-center gap-2">
-            <Chip small onClick={runBgEdit} disabled={bgEditLoading}>
-              {bgEditLoading ? "Editing..." : "Generate 3 variants"}
-            </Chip>
-            {bgEditError && (
-              <span className="text-[11px] text-red-300">{bgEditError}</span>
-            )}
-          </div>
-        </div>
-      </div>
-    ) : (
-      <div className="text-[12px] text-neutral-300">
-        No background yet. Click <b>Upload</b> to add an image, or use{" "}
-        <b>AI Background</b> below to generate one.
-        <div className="mt-2">
-          <Chip small onClick={triggerUpload}>Upload background</Chip>
-        </div>
-      </div>
-    )}
-  </Collapsible>
-</div>
-{/* UI: UPLOAD BACKGROUND (END)*/}
-
-
-{/* UI: BACKGROUND EFFECTS (BEGIN) */}
-<div
-  className={
-    selectedPanel === "background" || selectedPanel === "bgfx"
-      ? "relative rounded-xl border border-blue-400 transition"
-      : "relative rounded-xl border border-neutral-700 transition"
-  }
->
-  <Collapsible
-    title="Background Effects"
-    storageKey="p:bgfx"
-    defaultOpen={false}
-
-    // ✅ OPEN when either Background or BGFX is active
-    isOpen={selectedPanel === "background" || selectedPanel === "bgfx"}
-
-    // ✅ BLUE TITLE when BGFX is active (this is what you were missing)
-    titleClassName={
-      selectedPanel === "bgfx"
-        ? "text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]"
-        : ""
-    }
-
-    // ✅ Toggle specifically controls BGFX panel state
-    onToggle={() =>
-      useFlyerState
-        .getState()
-        .setSelectedPanel(selectedPanel === "bgfx" ? null : "bgfx")
-    }
-
-    right={
-      <Chip
-        small
-        onClick={() => {
-          setHue(0);
-          setHaze(0.5);
-          setVignette(true);
-          setVignetteStrength(0.55);
-
-          setBgPosX(50);
-          setBgPosY(50);
-          setBgScale(1);
-          setBgBlur(0);
-        }}
-      >
-        Reset
-      </Chip>
-    }
-  >
-    {/* Row 1: Haze | Hue | Vignette */}
-    <div className="grid grid-cols-3 gap-3">
-      <Stepper label="Haze" value={haze} setValue={setHaze} min={0} max={1} step={0.02} digits={2} />
-      <Stepper label="Hue" value={hue} setValue={setHue} min={-180} max={180} step={1} />
-      <Stepper label="Vignette" value={vignetteStrength} setValue={setVignetteStrength} min={0} max={0.9} step={0.02} digits={2} />
-    </div>
-
-    {/* Row 2: Scale | BG X | BG Y */}
-    <div className="grid grid-cols-3 gap-3 mt-2">
-      <Stepper label="Scale" value={bgScale} setValue={setBgScale} min={1} max={5} step={0.1} digits={2} />
-      <Stepper label="BG X %" value={bgPosX} setValue={setBgPosX} min={0} max={100} step={1} />
-      <Stepper label="BG Y %" value={bgPosY} setValue={setBgPosY} min={0} max={100} step={1} />
-    </div>
-
-    {/* Row 3: Blur */}
-    <div className="mt-2 pt-2 border-t border-white/5">
-      <Stepper label="Gaussian Blur (px)" value={bgBlur} setValue={setBgBlur} min={0} max={20} step={0.5} digits={1} />
-    </div>
-  </Collapsible>
-</div>
-{/* UI: BACKGROUND EFFECTS (END) */}
+<BackgroundPanels
+  selectedPanel={selectedPanel}
+  setSelectedPanel={setSelectedPanel}
+  triggerUpload={triggerUpload}
+  fitBackground={fitBackground}
+  clearBackground={clearBackground}
+  setBgScale={setBgScale}
+  bgFitMode={bgFitMode}
+  setBgFitMode={setBgFitMode}
+  setBgPosX={setBgPosX}
+  setBgPosY={setBgPosY}
+  setBgUrl={setBgUrl}
+  setBgUploadUrl={setBgUploadUrl}
+  bgUploadUrl={bgUploadUrl}
+  bgUrl={bgUrl}
+  bgRightRef={bgRightRef}
+  onRightBgFile={onRightBgFile}
+  logoPickerRef={logoPickerRef}
+  onLogoFiles={onLogoFiles}
+  logoSlotPickerRef={logoSlotPickerRef}
+  onLogoSlotFile={onLogoSlotFile}
+  portraitSlotPickerRef={portraitSlotPickerRef}
+  onPortraitSlotFile={onPortraitSlotFile}
+  vibeUploadInputRef={vibeUploadInputRef}
+  handleUploadDesignFromVibe={handleUploadDesignFromVibe}
+  bgScale={bgScale}
+  bgPosX={bgPosX}
+  bgPosY={bgPosY}
+  bgBlur={bgBlur}
+  setBgBlur={setBgBlur}
+  setHue={setHue}
+  setHaze={setHaze}
+  setVignette={setVignette}
+  setVignetteStrength={setVignetteStrength}
+  hue={hue}
+  haze={haze}
+  vignetteStrength={vignetteStrength}
+/>
 
 
 
 
 {/* UI: LIBRARY (BEGIN) */}
-<div className="mt-3" id="library-panel">
-  <div
-    className={
-      selectedPanel === "icons"
-        ? "relative rounded-xl border border-blue-400"
-        : "relative rounded-xl border border-neutral-700 transition"
-    }
-  >
-    <Collapsible
-     title="Library"
-storageKey="p:icons"
-isOpen={useFlyerState((s) => s.selectedPanel) === "icons"}
-onToggle={() => {
-        const store = useFlyerState.getState();
-
-
-
-        const next = store.selectedPanel === "icons" ? null : "icons";
-
-
-
-        store.setSelectedPanel(next);
-        store.setMoveTarget(next ? "icon" : null);
-      }}
-titleClassName={
-  useFlyerState((s) => s.selectedPanel) === "icons"
-    ? "text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]"
-    : ""
-}
-
-    >
-      {/* hidden input shared by all 4 slots */}
-      <input
-        ref={IS_iconSlotPickerRef}
-        type="file"
-        accept="image/*"
-        onChange={IS_onIconSlotFile}
-        className="hidden"
-      />
-
-      {/* === SECTION 1: USER UPLOADS (ICON SLOTS) === */}
-      <div className="text-[12px] text-neutral-300 mb-2">
-        Upload up to 4 icons/logos. Then click <b>Place</b> to add to canvas.
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        {IS_iconSlots.map((src, i) => (
-          <div
-            key={i}
-            className="rounded-lg border border-neutral-700 bg-neutral-900/50 overflow-hidden"
-          >
-            <div className="aspect-square w-full bg-[linear-gradient(45deg,#222_25%,#000_25%,#000_50%,#222_50%,#222_75%,#000_75%,#000)] bg-[length:16px_16px] grid place-items-center">
-              {src ? (
-                <img
-                  src={src}
-                  alt={`icon slot ${i + 1}`}
-                  className="w-full h-full object-contain"
-                  draggable={false}
-                />
-              ) : (
-                <div className="text-[11px] text-neutral-400">Empty</div>
-              )}
-            </div>
-            <div className="p-2 grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => IS_triggerIconSlotUpload(i)}
-                className="truncate rounded px-2 py-1 text-[11px] bg-neutral-900/70 border border-neutral-700 hover:bg-neutral-800"
-                title="Upload into this slot"
-              >
-                Upload
-              </button>
-              <button
-                type="button"
-                onClick={() => IS_placeIconFromSlot(i)}
-                className="truncate rounded px-2 py-1 text-[11px] bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
-                disabled={!src}
-                title="Place on canvas"
-              >
-                Place
-              </button>
-              <button
-                type="button"
-                onClick={() => IS_clearIconSlot(i)}
-                className="truncate rounded px-2 py-1 text-[11px] bg-neutral-900/70 border border-neutral-700 hover:bg-neutral-800 disabled:opacity-50"
-                disabled={!src}
-                title="Clear slot"
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-    
-
-      {/* === SELECTED EMOJI CONTROLS (like Graphics) === */}
-      {(() => {
-        let list: any[] = [];
-        if (Array.isArray(emojis)) {
-          list = emojis;
-        } else if (emojis && typeof emojis === "object") {
-          list = emojis[format] || [];
-        }
-
-        const sel = list.find((e: any) => e.id === selectedEmojiId);
-        if (!sel) return null;
-
-        const locked = !!sel.locked;
-
-        return (
-          <div
-            className="panel mt-4 rounded-lg border border-neutral-800 bg-neutral-950/40 p-3"
-            data-portrait-area="true"
-            onMouseDownCapture={(e) => e.stopPropagation()}
-            onPointerDownCapture={(e) => e.stopPropagation()}
-          >
-            <div className="text-[12px] text-neutral-200 font-bold mb-2 flex justify-between items-center">
-              <span>Emoji Controls</span>
-              <span className="text-neutral-500 font-normal text-[10px]">
-                {sel.id.split("_")[1] || "emoji"}
-              </span>
-            </div>
-
-            <div className="mb-3 flex items-center justify-between">
-              <div className="text-[34px] select-none">{sel.char}</div>
-              <button
-                type="button"
-                className="text-[11px] rounded-md border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 px-3 py-2"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  useFlyerState.getState().updateEmoji(format, sel.id, {
-                    locked: !locked,
-                  });
-                }}
-              >
-                {locked ? "Unlock" : "Lock"}
-              </button>
-            </div>
-
-            <div className="mb-3">
-              <div className="text-[11px] text-neutral-400 mb-1 flex justify-between">
-                <span>Scale</span>
-                <span>{Math.round((sel.scale || 1) * 100)}%</span>
-              </div>
-              <input
-                type="range"
-                min={0.2}
-                max={5}
-                step={0.05}
-                value={sel.scale ?? 1}
-                onChange={(e) => {
-                  useFlyerState.getState().updateEmoji(format, sel.id, {
-                    scale: Number(e.target.value),
-                  });
-                }}
-                className="w-full accent-blue-500 h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer"
-                disabled={locked}
-              />
-            </div>
-
-            <div className="mb-3">
-              <div className="text-[11px] text-neutral-400 mb-1 flex justify-between">
-                <span>Opacity</span>
-                <span>{Math.round((sel.opacity ?? 1) * 100)}%</span>
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.05}
-                value={sel.opacity ?? 1}
-                onChange={(e) => {
-                  useFlyerState.getState().updateEmoji(format, sel.id, {
-                    opacity: Number(e.target.value),
-                  });
-                }}
-                className="w-full accent-blue-500 h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer"
-                disabled={locked}
-              />
-            </div>
-
-            <div className="mb-3">
-              <div className="text-[11px] text-neutral-400 mb-1 flex justify-between">
-                <span>Rotation</span>
-                <span>{Math.round(sel.rotation ?? 0)}°</span>
-              </div>
-              <input
-                type="range"
-                min={-180}
-                max={180}
-                step={1}
-                value={sel.rotation ?? 0}
-                onChange={(e) => {
-                  useFlyerState.getState().updateEmoji(format, sel.id, {
-                    rotation: Number(e.target.value),
-                  });
-                }}
-                className="w-full accent-blue-500 h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer"
-                disabled={locked}
-              />
-            </div>
-
-            <button
-              className="w-full mt-1 text-[12px] bg-red-900/20 hover:bg-red-900/40 border border-red-900/50 hover:border-red-500 text-red-200 rounded-md py-2 transition-all flex items-center justify-center gap-2"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                useFlyerState.getState().removeEmoji(format, sel.id);
-                setSelectedEmojiId(null);
-              }}
-            >
-              <span className="font-bold">✕</span> Delete Emoji
-            </button>
-          </div>
-        );
-      })()}
-
-      {/* === SECTION 3: NIGHTLIFE GRAPHICS (PREMIUM) === */}
-      <div className="mt-4 border-t border-neutral-800 pt-3">
-        <div className="text-[12px] text-neutral-300 mb-2 font-bold">Nightlife Graphics</div>
-        <div className="grid grid-cols-2 gap-2">
-          {[
-            {
-              id: "hookah",
-              label: "Hookah",
-              paths: [
-                "M58 14L70 14L70 26L58 26Z",
-                "M54 26L74 26L80 40L74 52L54 52L48 40Z",
-                "M64 52L64 78",
-                "M52 86L76 86L76 98L52 98Z",
-                "M80 36H92Q104 36 104 48V66",
-                "M100 66L110 66",
-              ],
-            },
-            {
-              id: "bottle",
-              label: "Bottle Service",
-              paths: [
-                "M54 14H74V24H54Z",
-                "M58 24H70V36",
-                "M58 36Q58 32 62 32H66Q70 32 70 36V88Q70 98 64 100Q58 98 58 88Z",
-                "M58 88H70",
-                "M58 96H70",
-                "M80 54H96V80H80Z",
-                "M88 80V98",
-                "M82 98H94",
-              ],
-            },
-            {
-              id: "bucket",
-              label: "Bucket Deals",
-              paths: [
-                "M32 44H96L90 108Q64 116 38 108L32 44Z",
-                "M38 50H90",
-                "M34 60Q22 76 26 100Q30 116 50 112",
-                "M94 60Q106 76 102 100Q98 116 78 112",
-                "M44 44L52 36L62 44L54 52Z",
-                "M56 44L64 36L74 44L66 52Z",
-                "M68 44L76 36L86 44L78 52Z",
-                "M74 18L86 30L80 36L68 24Z",
-                "M70 24L80 34L76 72L66 66Z",
-              ],
-            },
-            {
-              id: "drink",
-              label: "Drink Specials",
-              paths: [
-                "M28 8A14 14 0 1 1 27.99 8Z",
-                "M40 18L100 18L74 52L66 52Z",
-                "M48 32L92 32",
-                "M70 52L70 86",
-                "M52 98L88 98",
-                "M34 58A20 20 0 1 1 33.99 58Z",
-                "M34 78L34 64",
-                "M34 78L24 84",
-                "M34 56L34 60",
-                "M34 96L34 92",
-                "M12 78L16 78",
-                "M56 78L52 78",
-              ],
-            },
-            {
-              id: "venue",
-              label: "Venue",
-              paths: [
-                "M64 20C46 20 32 34 32 52C32 76 64 108 64 108C64 108 96 76 96 52C96 34 82 20 64 20Z",
-                "M64 52A10 10 0 1 0 64 32A10 10 0 0 0 64 52Z",
-              ],
-            },
-            {
-              id: "music",
-              label: "Music",
-              paths: [
-                "M56 32L96 24V80",
-                "M56 32V88",
-                "M56 88A8 8 0 1 0 48 80A8 8 0 0 0 56 88Z",
-                "M96 80A8 8 0 1 0 88 72A8 8 0 0 0 96 80Z",
-              ],
-            },
-            {
-              id: "time",
-              label: "Time",
-              paths: [
-                "M64 28V60L82 70",
-                "M64 112A48 48 0 1 0 64 16A48 48 0 0 0 64 112Z",
-              ],
-            },
-          ].map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className="h-10 rounded-md bg-neutral-900/60 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-600 transition-all flex items-center gap-2 px-2 group relative overflow-hidden"
-              title={`Add ${item.label}`}
-              onClick={() => {
-                const svgTemplate = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none" stroke="{{COLOR}}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">${item.paths
-                  .map((d) => `<path d="${d}"/>`)
-                  .join("")}</svg>`;
-                const svg = svgTemplate.replace("{{COLOR}}", "#ffffff");
-                const svgBase64 = btoa(unescape(encodeURIComponent(svg)));
-                const url = `data:image/svg+xml;base64,${svgBase64}`;
-                const id = `sticker_${item.id}_${Date.now()}_${Math.random()
-                  .toString(36)
-                  .slice(2, 7)}`;
-                const store = useFlyerState.getState();
-                store.addPortrait(format, {
-                  id,
-                  url,
-                  x: 50,
-                  y: 50,
-                  scale: 0.6,
-                  locked: false,
-                  svgTemplate,
-                  iconColor: "#ffffff",
-                  label: item.label,
-                  showLabel: true,
-                  isSticker: true,
-                });
-                store.setSelectedPortraitId(id);
-                store.setSelectedPanel("icons");
-                store.setMoveTarget("icon");
-              }}
-            >
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 128 128"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={6}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="text-neutral-200 group-hover:text-white transition-colors"
-              >
-                {item.paths.map((d) => (
-                  <path key={d} d={d} />
-                ))}
-              </svg>
-              <span className="text-[10px] font-semibold text-neutral-300 group-hover:text-white">
-                {item.label}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* === SECTION 3: GRAPHICS / STICKERS === */}
-      <div className="mt-4 border-t border-neutral-800 pt-3">
-        <div className="text-[12px] text-neutral-300 mb-2 font-bold">Graphics</div>
-        <div
-          className="grid grid-cols-4 gap-2"
-          style={{
-            maxHeight: 180,
-            overflowY: "auto",
-          }}
-        >
-          {[
-            { id: "mezcal_bottle", src: "https://cdn-icons-png.flaticon.com/512/8091/8091033.png", name: "Mezcal" },
-            { id: "drink", src: "https://cdn-icons-png.flaticon.com/512/920/920587.png", name: "Drink" },
-            { id: "tequila_bottle", src: "https://cdn-icons-png.flaticon.com/512/7215/7215911.png", name: "Tequila" },
-            { id: "maracas", src: "https://cdn-icons-png.flaticon.com/512/6654/6654969.png", name: "Maracas" },
-            { id: "mardi_gras", src: "https://cdn-icons-png.flaticon.com/512/4924/4924300.png", name: "Mardi Gras" },
-            { id: "pin", src: "https://cdn-icons-png.flaticon.com/512/149/149059.png", name: "Pin" },
-            { id: "vinyl2", src: "https://cdn-icons-png.flaticon.com/512/1834/1834342.png", name: "Vinyl Record" },
-            { id: "margarita", src: "https://cdn-icons-png.flaticon.com/512/362/362504.png", name: "Margarita" },
-          
-          ].map((sticker) => (
-            <button
-              key={sticker.id}
-              type="button"
-              className="aspect-square rounded-md bg-neutral-900/60 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-600 transition-all flex items-center justify-center p-2 group relative overflow-hidden"
-              title={`Add ${sticker.name}`}
-              onClick={() => {
-                const id = `sticker_${sticker.id}_${Date.now()}`;
-                useFlyerState.getState().addPortrait(format, {
-                  id,
-                  url: sticker.src,
-                  x: 50,
-                  y: 50,
-                  scale: 0.5,
-                  locked: false,
-                  isSticker: true,
-                });
-                useFlyerState.getState().setSelectedPortraitId(id);
-                useFlyerState.getState().setSelectedPanel("icons");
-                useFlyerState.getState().setMoveTarget("icon");
-              }}
-            >
-              <img
-                src={sticker.src}
-                alt={sticker.name}
-                className="w-full h-full object-contain drop-shadow-sm group-hover:scale-110 transition-transform"
-                draggable={false}
-              />
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                <div className="text-white font-bold text-lg">+</div>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* === SELECTED STICKER CONTROLS === */}
-      {/* === SELECTED STICKER CONTROLS (WITH CANVAS SELECTOR) === */}
-{(() => {
-  const list = portraits[format] || [];
-  const stickers = list.filter((p) => !!(p as any)?.isSticker);
-
-  if (!stickers.length) return null;
-
-  const currentSel = list.find((p) => p.id === selectedPortraitId);
-  const selectedIsSticker = !!(currentSel as any)?.isSticker;
-
-  const activeStickerId = selectedIsSticker ? selectedPortraitId : stickers[0].id;
-  const sel = stickers.find((p) => p.id === activeStickerId) || stickers[0];
-
-  const locked = !!sel.locked;
-
-  return (
-    <div
-      className="panel mt-4 rounded-lg border border-neutral-800 bg-neutral-950/40 p-3"
-      data-portrait-area="true"
-      onMouseDownCapture={(e) => e.stopPropagation()}
-      onPointerDownCapture={(e) => e.stopPropagation()}
-    >
-      <div className="text-[12px] text-neutral-200 font-bold mb-2 flex justify-between items-center">
-        <span>Graphics on Canvas</span>
-        <span className="text-[10px] opacity-50 font-mono">
-          {stickers.length} total
-        </span>
-      </div>
-
-      {typeof (sel as any).svgTemplate === "string" && (
-        <div className="mb-3 flex items-center gap-2 text-[11px] text-neutral-300">
-          <span className="opacity-80">Icon Color</span>
-          <ColorDot
-            value={(sel as any).iconColor || "#ffffff"}
-            onChange={(value) => {
-              const template = String((sel as any).svgTemplate || "");
-              const nextSvg = template.replace("{{COLOR}}", value);
-              const svgBase64 = btoa(unescape(encodeURIComponent(nextSvg)));
-              const nextUrl = `data:image/svg+xml;base64,${svgBase64}`;
-              useFlyerState.getState().updatePortrait(format, sel.id, {
-                url: nextUrl,
-                iconColor: value,
-              });
-            }}
-          />
-        </div>
-      )}
-      {(sel as any).showLabel && (
-        <div className="mb-3">
-          <label className="block text-[11px] text-neutral-300 mb-1">
-            Label
-          </label>
-          <input
-            value={String((sel as any).label ?? "")}
-            onChange={(e) =>
-              useFlyerState.getState().updatePortrait(format, sel.id, {
-                label: e.target.value,
-              })
-            }
-            className="w-full rounded-md bg-neutral-900 border border-neutral-700 px-2 py-1.5 text-[11px] text-white"
-            placeholder="Label"
-          />
-        </div>
-      )}
-
-      {/* SELECT GRAPHIC ON CANVAS */}
-      <select
-        className="w-full mb-3 text-[11px] bg-neutral-900 border border-neutral-700 rounded-md py-2 px-2 text-white outline-none"
-        value={sel.id}
-        onChange={(e) => {
-          const id = e.target.value;
-          const store = useFlyerState.getState();
-          store.setSelectedPortraitId(id);
-          store.setSelectedPanel("icons");
-          store.setMoveTarget("icon");
-        }}
-      >
-        {stickers.map((p, idx) => (
-          <option key={p.id} value={p.id}>
-            {(p.id.split("_")[1] || "graphic")} #{idx + 1}
-            {p.locked ? " (locked)" : ""}
-          </option>
-        ))}
-      </select>
-
-      <div className="mb-4">
-        <div className="text-[11px] text-neutral-400 mb-1 flex justify-between">
-          <span>Scale</span>
-          <span>{Math.round((sel.scale || 1) * 100)}%</span>
-        </div>
-        <input
-          type="range"
-          min={0.1}
-          max={3}
-          step={0.1}
-          value={sel.scale ?? 1}
-          disabled={locked}
-          onChange={(e) =>
-            useFlyerState.getState().updatePortrait(format, sel.id, {
-              scale: Number(e.target.value),
-            })
-          }
-          className="w-full h-1 rounded-lg appearance-none cursor-pointer bg-neutral-700 accent-blue-500"
-        />
-      </div>
-
-      <div className="mb-4">
-        <div className="text-[11px] text-neutral-400 mb-1 flex justify-between">
-          <span>Opacity</span>
-          <span>{Math.round(((sel as any).opacity ?? 1) * 100)}%</span>
-        </div>
-        <input
-          type="range"
-          min={0}
-          max={1}
-          step={0.05}
-          value={(sel as any).opacity ?? 1}
-          disabled={locked}
-          onChange={(e) =>
-            useFlyerState.getState().updatePortrait(format, sel.id, {
-              opacity: Number(e.target.value),
-            })
-          }
-          className="w-full h-1 rounded-lg appearance-none cursor-pointer bg-neutral-700 accent-blue-500"
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        <button
-          className="text-[11px] bg-neutral-800 border border-neutral-600 rounded-md py-2"
-          onClick={() =>
-            useFlyerState.getState().updatePortrait(format, sel.id, {
-              locked: !locked,
-            })
-          }
-        >
-          {locked ? "Unlock" : "Lock"}
-        </button>
-
-        <button
-          className="text-[11px] bg-red-900/30 border border-red-700 rounded-md py-2"
-          onClick={() => {
-            removePortrait(format, sel.id);
-            useFlyerState.getState().setSelectedPortraitId(null);
-          }}
-        >
-          Delete
-        </button>
-      </div>
-    </div>
-  );
-})()}
-
-
-      {/* === SECTION 4: FLARES (Local Files + Screen Mode) === */}
-      <div className="mt-4 border-t border-neutral-800 pt-3">
-        <div className="text-[12px] text-neutral-300 mb-2 font-bold">
-          Flares & Light Leaks
-        </div>
-        <div className="grid grid-cols-4 gap-2">
-          {[
-            { id: "flare01", src: "/flares/flare01.png", name: "Warm Flare" },
-            { id: "flare02", src: "/flares/flare02.png", name: "Bright Flare" },
-            { id: "flareBlue01", src: "/flares/flareBlue01.png", name: "Blue Streak" },
-            { id: "flareBlue03", src: "/flares/flareBlue03.png", name: "Blue Glow" },
-            { id: "sun01", src: "/flares/sun01.png", name: "Warm Sun" },
-            { id: "sun02", src: "/flares/sun02.png", name: "Cool Sun" },
-            { id: "sun03", src: "/flares/sun03.png", name: "Red Sun" },
-            { id: "sun04", src: "/flares/sun04.png", name: "Green Sun" },
-          ].map((flare) => (
-            <button
-              key={flare.id}
-              type="button"
-              className="aspect-square rounded-md bg-black border border-neutral-800 hover:border-neutral-600 transition-all flex items-center justify-center p-1 group relative overflow-hidden"
-              title={`Add ${flare.name}`}
-              onClick={() => {
-                const id = `flare_${flare.id}_${Date.now()}_${Math.random()
-                  .toString(36)
-                  .slice(2, 7)}`;
-
-                useFlyerState.getState().addPortrait(format, {
-                  id,
-                  url: flare.src,
-                  x: 50,
-                  y: 50,
-                  scale: 0.8,
-                  locked: false,
-                  blendMode: "screen",
-                  opacity: 0.9,
-                  rotation: 0,
-                  isFlare: true,
-                });
-
-                useFlyerState.getState().setSelectedPortraitId(id);
-
-                // 🔥 KEEP LIBRARY OPEN FOR FLARE CONTROLS
-                useFlyerState.getState().setSelectedPanel("icons");
-
-                // still movable on canvas
-                useFlyerState.getState().setMoveTarget("icon");
-
-              }}
-            >
-              <img
-                src={flare.src}
-                alt={flare.name}
-                className="w-full h-full object-contain group-hover:scale-110 transition-transform opacity-90"
-                draggable={false}
-              />
-              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* === SELECTED FLARE CONTROLS (Fixed UI with Sliders) === */}
-      {/* === SELECTED FLARE CONTROLS (WITH CANVAS SELECTOR, NO BLEND MODE) === */}
-{(() => {
-  const list = portraits[format] || [];
-  const flares = list.filter((p) => !!(p as any)?.isFlare);
-
-  if (!flares.length) return null;
-
-  const currentSel = list.find((p) => p.id === selectedPortraitId);
-  const selectedIsFlare = !!(currentSel as any)?.isFlare;
-
-  const activeFlareId = selectedIsFlare ? selectedPortraitId : flares[0].id;
-  const sel = flares.find((p) => p.id === activeFlareId) || flares[0];
-
-  const locked = !!sel.locked;
-
-  const update = (patch: any) =>
-    useFlyerState.getState().updatePortrait(format, sel.id, patch);
-
-  return (
-    <div
-      className="panel mt-4 rounded-lg border border-neutral-800 bg-neutral-950/40 p-3"
-      data-portrait-area="true"
-      onMouseDownCapture={(e) => e.stopPropagation()}
-      onPointerDownCapture={(e) => e.stopPropagation()}
-    >
-      <div className="text-[12px] text-neutral-200 font-bold mb-2">
-        Flares on Canvas
-      </div>
-
-      {/* SELECT FLARE ON CANVAS */}
-      <select
-        className="w-full mb-3 text-[11px] bg-neutral-900 border border-neutral-700 rounded-md py-2 px-2 text-white outline-none"
-        value={sel.id}
-        onChange={(e) => {
-          const id = e.target.value;
-          const store = useFlyerState.getState();
-          store.setSelectedPortraitId(id);
-          store.setSelectedPanel("icons");
-          store.setMoveTarget("icon");
-        }}
-      >
-        {flares.map((p, idx) => (
-          <option key={p.id} value={p.id}>
-            {(p.id.split("_")[1] || "flare")} #{idx + 1}
-            {p.locked ? " (locked)" : ""}
-          </option>
-        ))}
-      </select>
-
-      <button
-        className="w-full mb-3 text-[11px] bg-neutral-800 border border-neutral-600 rounded-md py-2"
-        onClick={() => update({ locked: !locked })}
-      >
-        {locked ? "Unlock" : "Lock"}
-      </button>
-
-      <SliderRow
-        label="Opacity"
-        value={(sel as any).opacity ?? 1}
-        min={0}
-        max={1}
-        step={0.05}
-        onChange={(v) => update({ opacity: v })}
-      />
-
-      <SliderRow
-        label="Scale"
-        value={sel.scale ?? 1}
-        min={0.1}
-        max={3}
-        step={0.1}
-        onChange={(v) => update({ scale: v })}
-      />
-
-      <SliderRow
-        label="Rotation"
-        value={(sel as any).rotation ?? 0}
-        min={-180}
-        max={180}
-        step={5}
-        onChange={(v) => update({ rotation: v })}
-      />
-
-      <button
-        className="mt-4 w-full text-[11px] bg-red-900/30 border border-red-700 rounded-md py-2"
-        onClick={() => {
-          removePortrait(format, sel.id);
-          useFlyerState.getState().setSelectedPortraitId(null);
-        }}
-      >
-        Delete Flare
-      </button>
-    </div>
-  );
-})()}
-
-    </Collapsible>
-  </div>
-</div>
+<LibraryPanel
+  format={format}
+  selectedEmojiId={selectedEmojiId}
+  setSelectedEmojiId={setSelectedEmojiId}
+  IS_iconSlotPickerRef={IS_iconSlotPickerRef}
+  IS_onIconSlotFile={IS_onIconSlotFile}
+  IS_iconSlots={IS_iconSlots}
+  IS_triggerIconSlotUpload={IS_triggerIconSlotUpload}
+  IS_placeIconFromSlot={IS_placeIconFromSlot}
+  IS_clearIconSlot={IS_clearIconSlot}
+  nightlifeGraphics={NIGHTLIFE_GRAPHICS}
+  graphicStickers={GRAPHIC_STICKERS}
+  flareLibrary={FLARE_LIBRARY}
+/>
 {/* UI: LIBRARY (END) */}
 
 
