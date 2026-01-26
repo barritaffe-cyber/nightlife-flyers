@@ -6947,6 +6947,7 @@ const TOUR_STEPS = [
       setSelectedPanel("background");
       setMobileControlsTab("design");
       setTimeout(() => {
+        setSelectedPanel("background");
         document.getElementById("background-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 50);
     },
@@ -17353,7 +17354,7 @@ style={{ top: STICKY_TOP }}
             setFadeOut(false);
           }}
         >
-          <div data-tour="artboard">
+          <div data-tour="artboard" id="artboard">
           <Artboard
             /* PASSING ALL PROPS AS BEFORE */
             textureOpacity={textureOpacity}
