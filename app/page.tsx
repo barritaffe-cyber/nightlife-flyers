@@ -6939,12 +6939,11 @@ const TOUR_STEPS = [
     onEnter: () => {
       setUiMode("design");
       setMobileControlsOpen(true);
-      setSelectedPanel("background");
       setMobileControlsTab("design");
       setTimeout(() => {
         setSelectedPanel("background");
         document.getElementById("background-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 50);
+      }, 160);
     },
   },
   {
@@ -6968,8 +6967,11 @@ const TOUR_STEPS = [
     onEnter: () => {
       setUiMode("design");
       setMobileControlsOpen(true);
-      setSelectedPanel("headline");
       setMobileControlsTab("design");
+      setTimeout(() => {
+        setSelectedPanel("headline");
+        document.getElementById("headline-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 160);
     },
   },
   {
@@ -16258,6 +16260,7 @@ style={{ top: STICKY_TOP }}
       : "relative rounded-xl border border-neutral-700 transition"
   }
   data-tour="headline"
+  id="headline-panel"
 >
   <Collapsible
     title="Headline"
