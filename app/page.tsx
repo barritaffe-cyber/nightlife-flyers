@@ -6923,16 +6923,12 @@ const openTourPanel = React.useCallback(
     const scrollToTarget = () => {
       const el = document.getElementById(targetId);
       if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const top = window.scrollY + rect.top + rect.height / 2 - window.innerHeight / 2;
-      window.scrollTo({ top, behavior: "smooth" });
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
     };
     window.setTimeout(() => {
       setSelectedPanel(panel);
-      scrollToTarget();
-    }, 120);
-    window.setTimeout(scrollToTarget, 320);
-    window.setTimeout(scrollToTarget, 620);
+      window.setTimeout(scrollToTarget, 220);
+    }, 80);
   },
   [setSelectedPanel]
 );
@@ -7029,9 +7025,8 @@ useEffect(() => {
     setTourTip({ top: window.innerHeight * 0.5, left: window.innerWidth * 0.5, centered: true });
   };
   const el = resolveEl();
-  if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
   const raf = requestAnimationFrame(() => requestAnimationFrame(update));
-  const timer = window.setTimeout(update, 160);
+  const timer = window.setTimeout(update, 220);
   const onResize = () => update();
   const onScroll = () => update();
   window.addEventListener("resize", onResize);
