@@ -6968,9 +6968,7 @@ const TOUR_STEPS = [
     onEnter: () => {
       setUiMode("design");
       setSelectedPanel(null);
-      setTimeout(() => {
-        document.getElementById("artboard")?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 50);
+      window.setTimeout(scrollToArtboard, 120);
     },
   },
   {
@@ -11285,6 +11283,27 @@ function twoRaf(): Promise<void> {
     requestAnimationFrame(() => requestAnimationFrame(() => r()))
   );
 }
+
+async function waitForImages(root: HTMLElement) {
+  const imgs = Array.from(root.querySelectorAll('img')) as HTMLImageElement[];
+  await Promise.all(
+    imgs.map(async (img) => {
+      try {
+        if (img.complete && img.naturalWidth > 0) return;
+        if ('decode' in img) {
+          await (img as any).decode();
+        } else {
+          await new Promise<void>((resolve) => {
+            (img as HTMLImageElement).onload = () => resolve();
+            (img as HTMLImageElement).onerror = () => resolve();
+          });
+        }
+      } catch {
+        // ignore decode errors, proceed with export
+      }
+    })
+  );
+}
 // ===== EXPORT BEGIN (used by Export modal) =====
 async function renderExportDataUrl(
   art: HTMLElement,
@@ -11316,6 +11335,7 @@ async function renderExportDataUrl(
 
     (window as any).__HIDE_UI_EXPORT__ = true;
     await new Promise((r) => setTimeout(r, 150));
+    await twoRaf();
 
     originalStyle = {
       transform: wrapper.style.transform,
@@ -11336,6 +11356,7 @@ async function renderExportDataUrl(
     wrapper.style.transition = "none";
 
     await new Promise((r) => setTimeout(r, 100));
+    await twoRaf();
 
     const families = [
       headlineFamily,
@@ -11376,6 +11397,7 @@ async function renderExportDataUrl(
     };
 
     const dataUrl = await withExternalStylesDisabled(async () => {
+      await waitForImages(exportRoot);
       if (format === 'jpg') {
         return await htmlToImage.toJpeg(exportRoot, {
           cacheBust: true,
@@ -15379,22 +15401,23 @@ return (
 {/* --- EXPORT MODAL --- */}
 {exportModalOpen && (
   <div className="fixed inset-0 z-[2000] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-    <div className="bg-neutral-950 border border-neutral-700 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
+    <div className="relative bg-neutral-950 border border-neutral-700 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
+      <button
+        type="button"
+        onClick={handleExportClose}
+        className="absolute right-3 top-3 z-10 h-9 w-9 rounded-full bg-black/60 border border-white/15 text-white/80 hover:text-white hover:bg-black/80 grid place-items-center"
+        aria-label="Close export"
+      >
+        ✕
+      </button>
       <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
         <div className="text-sm font-semibold text-white">Export preview</div>
-        <button
-          type="button"
-          onClick={handleExportClose}
-          className="text-neutral-400 hover:text-white"
-        >
-          ✕
-        </button>
       </div>
       <div className="p-4 space-y-4">
         {exportStatus === "rendering" && (
           <div className="grid place-items-center gap-3 py-8">
             <div className="h-8 w-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
-            <div className="text-sm text-white/80">Preparing your export…</div>
+            <div className="text-sm text-white/90">Rendering image…</div>
             <div className="text-[12px] text-white/50">
               Exporting clean output at {exportScale}x.
             </div>
