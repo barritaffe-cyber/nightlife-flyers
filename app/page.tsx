@@ -6915,6 +6915,22 @@ const startTour = React.useCallback(() => {
   setTourStep(0);
 }, []);
 
+const openTourPanel = React.useCallback(
+  (panel: string | null, tab: "design" | "assets", targetId: string) => {
+    setUiMode("design");
+    setMobileControlsOpen(true);
+    setMobileControlsTab(tab);
+    requestAnimationFrame(() => {
+      setSelectedPanel(panel);
+      requestAnimationFrame(() => {
+        const el = document.getElementById(targetId);
+        el?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+  },
+  [setSelectedPanel]
+);
+
 const TOUR_STEPS = [
   {
     id: 'templates',
@@ -6922,13 +6938,7 @@ const TOUR_STEPS = [
     body: 'Start with a template so the typography and spacing are already dialed in.',
     selector: '[data-tour="templates"]',
     onEnter: () => {
-      setUiMode("design");
-      setMobileControlsOpen(true);
-      setSelectedPanel("template");
-      setMobileControlsTab("design");
-      setTimeout(() => {
-        document.getElementById("template-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 50);
+      openTourPanel("template", "design", "template-panel");
     },
   },
   {
@@ -6937,13 +6947,7 @@ const TOUR_STEPS = [
     body: 'Upload your own or use AI Background to generate the vibe.',
     selector: '[data-tour="background"]',
     onEnter: () => {
-      setUiMode("design");
-      setMobileControlsOpen(true);
-      setMobileControlsTab("design");
-      setTimeout(() => {
-        setSelectedPanel("background");
-        document.getElementById("background-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 160);
+      openTourPanel("background", "design", "background-panel");
     },
   },
   {
@@ -6965,13 +6969,7 @@ const TOUR_STEPS = [
     body: 'Change font, size, and alignment to set the tone of the flyer.',
     selector: '[data-tour="headline"]',
     onEnter: () => {
-      setUiMode("design");
-      setMobileControlsOpen(true);
-      setMobileControlsTab("design");
-      setTimeout(() => {
-        setSelectedPanel("headline");
-        document.getElementById("headline-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 160);
+      openTourPanel("headline", "design", "headline-panel");
     },
   },
   {
@@ -6980,13 +6978,7 @@ const TOUR_STEPS = [
     body: 'Use Library for flares, graphics, emojis, and cutouts.',
     selector: '[data-tour="library"]',
     onEnter: () => {
-      setUiMode("design");
-      setSelectedPanel("icons");
-      setMobileControlsOpen(true);
-      setMobileControlsTab("assets");
-      setTimeout(() => {
-        document.getElementById("library-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 50);
+      openTourPanel("icons", "assets", "library-panel");
     },
   },
   {
@@ -13949,7 +13941,7 @@ const undoAssetPosition = React.useCallback(() => {
 
 const mobileControlsTabs = (
   <div
-    className="lg:hidden flex items-center gap-2 px-4 py-2 bg-neutral-950/90 border-b border-neutral-800"
+    className="lg:hidden flex items-center justify-center gap-2 px-4 py-2 bg-neutral-950/90 border-b border-neutral-800"
     onPointerDownCapture={(e) => {
       if (floatingAssetRef.current && floatingAssetRef.current.contains(e.target as Node)) {
         return;
