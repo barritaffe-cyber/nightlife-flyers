@@ -32,16 +32,18 @@ type GenLighting = 'strobe' | 'softbox' | 'backlit' | 'flash';
  type GenProvider = 'auto' | 'nano' | 'openai';
  type GenSize = '1080' | '2160' | '3840';
 
- type Preset = {
-   key: string;
-   label: string;
-   style: GenStyle;
-   prompt: string;
- };
+type Preset = {
+  key: string;
+  label: string;
+  style: GenStyle;
+  prompt: string;
+};
 
- type Props = {
-   genStyle: GenStyle;
-   setGenStyle: (s: GenStyle) => void;
+type Props = {
+  selectedPanel?: string | null;
+  setSelectedPanel?: (panel: string | null) => void;
+  genStyle: GenStyle;
+  setGenStyle: (s: GenStyle) => void;
    presetKey: string;
    setPresetKey: (v: string) => void;
    presets: Preset[];
@@ -83,14 +85,16 @@ type GenLighting = 'strobe' | 'softbox' | 'backlit' | 'flash';
    genLoading: boolean;
    isPlaceholder: boolean;
    genError: string | null;
-   genCandidates: string[];
-   setBgUploadUrl: (v: string | null) => void;
-   setBgUrl: (v: string | null) => void;
- };
+  genCandidates: string[];
+  setBgUploadUrl: (v: string | null) => void;
+  setBgUrl: (v: string | null) => void;
+};
 
- function AiBackgroundPanel({
-   genStyle,
-   setGenStyle,
+function AiBackgroundPanel({
+  selectedPanel,
+  setSelectedPanel,
+  genStyle,
+  setGenStyle,
    presetKey,
    setPresetKey,
    presets,
@@ -132,12 +136,23 @@ type GenLighting = 'strobe' | 'softbox' | 'backlit' | 'flash';
    genLoading,
    isPlaceholder,
    genError,
-   genCandidates,
-   setBgUploadUrl,
-   setBgUrl,
- }: Props) {
-   return (
-     <Collapsible title="AI Background" storageKey="p_ai_bg" defaultOpen={true}>
+  genCandidates,
+  setBgUploadUrl,
+  setBgUrl,
+}: Props) {
+  const isControlled = typeof selectedPanel !== 'undefined' && typeof setSelectedPanel === 'function';
+  const isOpen = isControlled ? selectedPanel === 'ai_background' : undefined;
+  const onToggle = isControlled
+    ? () => setSelectedPanel?.(selectedPanel === 'ai_background' ? null : 'ai_background')
+    : undefined;
+  return (
+    <Collapsible
+      title="AI Background"
+      storageKey="p_ai_bg"
+      defaultOpen={true}
+      isOpen={isOpen}
+      onToggle={onToggle}
+    >
        <div className="space-y-3">
          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
            {(['urban', 'neon', 'tropical', 'vintage'] as GenStyle[]).map((s) => (
