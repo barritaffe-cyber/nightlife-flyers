@@ -6893,12 +6893,7 @@ const [tourTip, setTourTip] = useState<{ top: number; left: number; centered?: b
 // read AFTER hydration
 useEffect(() => {
   if (!hydrated) return;
-  try {
-    const seen = localStorage.getItem(ONBOARD_KEY);
-    setShowOnboard(!seen);
-  } catch {
-    setShowOnboard(true);
-  }
+  setShowOnboard(false);
 }, [hydrated]);
 
 const markOnboarded = () => {
@@ -13998,7 +13993,7 @@ const mobileControlsTabs = (
     <button
       type="button"
       onClick={startTour}
-      className="px-3 py-1 rounded text-[11px] font-semibold border border-white/20 text-white/90 bg-white/5 hover:bg-white/15"
+      className="px-3 py-1 rounded text-[11px] font-semibold border border-fuchsia-400/70 text-fuchsia-100 bg-fuchsia-500/20 hover:bg-fuchsia-500/30 shadow-[0_0_14px_rgba(217,70,239,0.65)]"
       title="Start Tour"
     >
       Start Tour
@@ -15154,7 +15149,7 @@ return (
               <button
                 type="button"
                 onClick={startTour}
-                className="ml-1 text-[12px] px-2 py-[2px] rounded-md border border-white/20 bg-white/5 hover:bg-white/15 hidden lg:inline-flex text-white/90 whitespace-nowrap"
+                className="ml-1 text-[12px] px-2 py-[2px] rounded-md border border-fuchsia-400/70 bg-fuchsia-500/20 hover:bg-fuchsia-500/30 hidden lg:inline-flex text-fuchsia-100 whitespace-nowrap shadow-[0_0_14px_rgba(217,70,239,0.65)]"
                 aria-label="Start Tour"
                 title="Start Tour"
               >
