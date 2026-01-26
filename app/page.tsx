@@ -6936,6 +6936,13 @@ const openTourPanel = React.useCallback(
   [setSelectedPanel]
 );
 
+const scrollToArtboard = React.useCallback(() => {
+  const el = document.getElementById("artboard");
+  if (!el) return;
+  const top = el.getBoundingClientRect().top + window.scrollY - 12;
+  window.scrollTo({ top, behavior: "smooth" });
+}, []);
+
 const TOUR_STEPS = [
   {
     id: 'templates',
@@ -11203,6 +11210,7 @@ function IS_placeIconFromSlot(i: number) {
     setSelIconId?.(null);
     setMoveMode(true);
     setDragging('icon');
+    window.setTimeout(scrollToArtboard, 120);
   } catch {}
 }
 
@@ -13500,6 +13508,7 @@ const handleTemplateSelect = React.useCallback(
   setTimeout(() => {
   setLoadingStartup(false);
   setShowStartup(false);
+  scrollToArtboard();
 
   // ✅ Only auto-open Templates if nothing else is open
   if (useFlyerState.getState().selectedPanel == null) {
@@ -15630,6 +15639,7 @@ style={{ top: STICKY_TOP }}
       }}
       onApply={(t) => {
         applyTemplateFromGallery(t);
+        window.setTimeout(scrollToArtboard, 180);
       }}
     />
   </div>
@@ -16063,6 +16073,7 @@ style={{ top: STICKY_TOP }}
 
                   // ✅ keep panel open
                   setSelectedPanel("logo");
+                  window.setTimeout(scrollToArtboard, 120);
                 }}
               >
                 Place
@@ -18406,6 +18417,7 @@ style={{ top: STICKY_TOP }}
                   useFlyerState.getState().setSelectedPortraitId(id);
                   useFlyerState.getState().setSelectedPanel("portrait");
                   useFlyerState.getState().setMoveTarget("portrait");
+                  window.setTimeout(scrollToArtboard, 120);
                 }}
               >
                 Place
