@@ -72,8 +72,8 @@ export function Stepper({
      }
    };
  
-   return (
-     <div className={`flex flex-col gap-1 ${className}`}>
+  return (
+    <div className={`flex flex-col gap-1 ${className}`}>
        {label && (
          <label className="text-[11px] text-neutral-300">{label}</label>
        )}
@@ -90,24 +90,111 @@ export function Stepper({
            className="w-[44px] px-1 py-[2px] text-[11px] rounded bg-[#17171b] text-white border border-neutral-700 text-center"
          />
  
-         <input
-           type="range"
-           min={min}
-           max={max}
-           step={step}
-           value={Number.isFinite(value as number) ? Number(value) : Number(min ?? 0)}
-           onChange={onRange}
-           onWheel={onWheel}
-           onKeyDown={onKeyDown}
-           disabled={disabled}
-           aria-label={label}
-           className="nf-range flex-1 h-2 appearance-none bg-transparent"
-         />
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={Number.isFinite(value as number) ? Number(value) : Number(min ?? 0)}
+          onChange={onRange}
+          onWheel={onWheel}
+          onKeyDown={onKeyDown}
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerDownCapture={(e) => e.stopPropagation()}
+          onTouchStart={(e) => {
+            e.stopPropagation();
+          }}
+          onTouchMove={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          disabled={disabled}
+          aria-label={label}
+          style={{ touchAction: 'pan-x' }}
+          className="nf-range flex-1 h-2 appearance-none bg-transparent"
+        />
        </div>
      </div>
-   );
- }
- 
+  );
+}
+
+export function FontPicker({
+  value,
+  options,
+  onChange,
+  label,
+  disabled,
+  className,
+  sample = 'Aa Bb 123',
+}: {
+  value: string;
+  options: string[];
+  onChange: (v: string) => void;
+  label?: string;
+  disabled?: boolean;
+  className?: string;
+  sample?: string;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const wrapRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    const handle = (e: MouseEvent | TouchEvent) => {
+      if (!wrapRef.current) return;
+      if (!wrapRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handle);
+    document.addEventListener('touchstart', handle, { passive: true });
+    return () => {
+      document.removeEventListener('mousedown', handle);
+      document.removeEventListener('touchstart', handle);
+    };
+  }, []);
+
+  return (
+    <div className={`relative ${className ?? ''}`} ref={wrapRef}>
+      {label && <div className="text-[11px] text-neutral-400 mb-1">{label}</div>}
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen((v) => !v)}
+        className="w-full rounded px-2 py-2 bg-[#17171b] text-white border border-neutral-700 text-left flex items-center justify-between gap-2 disabled:opacity-60"
+      >
+        <span className="truncate" style={{ fontFamily: value }}>
+          {value}
+        </span>
+        <span className="text-[11px] text-neutral-400" style={{ fontFamily: value }}>
+          {sample}
+        </span>
+      </button>
+      {open && (
+        <div className="absolute z-[60] mt-1 w-full max-h-64 overflow-auto rounded border border-neutral-700 bg-[#0f0f12] shadow-xl">
+          {options.map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => {
+                onChange(f);
+                setOpen(false);
+              }}
+              className="w-full px-2 py-2 text-left hover:bg-neutral-800/80 border-b border-neutral-800 last:border-b-0"
+            >
+              <div className="text-[12px] text-white" style={{ fontFamily: f }}>
+                {f}
+              </div>
+              <div className="text-[11px] text-neutral-400" style={{ fontFamily: f }}>
+                {sample}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Chip({
    active,
    onClick,
@@ -316,15 +403,15 @@ export const Collapsible: React.FC<{
    };
  
    return (
-     <section className={panelClass}>
-       <div className="w-full flex items-center gap-2">
-         <div className="flex-1">
-           <button
-             type="button"
-             onClick={handleToggle}
-             aria-expanded={open}
-             className="w-full flex items-center gap-2 px-2 py-1 rounded-md hover:bg-neutral-800/40 group focus:outline-none"
-           >
+    <section className={panelClass}>
+      <div className="w-full flex items-center gap-2 min-h-8">
+        <div className="flex-1">
+          <button
+            type="button"
+            onClick={handleToggle}
+            aria-expanded={open}
+            className="w-full h-8 flex items-center gap-2 px-2 py-1 rounded-md hover:bg-neutral-800/40 group focus:outline-none"
+          >
              <span
                className={clsx(
                  'inline-block transition-transform text-neutral-300 group-hover:text-white',
@@ -343,16 +430,16 @@ export const Collapsible: React.FC<{
              </span>
            </button>
          </div>
-         {right && (
-           <div
-             className="ml-auto flex items-center gap-2"
-             onMouseDown={(e) => e.stopPropagation()}
-             onClick={(e) => e.stopPropagation()}
-           >
-             {right}
-           </div>
-         )}
-       </div>
+        {right && (
+          <div
+            className="ml-auto flex items-center gap-2 min-h-8"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {right}
+          </div>
+        )}
+      </div>
  
        <AnimatePresence initial={false} mode="wait">
          {open && (

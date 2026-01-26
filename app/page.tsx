@@ -6886,6 +6886,9 @@ React.useEffect(() => {
 // ===== ONBOARDING STRIP (first-open only) =====
 const ONBOARD_KEY = 'nf:onboarded:v1';
 const [showOnboard, setShowOnboard] = useState<boolean>(false);
+const [tourStep, setTourStep] = useState<number | null>(null);
+const [tourRect, setTourRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
+const [tourTip, setTourTip] = useState<{ top: number; left: number } | null>(null);
 
 // read AFTER hydration
 useEffect(() => {
@@ -6901,7 +6904,103 @@ useEffect(() => {
 const markOnboarded = () => {
   try { localStorage.setItem(ONBOARD_KEY, '1'); } catch {}
   setShowOnboard(false);
+  setTourStep(null);
 };
+
+const TOUR_STEPS = [
+  {
+    id: 'templates',
+    title: 'Pick a template',
+    body: 'Start with a template so the typography and spacing are already dialed in.',
+    selector: '[data-tour="templates"]',
+    onEnter: () => {
+      setSelectedPanel("template");
+      setMobileControlsTab("design");
+    },
+  },
+  {
+    id: 'background',
+    title: 'Set the background',
+    body: 'Upload your own or use AI Background to generate the vibe.',
+    selector: '[data-tour="background"]',
+    onEnter: () => {
+      setSelectedPanel("background");
+      setMobileControlsTab("design");
+    },
+  },
+  {
+    id: 'artboard',
+    title: 'Edit on the canvas',
+    body: 'Tap any text or asset to edit. Drag to position. Use Move/Snap/Guides for alignment.',
+    selector: '[data-tour="artboard"]',
+    onEnter: () => {
+      setSelectedPanel(null);
+    },
+  },
+  {
+    id: 'headline',
+    title: 'Tune your headline',
+    body: 'Change font, size, and alignment to set the tone of the flyer.',
+    selector: '[data-tour="headline"]',
+    onEnter: () => {
+      setSelectedPanel("headline");
+      setMobileControlsTab("design");
+    },
+  },
+  {
+    id: 'library',
+    title: 'Add assets',
+    body: 'Use Library for flares, graphics, emojis, and cutouts.',
+    selector: '[data-tour="library"]',
+    onEnter: () => {
+      setSelectedPanel("library");
+      setMobileControlsTab("assets");
+      setTimeout(() => {
+        document.getElementById("library-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 50);
+    },
+  },
+  {
+    id: 'export',
+    title: 'Export clean',
+    body: 'Switch to Finish mode and export a clean PNG/JPG.',
+    selector: '[data-tour="export"]',
+    onEnter: () => {
+      setUiMode("finish");
+    },
+  },
+] as const;
+
+useEffect(() => {
+  if (!showOnboard) return;
+  setTourStep(0);
+}, [showOnboard]);
+
+useEffect(() => {
+  if (tourStep == null) return;
+  const step = TOUR_STEPS[tourStep];
+  step?.onEnter?.();
+  const el = step?.selector ? (document.querySelector(step.selector) as HTMLElement | null) : null;
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  const update = () => {
+    if (!el) {
+      setTourRect(null);
+      setTourTip(null);
+      return;
+    }
+    const r = el.getBoundingClientRect();
+    setTourRect({ top: r.top, left: r.left, width: r.width, height: r.height });
+    const tipWidth = 260;
+    const spaceRight = window.innerWidth - r.right;
+    const left = spaceRight > tipWidth + 16 ? r.right + 12 : Math.max(12, r.left - tipWidth - 12);
+    const top = Math.min(window.innerHeight - 140, Math.max(12, r.top + r.height + 8));
+    setTourTip({ top, left });
+  };
+  update();
+  const onResize = () => update();
+  window.addEventListener("resize", onResize);
+  return () => window.removeEventListener("resize", onResize);
+}, [tourStep]);
 
 // hidden file input to support "Upload background" from the strip
 const uplRef = useRef<HTMLInputElement>(null);
@@ -15126,51 +15225,65 @@ return (
 {/* ===== UI: PAGE HEADER (END) ===== */}
 
 {/* --- ONBOARDING STRIP (only after hydration, only first open) --- */}
-{hydrated && showOnboard && (
-          <div
-            className="sticky top-14 z-[49] text-white hidden lg:block"
-            style={{
-              background:
-                'linear-gradient(90deg, rgba(99,102,241,.9), rgba(236,72,153,.9))',
-              boxShadow: 'inset 0 -1px 0 rgba(255,255,255,.15)'
+{hydrated && tourStep != null && (
+  <div className="fixed inset-0 z-[2000] pointer-events-none">
+    <div className="absolute inset-0 bg-black/60" />
+    {tourRect && (
+      <div
+        className="absolute rounded-xl border border-white/40 shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] pointer-events-none"
+        style={{
+          top: tourRect.top - 6,
+          left: tourRect.left - 6,
+          width: tourRect.width + 12,
+          height: tourRect.height + 12,
+          boxShadow: "0 0 0 9999px rgba(0,0,0,0.6)",
+        }}
+      />
+    )}
+    {tourTip && (
+      <div
+        className="absolute w-[260px] rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur px-3 py-3 text-white shadow-[0_12px_30px_rgba(0,0,0,0.45)] pointer-events-auto"
+        style={{ top: tourTip.top, left: tourTip.left }}
+      >
+        <div className="text-[11px] uppercase tracking-wider text-neutral-400">
+          Step {tourStep + 1} / {TOUR_STEPS.length}
+        </div>
+        <div className="mt-1 text-sm font-semibold">{TOUR_STEPS[tourStep].title}</div>
+        <div className="mt-2 text-[12px] text-neutral-300">
+          {TOUR_STEPS[tourStep].body}
+        </div>
+        <div className="mt-3 flex items-center gap-2">
+          <button
+            type="button"
+            className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
+            onClick={() => {
+              if (tourStep === 0) {
+                markOnboarded();
+                return;
+              }
+              setTourStep((s) => (s == null ? null : Math.max(0, s - 1)));
             }}
           >
-            <div className="mx-auto max-w-7xl px-4 py-3 flex items-center gap-3 text-sm relative">
-              {/* subtle gloss */}
-              <div className="pointer-events-none absolute inset-0 opacity-[0.15]"
-                  style={{ background: 'linear-gradient(0deg, rgba(255,255,255,0.25), transparent 40%)' }} />
-              {/* sparkles icon */}
-              <span aria-hidden className="shrink-0">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 3l1.6 3.6L17 8.2l-3.4 1.6L12 13l-1.6-3.2L7 8.2l3.4-1.6L12 3zM5 14l.9 2l2 1l-2 1l-.9 2l-.9-2l-2-1l2-1l.9-2zM19 14l.9 2l2 1l-2 1l-.9 2l-.9-2l-2-1l2-1l.9-2z"
-                        fill="currentColor"/>
-                </svg>
-              </span>
-
-              <strong className="font-semibold relative z-10">Welcome!</strong>
-              <span className="opacity-95 relative z-10">
-                Add a background (right panel) or hit <b>AI Background → Generate</b>. You’ll have a poster in &lt; 60s.
-              </span>
-
-              <div className="ml-auto flex items-center gap-2 relative z-10">
-                <button
-                  type="button"
-                  onClick={quickGenerate}
-                  className="text-[11px] px-3 py-1 rounded bg-white/15 hover:bg-white/25 border border-white/25"
-                >
-                  Generate now →
-                </button>
-                <button
-                  type="button"
-                  className="text-[11px] px-3 py-1 rounded bg-white/10 hover:bg-white/20 border border-white/20"
-                  onClick={() => { try { localStorage.setItem('nf:onboarded:v1','1'); } catch {} setShowOnboard(false); }}
-                >
-                  Dismiss
-                </button>
-              </div>
-            </div>
-          </div>
-)}     
+            {tourStep === 0 ? "Skip" : "Back"}
+          </button>
+          <button
+            type="button"
+            className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
+            onClick={() => {
+              if (tourStep >= TOUR_STEPS.length - 1) {
+                markOnboarded();
+                return;
+              }
+              setTourStep((s) => (s == null ? null : s + 1));
+            }}
+          >
+            {tourStep >= TOUR_STEPS.length - 1 ? "Done" : "Next"}
+          </button>
+        </div>
+      </div>
+    )}
+  </div>
+)}
 
 {/* --- EXPORT MODAL --- */}
 {exportModalOpen && (
@@ -16546,7 +16659,7 @@ style={{ top: STICKY_TOP }}
         .setSelectedPanel(selectedPanel === "details" ? null : "details")
     }
     right={
-      <div className="flex items-center gap-3 text-[11px]">
+      <div className="flex items-center gap-3 text-[11px] h-8">
         <span className="opacity-80">Align</span>
         <Chip small active={detailsAlign === "left"} onClick={() => setDetailsAlign("left")}>L</Chip>
         <Chip small active={detailsAlign === "center"} onClick={() => setDetailsAlign("center")}>C</Chip>
@@ -16740,7 +16853,7 @@ style={{ top: STICKY_TOP }}
         .setSelectedPanel(selectedPanel === "venue" ? null : "venue")
     }
     right={
-      <div className="flex items-center gap-3 text-[11px]">
+      <div className="flex items-center gap-3 text-[11px] h-8">
         <span className="opacity-80">Align</span>
         <Chip small active={venueAlign === "left"} onClick={() => setVenueAlign("left")}>L</Chip>
         <Chip small active={venueAlign === "center"} onClick={() => setVenueAlign("center")}>C</Chip>
