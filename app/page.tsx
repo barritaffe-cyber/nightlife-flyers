@@ -7941,16 +7941,6 @@ const [bgBlur, setBgBlur] = useState(0);
   if (!has && format === 'story') setFormat('square');
   }, [bgUploadUrl, bgUrl, format]); 
 
-  useEffect(() => {
-    const has = !!(bgUploadUrl || bgUrl);
-    if (!has || format !== 'story') return;
-    if (!bgFitMode) {
-      setBgFitMode(true);
-      setBgScale((s) => (s > 1 ? 1 : s));
-      setBgPosX(50);
-      setBgPosY(50);
-    }
-  }, [bgUploadUrl, bgUrl, format, bgFitMode]);
 
   /* master grade (applies to whole poster) */
   const [exp,       setExp]       = useState<number>(1.00); // brightness/exposure (0.7–1.4)
