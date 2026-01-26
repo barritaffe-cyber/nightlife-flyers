@@ -349,6 +349,8 @@ const CINEMATIC_REF_LIBRARY = [
   { id: "glass-blue", label: "Glass Blue", src: "/cinematic-refs/glass-blue.png" },
   { id: "chrome-purple", label: "Chrome Purple", src: "/cinematic-refs/chrome-purple.png" },
   { id: "gold-smoke", label: "Gold Smoke", src: "/cinematic-refs/gold-smoke.png" },
+  { id: "neon-red", label: "Neon Red", src: "/cinematic-refs/neon-red.png" },
+  { id: "luxe-gold", label: "Luxe Gold", src: "/cinematic-refs/luxe-gold.png" },
   { id: "spicy", label: "Spicy Hot", src: "/cinematic-refs/spicy.png" },
   { id: "frozen", label: "Frozen", src: "/cinematic-refs/frozen.png" },
   { id: "white-gold", label: "White Gold", src: "/cinematic-refs/white-gold.png" },
