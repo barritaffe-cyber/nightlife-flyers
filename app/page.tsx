@@ -25,7 +25,8 @@ import { cleanupCutoutUrl } from "../lib/cleanupCutoutUrl";
 import * as Slider from "@radix-ui/react-slider";
 import type { CleanupParams } from "../lib/cleanupCutoutUrl";
 import { removeGreenScreen } from "./chromaKey";
-import { Collapsible, Chip, Stepper, ColorDot, SliderRow, FontPicker } from "../components/editor/controls";
+import { Collapsible, Chip, Stepper, ColorDot, SliderRow } from "../components/editor/controls";
+import { FontPicker } from "../components/editor/FontPicker";
 
 const AiBackgroundPanel = dynamic(() => import("../components/editor/AiBackgroundPanel"), {
   ssr: false,
