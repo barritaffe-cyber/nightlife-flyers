@@ -35,6 +35,7 @@ type LibraryPanelProps = {
   nightlifeGraphics: ReadonlyArray<NightlifeGraphic>;
   graphicStickers: ReadonlyArray<GraphicSticker>;
   flareLibrary: ReadonlyArray<FlareItem>;
+  onPlaceToCanvas?: () => void;
 };
 
 const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
@@ -51,6 +52,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
     nightlifeGraphics,
     graphicStickers,
     flareLibrary,
+    onPlaceToCanvas,
   }) => {
     const selectedPanel = useFlyerState((s) => s.selectedPanel);
     const setSelectedPanel = useFlyerState((s) => s.setSelectedPanel);
@@ -309,6 +311,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                       setSelectedPortraitId(id);
                       setSelectedPanel('icons');
                       setMoveTarget('icon');
+                      onPlaceToCanvas?.();
                     }}
                   >
                     <svg

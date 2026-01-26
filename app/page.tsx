@@ -6959,7 +6959,7 @@ const TOUR_STEPS = [
     body: 'Upload your own or use AI Background to generate the vibe.',
     selector: '[data-tour="background"]',
     onEnter: () => {
-      openTourPanel("ai_background", "design", "ai-background-panel");
+      openTourPanel("ai_background", "assets", "ai-background-panel");
     },
   },
   {
@@ -13774,6 +13774,7 @@ const activeAssetControls = React.useMemo(() => {
     if (!sel) return null;
     const isLogo = String(sel.id || "").startsWith("logo_") || !!(sel as any).isLogo;
     const isAsset = sel.isFlare || sel.isSticker || isLogo;
+    const hasIconColor = !!(sel as any).isSticker && typeof (sel as any).svgTemplate === "string";
 
     if (isAsset) {
       return {
@@ -13781,6 +13782,18 @@ const activeAssetControls = React.useMemo(() => {
         scale: sel.scale ?? 1,
         opacity: sel.opacity ?? 1,
         locked: !!sel.locked,
+        showColor: hasIconColor,
+        colorValue: (sel as any).iconColor || "#ffffff",
+        onColor: (value: string) => {
+          const template = String((sel as any).svgTemplate || "");
+          const nextSvg = template.replace("{{COLOR}}", value);
+          const svgBase64 = btoa(unescape(encodeURIComponent(nextSvg)));
+          const nextUrl = `data:image/svg+xml;base64,${svgBase64}`;
+          useFlyerState.getState().updatePortrait(format, sel.id, {
+            url: nextUrl,
+            iconColor: value,
+          });
+        },
         showLabel: !!(sel as any).showLabel,
         labelValue: String((sel as any).label ?? ""),
         onLabel: (v: string) =>
@@ -17622,6 +17635,14 @@ style={{ top: STICKY_TOP }}
           <span className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</span>
           <span className="text-neutral-300">•</span>
           <span>{activeAssetControls.label}</span>
+          {activeAssetControls.showColor && (
+            <div className="ml-auto">
+              <ColorDot
+                value={activeAssetControls.colorValue || "#ffffff"}
+                onChange={(v) => activeAssetControls.onColor?.(v)}
+              />
+            </div>
+          )}
         </div>
         <div className="mt-2 grid grid-cols-2 gap-3 items-center">
           <div>
@@ -17841,125 +17862,6 @@ style={{ top: STICKY_TOP }}
           </div>
 </Collapsible>
 {/* UI: PROJECT PORTABLE SAVE (END) */}
-
-{/* UI: ASSET MANAGER (BEGIN) */}
-<Collapsible title="Asset Manager" storageKey="p:assets" defaultOpen={false}>
-  <div className="text-[12px] text-neutral-300 mb-2">
-    Organize your uploaded logos and cutouts. Rename, tag, and clean up storage.
-  </div>
-
-  <div className="flex flex-wrap items-center gap-2 text-[11px]">
-    <Chip small active={assetTab === "logos"} onClick={() => setAssetTab("logos")}>
-      Logos ({logoLibrary.length})
-    </Chip>
-    <Chip small active={assetTab === "portraits"} onClick={() => setAssetTab("portraits")}>
-      Portraits ({portraitLibrary.length})
-    </Chip>
-    <input
-      type="text"
-      placeholder="Search names..."
-      value={assetQuery}
-      onChange={(e) => setAssetQuery(e.target.value)}
-      className="ml-auto px-2 py-1 rounded-md text-xs border border-neutral-700 bg-neutral-900/80"
-      style={{ width: 160 }}
-    />
-  </div>
-
-  {activeAssetTags.length > 1 && (
-    <div className="mt-2 flex flex-wrap gap-2">
-      {activeAssetTags.map((tag) => (
-        <Chip key={tag} small active={assetTag === tag} onClick={() => setAssetTag(tag)}>
-          {tag}
-        </Chip>
-      ))}
-    </div>
-  )}
-
-  <div className="mt-3 grid grid-cols-4 gap-2 max-h-40 overflow-y-auto pr-1">
-    {filteredAssets.map((url) => {
-      const meta = assetMeta[url];
-      const isSelected = selectedAssetUrl === url;
-      return (
-        <button
-          key={url}
-          type="button"
-          onClick={() => setSelectedAssetUrl(url)}
-          className={clsx(
-            "relative aspect-square w-full rounded-md border bg-neutral-900/60 overflow-hidden",
-            isSelected ? "border-fuchsia-400" : "border-neutral-700 hover:border-neutral-500"
-          )}
-          title={meta?.name || "Asset"}
-        >
-          <img src={url} alt={meta?.name || "Asset"} className="absolute inset-0 h-full w-full object-contain p-1" />
-          {isSelected && (
-            <div className="absolute inset-x-0 bottom-0 bg-black/60 text-[9px] text-white px-1 py-0.5 truncate">
-              {meta?.name || "Asset"}
-            </div>
-          )}
-        </button>
-      );
-    })}
-  </div>
-
-  {filteredAssets.length === 0 && (
-    <div className="mt-3 text-[11px] text-neutral-500">
-      No assets yet. Upload a {assetTab === "logos" ? "logo" : "portrait"} to see it here.
-    </div>
-  )}
-
-  {selectedAssetUrl && (
-    <div className="mt-3 rounded-lg border border-neutral-800 bg-neutral-950/40 p-3">
-      <div className="text-[11px] text-neutral-400 mb-1">Name</div>
-      <input
-        value={assetMeta[selectedAssetUrl]?.name || ""}
-        onChange={(e) => updateAssetMeta(selectedAssetUrl, { name: e.target.value })}
-        className="w-full rounded-md bg-neutral-900 border border-neutral-700 text-[11px] px-2 py-1.5 text-white"
-      />
-      <div className="mt-2 text-[11px] text-neutral-400 mb-1">Tags (comma separated)</div>
-      <input
-        value={assetTagDraft}
-        onChange={(e) => setAssetTagDraft(e.target.value)}
-        onBlur={commitAssetTags}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            commitAssetTags();
-          }
-        }}
-        className="w-full rounded-md bg-neutral-900 border border-neutral-700 text-[11px] px-2 py-1.5 text-white"
-      />
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={handleAssetUse}
-          className="text-[11px] rounded-md border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 px-2 py-1.5"
-        >
-          {assetTab === "logos" ? "Use as Logo" : "Use as Portrait"}
-        </button>
-        <button
-          type="button"
-          onClick={() => handleAssetDelete(selectedAssetUrl)}
-          className="text-[11px] rounded-md border border-red-700 bg-red-900/30 text-red-200 hover:bg-red-900/40 px-2 py-1.5"
-        >
-          Delete
-        </button>
-      </div>
-    </div>
-  )}
-
-  <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-neutral-400">
-    <span>Storage: {formatBytes(assetStorageBytes)}</span>
-    <button
-      type="button"
-      onClick={handleClearAssetType}
-      className="ml-auto rounded-md border border-neutral-700 bg-neutral-900/70 px-2 py-1 hover:bg-neutral-800 text-[11px]"
-      title="Remove all assets in this tab"
-    >
-      Clear {assetTab === "logos" ? "logos" : "portraits"}
-    </button>
-  </div>
-</Collapsible>
-{/* UI: ASSET MANAGER (END) */}
 
 {/* UI: BRAND KIT LITE (BEGIN) */}
 {/* =============================================================================
@@ -18222,6 +18124,7 @@ style={{ top: STICKY_TOP }}
   nightlifeGraphics={NIGHTLIFE_GRAPHICS}
   graphicStickers={GRAPHIC_STICKERS}
   flareLibrary={FLARE_LIBRARY}
+  onPlaceToCanvas={() => window.setTimeout(scrollToArtboard, 120)}
 />
 {/* UI: LIBRARY (END) */}
 
