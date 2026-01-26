@@ -6907,6 +6907,12 @@ const markOnboarded = () => {
   setTourStep(null);
 };
 
+const startTour = React.useCallback(() => {
+  try { localStorage.removeItem(ONBOARD_KEY); } catch {}
+  setShowOnboard(true);
+  setTourStep(0);
+}, []);
+
 const TOUR_STEPS = [
   {
     id: 'templates',
@@ -6980,15 +6986,18 @@ useEffect(() => {
   if (tourStep == null) return;
   const step = TOUR_STEPS[tourStep];
   step?.onEnter?.();
-  const el = step?.selector ? (document.querySelector(step.selector) as HTMLElement | null) : null;
+  const resolveEl = () =>
+    step?.selector ? (document.querySelector(step.selector) as HTMLElement | null) : null;
+  const el = resolveEl();
   if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
   const update = () => {
-    if (!el) {
+    const target = resolveEl();
+    if (!target) {
       setTourRect(null);
-      setTourTip(null);
+      setTourTip({ top: Math.max(16, window.innerHeight * 0.2), left: Math.max(16, (window.innerWidth - 260) / 2) });
       return;
     }
-    const r = el.getBoundingClientRect();
+    const r = target.getBoundingClientRect();
     setTourRect({ top: r.top, left: r.left, width: r.width, height: r.height });
     const tipWidth = 260;
     const spaceRight = window.innerWidth - r.right;
@@ -6996,10 +7005,13 @@ useEffect(() => {
     const top = Math.min(window.innerHeight - 140, Math.max(12, r.top + r.height + 8));
     setTourTip({ top, left });
   };
-  update();
+  const raf = requestAnimationFrame(() => requestAnimationFrame(update));
   const onResize = () => update();
   window.addEventListener("resize", onResize);
-  return () => window.removeEventListener("resize", onResize);
+  return () => {
+    cancelAnimationFrame(raf);
+    window.removeEventListener("resize", onResize);
+  };
 }, [tourStep]);
 
 // hidden file input to support "Upload background" from the strip
@@ -13950,6 +13962,14 @@ const mobileControlsTabs = (
     >
       Undo Move
     </button>
+    <button
+      type="button"
+      onClick={startTour}
+      className="px-3 py-1 rounded text-[11px] font-semibold border border-white/20 text-white/90 bg-white/5 hover:bg-white/15"
+      title="Start Tour"
+    >
+      Start Tour
+    </button>
   </div>
 );
 
@@ -15087,7 +15107,7 @@ return (
                 className="h-12 w-12 rounded-full shadow-[0_8px_28px_rgba(0,0,0,.45)]"
                 draggable={false}
               />
-              <div className="text-sm opacity-90">Nightlife Flyers — Studio</div>
+              <div className="text-sm opacity-90">Nightlife Flyers</div>
 
               {/* ALWAYS-SHOW PRICING LINK */}
               <Link
@@ -15098,6 +15118,15 @@ return (
               >
                 Pricing
               </Link>
+              <button
+                type="button"
+                onClick={startTour}
+                className="ml-1 text-[12px] px-2 py-[2px] rounded-md border border-white/20 bg-white/5 hover:bg-white/15 hidden lg:inline-flex text-white/90 whitespace-nowrap"
+                aria-label="Start Tour"
+                title="Start Tour"
+              >
+                Start Tour
+              </button>
               <button
                 type="button"
                 onClick={undoAssetPosition}
@@ -15187,7 +15216,7 @@ return (
 
 
      {/* RIGHT: EXPORT BUTTON (aligned to right panel column) */}
-        <div className="flex items-center gap-4 justify-self-stretch w-full pr-1">
+        <div className="flex items-center gap-4 justify-self-stretch w-full pr-1" data-tour="export">
           {uiMode === "finish" && (
             <>
               <div className="flex items-center gap-2 text-[11px]">
@@ -15272,6 +15301,7 @@ return (
             onClick={() => {
               if (tourStep >= TOUR_STEPS.length - 1) {
                 markOnboarded();
+                setUiMode("design");
                 return;
               }
               setTourStep((s) => (s == null ? null : s + 1));
@@ -15546,7 +15576,7 @@ style={{ top: STICKY_TOP }}
 
 {/* UI: STARTER TEMPLATES (BEGIN) */}
 
-<div className="mb-3" id="template-panel">
+<div className="mb-3" id="template-panel" data-tour="templates">
   <div
     className={
       selectedPanel === "template"
@@ -16196,6 +16226,7 @@ style={{ top: STICKY_TOP }}
       ? "relative rounded-xl border border-blue-400 transition"
       : "relative rounded-xl border border-neutral-700 transition"
   }
+  data-tour="headline"
 >
   <Collapsible
     title="Headline"
@@ -17287,6 +17318,7 @@ style={{ top: STICKY_TOP }}
             setFadeOut(false);
           }}
         >
+          <div data-tour="artboard">
           <Artboard
             /* PASSING ALL PROPS AS BEFORE */
             textureOpacity={textureOpacity}
@@ -17472,6 +17504,7 @@ style={{ top: STICKY_TOP }}
             mobileDragEnabled={mobileDragEnabled}
             onMobileDragEnd={handleMobileDragEnd}
           />
+          </div>
           
           {/* 🔥 FIXED: Elements moved INSIDE motion.div so they fade out */}
           {portraitCanvas}
@@ -18090,6 +18123,7 @@ style={{ top: STICKY_TOP }}
 
 
 
+<div data-tour="background">
 <BackgroundPanels
   selectedPanel={selectedPanel}
   setSelectedPanel={setSelectedPanel}
@@ -18128,11 +18162,13 @@ style={{ top: STICKY_TOP }}
   haze={haze}
   vignetteStrength={vignetteStrength}
 />
+</div>
 
 
 
 
 {/* UI: LIBRARY (BEGIN) */}
+<div data-tour="library">
 <LibraryPanel
   format={format}
   selectedEmojiId={selectedEmojiId}
@@ -18147,6 +18183,7 @@ style={{ top: STICKY_TOP }}
   graphicStickers={GRAPHIC_STICKERS}
   flareLibrary={FLARE_LIBRARY}
 />
+</div>
 {/* UI: LIBRARY (END) */}
 
 
