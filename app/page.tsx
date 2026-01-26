@@ -25,7 +25,7 @@ import { cleanupCutoutUrl } from "../lib/cleanupCutoutUrl";
 import * as Slider from "@radix-ui/react-slider";
 import type { CleanupParams } from "../lib/cleanupCutoutUrl";
 import { removeGreenScreen } from "./chromaKey";
-import { Collapsible, Chip, Stepper, ColorDot, SliderRow } from "../components/editor/controls";
+import { Collapsible, Chip, Stepper, ColorDot, SliderRow, FontPicker } from "../components/editor/controls";
 
 const AiBackgroundPanel = dynamic(() => import("../components/editor/AiBackgroundPanel"), {
   ssr: false,
@@ -1679,6 +1679,37 @@ const LockButton = ({
   const size = format === 'square' ? { w: 540, h: 540 } : { w: 540, h: 960 };
   const rootRef = useRef<HTMLDivElement>(null);
   const [headlineFontTick, setHeadlineFontTick] = React.useState(0);
+  const [bgNatSize, setBgNatSize] = React.useState<{ w: number; h: number } | null>(null);
+  const [bgIsLandscape, setBgIsLandscape] = useState(false);
+  const bgImgRef = React.useRef<HTMLImageElement | null>(null);
+
+  const bgMetrics = React.useMemo(() => {
+    if (!bgNatSize) return null;
+    const iw = bgNatSize.w;
+    const ih = bgNatSize.h;
+    if (!iw || !ih) return null;
+    const baseScale = bgFitMode
+      ? Math.min(size.w / iw, size.h / ih)
+      : Math.max(size.w / iw, size.h / ih);
+    const scaleFactor = baseScale * bgScale;
+    const dw = iw * scaleFactor;
+    const dh = ih * scaleFactor;
+    const rangeX = size.w - dw;
+    const rangeY = size.h - dh;
+    const dx = rangeX * (bgX / 100);
+    const dy = rangeY * (bgY / 100);
+    return { dw, dh, dx, dy, rangeX, rangeY };
+  }, [bgNatSize, size.w, size.h, bgScale, bgFitMode, bgX, bgY]);
+
+  React.useEffect(() => {
+    const img = bgImgRef.current;
+    if (!img || !img.complete || !img.naturalWidth || !img.naturalHeight) return;
+    const isWide = img.naturalWidth / img.naturalHeight > size.w / size.h;
+    if (bgIsLandscape !== isWide) setBgIsLandscape(isWide);
+    if (!bgNatSize || bgNatSize.w !== img.naturalWidth || bgNatSize.h !== img.naturalHeight) {
+      setBgNatSize({ w: img.naturalWidth, h: img.naturalHeight });
+    }
+  }, [bgUploadUrl, bgUrl, size.w, size.h, bgIsLandscape, bgNatSize]);
 
   React.useEffect(() => {
     let alive = true;
@@ -1812,7 +1843,6 @@ const bgDragState = useRef({
  /* >>> HEADLINE SIZE AUTO-FIT (BEGIN) <<< */
 // One source of truth for internal auto size
 const [headlinePx, setHeadlinePx] = useState<number>(format === 'square' ? 84 : 110);
-const [bgIsLandscape, setBgIsLandscape] = useState(false);
 
 
 
@@ -1986,16 +2016,24 @@ function scheduleBgDragMove(el: HTMLElement, x: number, y: number) {
 
     const dx = move.x - parseFloat(el.dataset.px || "0");
     const dy = move.y - parseFloat(el.dataset.py || "0");
-    const w = parseFloat(el.dataset.cw || "1");
-    const h = parseFloat(el.dataset.ch || "1");
     const startX = parseFloat(el.dataset.sx || "50");
     const startY = parseFloat(el.dataset.sy || "50");
+    const rangeX = parseFloat(el.dataset.rx || "0");
+    const rangeY = parseFloat(el.dataset.ry || "0");
 
-    const nextX = startX + (dx / w) * 100;
-    const nextY = startY + (dy / h) * 100;
+    const nextX = rangeX === 0 ? startX : startX + (dx / rangeX) * 100;
+    const nextY = rangeY === 0 ? startY : startY + (dy / rangeY) * 100;
+    const clampedX = clamp100(nextX);
+    const clampedY = clamp100(nextY);
 
-    el.style.left = `${nextX}%`;
-    el.style.top = `${nextY}%`;
+    el.dataset.nx = String(clampedX);
+    el.dataset.ny = String(clampedY);
+
+    const img = el.querySelector('img') as HTMLElement | null;
+    if (img) {
+      img.style.left = `${rangeX * (clampedX / 100)}px`;
+      img.style.top = `${rangeY * (clampedY / 100)}px`;
+    }
   });
 }
 
@@ -2433,16 +2471,16 @@ return (
       }}
       className="absolute"
       style={{
-        // 1. ANCHOR: React controls the resting position
-        left: `${bgX}%`,
-        top: `${bgY}%`,
+        // 1. ANCHOR: fixed to canvas, image handles pan internally
+        left: 0,
+        top: 0,
         width: "100%",
         height: "100%",
 
-        // 2. TRANSFORM: Handles Scale & Center
-        transform: `translate(-50%, -50%) scale(${bgScale})`,
+        // 2. TRANSFORM: handled on image
+        transform: "none",
         transformOrigin: "center center",
-        willChange: "left, top",
+        willChange: "transform",
 
         pointerEvents: "auto",
         cursor: moveTarget === "background" ? "grabbing" : "grab",
@@ -2493,11 +2531,11 @@ return (
         el.dataset.py = String(e.clientY);
         el.dataset.sx = String(bgX);
         el.dataset.sy = String(bgY);
+        el.dataset.nx = String(bgX);
+        el.dataset.ny = String(bgY);
 
-        const root = rootRef.current || el.parentElement;
-        const r = root?.getBoundingClientRect();
-        el.dataset.cw = String(r?.width || 1);
-        el.dataset.ch = String(r?.height || 1);
+        el.dataset.rx = String(bgMetrics?.rangeX ?? 0);
+        el.dataset.ry = String(bgMetrics?.rangeY ?? 0);
 
         el.style.transition = "none";
       }}
@@ -2527,8 +2565,8 @@ return (
 
         // 3. FINAL COMMIT (React Update)
         // This triggers ONE single re-render at the end.
-        const finalX = parseFloat(el.style.left) || bgX;
-        const finalY = parseFloat(el.style.top) || bgY;
+        const finalX = parseFloat(el.dataset.nx || "") || bgX;
+        const finalY = parseFloat(el.dataset.ny || "") || bgY;
 
         setBgX(finalX);
         setBgY(finalY);
@@ -2538,15 +2576,7 @@ return (
       }}
     >
       <img
-        ref={(el) => {
-          // ✅ FIX: Check dimensions immediately (fixes cached images stretching)
-          if (el && el.complete) {
-            const isWide =
-              el.naturalWidth / el.naturalHeight > size.w / size.h;
-            // Only update if different to prevent infinite re-renders
-            if (bgIsLandscape !== isWide) setBgIsLandscape(isWide);
-          }
-        }}
+        ref={bgImgRef}
         src={bgUploadUrl || bgUrl || ""}
         alt="background"
         draggable={false}
@@ -2555,23 +2585,21 @@ return (
           const img = e.currentTarget;
           const isWide = img.naturalWidth / img.naturalHeight > size.w / size.h;
           if (bgIsLandscape !== isWide) setBgIsLandscape(isWide);
+          if (!bgNatSize || bgNatSize.w !== img.naturalWidth || bgNatSize.h !== img.naturalHeight) {
+            setBgNatSize({ w: img.naturalWidth, h: img.naturalHeight });
+          }
         }}
         style={{
           pointerEvents: "none",
           userSelect: "none",
           position: "absolute",
-          left: "50%",
-          top: "50%",
-          transform: "translate(-50%, -50%)",
-          // ✅ FIX: Fit mode shows full image; Fill mode covers canvas
-          width: bgFitMode
-            ? (bgIsLandscape ? "100%" : "auto")
-            : (bgIsLandscape ? "auto" : "100%"),
-          height: bgFitMode
-            ? (bgIsLandscape ? "auto" : "100%")
-            : (bgIsLandscape ? "100%" : "auto"),
-          minWidth: bgFitMode ? "0" : "100%",
-          minHeight: bgFitMode ? "0" : "100%",
+          left: `${bgMetrics?.dx ?? 0}px`,
+          top: `${bgMetrics?.dy ?? 0}px`,
+          transform: "none",
+          width: bgMetrics ? `${bgMetrics.dw}px` : "100%",
+          height: bgMetrics ? `${bgMetrics.dh}px` : "100%",
+          minWidth: "0",
+          minHeight: "0",
           maxWidth: "none",
           maxHeight: "none",
         }}
@@ -16150,22 +16178,16 @@ style={{ top: STICKY_TOP }}
         )}
       </div>
 
-      <div className="text-[11px] mt-2">
-        Font
-        <select
+      <div className="mt-2">
+        <FontPicker
+          label="Font"
           value={headlineFamily}
-          onChange={(e) => {
-            setHeadlineFamily(e.target.value);
-            setTextStyle("headline", format, { family: e.target.value });
+          options={HEADLINE_FONTS_LOCAL}
+          onChange={(v) => {
+            setHeadlineFamily(v);
+            setTextStyle("headline", format, { family: v });
           }}
-          className="mt-1 w-full rounded p-2 bg-[#17171b] text-white border border-neutral-700"
-        >
-          {HEADLINE_FONTS_LOCAL.map((f) => (
-            <option key={f} value={f} style={{ fontFamily: f }}>
-              {f}
-            </option>
-          ))}
-        </select>
+        />
       </div>
 
       {/* TOGGLES ROW (No Gradient/Stroke) */}
@@ -16279,25 +16301,17 @@ style={{ top: STICKY_TOP }}
         placeholder="Optional sub-headline"
       />
 
-      {/* FONT FAMILY */}
-      <div className="text-[11px] mt-2">
-        Font
-        <select
+      <div className="mt-2">
+        <FontPicker
+          label="Font"
           value={head2Family}
-          onChange={(e) => {
-            const val = e.target.value;
-            setHead2Family(val);
-            setTextStyle("headline2", format, { family: val });
+          options={HEADLINE2_FONTS_LOCAL}
+          onChange={(v) => {
+            setHead2Family(v);
+            setTextStyle("headline2", format, { family: v });
           }}
           disabled={!headline2Enabled[format]}
-          className="mt-1 w-full rounded p-2 bg-[#17171b] text-white border border-neutral-700"
-        >
-          {HEADLINE2_FONTS_LOCAL.map((f) => (
-            <option key={f} value={f}>
-              {f}
-            </option>
-          ))}
-        </select>
+        />
       </div>
 
       {/* GRID 1 */}
@@ -16452,20 +16466,13 @@ style={{ top: STICKY_TOP }}
           />
         </div>
 
-        {/* ---------- FONT PICKER ---------- */}
-        <div className="text-[11px] mt-3">
-          <label className="block opacity-80 mb-1">Font</label>
-          <select
+        <div className="mt-3">
+          <FontPicker
+            label="Font"
             value={subtagFamily}
-            onChange={(e) => setSubtagFamily(e.target.value)}
-            className="w-full rounded p-2 bg-[#17171b] text-white border border-neutral-700"
-          >
-            {SUBTAG_FONTS_LOCAL.map((f) => (
-              <option key={f} value={f}>
-                {f}
-              </option>
-            ))}
-          </select>
+            options={SUBTAG_FONTS_LOCAL}
+            onChange={(v) => setSubtagFamily(v)}
+          />
         </div>
 
         {/* ---------- STEPPERS (Size + Alpha + Colors) ---------- */}
@@ -16536,19 +16543,14 @@ style={{ top: STICKY_TOP }}
         .setSelectedPanel(selectedPanel === "details" ? null : "details")
     }
     right={
-      <div className="flex items-center gap-2 text-[11px]">
-        <span className="opacity-70">Font</span>
-        <select
+      <div className="w-44">
+        <FontPicker
           value={detailsFamily}
-          onChange={(e) => setDetailsFamily(e.target.value)}
-          className="rounded px-2 py-1 w-24 bg-[#17171b] text-white border border-neutral-700"
-        >
-          {BODY_FONTS_LOCAL.map((f) => (
-            <option key={f} value={f}>
-              {f}
-            </option>
-          ))}
-        </select>
+          options={BODY_FONTS_LOCAL}
+          onChange={(v) => setDetailsFamily(v)}
+          className="text-[11px]"
+          label="Font"
+        />
       </div>
     }
   >
@@ -16646,19 +16648,16 @@ style={{ top: STICKY_TOP }}
           {details2Enabled[format] ? "On" : "Off"}
         </Chip>
 
-        <span className="opacity-80">Font</span>
-        <select
-          value={details2Family}
-          onChange={(e) => setDetails2Family(e.target.value)}
-          className="rounded px-2 py-1 w-24 bg-[#17171b] text-white border border-neutral-700"
-          disabled={!details2Enabled[format]}
-        >
-          {BODY_FONTS2_LOCAL.map((f) => (
-            <option key={f} value={f}>
-              {f}
-            </option>
-          ))}
-        </select>
+        <div className="w-44">
+          <FontPicker
+            label="Font"
+            value={details2Family ?? bodyFamily}
+            options={BODY_FONTS2_LOCAL}
+            onChange={(v) => setDetails2Family(v)}
+            disabled={!details2Enabled[format]}
+            className="text-[11px]"
+          />
+        </div>
       </div>
     }
   >
@@ -16746,19 +16745,14 @@ style={{ top: STICKY_TOP }}
         .setSelectedPanel(selectedPanel === "venue" ? null : "venue")
     }
     right={
-      <div className="flex items-center gap-3 text-[11px]">
-        <span className="opacity-80">Font</span>
-        <select
+      <div className="w-44">
+        <FontPicker
+          label="Font"
           value={venueFamily}
-          onChange={(e) => setVenueFamily(e.target.value)}
-          className="rounded px-2 py-1 w-24 bg-[#17171b] text-white border border-neutral-700"
-        >
-          {VENUE_FONTS_LOCAL.map((f) => (
-            <option key={f} value={f}>
-              {f}
-            </option>
-          ))}
-        </select>
+          options={VENUE_FONTS_LOCAL}
+          onChange={(v) => setVenueFamily(v)}
+          className="text-[11px]"
+        />
       </div>
     }
   >
@@ -17392,6 +17386,8 @@ style={{ top: STICKY_TOP }}
       <div
         className="rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur px-3 py-2 shadow-[0_12px_30px_rgba(0,0,0,0.45)]"
         style={{ width: scaledCanvasW, maxWidth: "100%" }}
+        onPointerDownCapture={(e) => e.stopPropagation()}
+        onTouchStartCapture={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2 text-[11px] font-semibold text-white">
           <span className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</span>
@@ -17399,17 +17395,11 @@ style={{ top: STICKY_TOP }}
           <span>{activeTextControls.label === "Details 2" ? "More Details" : activeTextControls.label}</span>
         </div>
         <div className="mt-2 grid grid-cols-[minmax(120px,1fr)_80px] gap-2 items-center">
-          <select
+          <FontPicker
             value={activeTextControls.font}
-            onChange={(e) => activeTextControls.onFont?.(e.target.value)}
-            className="w-full rounded-md bg-neutral-900 border border-neutral-700 text-[11px] px-2 py-1 text-white"
-          >
-            {(activeTextControls.fonts ?? []).map((f) => (
-              <option key={f} value={f} style={{ fontFamily: f }}>
-                {f}
-              </option>
-            ))}
-          </select>
+            options={activeTextControls.fonts ?? []}
+            onChange={(v) => activeTextControls.onFont?.(v)}
+          />
           <input
             type="range"
             min={activeTextControls.sizeMin}
@@ -17418,6 +17408,7 @@ style={{ top: STICKY_TOP }}
             value={Number(activeTextControls.size || 0)}
             onChange={(e) => activeTextControls.onSize?.(Number(e.target.value))}
             className="accent-fuchsia-500"
+            style={{ touchAction: "pan-x" }}
           />
           <div className="text-[10px] text-neutral-400">Line</div>
           <input
@@ -17428,6 +17419,7 @@ style={{ top: STICKY_TOP }}
             value={Number(activeTextControls.lineHeight || 0)}
             onChange={(e) => activeTextControls.onLine?.(Number(e.target.value))}
             className="accent-indigo-400"
+            style={{ touchAction: "pan-x" }}
           />
         </div>
       </div>
@@ -17443,7 +17435,9 @@ style={{ top: STICKY_TOP }}
         data-floating-controls="asset"
         onPointerDownCapture={(e) => {
           assetFocusLockRef.current = true;
+          e.stopPropagation();
         }}
+        onTouchStartCapture={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2 text-[11px] font-semibold text-white">
           <span className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</span>
@@ -17461,6 +17455,7 @@ style={{ top: STICKY_TOP }}
               value={Number(activeAssetControls.scale || 0)}
               onChange={(e) => activeAssetControls.onScale(Number(e.target.value))}
               className="w-full accent-fuchsia-500"
+              style={{ touchAction: "pan-x" }}
               disabled={activeAssetControls.locked}
             />
           </div>
@@ -17475,6 +17470,7 @@ style={{ top: STICKY_TOP }}
                 value={Number(activeAssetControls.opacity || 0)}
                 onChange={(e) => activeAssetControls.onOpacity?.(Number(e.target.value))}
                 className="w-full accent-indigo-400"
+                style={{ touchAction: "pan-x" }}
                 disabled={activeAssetControls.locked}
               />
             </div>
@@ -17492,6 +17488,7 @@ style={{ top: STICKY_TOP }}
                 value={Number(activeAssetControls.cleanup.shrinkPx || 0)}
                 onChange={(e) => activeAssetControls.cleanup?.onShrink?.(Number(e.target.value))}
                 className="w-full accent-amber-400"
+                style={{ touchAction: "pan-x" }}
                 disabled={activeAssetControls.locked}
               />
             </div>
@@ -17505,6 +17502,7 @@ style={{ top: STICKY_TOP }}
                 value={Number(activeAssetControls.cleanup.featherPx || 0)}
                 onChange={(e) => activeAssetControls.cleanup?.onFeather?.(Number(e.target.value))}
                 className="w-full accent-emerald-400"
+                style={{ touchAction: "pan-x" }}
                 disabled={activeAssetControls.locked}
               />
             </div>
@@ -17557,6 +17555,8 @@ style={{ top: STICKY_TOP }}
       <div
         className="rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur px-3 py-2 shadow-[0_12px_30px_rgba(0,0,0,0.45)]"
         style={{ width: scaledCanvasW, maxWidth: "100%" }}
+        onPointerDownCapture={(e) => e.stopPropagation()}
+        onTouchStartCapture={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2 text-[11px] font-semibold text-white">
           <span className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</span>
@@ -17574,6 +17574,7 @@ style={{ top: STICKY_TOP }}
               value={Number(activeBgControls.scale || 1)}
               onChange={(e) => activeBgControls.onScale(Number(e.target.value))}
               className="w-full accent-fuchsia-500"
+              style={{ touchAction: "pan-x" }}
             />
           </div>
           <div>
@@ -17586,6 +17587,7 @@ style={{ top: STICKY_TOP }}
               value={Number(activeBgControls.blur || 0)}
               onChange={(e) => activeBgControls.onBlur(Number(e.target.value))}
               className="w-full accent-indigo-400"
+              style={{ touchAction: "pan-x" }}
             />
           </div>
         </div>
