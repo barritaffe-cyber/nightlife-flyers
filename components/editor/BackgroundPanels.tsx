@@ -104,7 +104,6 @@ function BackgroundPanels({
     <>
       <div
         id="background-panel"
-        data-tour="background"
         className={
           selectedPanel === 'background'
             ? 'relative rounded-xl border border-blue-400'

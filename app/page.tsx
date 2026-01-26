@@ -6950,7 +6950,7 @@ const TOUR_STEPS = [
     body: 'Upload your own or use AI Background to generate the vibe.',
     selector: '[data-tour="background"]',
     onEnter: () => {
-      openTourPanel("background", "design", "background-panel");
+      openTourPanel("background", "design", "ai-background-panel");
     },
   },
   {
@@ -18078,6 +18078,7 @@ style={{ top: STICKY_TOP }}
           
 
 {/* UI: AI BACKGROUND (BEGIN) */}
+<div id="ai-background-panel" data-tour="background">
 <AiBackgroundPanel
   genStyle={genStyle}
   setGenStyle={setGenStyle}
@@ -18126,6 +18127,7 @@ style={{ top: STICKY_TOP }}
   setBgUploadUrl={setBgUploadUrl}
   setBgUrl={setBgUrl}
 />
+</div>
 {/* UI: AI BACKGROUND (END) */}
 
 
