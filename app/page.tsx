@@ -6921,6 +6921,7 @@ const TOUR_STEPS = [
     selector: '[data-tour="templates"]',
     onEnter: () => {
       setUiMode("design");
+      setMobileControlsOpen(true);
       setSelectedPanel("template");
       setMobileControlsTab("design");
       setTimeout(() => {
@@ -6935,6 +6936,7 @@ const TOUR_STEPS = [
     selector: '[data-tour="background"]',
     onEnter: () => {
       setUiMode("design");
+      setMobileControlsOpen(true);
       setSelectedPanel("background");
       setMobileControlsTab("design");
       setTimeout(() => {
@@ -6959,6 +6961,7 @@ const TOUR_STEPS = [
     selector: '[data-tour="headline"]',
     onEnter: () => {
       setUiMode("design");
+      setMobileControlsOpen(true);
       setSelectedPanel("headline");
       setMobileControlsTab("design");
     },
@@ -6970,7 +6973,8 @@ const TOUR_STEPS = [
     selector: '[data-tour="library"]',
     onEnter: () => {
       setUiMode("design");
-      setSelectedPanel("library");
+      setSelectedPanel("icons");
+      setMobileControlsOpen(true);
       setMobileControlsTab("assets");
       setTimeout(() => {
         document.getElementById("library-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -6999,8 +7003,6 @@ useEffect(() => {
   step?.onEnter?.();
   const resolveEl = () =>
     step?.selector ? (document.querySelector(step.selector) as HTMLElement | null) : null;
-  const el = resolveEl();
-  if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
   const update = () => {
     const target = resolveEl();
     if (!target) {
@@ -7012,12 +7014,25 @@ useEffect(() => {
     setTourRect({ top: r.top, left: r.left, width: r.width, height: r.height });
     setTourTip({ top: window.innerHeight * 0.5, left: window.innerWidth * 0.5, centered: true });
   };
+  const el = resolveEl();
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
   const raf = requestAnimationFrame(() => requestAnimationFrame(update));
+  const timer = window.setTimeout(update, 160);
   const onResize = () => update();
+  const onScroll = () => update();
   window.addEventListener("resize", onResize);
+  window.addEventListener("scroll", onScroll, { passive: true });
+  let observer: ResizeObserver | null = null;
+  if (el && "ResizeObserver" in window) {
+    observer = new ResizeObserver(() => update());
+    observer.observe(el);
+  }
   return () => {
     cancelAnimationFrame(raf);
+    clearTimeout(timer);
     window.removeEventListener("resize", onResize);
+    window.removeEventListener("scroll", onScroll);
+    observer?.disconnect();
   };
 }, [tourStep]);
 
@@ -15271,6 +15286,7 @@ return (
           left: tourRect.left - 6,
           width: tourRect.width + 12,
           height: tourRect.height + 12,
+          boxShadow: "0 0 0 9999px rgba(0,0,0,0.55)",
         }}
       />
     )}
@@ -18129,10 +18145,6 @@ style={{ top: STICKY_TOP }}
   isBlending={isBlending}
 />
 {/* UI: MAGIC BLEND PANEL (END) */}
-
-
-
-<div data-tour="background" id="background-panel">
 <BackgroundPanels
   selectedPanel={selectedPanel}
   setSelectedPanel={setSelectedPanel}
@@ -18171,13 +18183,11 @@ style={{ top: STICKY_TOP }}
   haze={haze}
   vignetteStrength={vignetteStrength}
 />
-</div>
 
 
 
 
 {/* UI: LIBRARY (BEGIN) */}
-<div data-tour="library" id="library-panel">
 <LibraryPanel
   format={format}
   selectedEmojiId={selectedEmojiId}
@@ -18192,7 +18202,6 @@ style={{ top: STICKY_TOP }}
   graphicStickers={GRAPHIC_STICKERS}
   flareLibrary={FLARE_LIBRARY}
 />
-</div>
 {/* UI: LIBRARY (END) */}
 
 

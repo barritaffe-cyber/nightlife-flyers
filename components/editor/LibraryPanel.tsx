@@ -66,7 +66,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
     const removeEmoji = useFlyerState((s) => s.removeEmoji);
 
     return (
-      <div className="mt-3" id="library-panel">
+      <div className="mt-3" id="library-panel" data-tour="library">
         <div
           className={
             selectedPanel === 'icons'
