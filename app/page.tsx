@@ -1021,8 +1021,10 @@ const NIGHTLIFE_SUBJECT_TOKENS = {
     champagne: "champagne tone attire, warm metallic sheen",
   },
   pose: {
-    dancing: "dynamic dancing pose, fluid movement, motion blur",
-    "hands-up": "hands raised, crowd-hype gesture, celebratory motion",
+    dancing:
+      "confident woman dancing freely, mid-motion, eyes closed, radiant smile, immersed in the music, natural arm lift, joyful expression, hair in motion with lively curls, soft cinematic spotlight, warm amber and orange glow, teal/magenta edge light, dreamy blurred crowd silhouettes, subtle disco ball sparkle, rain-like light streaks and bokeh, shallow depth of field, natural motion blur on hands and hips, expressive sway and rhythm",
+    "hands-up":
+      "hands raised high, crowd-hype gesture, celebratory energy, party anthem moment, faces turned to stage, bright strobe accents",
     performance: "stage performance stance, microphone energy, commanding presence",
     dj: "dj at decks, hands on mixer, mid-drop intensity",
   },
@@ -7916,13 +7918,6 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
   const [overlayTop, setOverlayTop] = useState(0);
 
 
-  // Guard: if Story is selected but there is no background, force Square.
-  // Also allows Story automatically once a background exists.
-  useEffect(() => {
-  const has = !!(bgUploadUrl || bgUrl);
-  if (!has && format === 'story') setFormat('square');
-  }, [bgUploadUrl, bgUrl, format]); 
-
   /* bg fx */
   const [vignette, setVignette] = useState(false);
   const [vignetteStrength, setVignetteStrength] = useState(0.1);
@@ -7938,6 +7933,24 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
   const [bgPosY, setBgPosY] = useState(50);
 const [bgBlur, setBgBlur] = useState(0);
   const [textureOpacity, setTextureOpacity] = useState(0);
+
+  // Guard: if Story is selected but there is no background, force Square.
+  // Also allows Story automatically once a background exists.
+  useEffect(() => {
+  const has = !!(bgUploadUrl || bgUrl);
+  if (!has && format === 'story') setFormat('square');
+  }, [bgUploadUrl, bgUrl, format]); 
+
+  useEffect(() => {
+    const has = !!(bgUploadUrl || bgUrl);
+    if (!has || format !== 'story') return;
+    if (!bgFitMode) {
+      setBgFitMode(true);
+      setBgScale((s) => (s > 1 ? 1 : s));
+      setBgPosX(50);
+      setBgPosY(50);
+    }
+  }, [bgUploadUrl, bgUrl, format, bgFitMode]);
 
   /* master grade (applies to whole poster) */
   const [exp,       setExp]       = useState<number>(1.00); // brightness/exposure (0.7–1.4)
