@@ -6888,7 +6888,7 @@ const ONBOARD_KEY = 'nf:onboarded:v1';
 const [showOnboard, setShowOnboard] = useState<boolean>(false);
 const [tourStep, setTourStep] = useState<number | null>(null);
 const [tourRect, setTourRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
-const [tourTip, setTourTip] = useState<{ top: number; left: number } | null>(null);
+const [tourTip, setTourTip] = useState<{ top: number; left: number; centered?: boolean } | null>(null);
 
 // read AFTER hydration
 useEffect(() => {
@@ -6920,8 +6920,12 @@ const TOUR_STEPS = [
     body: 'Start with a template so the typography and spacing are already dialed in.',
     selector: '[data-tour="templates"]',
     onEnter: () => {
+      setUiMode("design");
       setSelectedPanel("template");
       setMobileControlsTab("design");
+      setTimeout(() => {
+        document.getElementById("template-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 50);
     },
   },
   {
@@ -6930,8 +6934,12 @@ const TOUR_STEPS = [
     body: 'Upload your own or use AI Background to generate the vibe.',
     selector: '[data-tour="background"]',
     onEnter: () => {
+      setUiMode("design");
       setSelectedPanel("background");
       setMobileControlsTab("design");
+      setTimeout(() => {
+        document.getElementById("background-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 50);
     },
   },
   {
@@ -6940,6 +6948,7 @@ const TOUR_STEPS = [
     body: 'Tap any text or asset to edit. Drag to position. Use Move/Snap/Guides for alignment.',
     selector: '[data-tour="artboard"]',
     onEnter: () => {
+      setUiMode("design");
       setSelectedPanel(null);
     },
   },
@@ -6949,6 +6958,7 @@ const TOUR_STEPS = [
     body: 'Change font, size, and alignment to set the tone of the flyer.',
     selector: '[data-tour="headline"]',
     onEnter: () => {
+      setUiMode("design");
       setSelectedPanel("headline");
       setMobileControlsTab("design");
     },
@@ -6959,6 +6969,7 @@ const TOUR_STEPS = [
     body: 'Use Library for flares, graphics, emojis, and cutouts.',
     selector: '[data-tour="library"]',
     onEnter: () => {
+      setUiMode("design");
       setSelectedPanel("library");
       setMobileControlsTab("assets");
       setTimeout(() => {
@@ -6994,16 +7005,12 @@ useEffect(() => {
     const target = resolveEl();
     if (!target) {
       setTourRect(null);
-      setTourTip({ top: Math.max(16, window.innerHeight * 0.2), left: Math.max(16, (window.innerWidth - 260) / 2) });
+      setTourTip({ top: window.innerHeight * 0.5, left: window.innerWidth * 0.5, centered: true });
       return;
     }
     const r = target.getBoundingClientRect();
     setTourRect({ top: r.top, left: r.left, width: r.width, height: r.height });
-    const tipWidth = 260;
-    const spaceRight = window.innerWidth - r.right;
-    const left = spaceRight > tipWidth + 16 ? r.right + 12 : Math.max(12, r.left - tipWidth - 12);
-    const top = Math.min(window.innerHeight - 140, Math.max(12, r.top + r.height + 8));
-    setTourTip({ top, left });
+    setTourTip({ top: window.innerHeight * 0.5, left: window.innerWidth * 0.5, centered: true });
   };
   const raf = requestAnimationFrame(() => requestAnimationFrame(update));
   const onResize = () => update();
@@ -15256,23 +15263,25 @@ return (
 {/* --- ONBOARDING STRIP (only after hydration, only first open) --- */}
 {hydrated && tourStep != null && (
   <div className="fixed inset-0 z-[2000] pointer-events-none">
-    <div className="absolute inset-0 bg-black/60" />
     {tourRect && (
       <div
-        className="absolute rounded-xl border border-white/40 shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] pointer-events-none"
+        className="absolute rounded-xl border border-white/70 shadow-[0_0_24px_rgba(120,227,255,0.45)] pointer-events-none"
         style={{
           top: tourRect.top - 6,
           left: tourRect.left - 6,
           width: tourRect.width + 12,
           height: tourRect.height + 12,
-          boxShadow: "0 0 0 9999px rgba(0,0,0,0.6)",
         }}
       />
     )}
     {tourTip && (
       <div
         className="absolute w-[260px] rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur px-3 py-3 text-white shadow-[0_12px_30px_rgba(0,0,0,0.45)] pointer-events-auto"
-        style={{ top: tourTip.top, left: tourTip.left }}
+        style={{
+          top: tourTip.top,
+          left: tourTip.left,
+          transform: tourTip.centered ? "translate(-50%, -50%)" : undefined,
+        }}
       >
         <div className="text-[11px] uppercase tracking-wider text-neutral-400">
           Step {tourStep + 1} / {TOUR_STEPS.length}
@@ -18123,7 +18132,7 @@ style={{ top: STICKY_TOP }}
 
 
 
-<div data-tour="background">
+<div data-tour="background" id="background-panel">
 <BackgroundPanels
   selectedPanel={selectedPanel}
   setSelectedPanel={setSelectedPanel}
@@ -18168,7 +18177,7 @@ style={{ top: STICKY_TOP }}
 
 
 {/* UI: LIBRARY (BEGIN) */}
-<div data-tour="library">
+<div data-tour="library" id="library-panel">
 <LibraryPanel
   format={format}
   selectedEmojiId={selectedEmojiId}
