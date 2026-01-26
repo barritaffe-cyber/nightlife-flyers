@@ -6923,7 +6923,8 @@ const openTourPanel = React.useCallback(
     const scrollToTarget = () => {
       const el = document.getElementById(targetId);
       if (!el) return;
-      const top = el.getBoundingClientRect().top + window.scrollY - 12;
+      const rect = el.getBoundingClientRect();
+      const top = window.scrollY + rect.top + rect.height / 2 - window.innerHeight / 2;
       window.scrollTo({ top, behavior: "smooth" });
     };
     window.setTimeout(() => {
@@ -6939,7 +6940,8 @@ const openTourPanel = React.useCallback(
 const scrollToArtboard = React.useCallback(() => {
   const el = document.getElementById("artboard");
   if (!el) return;
-  const top = el.getBoundingClientRect().top + window.scrollY - 12;
+  const rect = el.getBoundingClientRect();
+  const top = window.scrollY + rect.top + rect.height / 2 - window.innerHeight / 2;
   window.scrollTo({ top, behavior: "smooth" });
 }, []);
 
@@ -13616,6 +13618,8 @@ const activeTextControls = React.useMemo(() => {
         lineMin: 0.3,
         lineMax: 1.3,
         lineStep: 0.02,
+        color: textFx?.color,
+        onColor: (v: string) => setTextFx((p) => ({ ...p, color: v })),
         onFont: (v: string) => {
           setHeadlineFamily(v);
           setTextStyle("headline", format, { family: v });
@@ -13641,6 +13645,8 @@ const activeTextControls = React.useMemo(() => {
         lineMin: 0.6,
         lineMax: 1.6,
         lineStep: 0.05,
+        color: head2Color,
+        onColor: (v: string) => setHead2Color(v),
         onFont: (v: string) => setHead2Family(v),
         onSize: (v: number) => setHead2SizePx(v),
         onLine: (v: number) => setHead2LineHeight(v),
@@ -13658,6 +13664,8 @@ const activeTextControls = React.useMemo(() => {
         lineMin: 0.8,
         lineMax: 2.2,
         lineStep: 0.05,
+        color: bodyColor,
+        onColor: (v: string) => setBodyColor(v),
         onFont: (v: string) => setDetailsFamily(v),
         onSize: (v: number) => setBodySize(v),
         onLine: (v: number) => setDetailsLineHeight(v),
@@ -13675,6 +13683,8 @@ const activeTextControls = React.useMemo(() => {
         lineMin: 0.8,
         lineMax: 2.2,
         lineStep: 0.05,
+        color: details2Color,
+        onColor: (v: string) => setDetails2Color(v),
         onFont: (v: string) => setDetails2Family(v),
         onSize: (v: number) => setDetails2Size(v),
         onLine: (v: number) => setDetails2LineHeight(v),
@@ -13692,6 +13702,8 @@ const activeTextControls = React.useMemo(() => {
         lineMin: 0.6,
         lineMax: 1.8,
         lineStep: 0.05,
+        color: venueColor,
+        onColor: (v: string) => setVenueColor(v),
         onFont: (v: string) => setVenueFamily(v),
         onSize: (v: number) => setVenueSize(v),
         onLine: (v: number) => setVenueLineHeight(v),
@@ -13709,6 +13721,8 @@ const activeTextControls = React.useMemo(() => {
         lineMin: 0.8,
         lineMax: 1.8,
         lineStep: 0.05,
+        color: subtagTextColor,
+        onColor: (v: string) => setSubtagTextColor(v),
         onFont: (v: string) => setSubtagFamily(v),
         onSize: (v: number) => setSubtagSize(v),
         onLine: () => {},
@@ -17461,6 +17475,14 @@ style={{ top: STICKY_TOP }}
           <span className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</span>
           <span className="text-neutral-300">•</span>
           <span>{activeTextControls.label === "Details 2" ? "More Details" : activeTextControls.label}</span>
+          {activeTextControls.color && (
+            <div className="ml-auto">
+              <ColorDot
+                value={activeTextControls.color}
+                onChange={(v) => activeTextControls.onColor?.(v)}
+              />
+            </div>
+          )}
         </div>
         <div className="mt-2 grid grid-cols-[minmax(120px,1fr)_80px] gap-2 items-center">
           <FontPicker
