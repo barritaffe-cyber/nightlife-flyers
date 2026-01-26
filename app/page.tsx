@@ -16546,7 +16546,7 @@ style={{ top: STICKY_TOP }}
         .setSelectedPanel(selectedPanel === "details" ? null : "details")
     }
     right={
-      <div className="flex items-center gap-2 text-[11px]">
+      <div className="flex items-center gap-2 text-[11px] py-1">
         <span className="opacity-80">Align</span>
         <Chip small active={detailsAlign === "left"} onClick={() => setDetailsAlign("left")}>L</Chip>
         <Chip small active={detailsAlign === "center"} onClick={() => setDetailsAlign("center")}>C</Chip>
@@ -16740,7 +16740,7 @@ style={{ top: STICKY_TOP }}
         .setSelectedPanel(selectedPanel === "venue" ? null : "venue")
     }
     right={
-      <div className="flex items-center gap-2 text-[11px]">
+      <div className="flex items-center gap-2 text-[11px] py-1">
         <span className="opacity-80">Align</span>
         <Chip small active={venueAlign === "left"} onClick={() => setVenueAlign("left")}>L</Chip>
         <Chip small active={venueAlign === "center"} onClick={() => setVenueAlign("center")}>C</Chip>
