@@ -6920,16 +6920,18 @@ const openTourPanel = React.useCallback(
     setUiMode("design");
     setMobileControlsOpen(true);
     setMobileControlsTab(tab);
-    requestAnimationFrame(() => {
+    const scrollToTarget = () => {
+      const el = document.getElementById(targetId);
+      if (!el) return;
+      const top = el.getBoundingClientRect().top + window.scrollY - 12;
+      window.scrollTo({ top, behavior: "smooth" });
+    };
+    window.setTimeout(() => {
       setSelectedPanel(panel);
-      requestAnimationFrame(() => {
-        const el = document.getElementById(targetId);
-        el?.scrollIntoView({ behavior: "smooth", block: "start" });
-        window.setTimeout(() => {
-          el?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }, 220);
-      });
-    });
+      scrollToTarget();
+    }, 120);
+    window.setTimeout(scrollToTarget, 320);
+    window.setTimeout(scrollToTarget, 620);
   },
   [setSelectedPanel]
 );
