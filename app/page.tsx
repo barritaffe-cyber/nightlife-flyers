@@ -8648,8 +8648,33 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
     const width = canvasSize.w * exportScale;
     const height = canvasSize.h * exportScale;
     try {
-      const dataUrl = await renderExportDataUrl(artRef.current, exportType, exportScale);
-      const sizeBytes = dataUrlBytes(dataUrl);
+      const needsRetry = () => {
+        const art = artRef.current;
+        if (!art) return false;
+        const exportRoot =
+          (art.closest?.('[data-export-root="true"]') as HTMLElement) ||
+          (document.getElementById('export-root') as HTMLElement) ||
+          art;
+        const imgs = Array.from(exportRoot.querySelectorAll('img')) as HTMLImageElement[];
+        const anyIncomplete = imgs.some((img) => !img.complete || img.naturalWidth === 0);
+        return anyIncomplete;
+      };
+
+      const mustRetry = !!(bgUrl || bgUploadUrl || logoUrl);
+      const maxAttempts = mustRetry ? 3 : 1;
+      let dataUrl = '';
+      let sizeBytes = 0;
+
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        dataUrl = await renderExportDataUrl(artRef.current, exportType, exportScale);
+        sizeBytes = dataUrlBytes(dataUrl);
+        if (!mustRetry) break;
+        if (!needsRetry()) break;
+        if (attempt < maxAttempts) {
+          await new Promise((r) => setTimeout(r, 220));
+        }
+      }
+
       setExportDataUrl(dataUrl);
       setExportMeta({
         width,
