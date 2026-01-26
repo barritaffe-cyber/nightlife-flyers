@@ -6925,6 +6925,9 @@ const openTourPanel = React.useCallback(
       requestAnimationFrame(() => {
         const el = document.getElementById(targetId);
         el?.scrollIntoView({ behavior: "smooth", block: "start" });
+        window.setTimeout(() => {
+          el?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 220);
       });
     });
   },
