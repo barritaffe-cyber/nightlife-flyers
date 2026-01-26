@@ -6966,7 +6966,7 @@ const TOUR_STEPS = [
     onEnter: () => {
       setUiMode("design");
       setSelectedPanel(null);
-      window.setTimeout(scrollToArtboard, 120);
+      window.setTimeout(scrollToArtboard, 180);
     },
   },
   {
