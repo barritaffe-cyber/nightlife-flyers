@@ -6905,6 +6905,13 @@ const markOnboarded = () => {
   try { localStorage.setItem(ONBOARD_KEY, '1'); } catch {}
   setShowOnboard(false);
   setTourStep(null);
+  setUiMode("design");
+  setMobileControlsOpen(true);
+  setMobileControlsTab("design");
+  setSelectedPanel("template");
+  setTimeout(() => {
+    document.getElementById("template-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 50);
 };
 
 const startTour = React.useCallback(() => {
@@ -6952,6 +6959,9 @@ const TOUR_STEPS = [
     onEnter: () => {
       setUiMode("design");
       setSelectedPanel(null);
+      setTimeout(() => {
+        document.getElementById("artboard")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 50);
     },
   },
   {
