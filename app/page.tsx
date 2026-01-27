@@ -8716,7 +8716,8 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
               artRef.current,
               exportType,
               scale,
-              (p) => setExportProgress(p)
+              (p) => setExportProgress(p),
+              false
             );
             usedScale = scale;
             width = canvasSize.w * scale;
@@ -8732,7 +8733,27 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
               break;
             }
           } catch (err) {
+            if (!isMobileExport) {
+              try {
+                dataUrl = await renderExportDataUrl(
+                  artRef.current,
+                  exportType,
+                  scale,
+                  (p) => setExportProgress(p),
+                  true
+                );
+                usedScale = scale;
+                width = canvasSize.w * scale;
+                height = canvasSize.h * scale;
+                sizeBytes = dataUrlBytes(dataUrl);
+                attempt = maxAttempts + 1;
+                break;
+              } catch (err2) {
+                lastErr = err2;
+              }
+            } else {
             lastErr = err;
+            }
             if (attempt < maxAttempts) {
               await new Promise((r) => setTimeout(r, 220));
             }
@@ -11685,7 +11706,8 @@ async function renderExportDataUrl(
   art: HTMLElement,
   format: 'png' | 'jpg',
   scale: number,
-  onProgress?: (p: number) => void
+  onProgress?: (p: number) => void,
+  forceProxy?: boolean
 ) {
   const exportRoot =
     (art.closest?.('[data-export-root="true"]') as HTMLElement) ||
@@ -11712,6 +11734,7 @@ async function renderExportDataUrl(
   const isMobileExport =
     typeof navigator !== "undefined" &&
     /iPad|iPhone|iPod|Android/i.test(navigator.userAgent || "");
+  const shouldInlineProxy = !!(isMobileExport || forceProxy);
 
   try {
     if (!art) throw new Error('Artboard not ready');
@@ -11851,7 +11874,7 @@ async function renderExportDataUrl(
       try {
         await waitForImageUrl(bgUploadUrl || bgUrl);
         await waitForImageUrl(logoUrl);
-        if (isMobileExport) {
+        if (shouldInlineProxy) {
           const inlineImgs = await inlineImagesForExport(exportRoot, { forceProxy: true });
           restoreInlineImages = inlineImgs.restore;
           missingInline = inlineImgs.missing;
