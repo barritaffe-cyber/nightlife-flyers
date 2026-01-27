@@ -11478,6 +11478,81 @@ async function waitForImages(root: HTMLElement) {
     })
   );
 }
+
+async function inlineImagesForExport(root: HTMLElement) {
+  const imgs = Array.from(root.querySelectorAll('img')) as HTMLImageElement[];
+  const cache = new Map<string, string | null>();
+  const swaps: Array<{
+    el: HTMLImageElement;
+    src: string;
+    srcset: string | null;
+    sizes: string | null;
+  }> = [];
+  const created = new Set<string>();
+
+  for (const img of imgs) {
+    const rawSrc = img.currentSrc || img.getAttribute('src') || '';
+    if (!rawSrc) continue;
+    if (
+      rawSrc.startsWith('data:') ||
+      rawSrc.startsWith('blob:') ||
+      rawSrc.startsWith('about:')
+    ) {
+      continue;
+    }
+
+    const absSrc = rawSrc.startsWith('http')
+      ? rawSrc
+      : new URL(rawSrc, window.location.href).toString();
+    if (!cache.has(absSrc)) {
+      try {
+        const res = await fetch(absSrc, { mode: 'cors', credentials: 'omit' });
+        if (!res.ok) throw new Error('fetch failed');
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        cache.set(absSrc, blobUrl);
+        created.add(blobUrl);
+      } catch {
+        cache.set(absSrc, null);
+      }
+    }
+
+    const blobUrl = cache.get(absSrc);
+    if (!blobUrl) continue;
+
+    swaps.push({
+      el: img,
+      src: img.getAttribute('src') || rawSrc,
+      srcset: img.getAttribute('srcset'),
+      sizes: img.getAttribute('sizes'),
+    });
+
+    img.setAttribute('src', blobUrl);
+    if (img.getAttribute('srcset')) img.removeAttribute('srcset');
+    if (img.getAttribute('sizes')) img.removeAttribute('sizes');
+  }
+
+  return () => {
+    for (const swap of swaps) {
+      try {
+        swap.el.setAttribute('src', swap.src);
+      } catch {}
+      if (swap.srcset != null) {
+        try { swap.el.setAttribute('srcset', swap.srcset); } catch {}
+      } else {
+        try { swap.el.removeAttribute('srcset'); } catch {}
+      }
+      if (swap.sizes != null) {
+        try { swap.el.setAttribute('sizes', swap.sizes); } catch {}
+      } else {
+        try { swap.el.removeAttribute('sizes'); } catch {}
+      }
+    }
+    for (const url of created) {
+      try { URL.revokeObjectURL(url); } catch {}
+    }
+  };
+}
 // ===== EXPORT BEGIN (used by Export modal) =====
 async function renderExportDataUrl(
   art: HTMLElement,
@@ -11505,6 +11580,7 @@ async function renderExportDataUrl(
     backgroundRepeat: string;
   } | null = null;
   let bgBlobUrl: string | null = null;
+  let tempBgEl: HTMLDivElement | null = null;
 
   try {
     if (!art) throw new Error('Artboard not ready');
@@ -11569,41 +11645,54 @@ async function renderExportDataUrl(
     onProgress?.(40);
 
     // Force a baked background layer to avoid missing CSS bg on mobile export
+    let bgSrcForExport: string | null = null;
     try {
       const snapSize = Math.min(
         4096,
         Math.max(canvasSize.w, canvasSize.h) * Math.max(1, scale)
       );
       const bgSnap = await (artRef.current as any)?.exportBackgroundDataUrl?.({ size: snapSize });
-      if (bgSnap) {
-        exportRoot.style.backgroundImage = `url(${bgSnap})`;
-        exportRoot.style.backgroundSize = "cover";
-        exportRoot.style.backgroundPosition = "center";
-        exportRoot.style.backgroundRepeat = "no-repeat";
-      }
+      if (bgSnap) bgSrcForExport = bgSnap;
     } catch {
       // ignore if snapshot fails
     }
     // Fallback: enforce a same-origin background to avoid CORS drops
     try {
-      if (!exportRoot.style.backgroundImage || exportRoot.style.backgroundImage === "none") {
+      if (!bgSrcForExport) {
         if (bgUploadUrl) {
-          exportRoot.style.backgroundImage = `url(${bgUploadUrl})`;
-          exportRoot.style.backgroundSize = "cover";
-          exportRoot.style.backgroundPosition = "center";
-          exportRoot.style.backgroundRepeat = "no-repeat";
+          bgSrcForExport = bgUploadUrl;
         } else if (bgUrl && bgUrl.startsWith("http")) {
           const res = await fetch(bgUrl);
           const blob = await res.blob();
           bgBlobUrl = URL.createObjectURL(blob);
-          exportRoot.style.backgroundImage = `url(${bgBlobUrl})`;
-          exportRoot.style.backgroundSize = "cover";
-          exportRoot.style.backgroundPosition = "center";
-          exportRoot.style.backgroundRepeat = "no-repeat";
+          bgSrcForExport = bgBlobUrl;
+        } else if (bgUrl) {
+          bgSrcForExport = bgUrl;
         }
       }
     } catch {
       // ignore fallback failures
+    }
+    if (bgSrcForExport) {
+      exportRoot.style.backgroundImage = "none";
+      tempBgEl = document.createElement("div");
+      tempBgEl.setAttribute("data-export-temp-bg", "true");
+      Object.assign(tempBgEl.style, {
+        position: "absolute",
+        inset: "0px",
+        zIndex: "0",
+        overflow: "hidden",
+        pointerEvents: "none",
+      });
+      const img = document.createElement("img");
+      img.src = bgSrcForExport;
+      img.style.width = "100%";
+      img.style.height = "100%";
+      img.style.objectFit = "cover";
+      img.style.display = "block";
+      tempBgEl.appendChild(img);
+      exportRoot.insertBefore(tempBgEl, exportRoot.firstChild);
+      await waitForImageUrl(bgSrcForExport);
     }
     onProgress?.(55);
 
@@ -11624,15 +11713,49 @@ async function renderExportDataUrl(
     };
 
     const dataUrl = await withExternalStylesDisabled(async () => {
-      await waitForImageUrl(bgUploadUrl || bgUrl);
-      await waitForImageUrl(logoUrl);
-      await waitForImages(exportRoot);
-      await waitForBackgroundImages(exportRoot);
-      onProgress?.(70);
+      let restoreInlineImages: null | (() => void) = null;
+      try {
+        await waitForImageUrl(bgUploadUrl || bgUrl);
+        await waitForImageUrl(logoUrl);
+        restoreInlineImages = await inlineImagesForExport(exportRoot);
+        await waitForImages(exportRoot);
+        await waitForBackgroundImages(exportRoot);
+        onProgress?.(70);
 
-      const capture = async () => {
-        if (format === 'jpg') {
-          return await htmlToImage.toJpeg(exportRoot, {
+        const capture = async () => {
+          if (format === 'jpg') {
+            return await htmlToImage.toJpeg(exportRoot, {
+              cacheBust: true,
+              backgroundColor: '#000',
+              pixelRatio: scale,
+              style: forcedStyle,
+              filter: (node: HTMLElement) => {
+                const el = node as HTMLElement;
+                if (!el) return true;
+                const skip =
+                  el.dataset?.nonexport === 'true' ||
+                  el.classList?.contains('debug-grid') ||
+                  el.classList?.contains('bounding-box') ||
+                  el.classList?.contains('text-bounding') ||
+                  el.classList?.contains('text-outline') ||
+                  el.classList?.contains('highlight-box') ||
+                  el.classList?.contains('drag-handle') ||
+                  el.classList?.contains('resize-handle') ||
+                  el.classList?.contains('portrait-handle') ||
+                  el.classList?.contains('portrait-bounding') ||
+                  el.classList?.contains('portrait-outline') ||
+                  el.classList?.contains('portrait-border') ||
+                  el.classList?.contains('portrait-slot') ||
+                  el.classList?.contains('overlay-grid') ||
+                  el.tagName === 'BUTTON' ||
+                  el.tagName === 'INPUT' ||
+                  el.tagName === 'TEXTAREA';
+                return !skip;
+              },
+            });
+          }
+
+          return await htmlToImage.toPng(exportRoot, {
             cacheBust: true,
             backgroundColor: '#000',
             pixelRatio: scale,
@@ -11661,48 +11784,20 @@ async function renderExportDataUrl(
               return !skip;
             },
           });
-        }
+        };
 
-        return await htmlToImage.toPng(exportRoot, {
-          cacheBust: true,
-          backgroundColor: '#000',
-          pixelRatio: scale,
-          style: forcedStyle,
-          filter: (node: HTMLElement) => {
-            const el = node as HTMLElement;
-            if (!el) return true;
-            const skip =
-              el.dataset?.nonexport === 'true' ||
-              el.classList?.contains('debug-grid') ||
-              el.classList?.contains('bounding-box') ||
-              el.classList?.contains('text-bounding') ||
-              el.classList?.contains('text-outline') ||
-              el.classList?.contains('highlight-box') ||
-              el.classList?.contains('drag-handle') ||
-              el.classList?.contains('resize-handle') ||
-              el.classList?.contains('portrait-handle') ||
-              el.classList?.contains('portrait-bounding') ||
-              el.classList?.contains('portrait-outline') ||
-              el.classList?.contains('portrait-border') ||
-              el.classList?.contains('portrait-slot') ||
-              el.classList?.contains('overlay-grid') ||
-              el.tagName === 'BUTTON' ||
-              el.tagName === 'INPUT' ||
-              el.tagName === 'TEXTAREA';
-            return !skip;
-          },
-        });
-      };
+        const needsWarmup = !!(bgUploadUrl || bgUrl || logoUrl);
+        if (!needsWarmup) return await capture();
 
-      const needsWarmup = !!(bgUploadUrl || bgUrl || logoUrl);
-      if (!needsWarmup) return await capture();
-
-      await capture(); // warm-up pass
-      onProgress?.(85);
-      await new Promise((r) => setTimeout(r, 200));
-      const out = await capture(); // final pass
-      onProgress?.(96);
-      return out;
+        await capture(); // warm-up pass
+        onProgress?.(85);
+        await new Promise((r) => setTimeout(r, 200));
+        const out = await capture(); // final pass
+        onProgress?.(96);
+        return out;
+      } finally {
+        if (restoreInlineImages) restoreInlineImages();
+      }
     });
 
     (window as any).__HIDE_UI_EXPORT__ = false;
@@ -11720,6 +11815,10 @@ async function renderExportDataUrl(
     exportRoot.style.backgroundSize = originalStyle.backgroundSize;
     exportRoot.style.backgroundPosition = originalStyle.backgroundPosition;
     exportRoot.style.backgroundRepeat = originalStyle.backgroundRepeat;
+    if (tempBgEl && tempBgEl.parentNode) {
+      try { tempBgEl.parentNode.removeChild(tempBgEl); } catch {}
+      tempBgEl = null;
+    }
     if (bgBlobUrl) {
       try { URL.revokeObjectURL(bgBlobUrl); } catch {}
       bgBlobUrl = null;
@@ -11746,6 +11845,10 @@ async function renderExportDataUrl(
       exportRoot.style.backgroundSize = originalStyle.backgroundSize;
       exportRoot.style.backgroundPosition = originalStyle.backgroundPosition;
       exportRoot.style.backgroundRepeat = originalStyle.backgroundRepeat;
+      if (tempBgEl && tempBgEl.parentNode) {
+        try { tempBgEl.parentNode.removeChild(tempBgEl); } catch {}
+        tempBgEl = null;
+      }
       if (bgBlobUrl) {
         try { URL.revokeObjectURL(bgBlobUrl); } catch {}
         bgBlobUrl = null;

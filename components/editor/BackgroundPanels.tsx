@@ -18,6 +18,8 @@ type Props = {
   setBgUploadUrl: (v: string | null) => void;
   bgUploadUrl: string | null;
   bgUrl: string | null;
+  genCandidates?: string[];
+  genError?: string | null;
   bgRightRef: React.RefObject<HTMLInputElement | null>;
   onRightBgFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
   logoPickerRef: React.RefObject<HTMLInputElement | null>;
@@ -65,6 +67,8 @@ function BackgroundPanels({
   setBgUploadUrl,
   bgUploadUrl,
   bgUrl,
+  genCandidates,
+  genError,
   bgRightRef,
   onRightBgFile,
   logoPickerRef,
@@ -259,6 +263,8 @@ function BackgroundPanels({
               </div>
             </div>
           )}
+
+          {genError && <div className="text-xs text-red-400 break-words mt-2">{genError}</div>}
         </Collapsible>
       </div>
 
