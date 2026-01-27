@@ -8537,8 +8537,8 @@ React.useEffect(() => {
     format: 'png' | 'jpg';
     scale: number;
   } | null>(null);
-  const [downloadInProgress, setDownloadInProgress] = useState(false);
-  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [exportProgress, setExportProgress] = useState(0);
+  const [exportProgressActive, setExportProgressActive] = useState(false);
   const HISTORY_LIMIT = 10;
   const historyRef = React.useRef<{
     undo: string[];
@@ -8622,40 +8622,26 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
     });
   }
 
-  async function downloadExportWithProgress(dataUrl: string, format: 'png' | 'jpg') {
-    setDownloadInProgress(true);
-    setDownloadProgress(5);
-    let raf = 0;
+  function startExportProgress() {
+    setExportProgressActive(true);
+    setExportProgress(6);
     const start = performance.now();
-    const animate = () => {
-      const t = Math.min(1, (performance.now() - start) / 1200);
-      setDownloadProgress(Math.min(90, Math.round(5 + t * 85)));
-      if (t < 1) raf = requestAnimationFrame(animate);
+    const tick = () => {
+      const t = Math.min(1, (performance.now() - start) / 1400);
+      setExportProgress(Math.min(92, Math.round(6 + t * 86)));
+      if (t < 1 && exportStatus === 'rendering') {
+        requestAnimationFrame(tick);
+      }
     };
-    raf = requestAnimationFrame(animate);
-    try {
-      const res = await fetch(dataUrl);
-      const blob = await res.blob();
-      setDownloadProgress(96);
-      const url = URL.createObjectURL(blob);
-      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `nightlife_export_${stamp}.${format}`;
-      a.rel = 'noopener';
-      document.body.appendChild(a);
-      a.click();
-      requestAnimationFrame(() => {
-        try { document.body.removeChild(a); } catch {}
-        URL.revokeObjectURL(url);
-      });
-      setDownloadProgress(100);
-      await new Promise((r) => setTimeout(r, 250));
-    } finally {
-      cancelAnimationFrame(raf);
-      setDownloadInProgress(false);
-      setDownloadProgress(0);
-    }
+    requestAnimationFrame(tick);
+  }
+
+  function finishExportProgress() {
+    setExportProgress(100);
+    setTimeout(() => {
+      setExportProgressActive(false);
+      setExportProgress(0);
+    }, 300);
   }
 
   const saveDebounce = useRef<number | null>(null);
@@ -8682,6 +8668,7 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
     setExportError(null);
     setExportDataUrl(null);
     setExportMeta(null);
+    startExportProgress();
 
     const width = canvasSize.w * exportScale;
     const height = canvasSize.h * exportScale;
@@ -8722,9 +8709,12 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
         scale: exportScale,
       });
       setExportStatus('ready');
+      finishExportProgress();
     } catch (err) {
       setExportStatus('error');
       setExportError('Export failed. Please try again.');
+      setExportProgressActive(false);
+      setExportProgress(0);
     }
   }, [artRef, canvasSize.h, canvasSize.w, exportScale, exportType, exportStatus]);
 
@@ -15598,25 +15588,17 @@ return (
         <div className="text-sm font-semibold text-white">Export preview</div>
       </div>
       <div className="p-4 space-y-4">
-        {downloadInProgress && (
-          <div className="rounded-xl border border-white/10 bg-neutral-950/95 p-4 space-y-3">
-            <div className="text-sm text-white/90">Merging final flyer…</div>
-            <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-fuchsia-400 to-indigo-400 transition-all"
-                style={{ width: `${downloadProgress}%` }}
-              />
-            </div>
-            <div className="text-[11px] text-white/50">{downloadProgress}%</div>
-          </div>
-        )}
         {exportStatus === "rendering" && (
           <div className="grid place-items-center gap-3 py-8">
             <div className="h-8 w-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
-            <div className="text-sm text-white/90">Rendering image…</div>
-            <div className="text-[12px] text-white/50">
-              Exporting clean output at {exportScale}x.
+            <div className="text-sm text-white/90">Merging final flyer…</div>
+            <div className="h-2 w-full max-w-xs rounded-full bg-white/10 overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-fuchsia-400 to-indigo-400 transition-all"
+                style={{ width: `${exportProgress}%` }}
+              />
             </div>
+            <div className="text-[12px] text-white/50">{exportProgress}%</div>
           </div>
         )}
 
@@ -15673,7 +15655,8 @@ return (
                 <button
                   type="button"
                   className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
-                  onClick={() => downloadExportWithProgress(exportDataUrl, exportMeta.format)}
+                  onClick={() => window.open(exportDataUrl, "_blank", "noopener")}
+                  disabled={exportStatus !== "ready" || exportProgressActive}
                 >
                   Open image
                 </button>
@@ -15681,7 +15664,8 @@ return (
                 <button
                   type="button"
                   className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
-                  onClick={() => downloadExportWithProgress(exportDataUrl, exportMeta.format)}
+                  onClick={() => downloadExport(exportDataUrl, exportMeta.format)}
+                  disabled={exportStatus !== "ready" || exportProgressActive}
                 >
                   Download
                 </button>
