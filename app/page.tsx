@@ -11527,6 +11527,7 @@ async function inlineImagesForExport(root: HTMLElement) {
     sizes: string | null;
   }> = [];
   const created = new Set<string>();
+  const missing: string[] = [];
 
   for (const img of imgs) {
     const rawSrc = img.currentSrc || img.getAttribute('src') || '';
@@ -11570,7 +11571,10 @@ async function inlineImagesForExport(root: HTMLElement) {
     }
 
     const blobUrl = cache.get(absSrc);
-    if (!blobUrl) continue;
+    if (!blobUrl) {
+      missing.push(absSrc);
+      continue;
+    }
 
     swaps.push({
       el: img,
@@ -11584,7 +11588,7 @@ async function inlineImagesForExport(root: HTMLElement) {
     if (img.getAttribute('sizes')) img.removeAttribute('sizes');
   }
 
-  return () => {
+  const restore = () => {
     for (const swap of swaps) {
       try {
         swap.el.setAttribute('src', swap.src);
@@ -11604,11 +11608,13 @@ async function inlineImagesForExport(root: HTMLElement) {
       try { URL.revokeObjectURL(url); } catch {}
     }
   };
+  return { restore, missing };
 }
 
 async function inlineBackgroundImagesForExport(root: HTMLElement) {
   const nodes = Array.from(root.querySelectorAll('*')) as HTMLElement[];
   const swaps: Array<{ el: HTMLElement; bg: string }> = [];
+  const missing: string[] = [];
 
   for (const el of nodes) {
     const style = getComputedStyle(el);
@@ -11633,6 +11639,8 @@ async function inlineBackgroundImagesForExport(root: HTMLElement) {
       if (dataUrl) {
         // Replace only the matching URL token in the CSS string
         nextBg = nextBg.replace(url, dataUrl);
+      } else {
+        missing.push(url);
       }
     }
 
@@ -11642,11 +11650,12 @@ async function inlineBackgroundImagesForExport(root: HTMLElement) {
     }
   }
 
-  return () => {
+  const restore = () => {
     for (const s of swaps) {
       try { s.el.style.backgroundImage = s.bg; } catch {}
     }
   };
+  return { restore, missing };
 }
 // ===== EXPORT BEGIN (used by Export modal) =====
 async function renderExportDataUrl(
@@ -11810,11 +11819,26 @@ async function renderExportDataUrl(
     const dataUrl = await withExternalStylesDisabled(async () => {
       let restoreInlineImages: null | (() => void) = null;
       let restoreInlineBg: null | (() => void) = null;
+      let missingInline: string[] = [];
+      let missingBgInline: string[] = [];
       try {
         await waitForImageUrl(bgUploadUrl || bgUrl);
         await waitForImageUrl(logoUrl);
-        restoreInlineImages = await inlineImagesForExport(exportRoot);
-        restoreInlineBg = await inlineBackgroundImagesForExport(exportRoot);
+        const inlineImgs = await inlineImagesForExport(exportRoot);
+        restoreInlineImages = inlineImgs.restore;
+        missingInline = inlineImgs.missing;
+        const inlineBg = await inlineBackgroundImagesForExport(exportRoot);
+        restoreInlineBg = inlineBg.restore;
+        missingBgInline = inlineBg.missing;
+        const missingAll = [...missingInline, ...missingBgInline];
+        if (missingAll.length > 0) {
+          const short = missingAll.slice(0, 3).map((u) => {
+            try { return new URL(u).host; } catch { return u; }
+          });
+          throw new Error(
+            `Some images could not be loaded. Sources: ${short.join(", ")}`
+          );
+        }
         await waitForImages(exportRoot);
         await waitForBackgroundImages(exportRoot);
         onProgress?.(70);
