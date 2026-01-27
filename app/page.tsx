@@ -8668,6 +8668,9 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
     setExportMeta(null);
     startExportProgress();
 
+    const isMobileExport =
+      typeof navigator !== "undefined" &&
+      /iPad|iPhone|iPod|Android/i.test(navigator.userAgent || "");
     let usedScale = exportScale;
     let width = canvasSize.w * exportScale;
     let height = canvasSize.h * exportScale;
@@ -8686,10 +8689,12 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
 
       const mustRetry = !!(bgUrl || bgUploadUrl || logoUrl);
       const maxAttempts = mustRetry ? 3 : 1;
-      const scaleAttempts = [exportScale]
-        .concat(exportScale > 2 ? [2] : [])
-        .concat(exportScale > 1 ? [1] : [])
-        .filter((v, i, a) => a.indexOf(v) === i);
+      const scaleAttempts = isMobileExport
+        ? [exportScale]
+            .concat(exportScale > 2 ? [2] : [])
+            .concat(exportScale > 1 ? [1] : [])
+            .filter((v, i, a) => a.indexOf(v) === i)
+        : [exportScale];
 
       let dataUrl = '';
       let sizeBytes = 0;
@@ -8709,7 +8714,7 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
             height = canvasSize.h * scale;
             sizeBytes = dataUrlBytes(dataUrl);
             if (!mustRetry || !needsRetry()) {
-              if (scale !== exportScale) {
+              if (isMobileExport && scale !== exportScale) {
                 setExportError(
                   `Export succeeded at ${scale}x for stability on mobile.`
                 );
@@ -11686,6 +11691,10 @@ async function renderExportDataUrl(
   let bgBlobUrl: string | null = null;
   let tempBgEl: HTMLDivElement | null = null;
 
+  const isMobileExport =
+    typeof navigator !== "undefined" &&
+    /iPad|iPhone|iPod|Android/i.test(navigator.userAgent || "");
+
   try {
     if (!art) throw new Error('Artboard not ready');
 
@@ -11824,20 +11833,22 @@ async function renderExportDataUrl(
       try {
         await waitForImageUrl(bgUploadUrl || bgUrl);
         await waitForImageUrl(logoUrl);
-        const inlineImgs = await inlineImagesForExport(exportRoot);
-        restoreInlineImages = inlineImgs.restore;
-        missingInline = inlineImgs.missing;
-        const inlineBg = await inlineBackgroundImagesForExport(exportRoot);
-        restoreInlineBg = inlineBg.restore;
-        missingBgInline = inlineBg.missing;
-        const missingAll = [...missingInline, ...missingBgInline];
-        if (missingAll.length > 0) {
-          const short = missingAll.slice(0, 3).map((u) => {
-            try { return new URL(u).host; } catch { return u; }
-          });
-          throw new Error(
-            `Some images could not be loaded. Sources: ${short.join(", ")}`
-          );
+        if (isMobileExport) {
+          const inlineImgs = await inlineImagesForExport(exportRoot);
+          restoreInlineImages = inlineImgs.restore;
+          missingInline = inlineImgs.missing;
+          const inlineBg = await inlineBackgroundImagesForExport(exportRoot);
+          restoreInlineBg = inlineBg.restore;
+          missingBgInline = inlineBg.missing;
+          const missingAll = [...missingInline, ...missingBgInline];
+          if (missingAll.length > 0) {
+            const short = missingAll.slice(0, 3).map((u) => {
+              try { return new URL(u).host; } catch { return u; }
+            });
+            throw new Error(
+              `Some images could not be loaded. Sources: ${short.join(", ")}`
+            );
+          }
         }
         await waitForImages(exportRoot);
         await waitForBackgroundImages(exportRoot);
