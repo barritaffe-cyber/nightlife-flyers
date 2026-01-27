@@ -11363,7 +11363,7 @@ async function dataUrlToBlobWithProgress(
   const mime = mimeMatch ? mimeMatch[1] : "application/octet-stream";
   const total = b64.length;
   const sliceSize = 1024 * 1024; // 1MB base64 chunks
-  const chunks: Uint8Array[] = [];
+  const chunks: BlobPart[] = [];
 
   for (let offset = 0; offset < total; offset += sliceSize) {
     const slice = b64.slice(offset, offset + sliceSize);
@@ -11371,7 +11371,7 @@ async function dataUrlToBlobWithProgress(
     const len = bin.length;
     const bytes = new Uint8Array(len);
     for (let i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
-    chunks.push(bytes);
+    chunks.push(bytes.buffer);
     const pct = startPct + Math.round(((offset + slice.length) / total) * (endPct - startPct));
     onProgress?.(Math.min(endPct, pct));
     // Yield to keep UI responsive
