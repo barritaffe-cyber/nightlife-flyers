@@ -11504,6 +11504,7 @@ async function renderExportDataUrl(
     backgroundPosition: string;
     backgroundRepeat: string;
   } | null = null;
+  let bgBlobUrl: string | null = null;
 
   try {
     if (!art) throw new Error('Artboard not ready');
@@ -11582,6 +11583,27 @@ async function renderExportDataUrl(
       }
     } catch {
       // ignore if snapshot fails
+    }
+    // Fallback: enforce a same-origin background to avoid CORS drops
+    try {
+      if (!exportRoot.style.backgroundImage || exportRoot.style.backgroundImage === "none") {
+        if (bgUploadUrl) {
+          exportRoot.style.backgroundImage = `url(${bgUploadUrl})`;
+          exportRoot.style.backgroundSize = "cover";
+          exportRoot.style.backgroundPosition = "center";
+          exportRoot.style.backgroundRepeat = "no-repeat";
+        } else if (bgUrl && bgUrl.startsWith("http")) {
+          const res = await fetch(bgUrl);
+          const blob = await res.blob();
+          bgBlobUrl = URL.createObjectURL(blob);
+          exportRoot.style.backgroundImage = `url(${bgBlobUrl})`;
+          exportRoot.style.backgroundSize = "cover";
+          exportRoot.style.backgroundPosition = "center";
+          exportRoot.style.backgroundRepeat = "no-repeat";
+        }
+      }
+    } catch {
+      // ignore fallback failures
     }
     onProgress?.(55);
 
@@ -11698,6 +11720,10 @@ async function renderExportDataUrl(
     exportRoot.style.backgroundSize = originalStyle.backgroundSize;
     exportRoot.style.backgroundPosition = originalStyle.backgroundPosition;
     exportRoot.style.backgroundRepeat = originalStyle.backgroundRepeat;
+    if (bgBlobUrl) {
+      try { URL.revokeObjectURL(bgBlobUrl); } catch {}
+      bgBlobUrl = null;
+    }
     onProgress?.(100);
 
     return dataUrl;
@@ -11720,6 +11746,10 @@ async function renderExportDataUrl(
       exportRoot.style.backgroundSize = originalStyle.backgroundSize;
       exportRoot.style.backgroundPosition = originalStyle.backgroundPosition;
       exportRoot.style.backgroundRepeat = originalStyle.backgroundRepeat;
+      if (bgBlobUrl) {
+        try { URL.revokeObjectURL(bgBlobUrl); } catch {}
+        bgBlobUrl = null;
+      }
     }
   }
 }
