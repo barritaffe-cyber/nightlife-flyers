@@ -6,15 +6,15 @@ export const runtime = "nodejs";
 
 export async function GET(req: Request) {
   try {
-    const auth = req.headers.get("authorization") || "";
-    const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+    const authHeader = req.headers.get("authorization") || "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
     if (!token) {
       return NextResponse.json({ error: "Missing token" }, { status: 401 });
     }
 
     const admin = supabaseAdmin();
-    const auth = supabaseAuth();
-    const { data: userData, error: userErr } = await auth.auth.getUser(token);
+    const authClient = supabaseAuth();
+    const { data: userData, error: userErr } = await authClient.auth.getUser(token);
     if (userErr || !userData?.user) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
@@ -37,13 +37,15 @@ export async function GET(req: Request) {
     const periodEnd = profile.current_period_end
       ? new Date(profile.current_period_end)
       : null;
+    const status = String(profile.status || "").trim().toLowerCase();
     const active =
-      profile.status === "active" &&
+      (status === "active" || status === "trial") &&
       periodEnd != null &&
       periodEnd.getTime() > now.getTime();
 
     return NextResponse.json({
       status: active ? "active" : "inactive",
+      raw_status: status,
       current_period_end: profile.current_period_end,
       email: profile.email,
     });
