@@ -8671,6 +8671,15 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
     const isMobileExport =
       typeof navigator !== "undefined" &&
       /iPad|iPhone|iPod|Android/i.test(navigator.userAgent || "");
+    const safeScale = isMobileExport
+      ? Math.max(
+          1,
+          Math.min(
+            exportScale,
+            Math.floor((4096 / Math.max(canvasSize.w, canvasSize.h)) * 100) / 100
+          )
+        )
+      : exportScale;
     let usedScale = exportScale;
     let width = canvasSize.w * exportScale;
     let height = canvasSize.h * exportScale;
@@ -8690,9 +8699,9 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
       const mustRetry = !!(bgUrl || bgUploadUrl || logoUrl);
       const maxAttempts = mustRetry ? 3 : 1;
       const scaleAttempts = isMobileExport
-        ? [exportScale]
-            .concat(exportScale > 2 ? [2] : [])
-            .concat(exportScale > 1 ? [1] : [])
+        ? [safeScale]
+            .concat(safeScale > 2 ? [2] : [])
+            .concat(safeScale > 1 ? [1] : [])
             .filter((v, i, a) => a.indexOf(v) === i)
         : [exportScale];
 
@@ -11522,7 +11531,10 @@ async function waitForImages(root: HTMLElement) {
   );
 }
 
-async function inlineImagesForExport(root: HTMLElement) {
+async function inlineImagesForExport(
+  root: HTMLElement,
+  opts?: { forceProxy?: boolean }
+) {
   const imgs = Array.from(root.querySelectorAll('img')) as HTMLImageElement[];
   const cache = new Map<string, string | null>();
   const swaps: Array<{
@@ -11550,6 +11562,9 @@ async function inlineImagesForExport(root: HTMLElement) {
       : new URL(rawSrc, window.location.href).toString();
     if (!cache.has(absSrc)) {
       try {
+        if (opts?.forceProxy) {
+          throw new Error('force proxy');
+        }
         const res = await fetch(absSrc, { mode: 'cors', credentials: 'omit' });
         if (!res.ok) throw new Error('fetch failed');
         const blob = await res.blob();
@@ -11557,7 +11572,7 @@ async function inlineImagesForExport(root: HTMLElement) {
         cache.set(absSrc, blobUrl);
         created.add(blobUrl);
       } catch {
-        // Fallback: proxy via same-origin to avoid CORS blocks
+        // Proxy via same-origin to avoid CORS blocks (mobile-safe)
         try {
           const proxied = await fetch(`/api/image-proxy?url=${encodeURIComponent(absSrc)}`, {
             cache: "no-store",
@@ -11616,7 +11631,10 @@ async function inlineImagesForExport(root: HTMLElement) {
   return { restore, missing };
 }
 
-async function inlineBackgroundImagesForExport(root: HTMLElement) {
+async function inlineBackgroundImagesForExport(
+  root: HTMLElement,
+  opts?: { forceProxy?: boolean }
+) {
   const nodes = Array.from(root.querySelectorAll('*')) as HTMLElement[];
   const swaps: Array<{ el: HTMLElement; bg: string }> = [];
   const missing: string[] = [];
@@ -11834,10 +11852,10 @@ async function renderExportDataUrl(
         await waitForImageUrl(bgUploadUrl || bgUrl);
         await waitForImageUrl(logoUrl);
         if (isMobileExport) {
-          const inlineImgs = await inlineImagesForExport(exportRoot);
+          const inlineImgs = await inlineImagesForExport(exportRoot, { forceProxy: true });
           restoreInlineImages = inlineImgs.restore;
           missingInline = inlineImgs.missing;
-          const inlineBg = await inlineBackgroundImagesForExport(exportRoot);
+          const inlineBg = await inlineBackgroundImagesForExport(exportRoot, { forceProxy: true });
           restoreInlineBg = inlineBg.restore;
           missingBgInline = inlineBg.missing;
           const missingAll = [...missingInline, ...missingBgInline];
