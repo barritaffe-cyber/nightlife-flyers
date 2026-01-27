@@ -8537,6 +8537,8 @@ React.useEffect(() => {
     format: 'png' | 'jpg';
     scale: number;
   } | null>(null);
+  const [downloadInProgress, setDownloadInProgress] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
   const HISTORY_LIMIT = 10;
   const historyRef = React.useRef<{
     undo: string[];
@@ -8618,6 +8620,42 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
     requestAnimationFrame(() => {
       try { document.body.removeChild(link); } catch {}
     });
+  }
+
+  async function downloadExportWithProgress(dataUrl: string, format: 'png' | 'jpg') {
+    setDownloadInProgress(true);
+    setDownloadProgress(5);
+    let raf = 0;
+    const start = performance.now();
+    const animate = () => {
+      const t = Math.min(1, (performance.now() - start) / 1200);
+      setDownloadProgress(Math.min(90, Math.round(5 + t * 85)));
+      if (t < 1) raf = requestAnimationFrame(animate);
+    };
+    raf = requestAnimationFrame(animate);
+    try {
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      setDownloadProgress(96);
+      const url = URL.createObjectURL(blob);
+      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `nightlife_export_${stamp}.${format}`;
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      requestAnimationFrame(() => {
+        try { document.body.removeChild(a); } catch {}
+        URL.revokeObjectURL(url);
+      });
+      setDownloadProgress(100);
+      await new Promise((r) => setTimeout(r, 250));
+    } finally {
+      cancelAnimationFrame(raf);
+      setDownloadInProgress(false);
+      setDownloadProgress(0);
+    }
   }
 
   const saveDebounce = useRef<number | null>(null);
@@ -11526,8 +11564,41 @@ async function renderExportDataUrl(
       await waitForImageUrl(logoUrl);
       await waitForImages(exportRoot);
       await waitForBackgroundImages(exportRoot);
-      if (format === 'jpg') {
-        return await htmlToImage.toJpeg(exportRoot, {
+
+      const capture = async () => {
+        if (format === 'jpg') {
+          return await htmlToImage.toJpeg(exportRoot, {
+            cacheBust: true,
+            backgroundColor: '#000',
+            pixelRatio: scale,
+            style: forcedStyle,
+            filter: (node: HTMLElement) => {
+              const el = node as HTMLElement;
+              if (!el) return true;
+              const skip =
+                el.dataset?.nonexport === 'true' ||
+                el.classList?.contains('debug-grid') ||
+                el.classList?.contains('bounding-box') ||
+                el.classList?.contains('text-bounding') ||
+                el.classList?.contains('text-outline') ||
+                el.classList?.contains('highlight-box') ||
+                el.classList?.contains('drag-handle') ||
+                el.classList?.contains('resize-handle') ||
+                el.classList?.contains('portrait-handle') ||
+                el.classList?.contains('portrait-bounding') ||
+                el.classList?.contains('portrait-outline') ||
+                el.classList?.contains('portrait-border') ||
+                el.classList?.contains('portrait-slot') ||
+                el.classList?.contains('overlay-grid') ||
+                el.tagName === 'BUTTON' ||
+                el.tagName === 'INPUT' ||
+                el.tagName === 'TEXTAREA';
+              return !skip;
+            },
+          });
+        }
+
+        return await htmlToImage.toPng(exportRoot, {
           cacheBust: true,
           backgroundColor: '#000',
           pixelRatio: scale,
@@ -11556,37 +11627,14 @@ async function renderExportDataUrl(
             return !skip;
           },
         });
-      }
+      };
 
-      return await htmlToImage.toPng(exportRoot, {
-        cacheBust: true,
-        backgroundColor: '#000',
-        pixelRatio: scale,
-        style: forcedStyle,
-        filter: (node: HTMLElement) => {
-          const el = node as HTMLElement;
-          if (!el) return true;
-          const skip =
-            el.dataset?.nonexport === 'true' ||
-            el.classList?.contains('debug-grid') ||
-            el.classList?.contains('bounding-box') ||
-            el.classList?.contains('text-bounding') ||
-            el.classList?.contains('text-outline') ||
-            el.classList?.contains('highlight-box') ||
-            el.classList?.contains('drag-handle') ||
-            el.classList?.contains('resize-handle') ||
-            el.classList?.contains('portrait-handle') ||
-            el.classList?.contains('portrait-bounding') ||
-            el.classList?.contains('portrait-outline') ||
-            el.classList?.contains('portrait-border') ||
-            el.classList?.contains('portrait-slot') ||
-            el.classList?.contains('overlay-grid') ||
-            el.tagName === 'BUTTON' ||
-            el.tagName === 'INPUT' ||
-            el.tagName === 'TEXTAREA';
-          return !skip;
-        },
-      });
+      const needsWarmup = !!(bgUploadUrl || bgUrl || logoUrl);
+      if (!needsWarmup) return await capture();
+
+      await capture(); // warm-up pass
+      await new Promise((r) => setTimeout(r, 200));
+      return await capture(); // final pass
     });
 
     (window as any).__HIDE_UI_EXPORT__ = false;
@@ -15550,6 +15598,18 @@ return (
         <div className="text-sm font-semibold text-white">Export preview</div>
       </div>
       <div className="p-4 space-y-4">
+        {downloadInProgress && (
+          <div className="rounded-xl border border-white/10 bg-neutral-950/95 p-4 space-y-3">
+            <div className="text-sm text-white/90">Merging final flyer…</div>
+            <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-fuchsia-400 to-indigo-400 transition-all"
+                style={{ width: `${downloadProgress}%` }}
+              />
+            </div>
+            <div className="text-[11px] text-white/50">{downloadProgress}%</div>
+          </div>
+        )}
         {exportStatus === "rendering" && (
           <div className="grid place-items-center gap-3 py-8">
             <div className="h-8 w-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
@@ -15613,7 +15673,7 @@ return (
                 <button
                   type="button"
                   className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
-                  onClick={() => window.open(exportDataUrl, "_blank", "noopener")}
+                  onClick={() => downloadExportWithProgress(exportDataUrl, exportMeta.format)}
                 >
                   Open image
                 </button>
@@ -15621,7 +15681,7 @@ return (
                 <button
                   type="button"
                   className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
-                  onClick={() => downloadExport(exportDataUrl, exportMeta.format)}
+                  onClick={() => downloadExportWithProgress(exportDataUrl, exportMeta.format)}
                 >
                   Download
                 </button>
