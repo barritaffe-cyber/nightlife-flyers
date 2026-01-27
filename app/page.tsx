@@ -19,6 +19,7 @@ import { getRootRef } from "../lib/rootRefUtil";
 import { useFlyerState, type Format } from "../app/state/flyerState";
 import type { Emoji } from "../app/types/emoji";
 import { canvasRefs } from "../lib/canvasRefs";
+import AuthGate from "../components/auth/AuthGate";
 import type { TemplateBase } from "../lib/templates";
 import type { MoveTarget } from "../app/state/flyerState";
 import { removeBackgroundLocal } from "../lib/removeBgLocal";
@@ -1811,7 +1812,6 @@ const LockButton = ({
   const [portraitAR, setPortraitAR] = React.useState<number | null>(null);
   // === Portrait lock state ===
   const [portraitLocked, setPortraitLocked] = useState<boolean>(false);
-  const [templateBase, setTemplateBase] = useState<any>(null);
   const [dragEffectsDisabled, setDragEffectsDisabled] = useState(false);
   const portraits = useFlyerState((s) => s.portraits);
   const updatePortrait = useFlyerState((s) => s.updatePortrait);
@@ -13220,7 +13220,6 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       // 🔥 CRITICAL: Detach Template System so it doesn't override us
       setTemplateId(null);
       setActiveTemplate(null);
-      setTemplateBase(null);
       setPendingFormat(null);
       setFadeOut(false);
 
@@ -13525,6 +13524,7 @@ const clearHeavyStorage = () => {
    ============================================================================
 */
 const templateBgScaleRef = React.useRef<number | null>(null);
+// eslint-disable-next-line react-hooks/exhaustive-deps
 const applyTemplate = React.useCallback<
   (tpl: TemplateSpec, opts?: { targetFormat?: Format; initialLoad?: boolean }) => void
 >(
@@ -13755,19 +13755,6 @@ const applyTemplate = React.useCallback<
 // =========================================================
 // ✅ CINEMATIC PRESETS (Visual Styles)
 // =========================================================
-const CINEMATIC_PRESETS = [
-  { id: "gold",   label: "Gold" },
-  { id: "silver", label: "Silver (Brushed Studio)" },
-  { id: "chrome", label: "Chrome (Mirror)" },
-  { id: "magma", label: "Magma (Volcanic)" },
-  { id: "ice", label: "Ice (Glacial)" },
-  { id: "holo", label: "Holographic (Iridescent)" },
-  { id: "wood", label: "Wood (Carved)" },
-  { id: "leather", label: "Leather (Luxury)" },
-  { id: "concrete", label: "Concrete (Industrial)" },
-  { id: "default", label: "Matte (Clean)" },
-] as const;
-
 // Apply button handler (shared with Choose-a-Vibe)
 const applyTemplateFromGallery = React.useCallback(
   (tpl: TemplateSpec, opts?: { targetFormat?: Format }) => {
@@ -13814,27 +13801,6 @@ const STARTUP_TEMPLATE_MAP: Record<string, TemplateSpec | undefined> = {
   luxury: findTemplateById("rnb_velvet"),
   urban: findTemplateById("hiphop_lowrider"),
   loaded: TEMPLATE_GALLERY[4] ?? TEMPLATE_GALLERY[0], // fallback
-};
-
-const QUICK_START_TEMPLATES = [
-  { id: "edm_tunnel", label: "EDM Tunnel" },
-  { id: "techno_warehouse", label: "Warehouse" },
-  { id: "afrobeat_rooftop", label: "Rooftop" },
-  { id: "latin_street_tropical", label: "Tropical" },
-  { id: "dnb_bunker", label: "DNB Bunker" },
-] as const;
-
-const handleStartupSelect = (key: string) => {
-  const tpl = STARTUP_TEMPLATE_MAP[key];
-
-  if (!tpl) {
-
-    return;
-  }
-
-  applyTemplate(tpl, { targetFormat: "square" });
-
-  setShowStartupTemplates(false);
 };
 
 // === SYNC HELPER: Saves all current local state to the global session ===
@@ -14050,8 +14016,6 @@ React.useEffect(() => {
 
 
 // keep this new state near the other useStates at the top of your component
-const [templateBase, setTemplateBase] = React.useState<any>(null);
-
 const handleTemplateSelect = React.useCallback(
   (key: string) => {
     setLoadingStartup(true);
@@ -14075,9 +14039,6 @@ const handleTemplateSelect = React.useCallback(
 
 
 
-      // 🧠 Save a snapshot of the base template (for optional reset)
-      setTemplateBase(JSON.parse(JSON.stringify(tpl)));
-
       // ✅ Startup load should be authoritative (same as gallery apply)
       const startupFormat: Format = format;
       const store = useFlyerState.getState();
@@ -14085,8 +14046,7 @@ const handleTemplateSelect = React.useCallback(
       store.setSessionDirty((prev) => ({ ...prev, square: false, story: false }));
       setFormat(startupFormat);
       applyTemplateFromGallery(tpl, { targetFormat: startupFormat });
-    } catch (err) {
-
+    } catch {
       alert("Could not load template.");
     }
 
@@ -14103,7 +14063,7 @@ const handleTemplateSelect = React.useCallback(
 }, 1200);
 
   },
-  [format]
+  [applyTemplateFromGallery, format, scrollToArtboard]
 );
 // === /STARTUP SCREEN ===
 
@@ -14345,7 +14305,6 @@ const activeTextControls = React.useMemo(() => {
   setSubtagSize,
   format,
   textFx?.color,
-  textFx?.tracking,
   setTextStyle,
 ]);
 
@@ -15635,10 +15594,11 @@ const emojiCanvas = React.useMemo(() => {
       })}
     </div>
   );
-}, [emojis, format, onEmojiMove, selectedEmojiId, recordMove]);
+}, [emojis, format, onEmojiMove, recordMove]);
 
 return (
   <>
+  <AuthGate />
   {/* CONTINUE SESSION MODAL */}
     <AnimatePresence>
       {hasSavedDesign && !showStartup && (
@@ -18217,7 +18177,7 @@ style={{ top: STICKY_TOP }}
         {activeAssetControls.showLabel && (
           <div
             className="mt-2"
-            onPointerDownCapture={(e) => {
+            onPointerDownCapture={() => {
               assetFocusLockRef.current = true;
               setFloatingAssetVisible(true);
             }}

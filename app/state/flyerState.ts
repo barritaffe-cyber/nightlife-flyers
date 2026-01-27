@@ -69,12 +69,6 @@ export type FlyerDesignV1 = {
   selectedEmojiId?: string | null;
 };
 
-const DESIGN_VERSION = 1 as const;
-
-function isFormat(x: any): x is Format {
-  return x === "square" || x === "story";
-}
-
 //
 // ============================================
 // TYPES
