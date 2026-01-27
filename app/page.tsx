@@ -8722,7 +8722,13 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
       finishExportProgress();
     } catch (err) {
       setExportStatus('error');
-      setExportError('Export failed. Please try again.');
+      const msg =
+        err instanceof Error
+          ? `${err.name}: ${err.message}`
+          : typeof err === 'string'
+            ? err
+            : 'Export failed. Please try again.';
+      setExportError(msg);
       setExportProgressActive(false);
       setExportProgress(0);
     }
