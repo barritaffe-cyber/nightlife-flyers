@@ -16006,8 +16006,11 @@ return (
               <div>Size: {formatBytes(exportMeta.sizeBytes)}</div>
             </div>
             {isIOS ? (
-              <div className="text-[12px] text-neutral-300">
-                Hold down on the image and tap <b>Save to Photos</b>.
+              <div className="text-[12px] text-neutral-300 space-y-1">
+                <div>Hold down on the image and tap <b>Save to Photos</b>.</div>
+                <div className="text-[11px] text-neutral-400">
+                  Tip: If the background doesn’t render, hit <b>Rerender</b> — data might be slow.
+                </div>
               </div>
             ) : (
               <div className="text-[12px] text-neutral-300">
