@@ -399,12 +399,14 @@ export async function POST(req: Request) {
       style = "club",
       format = "square",
       provider = "replicate",
+      extraPrompt = "",
     } = body as {
       subject: string;
       background: string;
       style?: MagicBlendStyle;
       format?: "square" | "story" | "portrait";
       provider?: "stability" | "openai" | "replicate";
+      extraPrompt?: string;
     };
     activeProvider = provider;
 
@@ -516,11 +518,16 @@ export async function POST(req: Request) {
 - Do not change the weather or season.
 - Only add subtle atmosphere and a few small accent lights; no scene overhaul.`;
 
+    const extraBlock =
+      typeof extraPrompt === "string" && extraPrompt.trim()
+        ? `\n\nAdditional directives:\n${extraPrompt.trim()}`
+        : "";
+
     const finalPrompt = `${BASE_PROMPT}
 
 ${STYLE_SUFFIX[safeStyle]}
 
-${backgroundLock}`;
+${backgroundLock}${extraBlock}`;
 
     // --- Single unified pass with TWO reference images (Imagine Art style) ---
     const sizeStr = format === "story" ? "1024x1792" : "1024x1024";

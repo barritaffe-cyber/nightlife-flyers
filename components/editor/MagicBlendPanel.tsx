@@ -11,6 +11,14 @@ type Props = {
   onToggle: () => void;
   blendStyle: BlendStyle;
   setBlendStyle: (v: BlendStyle) => void;
+  blendAttireColor: string;
+  setBlendAttireColor: (v: string) => void;
+  blendLighting: string;
+  setBlendLighting: (v: string) => void;
+  blendCameraZoom: string;
+  setBlendCameraZoom: (v: string) => void;
+  blendExpressionPose: string;
+  setBlendExpressionPose: (v: string) => void;
   blendBackgroundPriority: BlendPriority;
   setBlendBackgroundPriority: (v: BlendPriority) => void;
   isCuttingOut: boolean;
@@ -27,6 +35,14 @@ function MagicBlendPanel({
   onToggle,
   blendStyle,
   setBlendStyle,
+  blendAttireColor,
+  setBlendAttireColor,
+  blendLighting,
+  setBlendLighting,
+  blendCameraZoom,
+  setBlendCameraZoom,
+  blendExpressionPose,
+  setBlendExpressionPose,
   blendBackgroundPriority,
   setBlendBackgroundPriority,
   isCuttingOut,
@@ -37,6 +53,7 @@ function MagicBlendPanel({
   handleMagicBlend,
   isBlending,
 }: Props) {
+  const [optionsOpen, setOptionsOpen] = React.useState(false);
   return (
     <div className="mt-3" id="magic-blend-panel">
       <div
@@ -241,7 +258,7 @@ function MagicBlendPanel({
 
           <div className="pt-2 border-t border-white/5">
             <button
-              onClick={handleMagicBlend}
+              onClick={() => setOptionsOpen(true)}
               disabled={isBlending || isCuttingOut || !blendSubject}
               className={`w-full py-3 rounded-lg font-bold text-xs uppercase tracking-wider shadow-lg transition-all flex items-center justify-center gap-2 ${
                 isBlending
@@ -277,6 +294,123 @@ function MagicBlendPanel({
           </div>
         </Collapsible>
       </div>
+
+      {optionsOpen && (
+        <div className="fixed inset-0 z-[2100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-neutral-950 p-4 shadow-2xl">
+            <div className="text-sm font-semibold text-white mb-1">Blend Options</div>
+            <div className="text-[11px] text-neutral-400 mb-4">
+              Set quick directives before blending. These guide the AI without changing your assets.
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-[11px]">
+              <label className="space-y-1">
+                <span className="text-neutral-400">Attire Color</span>
+                <select
+                  className="w-full rounded-md border border-neutral-700 bg-neutral-900/60 px-2 py-1"
+                  value={blendAttireColor}
+                  onChange={(e) => setBlendAttireColor(e.target.value)}
+                >
+                  {[
+                    'auto',
+                    'all white',
+                    'all black',
+                    'red',
+                    'gold',
+                    'silver',
+                    'emerald',
+                    'violet',
+                    'neon pink',
+                    'neon blue',
+                  ].map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="space-y-1">
+                <span className="text-neutral-400">Lighting</span>
+                <select
+                  className="w-full rounded-md border border-neutral-700 bg-neutral-900/60 px-2 py-1"
+                  value={blendLighting}
+                  onChange={(e) => setBlendLighting(e.target.value)}
+                >
+                  {[
+                    'match scene',
+                    'rim light',
+                    'back light',
+                    'neon glow',
+                    'warm cinematic',
+                    'cool cinematic',
+                  ].map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="space-y-1">
+                <span className="text-neutral-400">Camera Zoom</span>
+                <select
+                  className="w-full rounded-md border border-neutral-700 bg-neutral-900/60 px-2 py-1"
+                  value={blendCameraZoom}
+                  onChange={(e) => setBlendCameraZoom(e.target.value)}
+                >
+                  {[
+                    'auto',
+                    'full body',
+                    'three-quarter',
+                    'waist-up',
+                    'chest-up',
+                  ].map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="space-y-1">
+                <span className="text-neutral-400">Expression / Pose</span>
+                <select
+                  className="w-full rounded-md border border-neutral-700 bg-neutral-900/60 px-2 py-1"
+                  value={blendExpressionPose}
+                  onChange={(e) => setBlendExpressionPose(e.target.value)}
+                >
+                  {[
+                    'confident',
+                    'joyful',
+                    'dance energy',
+                    'soft smile',
+                    'serious',
+                    'seductive',
+                  ].map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
+                onClick={() => setOptionsOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-lg hover:from-amber-400 hover:to-orange-500"
+                onClick={() => {
+                  setOptionsOpen(false);
+                  handleMagicBlend();
+                }}
+                disabled={isBlending || isCuttingOut || !blendSubject}
+              >
+                Blend Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
