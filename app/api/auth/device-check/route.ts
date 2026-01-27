@@ -6,8 +6,8 @@ export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
-    const auth = req.headers.get("authorization") || "";
-    const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+    const authHeader = req.headers.get("authorization") || "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
     if (!token) {
       return NextResponse.json({ error: "Missing token" }, { status: 401 });
     }
@@ -23,8 +23,8 @@ export async function POST(req: Request) {
     }
 
     const admin = supabaseAdmin();
-    const auth = supabaseAuth();
-    const { data: userData, error: userErr } = await auth.auth.getUser(token);
+    const authClient = supabaseAuth();
+    const { data: userData, error: userErr } = await authClient.auth.getUser(token);
     if (userErr || !userData?.user) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
@@ -38,7 +38,10 @@ export async function POST(req: Request) {
       .maybeSingle();
 
     if (fetchErr) {
-      return NextResponse.json({ error: "Device lookup failed" }, { status: 500 });
+      return NextResponse.json(
+        { error: "Device lookup failed", detail: fetchErr.message },
+        { status: 500 }
+      );
     }
 
     if (!existing) {

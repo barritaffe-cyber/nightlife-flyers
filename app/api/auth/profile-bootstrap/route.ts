@@ -6,25 +6,31 @@ export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
-    const auth = req.headers.get("authorization") || "";
-    const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+    const authHeader = req.headers.get("authorization") || "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
     if (!token) {
       return NextResponse.json({ error: "Missing token" }, { status: 401 });
     }
 
     const admin = supabaseAdmin();
-    const auth = supabaseAuth();
-    const { data: userData, error: userErr } = await auth.auth.getUser(token);
+    const authClient = supabaseAuth();
+    const { data: userData, error: userErr } = await authClient.auth.getUser(token);
     if (userErr || !userData?.user) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
     const user = userData.user;
 
-    await admin.from("profiles").upsert({
+    const { error: upsertErr } = await admin.from("profiles").upsert({
       id: user.id,
       email: user.email,
       status: "trial",
     });
+    if (upsertErr) {
+      return NextResponse.json(
+        { error: "Profile upsert failed", detail: upsertErr.message },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ ok: true });
   } catch {
