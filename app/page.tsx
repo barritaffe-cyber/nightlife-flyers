@@ -8539,6 +8539,8 @@ React.useEffect(() => {
   } | null>(null);
   const [exportProgress, setExportProgress] = useState(0);
   const [exportProgressActive, setExportProgressActive] = useState(false);
+  const [exportBlobUrl, setExportBlobUrl] = useState<string | null>(null);
+  const [exportFilename, setExportFilename] = useState<string | null>(null);
   const HISTORY_LIMIT = 10;
   const historyRef = React.useRef<{
     undo: string[];
@@ -8658,6 +8660,11 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
     setExportStatus('rendering');
     setExportError(null);
     setExportDataUrl(null);
+    if (exportBlobUrl) {
+      try { URL.revokeObjectURL(exportBlobUrl); } catch {}
+      setExportBlobUrl(null);
+    }
+    setExportFilename(null);
     setExportMeta(null);
     startExportProgress();
 
@@ -8704,6 +8711,15 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
         format: exportType,
         scale: exportScale,
       });
+      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+      const filename = `nightlife_export_${stamp}.${exportType}`;
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      setExportProgress(98);
+      const blobUrl = URL.createObjectURL(blob);
+      setExportBlobUrl(blobUrl);
+      setExportFilename(filename);
+      setExportProgress(100);
       setExportStatus('ready');
       finishExportProgress();
     } catch (err) {
@@ -8719,8 +8735,13 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
     setExportStatus('idle');
     setExportError(null);
     setExportDataUrl(null);
+    if (exportBlobUrl) {
+      try { URL.revokeObjectURL(exportBlobUrl); } catch {}
+    }
+    setExportBlobUrl(null);
+    setExportFilename(null);
     setExportMeta(null);
-  }, []);
+  }, [exportBlobUrl]);
 
   function storeRendered3DToLogoSlotsAndOpen(url: string) {
   // 1) Put into the first empty logo slot (or overwrite slot 0 if all full)
@@ -15662,8 +15683,11 @@ return (
                 <button
                   type="button"
                   className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
-                  onClick={() => window.open(exportDataUrl, "_blank", "noopener")}
-                  disabled={exportStatus !== "ready" || exportProgressActive}
+                  onClick={() => {
+                    if (!exportBlobUrl) return;
+                    window.open(exportBlobUrl, "_blank", "noopener");
+                  }}
+                  disabled={exportStatus !== "ready" || exportProgressActive || !exportBlobUrl}
                 >
                   Open image
                 </button>
@@ -15671,8 +15695,19 @@ return (
                 <button
                   type="button"
                   className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
-                  onClick={() => downloadExport(exportDataUrl, exportMeta.format)}
-                  disabled={exportStatus !== "ready" || exportProgressActive}
+                  onClick={() => {
+                    if (!exportBlobUrl || !exportFilename) return;
+                    const a = document.createElement('a');
+                    a.href = exportBlobUrl;
+                    a.download = exportFilename;
+                    a.rel = 'noopener';
+                    document.body.appendChild(a);
+                    a.click();
+                    requestAnimationFrame(() => {
+                      try { document.body.removeChild(a); } catch {}
+                    });
+                  }}
+                  disabled={exportStatus !== "ready" || exportProgressActive || !exportBlobUrl}
                 >
                   Download
                 </button>
