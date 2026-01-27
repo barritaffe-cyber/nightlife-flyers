@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../lib/supabase/admin";
+import { supabaseAuth } from "../../../../lib/supabase/auth";
 
 export const runtime = "nodejs";
 
@@ -22,7 +23,8 @@ export async function POST(req: Request) {
     }
 
     const admin = supabaseAdmin();
-    const { data: userData, error: userErr } = await admin.auth.getUser(token);
+    const auth = supabaseAuth();
+    const { data: userData, error: userErr } = await auth.auth.getUser(token);
     if (userErr || !userData?.user) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
