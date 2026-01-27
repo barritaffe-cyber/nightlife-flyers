@@ -8750,12 +8750,16 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
       finishExportProgress();
     } catch (err) {
       setExportStatus('error');
-      const msg =
-        err instanceof Error
-          ? `${err.name}: ${err.message}`
-          : typeof err === 'string'
-            ? err
-            : `Export failed. ${String(err)}`;
+      let msg: string;
+      if (err instanceof Error) {
+        msg = `${err.name}: ${err.message}`;
+      } else if (typeof err === "string") {
+        msg = err;
+      } else if (err && typeof err === "object" && "type" in (err as any)) {
+        msg = `Export failed due to an image load error. Please retry.`;
+      } else {
+        msg = `Export failed. ${String(err)}`;
+      }
       setExportError(msg || 'Export failed. Please try again.');
       setExportProgressActive(false);
       setExportProgress(0);
@@ -11547,7 +11551,21 @@ async function inlineImagesForExport(root: HTMLElement) {
         cache.set(absSrc, blobUrl);
         created.add(blobUrl);
       } catch {
-        cache.set(absSrc, null);
+        // Fallback: proxy via same-origin to avoid CORS blocks
+        try {
+          const proxied = await fetch(`/api/image-proxy?url=${encodeURIComponent(absSrc)}`, {
+            cache: "no-store",
+          });
+          if (!proxied.ok) throw new Error('proxy failed');
+          const data = await proxied.json();
+          if (data?.dataUrl) {
+            cache.set(absSrc, data.dataUrl);
+          } else {
+            cache.set(absSrc, null);
+          }
+        } catch {
+          cache.set(absSrc, null);
+        }
       }
     }
 
