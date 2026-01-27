@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../../lib/supabase/admin.ts";
+import { supabaseAdmin } from "../../../../lib/supabase/admin";
 
 export const runtime = "nodejs";
 
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
       .eq("id", existing.id);
 
     return NextResponse.json({ ok: true, status: "replaced" });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: "Device check failed" }, { status: 500 });
   }
 }

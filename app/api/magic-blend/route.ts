@@ -494,7 +494,6 @@ export async function POST(req: Request) {
 
     // 4) Convert both images to data URLs (order matters)
     stage = "data-urls";
-    const preCompositeDataUrl = bufferToDataUrlPng(preCompositeBuf);
     const bgOnlyDataUrl = bufferToDataUrlPng(bgCanvas);
 
     // --- Build prompt (BASE + SUFFIX + background lock) ---

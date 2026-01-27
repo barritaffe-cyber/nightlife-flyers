@@ -1,4 +1,6 @@
 'use client';
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @next/next/no-img-element */
 
 /* ===== BLOCK: IMPORTS (BEGIN) ===== */
@@ -9763,7 +9765,9 @@ const buildEdgeAwareLassoMask = (
       if (typeof s.align === 'string') setAlign(s.align);
       if (typeof s.lineHeight === 'number') setLineHeight(s.lineHeight);
       if (typeof s.textColWidth === 'number') setTextColWidth(s.textColWidth);
-      if (typeof s.tallHeadline === 'boolean') /* read-only in your code */ null;
+      if (typeof s.tallHeadline === 'boolean') {
+        // read-only in current code
+      }
       if (s.textFx && typeof s.textFx === 'object') setTextFx((prev) => ({ ...prev, ...s.textFx }));
 
       // headline size mode (optional in templates)
@@ -13524,7 +13528,6 @@ const clearHeavyStorage = () => {
    ============================================================================
 */
 const templateBgScaleRef = React.useRef<number | null>(null);
-// eslint-disable-next-line react-hooks/exhaustive-deps
 const applyTemplate = React.useCallback<
   (tpl: TemplateSpec, opts?: { targetFormat?: Format; initialLoad?: boolean }) => void
 >(
