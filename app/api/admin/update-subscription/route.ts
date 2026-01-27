@@ -32,8 +32,22 @@ export async function POST(req: Request) {
       .eq("email", email)
       .limit(1);
 
-    if (userErr || !users || users.length === 0) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (userErr) {
+      return NextResponse.json({ error: "User lookup failed" }, { status: 500 });
+    }
+
+    if (!users || users.length === 0) {
+      const { data: authUser, error: authErr } = await admin.auth.admin.getUserByEmail(email);
+      if (authErr || !authUser?.user) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
+      await admin.from("profiles").insert({
+        id: authUser.user.id,
+        email: authUser.user.email,
+        status,
+        current_period_end,
+      });
+      return NextResponse.json({ ok: true, created: true });
     }
 
     const { error: updateErr } = await admin
