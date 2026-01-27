@@ -8624,16 +8624,7 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
 
   function startExportProgress() {
     setExportProgressActive(true);
-    setExportProgress(6);
-    const start = performance.now();
-    const tick = () => {
-      const t = Math.min(1, (performance.now() - start) / 1400);
-      setExportProgress(Math.min(92, Math.round(6 + t * 86)));
-      if (t < 1 && exportStatus === 'rendering') {
-        requestAnimationFrame(tick);
-      }
-    };
-    requestAnimationFrame(tick);
+    setExportProgress(4);
   }
 
   function finishExportProgress() {
@@ -8691,7 +8682,12 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
       let sizeBytes = 0;
 
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        dataUrl = await renderExportDataUrl(artRef.current, exportType, exportScale);
+        dataUrl = await renderExportDataUrl(
+          artRef.current,
+          exportType,
+          exportScale,
+          (p) => setExportProgress(p)
+        );
         sizeBytes = dataUrlBytes(dataUrl);
         if (!mustRetry) break;
         if (!needsRetry()) break;
@@ -11436,7 +11432,8 @@ async function waitForImages(root: HTMLElement) {
 async function renderExportDataUrl(
   art: HTMLElement,
   format: 'png' | 'jpg',
-  scale: number
+  scale: number,
+  onProgress?: (p: number) => void
 ) {
   const exportRoot =
     (art.closest?.('[data-export-root="true"]') as HTMLElement) ||
@@ -11464,10 +11461,12 @@ async function renderExportDataUrl(
     setIsGenerating(true);
     setHideUiForExport(true);
     clearAllSelections();
+    onProgress?.(8);
 
     (window as any).__HIDE_UI_EXPORT__ = true;
     await new Promise((r) => setTimeout(r, 150));
     await twoRaf();
+    onProgress?.(18);
 
     originalStyle = {
       transform: wrapper.style.transform,
@@ -11493,6 +11492,7 @@ async function renderExportDataUrl(
 
     await new Promise((r) => setTimeout(r, 100));
     await twoRaf();
+    onProgress?.(28);
 
     const families = [
       headlineFamily,
@@ -11515,6 +11515,7 @@ async function renderExportDataUrl(
     try {
       await (document as any).fonts?.ready;
     } catch {}
+    onProgress?.(40);
 
     // Force a baked background layer to avoid missing CSS bg on mobile export
     try {
@@ -11532,6 +11533,7 @@ async function renderExportDataUrl(
     } catch {
       // ignore if snapshot fails
     }
+    onProgress?.(55);
 
     const exportStyle = getComputedStyle(exportRoot);
     const forcedStyle: any = {
@@ -11554,6 +11556,7 @@ async function renderExportDataUrl(
       await waitForImageUrl(logoUrl);
       await waitForImages(exportRoot);
       await waitForBackgroundImages(exportRoot);
+      onProgress?.(70);
 
       const capture = async () => {
         if (format === 'jpg') {
@@ -11623,8 +11626,11 @@ async function renderExportDataUrl(
       if (!needsWarmup) return await capture();
 
       await capture(); // warm-up pass
+      onProgress?.(85);
       await new Promise((r) => setTimeout(r, 200));
-      return await capture(); // final pass
+      const out = await capture(); // final pass
+      onProgress?.(96);
+      return out;
     });
 
     (window as any).__HIDE_UI_EXPORT__ = false;
@@ -11642,6 +11648,7 @@ async function renderExportDataUrl(
     exportRoot.style.backgroundSize = originalStyle.backgroundSize;
     exportRoot.style.backgroundPosition = originalStyle.backgroundPosition;
     exportRoot.style.backgroundRepeat = originalStyle.backgroundRepeat;
+    onProgress?.(100);
 
     return dataUrl;
   } catch (err) {
