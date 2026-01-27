@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable @next/next/no-img-element */
 
 import * as React from 'react';
 import { Collapsible, Chip, Stepper, ColorDot } from './controls';
@@ -14,11 +15,8 @@ type Props = {
   setBgFitMode: React.Dispatch<React.SetStateAction<boolean>>;
   setBgPosX: React.Dispatch<React.SetStateAction<number>>;
   setBgPosY: React.Dispatch<React.SetStateAction<number>>;
-  setBgUrl: (v: string | null) => void;
-  setBgUploadUrl: (v: string | null) => void;
   bgUploadUrl: string | null;
   bgUrl: string | null;
-  genCandidates?: string[];
   genError?: string | null;
   bgRightRef: React.RefObject<HTMLInputElement | null>;
   onRightBgFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -63,11 +61,8 @@ function BackgroundPanels({
   setBgScale,
   setBgPosX,
   setBgPosY,
-  setBgUrl,
-  setBgUploadUrl,
   bgUploadUrl,
   bgUrl,
-  genCandidates,
   genError,
   bgRightRef,
   onRightBgFile,

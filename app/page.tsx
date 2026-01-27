@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable @next/next/no-img-element */
 
 /* ===== BLOCK: IMPORTS (BEGIN) ===== */
 import StartupTemplates from "../components/ui/StartupTemplates";
@@ -13524,7 +13525,9 @@ const clearHeavyStorage = () => {
    ============================================================================
 */
 const templateBgScaleRef = React.useRef<number | null>(null);
-const applyTemplate = React.useCallback(
+const applyTemplate = React.useCallback<
+  (tpl: TemplateSpec, opts?: { targetFormat?: Format; initialLoad?: boolean }) => void
+>(
   (
     tpl: TemplateSpec,
     opts?: {
@@ -14124,28 +14127,6 @@ const [floatingEditorVisible, setFloatingEditorVisible] = React.useState(false);
 const [floatingAssetVisible, setFloatingAssetVisible] = React.useState(false);
 const [floatingBgVisible, setFloatingBgVisible] = React.useState(false);
 
-const openGettingStartedPanel = React.useCallback(
-  (
-    panel: string,
-    targetId: string,
-    opts?: { after?: () => void; openModal?: boolean; tab?: "design" | "assets" }
-  ) => {
-    setSelectedPanel(panel);
-    if (opts?.tab) {
-      setMobileControlsTab(opts.tab);
-    } else {
-      setMobileControlsTab("assets");
-    }
-    requestAnimationFrame(() => {
-      document
-        .getElementById(targetId)
-        ?.scrollIntoView({ behavior: "smooth", block: "start" });
-      opts?.after?.();
-      if (opts?.openModal) setCinematicModalOpen(true);
-    });
-  },
-  [setSelectedPanel, setMobileControlsTab, setCinematicModalOpen]
-);
 const floatingAssetRef = React.useRef<HTMLDivElement | null>(null);
 const assetFocusLockRef = React.useRef(false);
 const [lastMoveStack, setLastMoveStack] = React.useState<{
@@ -14318,27 +14299,57 @@ const activeTextControls = React.useMemo(() => {
   headSizeAuto,
   headManualPx,
   headMaxPx,
+  setTextFx,
+  setHeadlineFamily,
+  setHeadSizeAuto,
+  setHeadManualPx,
+  setLineHeight,
   head2Family,
   head2SizePx,
   head2LineHeight,
+  head2Color,
+  setHead2Color,
+  setHead2Family,
+  setHead2SizePx,
+  setHead2LineHeight,
   detailsFamily,
   bodySize,
   detailsLineHeight,
+  bodyColor,
+  setBodyColor,
+  setDetailsFamily,
+  setBodySize,
+  setDetailsLineHeight,
   bodyFamily,
   details2Family,
   details2Size,
   details2LineHeight,
+  details2Color,
+  setDetails2Color,
+  setDetails2Family,
+  setDetails2Size,
+  setDetails2LineHeight,
   venueFamily,
   venueSize,
   venueLineHeight,
+  venueColor,
+  setVenueColor,
+  setVenueFamily,
+  setVenueSize,
+  setVenueLineHeight,
   subtagFamily,
   subtagSize,
+  subtagTextColor,
+  setSubtagTextColor,
+  setSubtagFamily,
+  setSubtagSize,
   format,
-  textFx.tracking,
+  textFx?.color,
+  textFx?.tracking,
+  setTextStyle,
 ]);
 
 const activeAssetControls = React.useMemo(() => {
-  const store = useFlyerState.getState();
   if (selectedEmojiId) {
     const list = Array.isArray(emojis) ? emojis : emojis?.[format] || [];
     const sel = list.find((e: any) => e.id === selectedEmojiId);
@@ -14436,7 +14447,16 @@ const activeAssetControls = React.useMemo(() => {
   }
 
   return null;
-}, [selectedEmojiId, selectedPortraitId, emojis, portraits, format, cleanupParams]);
+}, [
+  selectedEmojiId,
+  selectedPortraitId,
+  emojis,
+  portraits,
+  format,
+  cleanupParams,
+  removePortrait,
+  setCleanupAndRun,
+]);
 
 const activeBgControls = React.useMemo(() => {
   if (selectedPanel !== "background" && moveTarget !== "background") return null;
@@ -14744,11 +14764,6 @@ function buildClassifierAlpha(
     // luma (linear-ish)
     const l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
 
-    // chroma (how "colored" the pixel is)
-    const mx = Math.max(r, g, b);
-    const mn = Math.min(r, g, b);
-    const chroma = mx - mn;
-
     // Normalize luma between bp..wp
     let t = (l - bp) / (wp - bp);
     t = clamp01(t);
@@ -15024,6 +15039,7 @@ function cropToAlpha(imgData: ImageData) {
   return outCanvas.toDataURL("image/png");
 }
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // --- 7) Main tool: remove gradient background via proxy selection ---
 async function removeGradientBgLikePhotoshop(urlOrDataUrl: string): Promise<string> {
   const img = await loadImage(urlOrDataUrl);
@@ -15398,6 +15414,8 @@ async function applyAuthoritativeMaskAndCrop(
   cropCtx.drawImage(outCanvas, minX, minY, cw, ch, 0, 0, cw, ch);
   return cropCanvas.toDataURL("image/png");
 }
+
+/* eslint-enable @typescript-eslint/no-unused-vars */
  
 const isBgDragging = useFlyerState((st) => st.isLiveDragging && st.moveTarget === "background");
 
@@ -15424,7 +15442,6 @@ const emojiCanvas = React.useMemo(() => {
       }}
     >
       {list.map((em) => {
-        const isSelected = selectedEmojiId === em.id;
         const locked = !!em.locked;
         // 🔥 Calculate inverse scale so button stays constant size
         const btnScale = 1 / (em.scale || 1);
@@ -15618,21 +15635,7 @@ const emojiCanvas = React.useMemo(() => {
       })}
     </div>
   );
-}, [emojis, format, onEmojiMove, selectedEmojiId]);
-
-const setPanelFromUserEvent = (
-  panel: string | null,
-  e?: MouseEvent | PointerEvent | React.MouseEvent | React.PointerEvent
-) => {
-  const native = (e as any)?.nativeEvent ?? e;
-  const isTrusted = native?.isTrusted === true;
-
-  if (!isTrusted) return; // ✅ ignore programmatic changes
-  useFlyerState.getState().setSelectedPanel(panel);
-};
-
-
-
+}, [emojis, format, onEmojiMove, selectedEmojiId, recordMove]);
 
 return (
   <>
@@ -15658,7 +15661,7 @@ return (
                     const saved = localStorage.getItem("nf:lastDesign");
                     if (saved) importDesignJSON(saved);
                     setHasSavedDesign(false);
-                  } catch (err) {
+                  } catch {
                     alert("Failed to load saved design.");
                     setHasSavedDesign(false);
                   }
@@ -18590,8 +18593,6 @@ style={{ top: STICKY_TOP }}
   setBgFitMode={setBgFitMode}
   setBgPosX={setBgPosX}
   setBgPosY={setBgPosY}
-  setBgUrl={setBgUrl}
-  setBgUploadUrl={setBgUploadUrl}
   bgUploadUrl={bgUploadUrl}
   bgUrl={bgUrl}
   bgRightRef={bgRightRef}
