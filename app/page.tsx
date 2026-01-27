@@ -11605,6 +11605,49 @@ async function inlineImagesForExport(root: HTMLElement) {
     }
   };
 }
+
+async function inlineBackgroundImagesForExport(root: HTMLElement) {
+  const nodes = Array.from(root.querySelectorAll('*')) as HTMLElement[];
+  const swaps: Array<{ el: HTMLElement; bg: string }> = [];
+
+  for (const el of nodes) {
+    const style = getComputedStyle(el);
+    const bg = style.backgroundImage;
+    if (!bg || bg === "none" || bg.includes("gradient")) continue;
+
+    const urls = extractCssUrls(bg).filter((u) => u && /^https?:/i.test(u));
+    if (!urls.length) continue;
+
+    let nextBg = bg;
+    for (const url of urls) {
+      let dataUrl: string | null = null;
+      try {
+        const res = await fetch(`/api/image-proxy?url=${encodeURIComponent(url)}`, {
+          cache: "no-store",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.dataUrl) dataUrl = data.dataUrl;
+        }
+      } catch {}
+      if (dataUrl) {
+        // Replace only the matching URL token in the CSS string
+        nextBg = nextBg.replace(url, dataUrl);
+      }
+    }
+
+    if (nextBg !== bg) {
+      swaps.push({ el, bg: el.style.backgroundImage });
+      el.style.backgroundImage = nextBg;
+    }
+  }
+
+  return () => {
+    for (const s of swaps) {
+      try { s.el.style.backgroundImage = s.bg; } catch {}
+    }
+  };
+}
 // ===== EXPORT BEGIN (used by Export modal) =====
 async function renderExportDataUrl(
   art: HTMLElement,
@@ -11766,10 +11809,12 @@ async function renderExportDataUrl(
 
     const dataUrl = await withExternalStylesDisabled(async () => {
       let restoreInlineImages: null | (() => void) = null;
+      let restoreInlineBg: null | (() => void) = null;
       try {
         await waitForImageUrl(bgUploadUrl || bgUrl);
         await waitForImageUrl(logoUrl);
         restoreInlineImages = await inlineImagesForExport(exportRoot);
+        restoreInlineBg = await inlineBackgroundImagesForExport(exportRoot);
         await waitForImages(exportRoot);
         await waitForBackgroundImages(exportRoot);
         onProgress?.(70);
@@ -11849,6 +11894,7 @@ async function renderExportDataUrl(
         return out;
       } finally {
         if (restoreInlineImages) restoreInlineImages();
+        if (restoreInlineBg) restoreInlineBg();
       }
     });
 
