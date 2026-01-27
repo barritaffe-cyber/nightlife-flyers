@@ -37,17 +37,10 @@ export async function POST(req: Request) {
     }
 
     if (!users || users.length === 0) {
-      const { data: authUser, error: authErr } = await admin.auth.admin.getUserByEmail(email);
-      if (authErr || !authUser?.user) {
-        return NextResponse.json({ error: "User not found" }, { status: 404 });
-      }
-      await admin.from("profiles").insert({
-        id: authUser.user.id,
-        email: authUser.user.email,
-        status,
-        current_period_end,
-      });
-      return NextResponse.json({ ok: true, created: true });
+      return NextResponse.json(
+        { error: "User not found. Please log in once to create a profile." },
+        { status: 404 }
+      );
     }
 
     const { error: updateErr } = await admin
