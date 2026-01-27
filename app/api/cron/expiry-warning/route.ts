@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../../lib/supabase/admin.ts";
-import { sendEmail } from "../../../../lib/email/sendEmail.ts";
+import { supabaseAdmin } from "../../../../lib/supabase/admin";
+import { sendEmail } from "../../../../lib/email/sendEmail";
 
 export const runtime = "nodejs";
 
