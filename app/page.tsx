@@ -8668,8 +8668,9 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
     setExportMeta(null);
     startExportProgress();
 
-    const width = canvasSize.w * exportScale;
-    const height = canvasSize.h * exportScale;
+    let usedScale = exportScale;
+    let width = canvasSize.w * exportScale;
+    let height = canvasSize.h * exportScale;
     try {
       const needsRetry = () => {
         const art = artRef.current;
@@ -8685,22 +8686,49 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
 
       const mustRetry = !!(bgUrl || bgUploadUrl || logoUrl);
       const maxAttempts = mustRetry ? 3 : 1;
+      const scaleAttempts = [exportScale]
+        .concat(exportScale > 2 ? [2] : [])
+        .concat(exportScale > 1 ? [1] : [])
+        .filter((v, i, a) => a.indexOf(v) === i);
+
       let dataUrl = '';
       let sizeBytes = 0;
+      let lastErr: unknown = null;
 
-      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        dataUrl = await renderExportDataUrl(
-          artRef.current,
-          exportType,
-          exportScale,
-          (p) => setExportProgress(p)
-        );
-        sizeBytes = dataUrlBytes(dataUrl);
-        if (!mustRetry) break;
-        if (!needsRetry()) break;
-        if (attempt < maxAttempts) {
-          await new Promise((r) => setTimeout(r, 220));
+      for (const scale of scaleAttempts) {
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          try {
+            dataUrl = await renderExportDataUrl(
+              artRef.current,
+              exportType,
+              scale,
+              (p) => setExportProgress(p)
+            );
+            usedScale = scale;
+            width = canvasSize.w * scale;
+            height = canvasSize.h * scale;
+            sizeBytes = dataUrlBytes(dataUrl);
+            if (!mustRetry || !needsRetry()) {
+              if (scale !== exportScale) {
+                setExportError(
+                  `Export succeeded at ${scale}x for stability on mobile.`
+                );
+              }
+              attempt = maxAttempts + 1;
+              break;
+            }
+          } catch (err) {
+            lastErr = err;
+            if (attempt < maxAttempts) {
+              await new Promise((r) => setTimeout(r, 220));
+            }
+          }
         }
+        if (dataUrl) break;
+      }
+
+      if (!dataUrl) {
+        throw lastErr || new Error('Export failed');
       }
 
       setExportDataUrl(dataUrl);
@@ -8709,7 +8737,7 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
         height,
         sizeBytes,
         format: exportType,
-        scale: exportScale,
+        scale: usedScale,
       });
       const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
       const filename = `nightlife_export_${stamp}.${exportType}`;
@@ -8727,8 +8755,8 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
           ? `${err.name}: ${err.message}`
           : typeof err === 'string'
             ? err
-            : 'Export failed. Please try again.';
-      setExportError(msg);
+            : `Export failed. ${String(err)}`;
+      setExportError(msg || 'Export failed. Please try again.');
       setExportProgressActive(false);
       setExportProgress(0);
     }
