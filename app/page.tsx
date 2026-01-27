@@ -1025,18 +1025,24 @@ const NIGHTLIFE_SUBJECT_TOKENS = {
   },
   pose: {
     dancing:
-      "confident woman dancing freely, mid-motion, eyes closed, radiant smile, immersed in the music, natural arm lift, joyful expression, hair in motion with lively curls, soft cinematic spotlight, warm amber and orange glow, teal/magenta edge light, dreamy blurred crowd silhouettes, subtle disco ball sparkle, rain-like light streaks and bokeh, shallow depth of field, natural motion blur on hands and hips, expressive sway and rhythm",
+      "eyes closed, head tilted back, expressive dancing, mid-motion sway, soft motion blur on hands, blissful energy, natural hair movement, warm amber rim light, cool blue shadows, volumetric smoke, glittering bokeh, candid snapshot, unposed",
     "hands-up":
-      "hands raised high, crowd-hype gesture, celebratory energy, party anthem moment, faces turned to stage, bright strobe accents",
-    performance: "stage performance stance, microphone energy, commanding presence",
-    dj: "dj at decks, hands on mixer, mid-drop intensity",
+      "hands raised high, fingers spread, euphoric cheer, crowd-hype moment, harsh direct flash, strobe beams through haze, sweat glisten on skin, blurred crowd silhouettes, candid snapshot, unposed",
+    performance:
+      "waist-up performance shot, gripping a microphone, leaning forward with intense expressive energy, veins visible on hands, powerful posture, backlit spotlight halo through haze, cinematic anamorphic flare",
+    dj: "dj pose, hand on headphones, other hand on mixer, concentrated vibe, rhythmic head nod, moody booth lighting, candid snapshot",
   },
   shot: {
-    "full-body": "full body shot, head-to-toe visible, entire outfit fully visible, balanced framing with space above head and below feet",
-    "three-quarter": "three-quarter shot, framed from mid-thigh up, outfit details clearly visible",
-    "waist-up": "waist-up shot, framed from waist to just above head, hands visible near waist or hips",
-    "chest-up": "chest-up portrait, framed from upper chest to top of head",
-    "close-up": "close-up portrait, face fills frame but not cropped",
+    "full-body":
+      "hyper-realistic full-body fashion shot, head-to-toe visible, eye-level, 35mm lens, full outfit and silhouette, no toy look, balanced framing with space above head and below feet",
+    "three-quarter":
+      "cinematic three-quarter portrait, mid-thigh up framing, 50mm lens, high-contrast lighting with warm amber key and cool blue backlight, reflective lounge vibe",
+    "waist-up":
+      "realistic waist-up nightlife shot, 85mm lens, handheld feel, slight motion blur in background, flash with soft falloff, disco ball bokeh",
+    "chest-up":
+      "tight chest-up cinematic portrait, 105mm macro, softbox from above, sharp rim light on jawline, subtle blue anamorphic flare, moody background",
+    "close-up":
+      "close-up portrait, face fills frame but not cropped, 105mm lens, realistic eyes, natural skin texture",
   },
   lighting: {
     strobe: "strobe lighting, sharp highlights, strong rim light, energetic contrast",
@@ -5755,6 +5761,10 @@ export default function Page() {
   const [blendStyle, setBlendStyle] = useState<
     "club" | "tropical" | "jazz_bar" | "outdoor_summer"
   >("club");
+  const [blendAttireColor, setBlendAttireColor] = useState<string>("auto");
+  const [blendLighting, setBlendLighting] = useState<string>("match scene");
+  const [blendCameraZoom, setBlendCameraZoom] = useState<string>("auto");
+  const [blendExpressionPose, setBlendExpressionPose] = useState<string>("confident");
   const suppressCloseRef = React.useRef(false);
   
   
@@ -6068,6 +6078,21 @@ export default function Page() {
 
 
       // ✅ 2. Send to API
+      const extraParts: string[] = [];
+      if (blendAttireColor && blendAttireColor !== "auto") {
+        extraParts.push(`Attire color: ${blendAttireColor}.`);
+      }
+      if (blendLighting && blendLighting !== "match scene") {
+        extraParts.push(`Lighting preference: ${blendLighting}.`);
+      }
+      if (blendCameraZoom && blendCameraZoom !== "auto") {
+        extraParts.push(`Camera framing: ${blendCameraZoom}.`);
+      }
+      if (blendExpressionPose && blendExpressionPose.trim()) {
+        extraParts.push(`Expression/pose: ${blendExpressionPose}.`);
+      }
+      const extraPrompt = extraParts.join(" ");
+
       const res = await fetch("/api/magic-blend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -6077,6 +6102,7 @@ export default function Page() {
           //prompt: blendPrompt,
           style: blendStyle,
           format: format,
+          extraPrompt,
         }),
       });
 
@@ -9289,31 +9315,31 @@ const generateBackground = async (opts: GenOpts = {}) => {
             const shotSpec = {
               "full-body": {
                 camera:
-                  "35mm lens, eye-level camera, camera 10-15 feet away, full body shot, head-to-toe visible, natural proportions",
+                  "35mm lens, eye-level camera, camera 10-15 feet away, full body shot, head-to-toe visible, natural proportions, cinematic rim lighting, no toy look",
                 composition: `full body, balanced framing with space above head and below feet, subject anchored on the ${side} side, large negative space on the ${textSide}`,
                 negatives: "cropped limbs, cut-off head, distorted anatomy, close-up, tight crop",
               },
               "three-quarter": {
                 camera:
-                  "50mm lens, eye-level camera, camera 6-8 feet away, three-quarter shot framed from mid-thigh up",
+                  "50mm lens, eye-level camera, camera 6-8 feet away, f/1.8, three-quarter shot framed from mid-thigh up",
                 composition: `three-quarter framing, outfit details clearly visible, subject anchored on the ${side} side, strong negative space on the ${textSide}`,
                 negatives: "full body, head-to-toe, close-up, tight crop, cropped limbs",
               },
               "waist-up": {
                 camera:
-                  "50-70mm lens, eye-level camera, camera 4-6 feet away, waist-up framing",
+                  "85mm lens, eye-level camera, camera 4-6 feet away, waist-up framing, flash with soft falloff",
                 composition: `waist-up shot, framed from waist to just above head, hands visible near waist or hips, subject anchored on the ${side} side, negative space on the ${textSide}`,
                 negatives: "full body, head-to-toe, close-up, tight crop, cropped arms",
               },
               "chest-up": {
                 camera:
-                  "85mm portrait lens, eye-level camera, camera 3-4 feet away, chest-up framing",
+                  "105mm macro lens, eye-level camera, camera 3-4 feet away, chest-up framing, softbox top light",
                 composition: `chest-up portrait, framed from upper chest to top of head, subject anchored on the ${side} side, 60% negative space on the ${textSide}`,
                 negatives: "full body, wide shot, long shot, cropped head, distorted anatomy",
               },
               "close-up": {
                 camera:
-                  "85mm lens, eye-level camera, camera 2-3 feet away, close-up framing, face fills frame but not cropped",
+                  "105mm lens, eye-level camera, camera 2-3 feet away, close-up framing, face fills frame but not cropped",
                 composition: `close-up portrait, subject anchored on the ${side} side, generous negative space on the ${textSide}`,
                 negatives: "full body, wide shot, long shot, cropped head, distorted anatomy",
               },
@@ -18534,6 +18560,14 @@ style={{ top: STICKY_TOP }}
   }
   blendStyle={blendStyle}
   setBlendStyle={setBlendStyle}
+  blendAttireColor={blendAttireColor}
+  setBlendAttireColor={setBlendAttireColor}
+  blendLighting={blendLighting}
+  setBlendLighting={setBlendLighting}
+  blendCameraZoom={blendCameraZoom}
+  setBlendCameraZoom={setBlendCameraZoom}
+  blendExpressionPose={blendExpressionPose}
+  setBlendExpressionPose={setBlendExpressionPose}
   blendBackgroundPriority={blendBackgroundPriority}
   setBlendBackgroundPriority={setBlendBackgroundPriority}
   isCuttingOut={isCuttingOut}
