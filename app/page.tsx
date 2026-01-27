@@ -8713,9 +8713,7 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
       });
       const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
       const filename = `nightlife_export_${stamp}.${exportType}`;
-      const res = await fetch(dataUrl);
-      const blob = await res.blob();
-      setExportProgress(98);
+      const blob = await dataUrlToBlobWithProgress(dataUrl, (p) => setExportProgress(p), 96, 100);
       const blobUrl = URL.createObjectURL(blob);
       setExportBlobUrl(blobUrl);
       setExportFilename(filename);
@@ -11350,6 +11348,37 @@ function twoRaf(): Promise<void> {
   return new Promise((r) =>
     requestAnimationFrame(() => requestAnimationFrame(() => r()))
   );
+}
+
+async function dataUrlToBlobWithProgress(
+  dataUrl: string,
+  onProgress?: (p: number) => void,
+  startPct = 96,
+  endPct = 100
+): Promise<Blob> {
+  const comma = dataUrl.indexOf(",");
+  const header = dataUrl.slice(0, comma);
+  const b64 = dataUrl.slice(comma + 1);
+  const mimeMatch = /data:([^;]+);base64/.exec(header);
+  const mime = mimeMatch ? mimeMatch[1] : "application/octet-stream";
+  const total = b64.length;
+  const sliceSize = 1024 * 1024; // 1MB base64 chunks
+  const chunks: Uint8Array[] = [];
+
+  for (let offset = 0; offset < total; offset += sliceSize) {
+    const slice = b64.slice(offset, offset + sliceSize);
+    const bin = atob(slice);
+    const len = bin.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+    chunks.push(bytes);
+    const pct = startPct + Math.round(((offset + slice.length) / total) * (endPct - startPct));
+    onProgress?.(Math.min(endPct, pct));
+    // Yield to keep UI responsive
+    await new Promise((r) => setTimeout(r, 0));
+  }
+
+  return new Blob(chunks, { type: mime });
 }
 
 function extractCssUrls(input: string): string[] {
@@ -15616,7 +15645,7 @@ return (
         <div className="text-sm font-semibold text-white">Export preview</div>
       </div>
       <div className="p-4 space-y-4">
-        {exportStatus === "rendering" && (
+        {exportProgressActive && (
           <div className="grid place-items-center gap-3 py-8">
             <div className="h-8 w-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
             <div className="text-sm text-white/90">Merging final flyer…</div>
@@ -15630,7 +15659,7 @@ return (
           </div>
         )}
 
-        {exportStatus === "error" && (
+        {!exportProgressActive && exportStatus === "error" && (
           <div className="space-y-3">
             <div className="text-sm text-red-300">{exportError ?? "Export failed."}</div>
             <div className="flex items-center gap-2">
@@ -15652,7 +15681,7 @@ return (
           </div>
         )}
 
-        {exportStatus === "ready" && exportDataUrl && exportMeta && (
+        {!exportProgressActive && exportStatus === "ready" && exportDataUrl && exportMeta && exportBlobUrl && (
           <>
             <div className="rounded-lg overflow-hidden border border-neutral-800 bg-black">
               <img
