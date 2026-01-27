@@ -9006,9 +9006,9 @@ useEffect(() => {
 
 
   // GOD MODE controls
-  const [genCount, setGenCount] = useState<1 | 2 | 4>(1);          // how many images to render
-  const [genSize, setGenSize]   = useState<'1080' | '2160' | '3840'>('2160'); // render resolution hint
-  const [genCandidates, setGenCandidates] = useState<string[]>([]); // b64/url of batch results
+const [genCount, setGenCount] = useState<1 | 2 | 4>(1);          // how many images to render
+const [genSize, setGenSize]   = useState<'1080' | '2160' | '3840'>('2160'); // render resolution hint
+const [genCandidates, setGenCandidates] = useState<string[]>([]); // b64/url of batch results
 
 
   useEffect(() => { setSeed(Math.floor(Math.random() * 1e9)); }, []);
@@ -9359,6 +9359,7 @@ const generateBackground = async (opts: GenOpts = {}) => {
     setGenLoading(false);
   }
 };
+
 
 
 
@@ -11423,6 +11424,10 @@ async function renderExportDataUrl(
     width: string;
     height: string;
     transition: string;
+    backgroundImage: string;
+    backgroundSize: string;
+    backgroundPosition: string;
+    backgroundRepeat: string;
   } | null = null;
 
   try {
@@ -11445,6 +11450,10 @@ async function renderExportDataUrl(
       width: wrapper.style.width,
       height: wrapper.style.height,
       transition: wrapper.style.transition,
+      backgroundImage: exportRoot.style.backgroundImage,
+      backgroundSize: exportRoot.style.backgroundSize,
+      backgroundPosition: exportRoot.style.backgroundPosition,
+      backgroundRepeat: exportRoot.style.backgroundRepeat,
     };
 
     wrapper.style.transform = "none";
@@ -11478,6 +11487,23 @@ async function renderExportDataUrl(
     try {
       await (document as any).fonts?.ready;
     } catch {}
+
+    // Force a baked background layer to avoid missing CSS bg on mobile export
+    try {
+      const snapSize = Math.min(
+        4096,
+        Math.max(canvasSize.w, canvasSize.h) * Math.max(1, scale)
+      );
+      const bgSnap = await (artRef.current as any)?.exportBackgroundDataUrl?.({ size: snapSize });
+      if (bgSnap) {
+        exportRoot.style.backgroundImage = `url(${bgSnap})`;
+        exportRoot.style.backgroundSize = "cover";
+        exportRoot.style.backgroundPosition = "center";
+        exportRoot.style.backgroundRepeat = "no-repeat";
+      }
+    } catch {
+      // ignore if snapshot fails
+    }
 
     const exportStyle = getComputedStyle(exportRoot);
     const forcedStyle: any = {
@@ -11574,6 +11600,10 @@ async function renderExportDataUrl(
     wrapper.style.width = originalStyle.width;
     wrapper.style.height = originalStyle.height;
     wrapper.style.transition = originalStyle.transition;
+    exportRoot.style.backgroundImage = originalStyle.backgroundImage;
+    exportRoot.style.backgroundSize = originalStyle.backgroundSize;
+    exportRoot.style.backgroundPosition = originalStyle.backgroundPosition;
+    exportRoot.style.backgroundRepeat = originalStyle.backgroundRepeat;
 
     return dataUrl;
   } catch (err) {
@@ -11591,6 +11621,10 @@ async function renderExportDataUrl(
       wrapper.style.width = originalStyle.width;
       wrapper.style.height = originalStyle.height;
       wrapper.style.transition = originalStyle.transition;
+      exportRoot.style.backgroundImage = originalStyle.backgroundImage;
+      exportRoot.style.backgroundSize = originalStyle.backgroundSize;
+      exportRoot.style.backgroundPosition = originalStyle.backgroundPosition;
+      exportRoot.style.backgroundRepeat = originalStyle.backgroundRepeat;
     }
   }
 }
