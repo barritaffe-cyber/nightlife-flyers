@@ -8679,8 +8679,15 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
   // PORTRAIT: direct-drag ref (for smooth RAF dragging)
   const portraitFrameRef = React.useRef<HTMLDivElement | null>(null);
 
+  const [subscriptionStatus, setSubscriptionStatus] = React.useState<"active" | "inactive">("inactive");
+  const isPaid = subscriptionStatus === "active";
+
   const handleExportStart = React.useCallback(async () => {
     if (exportStatus === 'rendering') return;
+    if (!isPaid) {
+      window.location.href = "/pricing";
+      return;
+    }
     if (!artRef.current) {
       alert('Artboard not ready');
       return;
@@ -8828,7 +8835,7 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
       setExportProgressActive(false);
       setExportProgress(0);
     }
-  }, [artRef, canvasSize.h, canvasSize.w, exportScale, exportType, exportStatus]);
+  }, [artRef, canvasSize.h, canvasSize.w, exportScale, exportType, exportStatus, isPaid]);
 
   const handleExportClose = React.useCallback(() => {
     setExportModalOpen(false);
@@ -15599,9 +15606,10 @@ const emojiCanvas = React.useMemo(() => {
   );
 }, [emojis, format, onEmojiMove, recordMove]);
 
+
 return (
   <>
-  <AuthGate />
+  <AuthGate onStatusChange={setSubscriptionStatus} />
   {/* CONTINUE SESSION MODAL */}
     <AnimatePresence>
       {hasSavedDesign && !showStartup && (
@@ -17473,12 +17481,12 @@ style={{ top: STICKY_TOP }}
 
 
 
- 
 </div>
 
 <div className={uiMode === "finish" ? "space-y-3" : "hidden"}>
 {/* UI: CINEMATIC OVERLAYS (BEGIN) */}
 <div
+  id="cinema-panel"
   className={
     selectedPanel === "cinema"
       ? "relative rounded-xl border border-blue-400 transition"
@@ -17550,9 +17558,6 @@ style={{ top: STICKY_TOP }}
   </Collapsible>
 </div>
 {/* UI: CINEMATIC OVERLAYS (END) */}
-
-
-
 
 {/* UI: MASTER COLOR GRADE (BEGIN) */}
 <div
@@ -17685,7 +17690,6 @@ style={{ top: STICKY_TOP }}
   </Collapsible>
 </div>
 {/* UI: MASTER COLOR GRADE (END) */}
-
 </div>
 
 </aside>

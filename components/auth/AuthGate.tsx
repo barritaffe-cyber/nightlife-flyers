@@ -4,7 +4,11 @@ import React from "react";
 import { supabaseBrowser } from "../../lib/supabase/client";
 import { getDeviceType, getOrCreateDeviceId } from "../../lib/auth/device";
 
-export default function AuthGate() {
+export default function AuthGate({
+  onStatusChange,
+}: {
+  onStatusChange?: (status: "active" | "inactive") => void;
+}) {
   const [loading, setLoading] = React.useState(true);
   const [blocked, setBlocked] = React.useState<null | {
     reason: "login" | "expired" | "replace";
@@ -54,16 +58,19 @@ export default function AuthGate() {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!statusRes.ok) {
-          if (mounted) setBlocked({ reason: "expired" });
+          if (mounted) onStatusChange?.("inactive");
+          if (mounted) setBlocked(null);
           return;
         }
 
         const status = await statusRes.json();
         if (status.status !== "active") {
-          if (mounted) setBlocked({ reason: "expired" });
+          if (mounted) onStatusChange?.("inactive");
+          if (mounted) setBlocked(null);
           return;
         }
 
+        if (mounted) onStatusChange?.("active");
         if (mounted) setBlocked(null);
       } catch {
         if (mounted) setBlocked({ reason: "login" });
