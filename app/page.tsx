@@ -26,6 +26,7 @@ import type { TemplateBase } from "../lib/templates";
 import type { MoveTarget } from "../app/state/flyerState";
 import { removeBackgroundLocal } from "../lib/removeBgLocal";
 import { cleanupCutoutUrl } from "../lib/cleanupCutoutUrl";
+import { supabaseBrowser } from "../lib/supabase/client";
 import * as Slider from "@radix-ui/react-slider";
 import type { CleanupParams } from "../lib/cleanupCutoutUrl";
 import { removeGreenScreen } from "./chromaKey";
@@ -8681,10 +8682,23 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
 
   const [subscriptionStatus, setSubscriptionStatus] = React.useState<"active" | "inactive">("inactive");
   const isPaid = subscriptionStatus === "active";
+  const [accountOpen, setAccountOpen] = React.useState(false);
+  const [accountLoading, setAccountLoading] = React.useState(false);
+  const [accountError, setAccountError] = React.useState<string | null>(null);
+  const [accountData, setAccountData] = React.useState<{
+    email: string | null;
+    status: string;
+    rawStatus: string | null;
+    periodEnd: string | null;
+  } | null>(null);
 
   const handleExportStart = React.useCallback(async () => {
     if (exportStatus === 'rendering') return;
     if (!isPaid) {
+      try {
+        localStorage.setItem("nf:lastDesign", exportDesignJSON());
+        sessionStorage.setItem("nf:resume", "1");
+      } catch {}
       window.location.href = "/pricing";
       return;
     }
@@ -8836,6 +8850,47 @@ const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
       setExportProgress(0);
     }
   }, [artRef, canvasSize.h, canvasSize.w, exportScale, exportType, exportStatus, isPaid]);
+
+  const prepareResumeForReturn = React.useCallback(() => {
+    try {
+      localStorage.setItem("nf:lastDesign", exportDesignJSON());
+      sessionStorage.setItem("nf:resume", "1");
+    } catch {}
+  }, []);
+
+  const openAccountPanel = React.useCallback(async () => {
+    setAccountOpen(true);
+    setAccountLoading(true);
+    setAccountError(null);
+    try {
+      const supabase = supabaseBrowser();
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) {
+        setAccountError("Login required");
+        setAccountLoading(false);
+        return;
+      }
+      await fetch("/api/auth/profile-bootstrap", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const res = await fetch("/api/auth/status", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      setAccountData({
+        email: json.email || data.session?.user?.email || null,
+        status: json.status || "inactive",
+        rawStatus: json.raw_status || null,
+        periodEnd: json.current_period_end || null,
+      });
+    } catch {
+      setAccountError("Failed to load account");
+    } finally {
+      setAccountLoading(false);
+    }
+  }, []);
 
   const handleExportClose = React.useCallback(() => {
     setExportModalOpen(false);
@@ -9899,6 +9954,7 @@ const buildEdgeAwareLassoMask = (
   saveDebounce.current = window.setTimeout(() => {
     try {
       saveDesign('__autosave__');
+      localStorage.setItem('nf:lastDesign', exportDesignJSON());
       localStorage.setItem('NLF:auto:savedAt', String(Date.now()));
       lastSnapRef.current = snap;
     } catch {}
@@ -14681,8 +14737,31 @@ React.useEffect(() => {
 }, [mobileControlsOpen]);
 
 React.useEffect(() => {
-  setHasSavedDesign(false);
-}, []);
+  if (!storageReady) return;
+  const resumeFlag =
+    typeof sessionStorage !== "undefined" &&
+    sessionStorage.getItem("nf:resume") === "1";
+  const saved =
+    typeof localStorage !== "undefined"
+      ? localStorage.getItem("nf:lastDesign")
+      : null;
+
+  if (resumeFlag && saved) {
+    try {
+      importDesignJSON(saved);
+      setShowStartup(false);
+    } catch {
+      setHasSavedDesign(true);
+    }
+    try { sessionStorage.removeItem("nf:resume"); } catch {}
+    return;
+  }
+
+  if (saved) {
+    setHasSavedDesign(true);
+    setShowStartup(false);
+  }
+}, [storageReady]);
 /* ===== AUTOSAVE: SMART SAVE/LOAD (END) ===== */
 
 // =========================================================
@@ -15719,13 +15798,20 @@ return (
         <div className="mx-auto max-w-7xl px-4 py-2 lg:h-14 grid grid-cols-1 lg:grid-cols-[clamp(260px,22vw,360px)_minmax(560px,1fr)_clamp(260px,22vw,360px)] gap-2 lg:gap-4 items-center">
           {/* LEFT: Brand */}
              <div className="hidden lg:flex items-center gap-3">
-              <img
-                src="/branding/nf-logo.png"
-                alt="Nightlife Flyers"
-                className="h-12 w-12 rounded-full shadow-[0_8px_28px_rgba(0,0,0,.45)]"
-                draggable={false}
-              />
-              <div className="text-sm opacity-90">Nightlife Flyers</div>
+              <button
+                type="button"
+                onClick={openAccountPanel}
+                className="flex items-center gap-3"
+                aria-label="Open account"
+              >
+                <img
+                  src="/branding/nf-logo.png"
+                  alt="Nightlife Flyers"
+                  className="h-12 w-12 rounded-full shadow-[0_8px_28px_rgba(0,0,0,.45)]"
+                  draggable={false}
+                />
+                <div className="text-sm opacity-90">Nightlife Flyers</div>
+              </button>
 
               {/* ALWAYS-SHOW PRICING LINK */}
               <Link
@@ -15733,6 +15819,7 @@ return (
                 className="ml-2 text-[12px] px-2 py-[2px] rounded-md border border-white/20 bg-white/10 hover:bg-white/20 hidden lg:inline-flex
                            text-[#78E3FF] drop-shadow-[0_0_10px_rgba(120,227,255,0.95)]"
                 aria-label="View Pricing"
+                onClick={prepareResumeForReturn}
               >
                 Pricing
               </Link>
@@ -15793,12 +15880,19 @@ return (
                 Story
               </Chip>
 
-              <img
-                src="/branding/nf-logo.png"
-                alt="Nightlife Flyers"
-                className="lg:hidden h-10 w-10 mx-2"
-                draggable={false}
-              />
+              <button
+                type="button"
+                onClick={openAccountPanel}
+                className="lg:hidden"
+                aria-label="Open account"
+              >
+                <img
+                  src="/branding/nf-logo.png"
+                  alt="Nightlife Flyers"
+                  className="h-10 w-10 mx-2"
+                  draggable={false}
+                />
+              </button>
 
               {/* ✅ GUIDES TOGGLE */}
               <Chip 
@@ -15933,6 +16027,65 @@ return (
         </div>
       </div>
     )}
+  </div>
+)}
+
+{accountOpen && (
+  <div className="fixed inset-0 z-[2050] flex items-center justify-center p-4">
+    <button
+      type="button"
+      className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+      onClick={() => setAccountOpen(false)}
+      aria-label="Close account"
+    />
+    <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-neutral-950 p-5 text-white shadow-2xl">
+      <div className="flex items-center justify-between">
+        <div className="text-sm font-semibold">Account</div>
+        <button
+          type="button"
+          onClick={() => setAccountOpen(false)}
+          className="h-8 w-8 rounded-full border border-white/10 bg-white/5 text-white/80 hover:bg-white/10"
+          aria-label="Close"
+        >
+          ✕
+        </button>
+      </div>
+      <div className="mt-4 space-y-2 text-sm text-white/85">
+        {accountLoading && <div className="text-white/70">Loading account…</div>}
+        {!accountLoading && accountError && (
+          <div className="text-red-300">{accountError}</div>
+        )}
+        {!accountLoading && !accountError && (
+          <>
+            <div>Email: {accountData?.email ?? "-"}</div>
+            <div>Access: {accountData?.status ?? "-"}</div>
+            <div>Plan status: {accountData?.rawStatus ?? "-"}</div>
+            <div>
+              Expires:{" "}
+              {accountData?.periodEnd
+                ? new Date(accountData.periodEnd).toDateString()
+                : "-"}
+            </div>
+          </>
+        )}
+      </div>
+      <div className="mt-4 flex items-center gap-2">
+        <a
+          href="/pricing"
+          onClick={prepareResumeForReturn}
+          className="rounded-lg border border-fuchsia-400/40 bg-fuchsia-500/20 px-3 py-2 text-xs text-white hover:bg-fuchsia-500/30"
+        >
+          Manage plan
+        </a>
+        <button
+          type="button"
+          className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
+          onClick={() => setAccountOpen(false)}
+        >
+          Close
+        </button>
+      </div>
+    </div>
   </div>
 )}
 
