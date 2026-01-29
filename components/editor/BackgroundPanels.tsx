@@ -54,6 +54,14 @@ type Props = {
   onGenerateSubject?: () => void;
   isGeneratingSubject?: boolean;
   subjectError?: string | null;
+  subjectGender?: string;
+  setSubjectGender?: (v: string) => void;
+  subjectEthnicity?: string;
+  setSubjectEthnicity?: (v: string) => void;
+  subjectAttire?: string;
+  setSubjectAttire?: (v: string) => void;
+  subjectShot?: string;
+  setSubjectShot?: (v: string) => void;
 };
 
 function BackgroundPanels({
@@ -106,6 +114,14 @@ function BackgroundPanels({
   onGenerateSubject,
   isGeneratingSubject = false,
   subjectError,
+  subjectGender = 'any',
+  setSubjectGender,
+  subjectEthnicity = 'any',
+  setSubjectEthnicity,
+  subjectAttire = 'club-glam',
+  setSubjectAttire,
+  subjectShot = 'three-quarter',
+  setSubjectShot,
 }: Props) {
   return (
     <>
@@ -257,6 +273,56 @@ function BackgroundPanels({
               <div className="mt-3 rounded-lg border border-neutral-800 bg-neutral-950/40 p-2">
                 <div className="text-[11px] text-neutral-300 mb-2">
                   Need a subject for this background? Generate one from your AI presets.
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[11px] mb-2">
+                  <label className="space-y-1">
+                    <span className="text-neutral-400">Gender</span>
+                    <select
+                      className="w-full rounded-md border border-neutral-700 bg-neutral-900/60 px-2 py-1"
+                      value={subjectGender}
+                      onChange={(e) => setSubjectGender?.(e.target.value)}
+                    >
+                      {['any', 'man', 'woman'].map((opt) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-neutral-400">Ethnicity</span>
+                    <select
+                      className="w-full rounded-md border border-neutral-700 bg-neutral-900/60 px-2 py-1"
+                      value={subjectEthnicity}
+                      onChange={(e) => setSubjectEthnicity?.(e.target.value)}
+                    >
+                      {['any', 'black', 'white', 'latino', 'east-asian', 'indian', 'middle-eastern', 'mixed'].map((opt) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-neutral-400">Attire</span>
+                    <select
+                      className="w-full rounded-md border border-neutral-700 bg-neutral-900/60 px-2 py-1"
+                      value={subjectAttire}
+                      onChange={(e) => setSubjectAttire?.(e.target.value)}
+                    >
+                      {['club-glam', 'luxury', 'festival', 'all-white', 'streetwear'].map((opt) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-neutral-400">Shot</span>
+                    <select
+                      className="w-full rounded-md border border-neutral-700 bg-neutral-900/60 px-2 py-1"
+                      value={subjectShot}
+                      onChange={(e) => setSubjectShot?.(e.target.value)}
+                    >
+                      {['full-body', 'three-quarter', 'waist-up', 'chest-up', 'close-up'].map((opt) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
                 <div className="flex items-center gap-2 text-[11px]">
                   <Chip small onClick={onGenerateSubject} disabled={isGeneratingSubject}>

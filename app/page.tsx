@@ -18948,6 +18948,14 @@ style={{ top: STICKY_TOP }}
   onGenerateSubject={generateSubjectForBackground}
   isGeneratingSubject={subjectGenLoading}
   subjectError={subjectGenError}
+  subjectGender={genGender}
+  setSubjectGender={(v) => setGenGender(v as any)}
+  subjectEthnicity={genEthnicity}
+  setSubjectEthnicity={(v) => setGenEthnicity(v as any)}
+  subjectAttire={genAttire}
+  setSubjectAttire={(v) => setGenAttire(v as any)}
+  subjectShot={genShot}
+  setSubjectShot={(v) => setGenShot(v as any)}
   setBgBlur={setBgBlur}
   setHue={setHue}
   setHaze={setHaze}
