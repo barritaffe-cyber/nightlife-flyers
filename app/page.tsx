@@ -9731,8 +9731,18 @@ const generateSubjectForBackground = async () => {
 
     let dataUrl = rawUrl;
     if (!dataUrl.startsWith("data:image/")) {
-      const blob = await (await fetch(dataUrl)).blob();
-      dataUrl = await blobToDataURL(blob);
+      try {
+        const blob = await (await fetch(dataUrl)).blob();
+        dataUrl = await blobToDataURL(blob);
+      } catch {
+        const proxyUrl = `/api/image-proxy?url=${encodeURIComponent(dataUrl)}`;
+        const proxyRes = await fetch(proxyUrl);
+        if (!proxyRes.ok) {
+          throw new Error("Image fetch failed. Check OpenAI key or network.");
+        }
+        const proxyBlob = await proxyRes.blob();
+        dataUrl = await blobToDataURL(proxyBlob);
+      }
     }
 
     const cutout = await removeBackgroundLocal(dataUrl);
