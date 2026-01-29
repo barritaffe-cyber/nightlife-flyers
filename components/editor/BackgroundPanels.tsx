@@ -50,6 +50,10 @@ type Props = {
   hue: number;
   haze: number;
   vignetteStrength: number;
+  hasSubject?: boolean;
+  onGenerateSubject?: () => void;
+  isGeneratingSubject?: boolean;
+  subjectError?: string | null;
 };
 
 function BackgroundPanels({
@@ -98,6 +102,10 @@ function BackgroundPanels({
   hue,
   haze,
   vignetteStrength,
+  hasSubject = false,
+  onGenerateSubject,
+  isGeneratingSubject = false,
+  subjectError,
 }: Props) {
   return (
     <>
@@ -245,6 +253,22 @@ function BackgroundPanels({
                   Ctrl
                 </span>
                 + scroll to zoom.
+              </div>
+              <div className="mt-3 rounded-lg border border-neutral-800 bg-neutral-950/40 p-2">
+                <div className="text-[11px] text-neutral-300 mb-2">
+                  Need a subject for this background? Generate one from your AI presets.
+                </div>
+                <div className="flex items-center gap-2 text-[11px]">
+                  <Chip small onClick={onGenerateSubject} disabled={isGeneratingSubject}>
+                    {isGeneratingSubject ? "Generating…" : "Generate subject"}
+                  </Chip>
+                  {hasSubject && <span className="text-neutral-500">Subject already on canvas</span>}
+                </div>
+                {subjectError && (
+                  <div className="mt-2 text-[11px] text-red-400 break-words">
+                    {subjectError}
+                  </div>
+                )}
               </div>
 
             </div>

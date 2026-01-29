@@ -6444,10 +6444,16 @@ const selectedPortrait = React.useMemo(() => {
   const list = portraits?.[format] || [];
   return list.find((p) => p.id === selectedPortraitId) || null;
 }, [portraits, format, selectedPortraitId]);
+const selectedPortraitIsAsset = React.useMemo(() => {
+  if (!selectedPortrait) return false;
+  const id = String((selectedPortrait as any).id || "");
+  return !!(selectedPortrait as any).isFlare || !!(selectedPortrait as any).isSticker || id.startsWith("logo_");
+}, [selectedPortrait]);
 
 // ✅ SINGLE source-of-truth slider sync on portrait switch
 useEffect(() => {
   if (!selectedPortraitId) return;
+  if (selectedPortraitIsAsset) return;
 
   // 1) prefer cleanupById (local UI cache)
   const cached = cleanupById[selectedPortraitId];
@@ -6468,11 +6474,11 @@ useEffect(() => {
 
   // 3) fallback to default
   setCleanupParams(DEFAULT_CLEANUP);
-}, [selectedPortraitId, cleanupById, portraits, format]);
+}, [selectedPortraitId, selectedPortraitIsAsset, cleanupById, portraits, format]);
 
 // ✅ Call this from slider handlers: it updates UI cache AND triggers cleanup
 function setCleanupAndRun(next: CleanupParams) {
-  if (!selectedPortrait) return;
+  if (!selectedPortrait || selectedPortraitIsAsset) return;
 
   const portraitId = selectedPortrait.id;
 
@@ -6551,6 +6557,7 @@ function setCleanupAndRun(next: CleanupParams) {
 
 const onChangeCleanup = (patch: Partial<CleanupParams>) => {
   if (!selectedPortraitId) return;
+  if (selectedPortraitIsAsset) return;
 
   const next: CleanupParams = { ...cleanupParams, ...patch };
 
@@ -6694,6 +6701,45 @@ const portraitPickerRef = useRef<HTMLInputElement>(null);
 const [rmModel, setRmModel]       = useState<0 | 1>(1);
 const [rmFeather, setRmFeather]   = useState<number>(2);
 const [enablePortraitOverlay, setEnablePortraitOverlay] = useState<boolean>(true);
+
+const downscaleDataUrlIfNeeded = React.useCallback(
+  (dataUrl: string, maxDim = 1800) =>
+    new Promise<string>((resolve) => {
+      if (typeof window === "undefined") return resolve(dataUrl);
+      if (window.innerWidth >= 1024) return resolve(dataUrl);
+      if (!dataUrl.startsWith("data:image/")) return resolve(dataUrl);
+      const img = new Image();
+      img.onload = () => {
+        const max = Math.max(img.width, img.height);
+        if (max <= maxDim) return resolve(dataUrl);
+        const scale = maxDim / max;
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return resolve(dataUrl);
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/png", 0.92));
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    }),
+  []
+);
+
+const setPortraitUrlSafe = React.useCallback(
+  async (src: string | null) => {
+    if (!src) {
+      setPortraitUrl(null);
+      return;
+    }
+    const next = await downscaleDataUrlIfNeeded(src, 1800);
+    setPortraitUrl(next);
+  },
+  [downscaleDataUrlIfNeeded]
+);
 
 // ===== BG CLEANUP UI (Portrait Matte Refinement) =====
 const [bgCleanup, setBgCleanup] = useState({
@@ -7602,11 +7648,12 @@ async function onPortraitSlotFile(e: React.ChangeEvent<HTMLInputElement>) {
     // 2. Process locally
     // Note: ensure removeBackgroundLocal is imported/available
     const cutDataUrl = await removeBackgroundLocal(originalUrl);
+    const scaledCut = await downscaleDataUrlIfNeeded(cutDataUrl, 1800);
 
     // 3. Save to slot
     setPortraitSlots(prev => {
       const next = [...prev];
-      next[idx] = cutDataUrl;
+      next[idx] = scaledCut;
       try { localStorage.setItem('nf:portraitSlots', JSON.stringify(next)); } catch {}
       return next;
     });
@@ -7622,10 +7669,10 @@ async function onPortraitSlotFile(e: React.ChangeEvent<HTMLInputElement>) {
   }
 }
 
-function placePortraitFromSlot(i: number) {
+async function placePortraitFromSlot(i: number) {
   const src = portraitSlots[i];
   if (!src) return;
-  setPortraitUrl(src);
+  await setPortraitUrlSafe(src);
   setPortraitLocked(false);
   setMoveMode(true);
   setDragging('portrait');
@@ -7854,18 +7901,18 @@ const assetStorageBytes = React.useMemo(
   [activeAssetList]
 );
 
-  const handleAssetUse = React.useCallback(() => {
+  const handleAssetUse = React.useCallback(async () => {
     if (!selectedAssetUrl) return;
     if (activeAssetType === 'logo') {
       setLogoUrl(selectedAssetUrl);
     } else {
-      setPortraitUrl(selectedAssetUrl);
+      await setPortraitUrlSafe(selectedAssetUrl);
       setPortraitLocked(false);
       const store = useFlyerState.getState();
       store.setMoveTarget('portrait');
       store.setSelectedPanel('portrait');
     }
-  }, [activeAssetType, selectedAssetUrl, setLogoUrl, setPortraitUrl, setPortraitLocked]);
+  }, [activeAssetType, selectedAssetUrl, setLogoUrl, setPortraitUrlSafe, setPortraitLocked]);
 
 const handleAssetDelete = React.useCallback(
   (url: string) => {
@@ -9022,6 +9069,8 @@ const [iconList, setIconList] = useState<Icon[]>([]);
   const [lockVar, setLockVar] = useState<boolean>(false);
   const [seed, setSeed] = useState<number>(0);
   const [clarity, setClarity] = useState(0.15);
+  const [subjectGenLoading, setSubjectGenLoading] = useState(false);
+  const [subjectGenError, setSubjectGenError] = useState<string | null>(null);
   const [presetKey, setPresetKey] = useState<string>('');
   const [genGender, setGenGender] = useState<GenGender>("any");
   const [genEthnicity, setGenEthnicity] = useState<GenEthnicity>("any");
@@ -9576,6 +9625,130 @@ const generateBackground = async (opts: GenOpts = {}) => {
     }
   } finally {
     setGenLoading(false);
+  }
+};
+
+const generateSubjectForBackground = async () => {
+  if (subjectGenLoading) return;
+  if (!(bgUploadUrl || bgUrl)) {
+    setSubjectGenError("Add a background first.");
+    return;
+  }
+  if (credits <= 0) {
+    setSubjectGenError("No credits left.");
+    return;
+  }
+
+  try {
+    setSubjectGenLoading(true);
+    setSubjectGenError(null);
+
+    const referenceSample = getReferenceSample(genGender, genEthnicity);
+    const safeHumanPrompt = [
+      'photorealistic, real human proportions, natural facial anatomy, realistic skin texture',
+      'natural facial proportions, symmetrical but imperfect face, realistic eyes with natural sclera',
+      'normal pupil size, subtle facial expression, relaxed jaw, soft neutral gaze',
+      'natural skin texture, visible pores, no plastic skin, no waxy skin',
+      'soft diffused lighting on skin, natural shadows',
+      'high detail but not over-sharpened, professional photography quality',
+    ].join(', ');
+
+    const subjectPrompt = [
+      NIGHTLIFE_SUBJECT_TOKENS.energy[genEnergy],
+      getAttirePrompt(genGender, genAttire),
+      NIGHTLIFE_SUBJECT_TOKENS.attireColor[genAttireColor],
+      NIGHTLIFE_SUBJECT_TOKENS.colorway[genColorway],
+      NIGHTLIFE_SUBJECT_TOKENS.pose[genPose],
+      NIGHTLIFE_SUBJECT_TOKENS.shot[genShot],
+      NIGHTLIFE_SUBJECT_TOKENS.lighting[genLighting],
+      NIGHTLIFE_SUBJECT_TOKENS.fashionBoost,
+    ]
+      .filter(Boolean)
+      .join(', ');
+
+    const shotSpec: Record<
+      GenShot,
+      { camera: string; negatives: string }
+    > = {
+      "full-body": {
+        camera:
+          "full body, head-to-toe visible, 35mm lens, eye-level, 10–15ft distance, no cropped limbs",
+        negatives: "cropped limbs, cut-off head, tight crop",
+      },
+      "three-quarter": {
+        camera:
+          "three-quarter, mid-thigh up, 50mm lens, eye-level, 6–8ft distance",
+        negatives: "full body, tight crop, cropped limbs",
+      },
+      "waist-up": {
+        camera:
+          "waist-up, 70–85mm lens, eye-level, 4–6ft distance, hands visible near waist or hips",
+        negatives: "full body, cropped arms, tight crop",
+      },
+      "chest-up": {
+        camera:
+          "chest-up, 85–105mm lens, eye-level, 3–4ft distance, shoulders visible",
+        negatives: "full body, cropped head, tight crop",
+      },
+      "close-up": {
+        camera:
+          "close-up portrait, 85–105mm lens, eye-level, face fills frame but not cropped",
+        negatives: "full body, wide shot, cropped head",
+      },
+    };
+
+    const shot = shotSpec[genShot];
+    const prompt = [
+      "single subject on neutral dark backdrop for easy cutout",
+      "clean studio background, no props, no text, no logos",
+      subjectPrompt,
+      safeHumanPrompt,
+      shot.camera,
+      "no background scene, isolate subject only",
+      "high detail, cinematic nightlife styling",
+      `negative prompt: low quality, blurry, extra people, ${shot.negatives}`,
+    ].join(", ");
+
+    const res = await fetch("/api/gen-image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        prompt,
+        format: format === "story" ? "story" : "square",
+        provider: genProvider === "auto" ? "auto" : genProvider,
+        reference: referenceSample || undefined,
+      }),
+    });
+    const j = await res.json().catch(() => ({} as any));
+    if (!res.ok || j?.error) {
+      throw new Error(j?.error || `HTTP ${res.status}`);
+    }
+    let rawUrl = "";
+    if (j?.b64) rawUrl = `data:image/png;base64,${j.b64}`;
+    else if (j?.url) rawUrl = j.url;
+    else if (j?.placeholder) throw new Error("Provider returned placeholder");
+    else throw new Error("No image data returned");
+
+    let dataUrl = rawUrl;
+    if (!dataUrl.startsWith("data:image/")) {
+      const blob = await (await fetch(dataUrl)).blob();
+      dataUrl = await blobToDataURL(blob);
+    }
+
+    const cutout = await removeBackgroundLocal(dataUrl);
+    const finalCutout = await downscaleDataUrlIfNeeded(cutout, 1800);
+    setPortraitUrl(finalCutout);
+    setPortraitLocked(false);
+    const store = useFlyerState.getState();
+    store.setMoveTarget("portrait");
+    store.setSelectedPanel("portrait");
+    setMoveMode(true);
+    setDragging("portrait");
+    setCredits((c) => Math.max(0, c - 1));
+  } catch (e: any) {
+    setSubjectGenError(String(e?.message || e || "Subject generation failed"));
+  } finally {
+    setSubjectGenLoading(false);
   }
 };
 
@@ -14685,9 +14858,19 @@ React.useEffect(() => {
 
 React.useEffect(() => {
   if (!mobileControlsOpen) return;
-  const onScroll = () => setFloatingEditorVisible(false);
+  let raf = 0;
+  const onScroll = () => {
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      setFloatingEditorVisible(false);
+    });
+  };
   window.addEventListener("scroll", onScroll, { passive: true });
-  return () => window.removeEventListener("scroll", onScroll);
+  return () => {
+    window.removeEventListener("scroll", onScroll);
+    if (raf) cancelAnimationFrame(raf);
+  };
 }, [mobileControlsOpen]);
 
 React.useEffect(() => {
@@ -14725,27 +14908,45 @@ React.useEffect(() => {
 
 React.useEffect(() => {
   if (!mobileControlsOpen) return;
+  let raf = 0;
   const onScroll = () => {
-    if (floatingAssetVisible) return;
-    if (
-      typeof document !== "undefined" &&
-      (assetFocusLockRef.current ||
-        (floatingAssetRef.current &&
-          floatingAssetRef.current.contains(document.activeElement)))
-    ) {
-      return;
-    }
-    setFloatingAssetVisible(false);
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      if (floatingAssetVisible) return;
+      if (
+        typeof document !== "undefined" &&
+        (assetFocusLockRef.current ||
+          (floatingAssetRef.current &&
+            floatingAssetRef.current.contains(document.activeElement)))
+      ) {
+        return;
+      }
+      setFloatingAssetVisible(false);
+    });
   };
   window.addEventListener("scroll", onScroll, { passive: true });
-  return () => window.removeEventListener("scroll", onScroll);
+  return () => {
+    window.removeEventListener("scroll", onScroll);
+    if (raf) cancelAnimationFrame(raf);
+  };
 }, [mobileControlsOpen, floatingAssetVisible]);
 
 React.useEffect(() => {
   if (!mobileControlsOpen) return;
-  const onScroll = () => setFloatingBgVisible(false);
+  let raf = 0;
+  const onScroll = () => {
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      setFloatingBgVisible(false);
+    });
+  };
   window.addEventListener("scroll", onScroll, { passive: true });
-  return () => window.removeEventListener("scroll", onScroll);
+  return () => {
+    window.removeEventListener("scroll", onScroll);
+    if (raf) cancelAnimationFrame(raf);
+  };
 }, [mobileControlsOpen]);
 
 React.useEffect(() => {
@@ -18743,6 +18944,10 @@ style={{ top: STICKY_TOP }}
   bgPosX={bgPosX}
   bgPosY={bgPosY}
   bgBlur={bgBlur}
+  hasSubject={!!portraitUrl}
+  onGenerateSubject={generateSubjectForBackground}
+  isGeneratingSubject={subjectGenLoading}
+  subjectError={subjectGenError}
   setBgBlur={setBgBlur}
   setHue={setHue}
   setHaze={setHaze}
