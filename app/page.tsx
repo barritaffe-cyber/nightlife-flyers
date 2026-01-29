@@ -9701,12 +9701,13 @@ const generateSubjectForBackground = async () => {
     const prompt = [
       "single subject on neutral dark backdrop for easy cutout",
       "clean studio background, no props, no text, no logos",
+      "fully clothed, non-suggestive attire, no lingerie, no swimwear, no nudity, no implied nudity",
       subjectPrompt,
       safeHumanPrompt,
       shot.camera,
       "no background scene, isolate subject only",
       "high detail, cinematic nightlife styling",
-      `negative prompt: low quality, blurry, extra people, ${shot.negatives}`,
+      `negative prompt: sexual, lingerie, bikini, bra, underwear, cleavage, revealing outfit, see-through, low quality, blurry, extra people, ${shot.negatives}`,
     ].join(", ");
 
     const res = await fetch("/api/gen-image", {
