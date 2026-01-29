@@ -81,6 +81,15 @@ const STYLE_SUFFIX: Record<MagicBlendStyle, string> = {
 - light bloom on distant lights only (no bloom on the subject’s face)
 - visual energy funnels toward the subject as the scene’s focal point
 - architectural lighting, glossy surfaces, high-end atmosphere
+Lighting (club – tighten atmosphere):
+- strong directional key light from existing club fixtures (cyan/blue)
+- visible rim light on hair/shoulders from behind (magenta or warm amber)
+- clear backlight separation (subject edges glow slightly from scene lights)
+- deep shadow pockets on the subject’s far side (no flat fill)
+- localized neon reflections on skin + fabric (specular hits, not overall glow)
+- background is darker and softer than subject (strong depth separation)
+- moderate haze only where light beams exist (not blanket fog)
+- add subtle floor bounce from colored lights near the subject’s legs
 
 Avoid:
 - tropical elements (palms, beach, sunset, tiki decor)
