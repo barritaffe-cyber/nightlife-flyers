@@ -68,6 +68,33 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
     const updateEmoji = useFlyerState((s) => s.updateEmoji);
     const removeEmoji = useFlyerState((s) => s.removeEmoji);
 
+    const downscaleDataUrlIfNeeded = React.useCallback(
+      (dataUrl: string, maxDim = 1400) =>
+        new Promise<string>((resolve) => {
+          if (typeof window === 'undefined') return resolve(dataUrl);
+          if (window.innerWidth >= 1024) return resolve(dataUrl);
+          if (!dataUrl.startsWith('data:image/')) return resolve(dataUrl);
+          const img = new Image();
+          img.onload = () => {
+            const max = Math.max(img.width, img.height);
+            if (max <= maxDim) return resolve(dataUrl);
+            const scale = maxDim / max;
+            const w = Math.max(1, Math.round(img.width * scale));
+            const h = Math.max(1, Math.round(img.height * scale));
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return resolve(dataUrl);
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/png', 0.9));
+          };
+          img.onerror = () => resolve(dataUrl);
+          img.src = dataUrl;
+        }),
+      []
+    );
+
     return (
       <div className="mt-3" id="library-panel" data-tour="library">
         <div
@@ -92,6 +119,9 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                 : ''
             }
           >
+            <div className="mb-2 rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-100">
+              Tip: After placing items, lock them so they don&apos;t move by accident.
+            </div>
             <input
               ref={IS_iconSlotPickerRef}
               type="file"
@@ -541,14 +571,15 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                     type="button"
                     className="aspect-square rounded-md bg-black border border-neutral-800 hover:border-neutral-600 transition-all flex items-center justify-center p-1 group relative overflow-hidden"
                     title={`Add ${flare.name}`}
-                    onClick={() => {
+                    onClick={async () => {
                       const id = `flare_${flare.id}_${Date.now()}_${Math.random()
                         .toString(36)
                         .slice(2, 7)}`;
+                      const flareSrc = await downscaleDataUrlIfNeeded(flare.src, 1400);
 
                       addPortrait(format, {
                         id,
-                        url: flare.src,
+                        url: flareSrc,
                         x: 50,
                         y: 50,
                         scale: 0.8,
