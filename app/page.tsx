@@ -6090,7 +6090,15 @@ export default function Page() {
         extraParts.push(`Lighting preference: ${blendLighting}.`);
       }
       if (blendCameraZoom && blendCameraZoom !== "auto") {
-        extraParts.push(`Camera framing: ${blendCameraZoom}.`);
+        const zoomPrompt =
+          blendCameraZoom === "full body"
+            ? "Camera framing: full-body, head-to-toe in frame, feet visible, space above head and below feet, 35mm lens, 10–15ft distance, no cropped limbs."
+            : blendCameraZoom === "three-quarter"
+            ? "Camera framing: three-quarter, mid-thigh up, 50mm lens, 6–8ft distance, no cropped head or hands."
+            : blendCameraZoom === "waist-up"
+            ? "Camera framing: waist-up, 70–85mm lens, 4–6ft distance, hands visible near waist/hips."
+            : "Camera framing: chest-up, 85–105mm lens, 3–4ft distance, face and shoulders fully visible, no tight crop.";
+        extraParts.push(zoomPrompt);
       }
       if (blendExpressionPose && blendExpressionPose.trim()) {
         extraParts.push(`Expression/pose: ${blendExpressionPose}.`);
@@ -6106,6 +6114,7 @@ export default function Page() {
           //prompt: blendPrompt,
           style: blendStyle,
           format: format,
+          cameraZoom: blendCameraZoom,
           extraPrompt,
         }),
       });
@@ -6123,6 +6132,9 @@ export default function Page() {
       setBgScale(1); 
       setBgPosX(50); 
       setBgPosY(50);
+      if (typeof window !== "undefined" && window.innerWidth < 1024) {
+        window.setTimeout(scrollToArtboard, 160);
+      }
 
     } catch (err: any) {
 
@@ -15801,6 +15813,7 @@ return (
               <button
                 type="button"
                 onClick={openAccountPanel}
+                onPointerUp={openAccountPanel}
                 className="flex items-center gap-3"
                 aria-label="Open account"
               >
@@ -15883,6 +15896,7 @@ return (
               <button
                 type="button"
                 onClick={openAccountPanel}
+                onPointerUp={openAccountPanel}
                 className="lg:hidden"
                 aria-label="Open account"
               >
@@ -16091,8 +16105,8 @@ return (
 
 {/* --- EXPORT MODAL --- */}
 {exportModalOpen && (
-  <div className="fixed inset-0 z-[2000] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-    <div className="relative bg-neutral-950 border border-neutral-700 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
+  <div className="fixed inset-0 z-[2000] bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
+    <div className="relative bg-neutral-950 border border-neutral-700 rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
       <button
         type="button"
         onClick={handleExportClose}
@@ -16101,7 +16115,7 @@ return (
       >
         ✕
       </button>
-      <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
+      <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between sticky top-0 bg-neutral-950/95 backdrop-blur z-10">
         <div className="text-sm font-semibold text-white">Export preview</div>
       </div>
       <div className="p-4 space-y-4">

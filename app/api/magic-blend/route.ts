@@ -400,6 +400,7 @@ export async function POST(req: Request) {
       format = "square",
       provider = "replicate",
       extraPrompt = "",
+      cameraZoom = "auto",
     } = body as {
       subject: string;
       background: string;
@@ -407,6 +408,7 @@ export async function POST(req: Request) {
       format?: "square" | "story" | "portrait";
       provider?: "stability" | "openai" | "replicate";
       extraPrompt?: string;
+      cameraZoom?: string;
     };
     activeProvider = provider;
 
@@ -447,7 +449,18 @@ export async function POST(req: Request) {
 
     // Subject framing: bigger & slightly lifted (poster feel)
     // NOTE: if background adherence is still weak, drop this to 0.88–0.92
-    const subjectScale = safeStyle === "club" ? 1.08 : 0.96;
+    const zoom = String(cameraZoom || "auto").toLowerCase();
+    const zoomScaleMap: Record<string, number> = {
+      "full body": format === "story" ? 0.72 : 0.8,
+      "three-quarter": format === "story" ? 0.86 : 0.9,
+      "waist-up": format === "story" ? 1.02 : 1.05,
+      "chest-up": format === "story" ? 1.12 : 1.18,
+      auto: safeStyle === "club" ? 1.08 : 0.96,
+    };
+    const subjectScale = Math.max(
+      0.65,
+      Math.min(1.25, zoomScaleMap[zoom] ?? zoomScaleMap.auto)
+    );
     const subjSize = Math.min(
       Math.round(baseSize * subjectScale),
       sizeW,
@@ -461,7 +474,17 @@ export async function POST(req: Request) {
       try {
         const meta = await sharp(buf).metadata();
         if (!meta.width || !meta.height) return buf;
-        const cropH = Math.max(1, Math.round(meta.height * 0.75));
+        const cropRatio =
+          zoom === "full body"
+            ? 0.98
+            : zoom === "three-quarter"
+            ? 0.9
+            : zoom === "waist-up"
+            ? 0.78
+            : zoom === "chest-up"
+            ? 0.68
+            : 0.75;
+        const cropH = Math.max(1, Math.round(meta.height * cropRatio));
         return await sharp(buf)
           .extract({ left: 0, top: 0, width: meta.width, height: cropH })
           .png()
