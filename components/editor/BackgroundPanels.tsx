@@ -62,6 +62,8 @@ type Props = {
   setSubjectAttire?: (v: string) => void;
   subjectShot?: string;
   setSubjectShot?: (v: string) => void;
+  genProvider: 'auto' | 'nano' | 'openai' | 'venice';
+  setGenProvider: (v: 'auto' | 'nano' | 'openai' | 'venice') => void;
 };
 
 function BackgroundPanels({
@@ -122,6 +124,8 @@ function BackgroundPanels({
   setSubjectAttire,
   subjectShot = 'three-quarter',
   setSubjectShot,
+  genProvider,
+  setGenProvider,
 }: Props) {
   return (
     <>
@@ -270,6 +274,24 @@ function BackgroundPanels({
                 </span>
                 + scroll to zoom.
               </div>
+
+              {/* Provider quick-pick (mirrors AI Background panel) — placed right above subject creation */}
+              <div className="flex items-center gap-2 text-[11px] mt-3">
+                <span>Provider</span>
+                <Chip small active={genProvider === 'auto'} onClick={() => setGenProvider('auto')}>
+                  Auto
+                </Chip>
+                <Chip small active={genProvider === 'nano'} onClick={() => setGenProvider('nano')}>
+                  Nano
+                </Chip>
+                <Chip small active={genProvider === 'openai'} onClick={() => setGenProvider('openai')}>
+                  OpenAI
+                </Chip>
+                <Chip small active={genProvider === 'venice'} onClick={() => setGenProvider('venice')}>
+                  Venice
+                </Chip>
+              </div>
+
               <div className="mt-3 rounded-lg border border-neutral-800 bg-neutral-950/40 p-2">
                 <div className="text-[11px] text-neutral-300 mb-2">
                   Need a subject for this background? Generate one from your AI presets.
@@ -395,56 +417,6 @@ function BackgroundPanels({
             </Chip>
           }
         >
-          <div className="mb-3 rounded-lg border border-neutral-700 bg-neutral-900/40 p-2">
-            <div className="text-[11px] text-neutral-300 mb-2">Overlay Presets</div>
-            <div className="flex flex-wrap gap-2">
-              <Chip
-                small
-                onClick={() => {
-                  setBgFog?.(0);
-                  setBgWarmGlow?.(0);
-                  setBgNeonHaze?.(0);
-                  setBgTintStrength?.(0);
-                }}
-              >
-                None
-              </Chip>
-              <Chip
-                small
-                onClick={() => {
-                  setBgFog?.(0.35);
-                  setBgWarmGlow?.(0.12);
-                  setBgNeonHaze?.(0);
-                  setBgTintStrength?.(0);
-                }}
-              >
-                Add Fog
-              </Chip>
-              <Chip
-                small
-                onClick={() => {
-                  setBgFog?.(0.12);
-                  setBgWarmGlow?.(0.35);
-                  setBgNeonHaze?.(0);
-                  setBgTintStrength?.(0);
-                }}
-              >
-                Warm Glow
-              </Chip>
-              <Chip
-                small
-                onClick={() => {
-                  setBgFog?.(0.15);
-                  setBgWarmGlow?.(0);
-                  setBgNeonHaze?.(0.35);
-                  setBgTintStrength?.(0);
-                }}
-              >
-                Neon Haze
-              </Chip>
-            </div>
-          </div>
-
           <div className="grid grid-cols-3 gap-3 mb-2">
             <Stepper
               label="Fog"

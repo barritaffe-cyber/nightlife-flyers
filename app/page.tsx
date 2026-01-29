@@ -5507,7 +5507,8 @@ function removeEnclosedBackgroundIslands(imgData: ImageData) {
 }
 
 
-function cropToAlpha(imgData: ImageData) {
+// Alpha crop helper (used by removeVoidAndCropToPng)
+function cropToAlpha(imgData: ImageData): string {
   const { width: w, height: h, data } = imgData;
   let minX = w, minY = h, maxX = -1, maxY = -1;
 
@@ -5522,72 +5523,58 @@ function cropToAlpha(imgData: ImageData) {
     }
   }
 
-  // if fully empty, return 1x1 transparent png
   if (maxX < minX || maxY < minY) {
     const c = document.createElement("canvas");
-    c.width = 1; c.height = 1;
+    c.width = 1;
+    c.height = 1;
     return c.toDataURL("image/png");
   }
 
   const cw = maxX - minX + 1;
   const ch = maxY - minY + 1;
 
-  const src = document.createElement("canvas");
-  src.width = w; src.height = h;
-  const sctx = src.getContext("2d")!;
+  const srcCanvas = document.createElement("canvas");
+  srcCanvas.width = w;
+  srcCanvas.height = h;
+  const sctx = srcCanvas.getContext("2d")!;
   sctx.putImageData(imgData, 0, 0);
 
-  const out = document.createElement("canvas");
-  out.width = cw; out.height = ch;
-  const octx = out.getContext("2d")!;
-  octx.drawImage(src, minX, minY, cw, ch, 0, 0, cw, ch);
+  const outCanvas = document.createElement("canvas");
+  outCanvas.width = cw;
+  outCanvas.height = ch;
+  const octx = outCanvas.getContext("2d")!;
+  octx.drawImage(srcCanvas, minX, minY, cw, ch, 0, 0, cw, ch);
 
-  return out.toDataURL("image/png");
+  return outCanvas.toDataURL("image/png");
 }
 
-function erodeAlpha(imgData: ImageData, iterations = 1, alphaThreshold = 10) {
+// Alpha helpers (shared)
+function erodeAlpha(imgData: ImageData, iterations = 1, alphaThreshold = 10): ImageData {
   const { width: w, height: h, data } = imgData;
-
   for (let it = 0; it < iterations; it++) {
     const copy = new Uint8ClampedArray(data);
-
-    const aAt = (x: number, y: number) =>
-      copy[(y * w + x) * 4 + 3];
-
+    const aAt = (x: number, y: number) => copy[(y * w + x) * 4 + 3];
     for (let y = 1; y < h - 1; y++) {
       for (let x = 1; x < w - 1; x++) {
         const a = aAt(x, y);
         if (a <= alphaThreshold) continue;
-
-        if (
+        const n =
           aAt(x + 1, y) <= alphaThreshold ||
           aAt(x - 1, y) <= alphaThreshold ||
           aAt(x, y + 1) <= alphaThreshold ||
-          aAt(x, y - 1) <= alphaThreshold
-        ) {
-          data[(y * w + x) * 4 + 3] = 0;
-        }
+          aAt(x, y - 1) <= alphaThreshold;
+        if (n) data[(y * w + x) * 4 + 3] = 0;
       }
     }
   }
-
   return imgData;
 }
 
-function featherAlpha(imgData: ImageData, radius = 1) {
+function featherAlpha(imgData: ImageData, radius = 1): ImageData {
   const { width: w, height: h, data } = imgData;
-  const copy = new Uint8ClampedArray(data); // snapshot
-
-  const aAt = (x: number, y: number) => copy[(y * w + x) * 4 + 3];
-  const setA = (x: number, y: number, a: number) => {
-    data[(y * w + x) * 4 + 3] = a;
-  };
-
-  // simple 3x3 box blur on alpha, repeated `radius` times
   for (let it = 0; it < radius; it++) {
     const prev = new Uint8ClampedArray(data);
     const aPrev = (x: number, y: number) => prev[(y * w + x) * 4 + 3];
-
     for (let y = 1; y < h - 1; y++) {
       for (let x = 1; x < w - 1; x++) {
         let sum = 0;
@@ -5600,16 +5587,12 @@ function featherAlpha(imgData: ImageData, radius = 1) {
         sum += aPrev(x - 1, y - 1);
         sum += aPrev(x + 1, y - 1);
         sum += aPrev(x - 1, y + 1);
-
-        const avg = Math.round(sum / 9);
-        setA(x, y, avg);
+        data[(y * w + x) * 4 + 3] = Math.round(sum / 9);
       }
     }
   }
-
   return imgData;
 }
-
 
 async function removeVoidAndCropToPng(urlOrDataUrl: string): Promise<string> {
   const img = await loadImage(urlOrDataUrl);
@@ -5634,17 +5617,17 @@ cleared = removeEnclosedBackgroundIslands(cleared);
 // Fix Edges For 3D Renders
 // First Number Is Edge Pixels
 // Second Number Is Alpha Threshold
-//Kills Halo
+// Kills Halo
 cleared = erodeAlpha(cleared, 3, 10);
 
-
-//restore smooth edge (anti-alias)
+// restore smooth edge (anti-alias)
 cleared = featherAlpha(cleared, 1);
 
 ctx.putImageData(cleared, 0, 0);
 
 // 3) Crop tightly to remaining opaque pixels
 const finalData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+// eslint-disable-next-line @typescript-eslint/no-use-before-define
 return cropToAlpha(finalData);
 
 }
@@ -6741,6 +6724,9 @@ const setPortraitUrlSafe = React.useCallback(
   [downscaleDataUrlIfNeeded]
 );
 
+const isValidPortraitSource = (src: string | null | undefined) =>
+  !!src && (src.startsWith("data:image/") || src.startsWith("blob:") || src.startsWith("http"));
+
 // ===== BG CLEANUP UI (Portrait Matte Refinement) =====
 const [bgCleanup, setBgCleanup] = useState({
   shrinkPx: 1,          // 0..4  (erode)
@@ -6765,13 +6751,22 @@ React.useEffect(() => { setPBaseW(null); setPBaseH(null); }, [portraitUrl]);
 // === PORTRAIT SLOTS (up to 4, persisted) ===
 const MAX_PORTRAIT_SLOTS = 4;
 
+const normalizePortraitSlots = (values?: unknown[]) => {
+  const arr = Array.isArray(values) ? values : [];
+  const safe = arr
+    .slice(0, MAX_PORTRAIT_SLOTS)
+    .map((v) => (typeof v === 'string' ? v : ''));
+  const paddingCount = Math.max(0, MAX_PORTRAIT_SLOTS - safe.length);
+  return [...safe, ...Array(paddingCount).fill('')];
+};
+
 const [portraitSlots, setPortraitSlots] = useState<string[]>(() => {
   try {
     const raw = localStorage.getItem('nf:portraitSlots');
     const arr = raw ? JSON.parse(raw) : [];
-    return Array.isArray(arr) ? arr.slice(0, MAX_PORTRAIT_SLOTS) : Array(MAX_PORTRAIT_SLOTS).fill('');
+    return normalizePortraitSlots(arr);
   } catch {
-    return Array(MAX_PORTRAIT_SLOTS).fill('');
+    return normalizePortraitSlots([]);
   }
 });
 
@@ -6779,9 +6774,9 @@ const [portraitSlotSources, setPortraitSlotSources] = useState<string[]>(() => {
   try {
     const raw = localStorage.getItem('nf:portraitSlotSources');
     const arr = raw ? JSON.parse(raw) : [];
-    return Array.isArray(arr) ? arr.slice(0, MAX_PORTRAIT_SLOTS) : Array(MAX_PORTRAIT_SLOTS).fill('');
+    return normalizePortraitSlots(arr);
   } catch {
-    return Array(MAX_PORTRAIT_SLOTS).fill('');
+    return normalizePortraitSlots([]);
   }
 });
 
@@ -6795,15 +6790,15 @@ React.useEffect(() => {
 }, [portraitSlots, portraitSlotSources]);
 
 function persistPortraitSlots(next: string[]) {
-  const trimmed = next.slice(0, MAX_PORTRAIT_SLOTS);
-  setPortraitSlots(trimmed);
-  try { localStorage.setItem('nf:portraitSlots', JSON.stringify(trimmed)); } catch {}
+  const normalized = normalizePortraitSlots(next);
+  setPortraitSlots(normalized);
+  try { localStorage.setItem('nf:portraitSlots', JSON.stringify(normalized)); } catch {}
 }
 
 function persistPortraitSlotSources(next: string[]) {
-  const trimmed = next.slice(0, MAX_PORTRAIT_SLOTS);
-  setPortraitSlotSources(trimmed);
-  try { localStorage.setItem('nf:portraitSlotSources', JSON.stringify(trimmed)); } catch {}
+  const normalized = normalizePortraitSlots(next);
+  setPortraitSlotSources(normalized);
+  try { localStorage.setItem('nf:portraitSlotSources', JSON.stringify(normalized)); } catch {}
 }
 
 const portraitSlotPickerRef = useRef<HTMLInputElement>(null);
@@ -9061,7 +9056,7 @@ const [iconList, setIconList] = useState<Icon[]>([]);
   /* AI background state */
   const [genStyle, setGenStyle] = useState<GenStyle>('urban');
   const [genPrompt, setGenPrompt] = useState('nightlife subject on the side, cinematic light, room for bold text');
-  const [genProvider, setGenProvider] = useState<'auto' | 'nano' | 'openai'>('auto');
+  const [genProvider, setGenProvider] = useState<'auto' | 'nano' | 'openai' | 'venice'>('auto');
   const [genLoading, setGenLoading] = useState(false);
   const [genError, setGenError] = useState<string>('');
   const [isPlaceholder, setIsPlaceholder] = useState<boolean>(false);
@@ -9612,6 +9607,7 @@ const generateBackground = async (opts: GenOpts = {}) => {
     setBgScale(1.3);
     setBgPosX(50);
     setBgPosY(50);
+    setBgFitMode(false);
     setIsPlaceholder(false);
     lastGenRef.current = { opts: opts, seed: baseSeed, fmt: requestedFormat };
     if (willConsume) setCredits(c => Math.max(0, c - 1));
@@ -9653,14 +9649,56 @@ const generateSubjectForBackground = async () => {
       'high detail but not over-sharpened, professional photography quality',
     ].join(', ');
 
+    const safeAttireMap: Record<GenAttire, string> = {
+      "club-glam": "high-fashion eveningwear, tasteful, fully clothed, no revealing cuts",
+      luxury: "luxury designer outfit, tailored, elegant, fully clothed",
+      festival: "stylish festival outfit, modest, layered fabrics",
+      "all-white": "all-white luxury attire, tailored, tasteful",
+      streetwear: "premium streetwear, layered fit, fully clothed",
+    };
+    const safePoseMap: Record<GenPose, string> = {
+      dancing: "joyful dance movement, expressive but tasteful",
+      "hands-up": "celebratory hands up, energetic and friendly",
+      performance: "performer stance, confident and composed",
+      dj: "DJ pose, focused and professional",
+    };
+    const genderPrompt =
+      genGender === "any"
+        ? ""
+        : genGender === "man"
+        ? "Subject profile: male (man), adult. Keep gender exactly as stated."
+        : "Subject profile: female (woman), adult. Keep gender exactly as stated.";
+
+    const ethnicityPrompt =
+      genEthnicity === "any"
+        ? ""
+        : {
+            black: "Subject ethnicity: Black. Keep natural Black facial features and rich brown skin tone. Do not lighten skin.",
+            white: "Subject ethnicity: white / Caucasian. Keep facial features and fair-to-olive skin tone consistent. Do not darken skin.",
+            latino: "Subject ethnicity: Latino / Hispanic. Keep facial features and warm medium skin tone consistent. Do not lighten skin.",
+            "east-asian": "Subject ethnicity: East Asian. Keep East Asian facial features and natural skin tone. Do not change ethnicity.",
+            indian: "Subject ethnicity: South Asian / Indian. Keep facial features and brown skin tone consistent. Do not lighten skin.",
+            "middle-eastern": "Subject ethnicity: Middle Eastern. Keep facial features and olive-to-tan skin tone. Do not change ethnicity.",
+            mixed: "Subject ethnicity: mixed. Keep blended facial features and balanced skin tone; believable mixed heritage. Do not force a single ethnicity.",
+          }[genEthnicity] || "";
+
+    const femaleSharpnessPreset =
+      genGender === "woman"
+        ? "tack-sharp focus, natural skin texture, visible pores, no beauty filter, no skin smoothing, 85mm f/1.8, Sony A7R IV, studio sharpness"
+        : "";
+
     const subjectPrompt = [
+      genderPrompt,
+      ethnicityPrompt,
       NIGHTLIFE_SUBJECT_TOKENS.energy[genEnergy],
-      getAttirePrompt(genGender, genAttire),
+      safePoseMap[genPose],
+      NIGHTLIFE_SUBJECT_TOKENS.shot[genShot],
+      "adult subject, 21+, tasteful fashion, premium nightlife styling",
+      safeAttireMap[genAttire],
       NIGHTLIFE_SUBJECT_TOKENS.attireColor[genAttireColor],
       NIGHTLIFE_SUBJECT_TOKENS.colorway[genColorway],
-      NIGHTLIFE_SUBJECT_TOKENS.pose[genPose],
-      NIGHTLIFE_SUBJECT_TOKENS.shot[genShot],
       NIGHTLIFE_SUBJECT_TOKENS.lighting[genLighting],
+      femaleSharpnessPreset,
       NIGHTLIFE_SUBJECT_TOKENS.fashionBoost,
     ]
       .filter(Boolean)
@@ -9705,30 +9743,47 @@ const generateSubjectForBackground = async () => {
       subjectPrompt,
       safeHumanPrompt,
       shot.camera,
+      "shot on Sony A7R IV, 85mm prime lens, f/2, 1/160s, ISO 400, studio strobe key, RAW photo, subtle film grain, unretouched editorial look",
       "no background scene, isolate subject only",
       "high detail, cinematic nightlife styling",
-      `negative prompt: sexual, lingerie, bikini, bra, underwear, cleavage, revealing outfit, see-through, low quality, blurry, extra people, ${shot.negatives}`,
+      "sharp focus, crisp facial detail, no motion blur, no gaussian blur, no soft focus",
+      `negative prompt: suggestive content, skimpy clothing, exposed undergarments, revealing cuts, sheer fabric, explicit themes, blur, soft focus, airbrushed skin, plastic skin, doll-like, beauty filter, cgi, 3d render, illustration, cartoon, wax figure, low quality, extra people, ${shot.negatives}`,
+      "Do not change ethnicity or skin tone. Do not default to caucasian features if profile is non-white. Keep stated gender.",
     ].join(", ");
 
-    const res = await fetch("/api/gen-image", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        prompt,
-        format: format === "story" ? "story" : "square",
-        provider: genProvider === "auto" ? "auto" : genProvider,
-        reference: referenceSample || undefined,
-      }),
-    });
-    const j = await res.json().catch(() => ({} as any));
-    if (!res.ok || j?.error) {
-      throw new Error(j?.error || `HTTP ${res.status}`);
+    async function requestSubject(
+      provider: "nano" | "venice",
+      includeReference: boolean
+    ): Promise<string> {
+      const res = await fetch("/api/gen-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt,
+          format: format === "story" ? "story" : "square",
+          provider,
+          reference: includeReference ? referenceSample || undefined : undefined,
+        }),
+      });
+      const j = await res.json().catch(() => ({} as any));
+      if (!res.ok || j?.error) {
+        throw new Error(j?.error || `HTTP ${res.status}`);
+      }
+      if (j?.b64) return `data:image/png;base64,${j.b64}`;
+      if (j?.url) return j.url;
+      if (j?.placeholder) throw new Error("Provider returned placeholder");
+      throw new Error("No image data returned");
     }
+
     let rawUrl = "";
-    if (j?.b64) rawUrl = `data:image/png;base64,${j.b64}`;
-    else if (j?.url) rawUrl = j.url;
-    else if (j?.placeholder) throw new Error("Provider returned placeholder");
-    else throw new Error("No image data returned");
+    let usedNano = false;
+    try {
+      rawUrl = await requestSubject("nano", true); // primary: OpenAI-backed nano
+      usedNano = true;
+    } catch (err: any) {
+      // Fallback to Venice (text-only) if nano fails (e.g., key/network)
+      rawUrl = await requestSubject("venice", false);
+    }
 
     let dataUrl = rawUrl;
     if (!dataUrl.startsWith("data:image/")) {
@@ -9746,15 +9801,102 @@ const generateSubjectForBackground = async () => {
       }
     }
 
-    const cutout = await removeBackgroundLocal(dataUrl);
+    // Guard against tiny/empty responses; retry with Venice once if nano returned junk
+    const isTinyData =
+      dataUrl.startsWith("data:image/") && dataUrl.length < 5000; // ~few hundred bytes → likely blank
+    if (isTinyData && usedNano) {
+      // retry with Venice (text-only) as a fallback
+      rawUrl = await requestSubject("venice", false);
+      dataUrl = rawUrl;
+      if (!dataUrl.startsWith("data:image/")) {
+        try {
+          const blob = await (await fetch(dataUrl)).blob();
+          dataUrl = await blobToDataURL(blob);
+        } catch {
+          const proxyUrl = `/api/image-proxy?url=${encodeURIComponent(dataUrl)}`;
+          const proxyRes = await fetch(proxyUrl);
+          if (!proxyRes.ok) {
+            throw new Error("Image fetch failed. Check keys or network.");
+          }
+          const proxyBlob = await proxyRes.blob();
+          dataUrl = await blobToDataURL(proxyBlob);
+        }
+      }
+    }
+
+    const originalLen = dataUrl.length;
+    let cutout = dataUrl;
+    try {
+      const removed = await removeBackgroundLocal(dataUrl);
+      if (removed) cutout = removed;
+    } catch {
+      // fall back to original if removal fails
+    }
+
+    // If removeBackgroundLocal returns a blob URL, convert it to a data URL so we can validate size
+    if (typeof cutout === "string" && cutout.startsWith("blob:")) {
+      try {
+        const blob = await (await fetch(cutout)).blob();
+        cutout = await blobToDataURL(blob);
+      } catch {
+        // if blob fetch fails, keep the original dataUrl
+        cutout = dataUrl;
+      }
+    }
+
+    // If removal produced an obviously tiny data URL, fall back to the original render
+    if (
+      typeof cutout === "string" &&
+      cutout.startsWith("data:image/") &&
+      (cutout.length < 5000 || cutout.length < originalLen * 0.2)
+    ) {
+      cutout = dataUrl;
+    }
+
     const finalCutout = await downscaleDataUrlIfNeeded(cutout, 1800);
-    setPortraitUrl(finalCutout);
+    // If removal shrank the payload below 70% of original, keep the original to avoid amputations
+    const tooSmall =
+      finalCutout.startsWith("data:image/") &&
+      finalCutout.length < originalLen * 0.7;
+
+    if (!isValidPortraitSource(finalCutout) || tooSmall) {
+      // fallback to original (no removal) to preserve full subject
+      const fallback = await downscaleDataUrlIfNeeded(dataUrl, 1800);
+      if (!isValidPortraitSource(fallback)) {
+        throw new Error("Subject render returned an empty image.");
+      }
+      cutout = fallback;
+    } else {
+      cutout = finalCutout;
+    }
+
+    const usableCutout = cutout;
+    await setPortraitUrlSafe(usableCutout);
+    setBlendSubject(usableCutout);
+    setSelectedPanel("magic_blend");
+    useFlyerState.getState().setSelectedPanel("magic_blend");
+    let slotIdx = portraitSlots.findIndex((s) => !s);
+    if (slotIdx === -1) {
+      slotIdx =
+        portraitSlots.length < MAX_PORTRAIT_SLOTS ? portraitSlots.length : 0;
+    }
+    if (slotIdx !== -1) {
+      const next = [...portraitSlots];
+      next[slotIdx] = finalCutout;
+      persistPortraitSlots(next);
+      const srcNext = [...portraitSlotSources];
+      srcNext[slotIdx] = finalCutout;
+      persistPortraitSlotSources(srcNext);
+    }
     setPortraitLocked(false);
     const store = useFlyerState.getState();
     store.setMoveTarget("portrait");
     store.setSelectedPanel("portrait");
     setMoveMode(true);
     setDragging("portrait");
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      window.setTimeout(scrollToArtboard, 120);
+    }
     setCredits((c) => Math.max(0, c - 1));
   } catch (e: any) {
     setSubjectGenError(String(e?.message || e || "Subject generation failed"));
@@ -13646,7 +13788,7 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
 
 
       // Restore Arrays
-      if (Array.isArray(data.portraitSlots)) setPortraitSlots(data.portraitSlots);
+      if (Array.isArray(data.portraitSlots)) setPortraitSlots(normalizePortraitSlots(data.portraitSlots));
       if (Array.isArray(data.logoSlots)) setLogoSlots(data.logoSlots);
       if (data.shapes) setShapes(data.shapes);
       if (data.icons) setIconList(data.icons);
@@ -14995,8 +15137,6 @@ React.useEffect(() => {
 // then cleans edges (halo + smooth), then crops.
 // =========================================================
 
-function clamp01(n: number) { return Math.max(0, Math.min(1, n)); }
-
 // --- 1) Build a proxy "classifier" image (contrast crush) ---
 function buildClassifierAlpha(
   src: ImageData,
@@ -15219,98 +15359,6 @@ function applyBgMaskToAlpha(src: ImageData, bgMask: Uint8Array) {
   return src;
 }
 
-// --- 5) Halo cleanup + smooth edge (erode then feather) ---
-function erodeAlpha(imgData: ImageData, iterations = 1, alphaThreshold = 10) {
-  const { width: w, height: h, data } = imgData;
-
-  for (let it = 0; it < iterations; it++) {
-    const copy = new Uint8ClampedArray(data);
-    const aAt = (x: number, y: number) => copy[(y * w + x) * 4 + 3];
-
-    for (let y = 1; y < h - 1; y++) {
-      for (let x = 1; x < w - 1; x++) {
-        const a = aAt(x, y);
-        if (a <= alphaThreshold) continue;
-
-        const n =
-          aAt(x + 1, y) <= alphaThreshold ||
-          aAt(x - 1, y) <= alphaThreshold ||
-          aAt(x, y + 1) <= alphaThreshold ||
-          aAt(x, y - 1) <= alphaThreshold;
-
-        if (n) data[(y * w + x) * 4 + 3] = 0;
-      }
-    }
-  }
-  return imgData;
-}
-
-function featherAlpha(imgData: ImageData, radius = 1) {
-  const { width: w, height: h, data } = imgData;
-
-  for (let it = 0; it < radius; it++) {
-    const prev = new Uint8ClampedArray(data);
-    const aPrev = (x: number, y: number) => prev[(y * w + x) * 4 + 3];
-
-    for (let y = 1; y < h - 1; y++) {
-      for (let x = 1; x < w - 1; x++) {
-        let sum = 0;
-        sum += aPrev(x, y);
-        sum += aPrev(x + 1, y);
-        sum += aPrev(x - 1, y);
-        sum += aPrev(x, y + 1);
-        sum += aPrev(x, y - 1);
-        sum += aPrev(x + 1, y + 1);
-        sum += aPrev(x - 1, y - 1);
-        sum += aPrev(x + 1, y - 1);
-        sum += aPrev(x - 1, y + 1);
-        data[(y * w + x) * 4 + 3] = Math.round(sum / 9);
-      }
-    }
-  }
-  return imgData;
-}
-
-// --- 6) Crop to alpha ---
-function cropToAlpha(imgData: ImageData) {
-  const { width: w, height: h, data } = imgData;
-  let minX = w, minY = h, maxX = -1, maxY = -1;
-
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const a = data[(y * w + x) * 4 + 3];
-      if (a === 0) continue;
-      if (x < minX) minX = x;
-      if (y < minY) minY = y;
-      if (x > maxX) maxX = x;
-      if (y > maxY) maxY = y;
-    }
-  }
-
-  if (maxX < minX || maxY < minY) {
-    const c = document.createElement("canvas");
-    c.width = 1; c.height = 1;
-    return c.toDataURL("image/png");
-  }
-
-  const cw = maxX - minX + 1;
-  const ch = maxY - minY + 1;
-
-  const srcCanvas = document.createElement("canvas");
-  srcCanvas.width = w;
-  srcCanvas.height = h;
-  const sctx = srcCanvas.getContext("2d")!;
-  sctx.putImageData(imgData, 0, 0);
-
-  const outCanvas = document.createElement("canvas");
-  outCanvas.width = cw;
-  outCanvas.height = ch;
-  const octx = outCanvas.getContext("2d")!;
-  octx.drawImage(srcCanvas, minX, minY, cw, ch, 0, 0, cw, ch);
-
-  return outCanvas.toDataURL("image/png");
-}
-
 /* eslint-disable @typescript-eslint/no-unused-vars */
 // --- 7) Main tool: remove gradient background via proxy selection ---
 async function removeGradientBgLikePhotoshop(urlOrDataUrl: string): Promise<string> {
@@ -15350,7 +15398,7 @@ async function removeGradientBgLikePhotoshop(urlOrDataUrl: string): Promise<stri
 
   // Edge hygiene (tune if needed)
   let cleaned = erodeAlpha(cut, 1, 10);
-  cleaned = featherAlpha(cleaned, 1);
+  cleaned = featherAlphaOnly(cleaned, 1);
 
   return cropToAlpha(cleaned);
 }
@@ -17932,7 +17980,7 @@ style={{ top: STICKY_TOP }}
     </div>
 
     <div className="text-[11px] text-neutral-400 mt-2">
-      <b>Pro Tip:</b> Keep Texture around 0.30–0.40 for that &quot;printed flyer&quot; look.
+      <b>Pro Tip:</b> Keep Texture around 0.30–0.40 for that "printed flyer" look.
     </div>
   </Collapsible>
 </div>
@@ -18975,6 +19023,8 @@ style={{ top: STICKY_TOP }}
   hue={hue}
   haze={haze}
   vignetteStrength={vignetteStrength}
+  genProvider={genProvider}
+  setGenProvider={setGenProvider}
 />
 
 
