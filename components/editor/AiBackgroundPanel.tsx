@@ -5,7 +5,7 @@
  import { Chip, Stepper, Collapsible } from './controls';
 
 type GenStyle = 'urban' | 'neon' | 'vintage' | 'tropical';
-type GenGender = 'any' | 'man' | 'woman';
+type GenGender = 'any' | 'woman' | 'man' | 'nonbinary';
 type GenEthnicity =
   | 'any'
   | 'black'
@@ -16,7 +16,7 @@ type GenEthnicity =
   | 'middle-eastern'
   | 'mixed';
 type GenEnergy = 'calm' | 'vibe' | 'wild';
-type GenAttire = 'streetwear' | 'club-glam' | 'luxury' | 'festival' | 'all-white';
+type GenAttire = 'streetwear' | 'club-glam' | 'luxury' | 'festival' | 'all-white' | 'cyberpunk';
 type GenColorway = 'neon' | 'monochrome' | 'warm' | 'cool' | 'gold-black';
 type GenAttireColor =
   | 'black'
@@ -30,7 +30,7 @@ type GenAttireColor =
 type GenPose = 'dancing' | 'hands-up' | 'performance' | 'dj';
 type GenShot = 'full-body' | 'three-quarter' | 'waist-up' | 'chest-up' | 'close-up';
 type GenLighting = 'strobe' | 'softbox' | 'backlit' | 'flash';
- type GenProvider = 'auto' | 'nano' | 'openai';
+ type GenProvider = 'auto' | 'nano' | 'openai' | 'venice';
  type GenSize = '1080' | '2160' | '3840';
 
 type Preset = {
@@ -153,6 +153,9 @@ function AiBackgroundPanel({
       defaultOpen={true}
       isOpen={isOpen}
       onToggle={onToggle}
+      panelClassName={
+        isOpen ? "ring-1 ring-[#00d4ff]/35 shadow-[0_0_18px_rgba(0,212,255,0.18)]" : undefined
+      }
     >
        <div className="space-y-3">
          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
@@ -236,6 +239,9 @@ function AiBackgroundPanel({
           <Chip small active={genProvider === 'openai'} onClick={() => setGenProvider('openai')}>
             OpenAI
           </Chip>
+          <Chip small active={genProvider === 'venice'} onClick={() => setGenProvider('venice')}>
+            Imagine
+          </Chip>
          </div>
 
          <div className="flex items-center justify-between">
@@ -306,7 +312,7 @@ function AiBackgroundPanel({
            <div className="text-[11px] text-neutral-300 mb-2">Subject Profile (optional)</div>
            <div className="grid grid-cols-2 gap-2">
              <label className="text-[10px] text-neutral-400">
-               Gender
+               Subject identity
                <select
                  value={genGender}
                  onChange={(e) => setGenGender?.(e.target.value as GenGender)}
@@ -314,8 +320,9 @@ function AiBackgroundPanel({
                  disabled={!allowPeople}
                >
                  <option value="any">Any</option>
-                 <option value="woman">Woman</option>
-                 <option value="man">Man</option>
+                 <option value="woman">Female / femme-presenting</option>
+                 <option value="man">Male / masc-presenting</option>
+                 <option value="nonbinary">Non-binary / androgynous</option>
                </select>
              </label>
              <label className="text-[10px] text-neutral-400">
@@ -326,15 +333,15 @@ function AiBackgroundPanel({
                  className="mt-1 w-full rounded bg-[#17171b] text-white border border-neutral-700 px-2 py-1 text-[11px]"
                  disabled={!allowPeople}
                >
-                 <option value="any">Any</option>
-                 <option value="black">Black</option>
-                 <option value="white">White</option>
-                 <option value="latino">Latino</option>
-                 <option value="east-asian">East Asian</option>
-                 <option value="indian">Indian</option>
-                 <option value="middle-eastern">Middle Eastern</option>
-                 <option value="mixed">Mixed</option>
-               </select>
+                <option value="any">Any</option>
+                <option value="black">Black</option>
+                <option value="white">Caucasian</option>
+                <option value="latino">Latina / Latino</option>
+                <option value="east-asian">East Asian</option>
+                <option value="indian">Indian</option>
+                <option value="middle-eastern">Middle Eastern</option>
+                <option value="mixed">Mixed</option>
+              </select>
              </label>
            </div>
            <div className="mt-2 text-[10px] text-neutral-500">
@@ -371,6 +378,7 @@ function AiBackgroundPanel({
                  <option value="luxury">Luxury</option>
                  <option value="festival">Festival</option>
                  <option value="all-white">All White</option>
+                 <option value="cyberpunk">Cyberpunk</option>
                </select>
              </label>
              <label className="text-[10px] text-neutral-400">

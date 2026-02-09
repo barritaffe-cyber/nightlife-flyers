@@ -140,11 +140,146 @@ async function genWithOpenAI(
   return { ok: true, url, b64 };
 }
 
+function clampPrompt(prompt: string, max = 1500) {
+  if (prompt.length <= max) return prompt;
+  const head = Math.floor(max * 0.7);
+  const tail = max - head - 20;
+  return `${prompt.slice(0, head)}… [trimmed] …${prompt.slice(-tail)}`;
+}
+
+function truncatePromptAscii(prompt: string, max: number) {
+  if (prompt.length <= max) return prompt;
+  const head = Math.floor(max * 0.7);
+  const tail = max - head - 12;
+  return `${prompt.slice(0, head)} [trimmed] ${prompt.slice(-tail)}`;
+}
+
+function sanitizeImaginePrompt(prompt: string, max: number) {
+  let cleaned = String(prompt || "");
+  const lower = cleaned.toLowerCase();
+  const negIdx = lower.indexOf("negative prompt");
+  if (negIdx !== -1) cleaned = cleaned.slice(0, negIdx);
+  const sepIdx = cleaned.indexOf("||");
+  if (sepIdx !== -1) cleaned = cleaned.slice(0, sepIdx);
+  cleaned = cleaned.replace(/\s+/g, " ").trim();
+  return truncatePromptAscii(cleaned, max);
+}
+
+async function genWithImagine(
+  prompt: string,
+  format: Format,
+  reference?: string,
+  origin?: string
+) {
+  const key = process.env.IMAGINE_API_KEY || process.env.VENICE_API_KEY;
+  if (!key) {
+    return {
+      ok: false,
+      error: 'Missing IMAGINE_API_KEY',
+      placeholder: placeholderDataURL(format, 'Imagine key missing'),
+    };
+  }
+
+  const aspectRatio = format === 'story' ? '9:16' : '1:1';
+  const styleIdRaw =
+    process.env.IMAGINE_STYLE_ID ||
+    process.env.IMAGINE_IMAGE_STYLE_ID ||
+    '29';
+  const parsedStyleId = Number.parseInt(String(styleIdRaw).trim(), 10);
+  const styleId = Number.isFinite(parsedStyleId) ? String(parsedStyleId) : '29';
+  const styleName = process.env.IMAGINE_IMAGE_STYLE || 'realistic';
+  const variationModeRaw = (process.env.IMAGINE_VARIATION_MODE || 'create').trim().toLowerCase();
+  const variationMode =
+    variationModeRaw === 'variation' || variationModeRaw === 'edit' || variationModeRaw === 'upscale'
+      ? variationModeRaw
+      : 'create';
+  const promptMax =
+    Number(process.env.IMAGINE_PROMPT_MAX || 400) || 400;
+  const safePrompt = sanitizeImaginePrompt(prompt, promptMax) || clampPrompt(prompt, 400);
+  const form = new FormData();
+  form.append('prompt', safePrompt);
+  form.append('style_id', styleId);
+  form.append('style', styleName);
+  form.append('aspect_ratio', aspectRatio);
+  form.append('variation', variationMode);
+
+  const cfg = process.env.IMAGINE_CFG;
+  if (cfg) form.append('cfg', String(cfg));
+
+  const res = await fetch('https://api.vyro.ai/v2/image/generations', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${key}`,
+    },
+    body: form,
+  });
+
+  const contentType = res.headers.get('content-type') || '';
+  const buf = Buffer.from(await res.arrayBuffer());
+  const rawText = contentType.includes('text') || contentType.includes('json')
+    ? buf.toString('utf8')
+    : '';
+
+  if (!res.ok) {
+    let msg = `Imagine HTTP ${res.status}`;
+    if (contentType.includes('application/json')) {
+      try {
+        const j = JSON.parse(rawText || '{}');
+        msg = j?.error?.message || j?.error || j?.message || msg;
+      } catch {}
+    } else if (rawText) {
+      msg = rawText;
+    }
+    if (rawText && rawText !== msg) msg = `${msg} | ${rawText}`;
+    return {
+      ok: false,
+      error: msg,
+      placeholder: placeholderDataURL(format, 'Imagine error'),
+    };
+  }
+
+  if (contentType.startsWith('image/') || contentType.includes('octet-stream')) {
+    const mime = contentType.startsWith('image/') ? contentType.split(';')[0] : 'image/png';
+    return { ok: true, url: `data:${mime};base64,${buf.toString('base64')}` };
+  }
+
+  if (contentType.includes('application/json')) {
+    try {
+      const j = JSON.parse(rawText || '{}');
+      const out =
+        j?.data?.[0] ||
+        j?.output?.[0] ||
+        j?.image ||
+        j?.image_base64 ||
+        j?.result;
+      if (typeof out === 'string') {
+        if (out.startsWith('data:image/')) return { ok: true, url: out };
+        const isUrl = out.startsWith('http');
+        return isUrl ? { ok: true, url: out } : { ok: true, b64: out };
+      }
+      if (out?.b64_json) return { ok: true, b64: out.b64_json };
+      if (out?.url) return { ok: true, url: out.url };
+    } catch {}
+  }
+
+  return {
+    ok: false,
+    error: 'No image in Imagine response',
+    placeholder: placeholderDataURL(format, 'No image'),
+  };
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const prompt = String(body?.prompt || '').trim();
-    const provider = (body?.provider || 'auto') as 'auto' | 'nano' | 'openai' | 'mock';
+    const provider = (body?.provider || 'auto') as
+      | 'auto'
+      | 'nano'
+      | 'openai'
+      | 'venice'
+      | 'imagine'
+      | 'mock';
     const format = (body?.format || 'square') as Format;
     const reference = typeof body?.reference === "string" ? body.reference : undefined;
 
@@ -158,6 +293,17 @@ export async function POST(req: NextRequest) {
     }
 
     // For now, “nano” == fast OpenAI call. Swap this later for your local / alt service.
+    if (provider === 'venice' || provider === 'imagine') {
+      const origin = new URL(req.url).origin;
+      const r = await genWithImagine(prompt, format, reference, origin);
+      if (!r.ok) {
+        return NextResponse.json({ error: r.error, placeholder: r.placeholder }, { status: 200 });
+      }
+      if (r.b64) return NextResponse.json({ b64: r.b64 });
+      if (r.url) return NextResponse.json({ url: r.url });
+      return NextResponse.json({ placeholder: placeholderDataURL(format, 'empty result') });
+    }
+
     if (provider === 'nano' || provider === 'auto' || provider === 'openai') {
       const origin = new URL(req.url).origin;
       const r = await genWithOpenAI(prompt, format, reference, origin);

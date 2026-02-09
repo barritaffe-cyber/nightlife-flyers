@@ -6,6 +6,7 @@ import { supabaseBrowser } from "../../lib/supabase/client";
 export default function ProfilePage() {
   const [email, setEmail] = React.useState<string | null>(null);
   const [status, setStatus] = React.useState<string | null>(null);
+  const [rawStatus, setRawStatus] = React.useState<string | null>(null);
   const [periodEnd, setPeriodEnd] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -17,12 +18,17 @@ export default function ProfilePage() {
         window.location.href = "/login";
         return;
       }
+      await fetch("/api/auth/profile-bootstrap", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const res = await fetch("/api/auth/status", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const json = await res.json();
       setEmail(json.email || data.session?.user?.email || null);
       setStatus(json.status || "inactive");
+      setRawStatus(json.raw_status || null);
       setPeriodEnd(json.current_period_end || null);
     };
     run();
@@ -34,7 +40,8 @@ export default function ProfilePage() {
         <h1 className="text-2xl font-semibold mb-2">Profile</h1>
         <div className="rounded-xl border border-white/10 bg-neutral-900 p-4 space-y-2 text-sm">
           <div>Email: {email ?? "-"}</div>
-          <div>Status: {status ?? "-"}</div>
+          <div>Access: {status ?? "-"}</div>
+          <div>Plan status: {rawStatus ?? "-"}</div>
           <div>Expires: {periodEnd ? new Date(periodEnd).toDateString() : "-"}</div>
         </div>
       </div>

@@ -83,7 +83,7 @@ export default function AuthGate({
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [onStatusChange]);
 
   if (loading) return null;
   if (!blocked) return null;

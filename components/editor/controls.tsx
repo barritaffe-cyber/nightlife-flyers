@@ -7,8 +7,8 @@ import { motion, AnimatePresence } from 'framer-motion';
    return a.filter(Boolean).join(' ');
  }
  
- const panelClass =
-   'panel min-w-0 p-4 rounded-lg border border-neutral-700 bg-neutral-900/70 space-y-3';
+const panelClass =
+  'panel min-w-0 p-4 rounded-xl border border-white/5 bg-neutral-900/80 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.35)] space-y-3';
  
  export type StepperProps = {
    label?: string;
@@ -357,6 +357,7 @@ export const Collapsible: React.FC<{
    right?: React.ReactNode;
    children: React.ReactNode;
    titleClassName?: string;
+   panelClassName?: string;
  }> = ({
    title,
    storageKey,
@@ -366,29 +367,31 @@ export const Collapsible: React.FC<{
    right,
    children,
    titleClassName,
+   panelClassName,
  }) => {
    const STORAGE_VERSION = 'v1';
    const key = `${storageKey}:${STORAGE_VERSION}`;
  
-   const [internalOpen, setInternalOpen] = React.useState<boolean>(!!defaultOpen);
-   const mountedRef = React.useRef(false);
+ const [internalOpen, setInternalOpen] = React.useState<boolean>(!!defaultOpen);
+ const mountedRef = React.useRef(false);
  
    const isControlled = typeof isOpen === 'boolean';
    const open = isControlled ? isOpen : internalOpen;
  
-   React.useEffect(() => {
-     mountedRef.current = true;
-     if (isControlled) return;
+ React.useEffect(() => {
+   mountedRef.current = true;
+   if (isControlled) return;
  
      try {
        const v = localStorage.getItem(key);
        if (v === '1') setInternalOpen(true);
        if (v === '0') setInternalOpen(false);
      } catch {}
-     return () => {
-       mountedRef.current = false;
-     };
-   }, [key, isControlled]);
+   return () => {
+     mountedRef.current = false;
+   };
+ }, [key, isControlled]);
+
  
    React.useEffect(() => {
      if (!mountedRef.current) return;
@@ -403,7 +406,7 @@ export const Collapsible: React.FC<{
    };
  
    return (
-    <section className={panelClass}>
+    <section className={clsx(panelClass, panelClassName)}>
       <div className="w-full flex items-center gap-2 min-h-8">
         <div className="flex-1">
           <button
@@ -441,16 +444,15 @@ export const Collapsible: React.FC<{
         )}
       </div>
  
-       <AnimatePresence initial={false} mode="wait">
+       <AnimatePresence initial={false}>
          {open && (
            <motion.div
              key="content"
-             layout
-             initial={{ opacity: 0, height: 0 }}
-             animate={{ opacity: 1, height: 'auto' }}
-             exit={{ opacity: 0, height: 0 }}
-             transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-             style={{ overflow: 'hidden', willChange: 'height, opacity' }}
+             initial={{ opacity: 0, height: 0, y: -4 }}
+             animate={{ opacity: 1, height: 'auto', y: 0 }}
+             exit={{ opacity: 0, height: 0, y: -4 }}
+             transition={{ type: 'spring', stiffness: 320, damping: 32, mass: 0.6 }}
+             style={{ overflow: 'hidden', willChange: 'height, opacity, transform' }}
              className="mt-3 px-2 pb-2"
            >
              {children}

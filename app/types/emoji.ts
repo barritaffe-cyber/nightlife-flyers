@@ -2,6 +2,7 @@
 
 export type Emoji = {
   id: string;
+  kind: 'emoji' | 'flare' | 'sticker';
   char: string;
   x: number;
   y: number;
@@ -9,4 +10,13 @@ export type Emoji = {
   rotation: number;
   locked: boolean;
   opacity: number;
+  tint?: number;        // hue-rotate degrees for tinting (optional)
+
+  // Optional fields for library assets (stickers/flares/images)
+  url?: string;          // image source for stickers/flares
+  isFlare?: boolean;     // treat as flare (screen blend, no cleanup)
+  isSticker?: boolean;   // treat as sticker/graphic
+  blendMode?: string;    // css mix-blend-mode
+  svgTemplate?: string;  // svg template with {{COLOR}} token (optional)
+  iconColor?: string;    // initial svg stroke color (optional)
 };

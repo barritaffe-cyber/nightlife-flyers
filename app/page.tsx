@@ -361,6 +361,8 @@ const CINEMATIC_REF_LIBRARY = [
   { id: "spicy", label: "Spicy Hot", src: "/cinematic-refs/spicy.png" },
   { id: "frozen", label: "Frozen", src: "/cinematic-refs/frozen.png" },
   { id: "white-gold", label: "White Gold", src: "/cinematic-refs/white-gold.png" },
+  { id: "black", label: "Black", src: "/cinematic-refs/black.png" },
+  { id: "lines", label: "Lines", src: "/cinematic-refs/lines.png" },
   { id: "african", label: "African", src: "/cinematic-refs/african.png" },
   { id: "pink", label: "Pink", src: "/cinematic-refs/pink.png" },
 ] as const;
@@ -502,7 +504,7 @@ const TemplateGalleryPanel = React.memo(({
   const [q, setQ] = React.useState('');
   const deferredQ = React.useDeferredValue(q);
   const [tag, setTag] = React.useState<string>('All');
-  const [visibleCount, setVisibleCount] = React.useState(16);
+  const [visibleCount, setVisibleCount] = React.useState(18);
 
   const allTags = React.useMemo(() => {
     const s = new Set<string>();
@@ -519,7 +521,7 @@ const TemplateGalleryPanel = React.memo(({
   }, [items, deferredQ, tag]);
 
   React.useEffect(() => {
-    setVisibleCount(16);
+    setVisibleCount(18);
   }, [tag, deferredQ]);
 
   const visible = React.useMemo(
@@ -598,9 +600,9 @@ const TemplateGalleryPanel = React.memo(({
         <div className="mt-3 grid place-items-center">
           <button
             type="button"
-            className="rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/80 hover:bg-white/10"
-            onClick={() => setVisibleCount((prev) => prev + 16)}
-          >
+          className="rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/80 hover:bg-white/10"
+          onClick={() => setVisibleCount((prev) => prev + 16)}
+        >
             Show more
           </button>
         </div>
@@ -1841,8 +1843,11 @@ const LockButton = ({
         const iw = img.naturalWidth;
         const ih = img.naturalHeight;
         
-        // "Cover" logic based on bgScale
-        const scaleFactor = Math.max(outW / iw, outH / ih) * bgScale; 
+        // Match the canvas "Fit/Fill" behavior and current zoom
+        const baseScale = bgFitMode
+          ? Math.min(outW / iw, outH / ih)
+          : Math.max(outW / iw, outH / ih);
+        const scaleFactor = baseScale * bgScale; 
         
         const dw = iw * scaleFactor;
         const dh = ih * scaleFactor;
@@ -1851,7 +1856,17 @@ const LockButton = ({
         const dx = (outW - dw) * (bgX / 100);
         const dy = (outH - dh) * (bgY / 100);
 
-        ctx.drawImage(img, dx, dy, dw, dh);
+        if (bgRotate) {
+          const cx = dx + dw / 2;
+          const cy = dy + dh / 2;
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.rotate((bgRotate * Math.PI) / 180);
+          ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+          ctx.restore();
+        } else {
+          ctx.drawImage(img, dx, dy, dw, dh);
+        }
 
         return c.toDataURL("image/jpeg", 0.95);
       };
@@ -10365,7 +10380,7 @@ const generateSubjectForBackground = async () => {
       );
       usedNano = subjectProvider !== "venice";
     } catch (err: any) {
-      // Fallback to Venice only when OpenAI-backed provider fails
+      // Fallback to Imagine only when OpenAI-backed provider fails
       if (subjectProvider === "venice") throw err;
       rawUrl = await requestSubject("venice", false);
     }
@@ -10386,11 +10401,11 @@ const generateSubjectForBackground = async () => {
       }
     }
 
-    // Guard against tiny/empty responses; retry with Venice once if nano returned junk
+    // Guard against tiny/empty responses; retry with Imagine once if nano returned junk
     const isTinyData =
       dataUrl.startsWith("data:image/") && dataUrl.length < 5000; // ~few hundred bytes → likely blank
     if (isTinyData && usedNano) {
-      // retry with Venice (text-only) as a fallback
+      // retry with Imagine (text-only) as a fallback
       rawUrl = await requestSubject("venice", false);
       dataUrl = rawUrl;
       if (!dataUrl.startsWith("data:image/")) {

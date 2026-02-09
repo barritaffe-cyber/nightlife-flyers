@@ -56,7 +56,7 @@ function MagicBlendPanel({
 }: Props) {
   const [optionsOpen, setOptionsOpen] = React.useState(false);
   return (
-    <div className="mt-3" id="magic-blend-panel">
+    <div className="mt-3" id="magic-blend-panel" data-tour="magic-blend">
       <div
         className={
           selectedPanel === 'magic_blend'

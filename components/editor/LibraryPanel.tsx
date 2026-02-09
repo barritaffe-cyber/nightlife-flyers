@@ -27,6 +27,7 @@ type LibraryPanelProps = {
   format: Format;
   selectedEmojiId: string | null;
   setSelectedEmojiId: (id: string | null) => void;
+  liveEmojiPos?: { id: string; x: number; y: number } | null;
   IS_iconSlotPickerRef: React.RefObject<HTMLInputElement | null>;
   IS_onIconSlotFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
   IS_iconSlots: ReadonlyArray<string | null>;
@@ -44,6 +45,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
     format,
     selectedEmojiId,
     setSelectedEmojiId,
+    liveEmojiPos,
     IS_iconSlotPickerRef,
     IS_onIconSlotFile,
     IS_iconSlots,
@@ -55,6 +57,23 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
     flareLibrary,
     onPlaceToCanvas,
   }) => {
+    // rAF throttle to smooth slider-driven updates
+    const updatePortraitRaf = React.useRef<(id: string, patch: any) => void | undefined>(undefined);
+    const updateEmojiRaf = React.useRef<(id: string, patch: any) => void | undefined>(undefined);
+
+    // set up throttles after store actions are declared
+    const makeThrottle = React.useCallback(<T extends (...args: any[]) => void>(fn: T) => {
+      let frame: number | null = null;
+      let lastArgs: any[] | null = null;
+      return (...args: any[]) => {
+        lastArgs = args;
+        if (frame !== null) return;
+        frame = requestAnimationFrame(() => {
+          frame = null;
+          if (lastArgs) fn(...(lastArgs as any[]));
+        });
+      };
+    }, []);
     const selectedPanel = useFlyerState((s) => s.selectedPanel);
     const setSelectedPanel = useFlyerState((s) => s.setSelectedPanel);
     const setMoveTarget = useFlyerState((s) => s.setMoveTarget);
@@ -65,8 +84,63 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
     const removePortrait = useFlyerState((s) => s.removePortrait);
     const addPortrait = useFlyerState((s) => s.addPortrait);
     const setSelectedPortraitId = useFlyerState((s) => s.setSelectedPortraitId);
+    const addEmoji = useFlyerState((s) => s.addEmoji);
     const updateEmoji = useFlyerState((s) => s.updateEmoji);
     const removeEmoji = useFlyerState((s) => s.removeEmoji);
+
+    // build throttles once store actions are available
+    React.useEffect(() => {
+      const lerp = (a: number, b: number, t = 0.35) => a + (b - a) * t;
+
+      const smoothPortrait = (id: string, patch: any) => {
+        const store = useFlyerState.getState();
+        const list = store.portraits?.[format] || [];
+        const cur = list.find((p: any) => p.id === id);
+        if (!cur) return updatePortrait(format, id, patch);
+
+        const out: any = { ...patch };
+        (["scale", "opacity", "rotation", "tint"] as const).forEach((key) => {
+          if (typeof patch[key] === "number") {
+            const curVal =
+              key === "scale"
+                ? cur.scale ?? 1
+                : key === "opacity"
+                ? cur.opacity ?? 1
+                : key === "rotation"
+                ? cur.rotation ?? 0
+                : (cur as any).tint ?? 0;
+            out[key] = lerp(curVal, Number(patch[key]));
+          }
+        });
+        updatePortrait(format, id, out);
+      };
+
+      const smoothEmoji = (id: string, patch: any) => {
+        const store = useFlyerState.getState();
+        const list = store.emojis?.[format] || [];
+        const cur = list.find((e: any) => e.id === id);
+        if (!cur) return updateEmoji(format, id, patch);
+
+        const out: any = { ...patch };
+        (["scale", "opacity", "rotation", "tint"] as const).forEach((key) => {
+          if (typeof patch[key] === "number") {
+            const curVal =
+              key === "scale"
+                ? cur.scale ?? 1
+                : key === "opacity"
+                ? cur.opacity ?? 1
+                : key === "rotation"
+                ? cur.rotation ?? 0
+                : (cur as any).tint ?? 0;
+            out[key] = lerp(curVal, Number(patch[key]));
+          }
+        });
+        updateEmoji(format, id, out);
+      };
+
+      updatePortraitRaf.current = makeThrottle(smoothPortrait);
+      updateEmojiRaf.current = makeThrottle(smoothEmoji);
+    }, [format, updatePortrait, updateEmoji, makeThrottle]);
 
     const downscaleDataUrlIfNeeded = React.useCallback(
       (dataUrl: string, maxDim = 1400) =>
@@ -121,6 +195,40 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
           >
             <div className="mb-2 rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-100">
               Tip: After placing items, lock them so they don&apos;t move by accident.
+            </div>
+
+            {/* Emoji Library (quick add) */}
+            <div className="mt-4 border-t border-neutral-800 pt-3">
+              <div className="text-[12px] text-neutral-300 mb-2 font-bold">Emoji Library</div>
+              <div className="grid grid-cols-6 gap-2">
+                {['🎉','🎊','✨','🎭','🎈','🥳','💜','💛','💚','💙','🔥','🌟'].map((em) => (
+                  <button
+                    key={em}
+                    type="button"
+                    className="aspect-square rounded-md bg-neutral-900/60 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-600 text-xl flex items-center justify-center transition-all"
+                    onClick={() => {
+                      const id = `emoji_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
+                      addEmoji(format, {
+                        id,
+                        kind: 'emoji',
+                        char: em,
+                        x: 50,
+                        y: 50,
+                        scale: 1,
+                        rotation: 0,
+                        locked: false,
+                        opacity: 1,
+                      });
+                      setSelectedEmojiId(id);
+                      setSelectedPanel('icons');
+                      setMoveTarget('icon');
+                      onPlaceToCanvas?.();
+                    }}
+                  >
+                    {em}
+                  </button>
+                ))}
+              </div>
             </div>
             <input
               ref={IS_iconSlotPickerRef}
@@ -195,6 +303,9 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
               if (!sel) return null;
 
               const locked = !!sel.locked;
+              const isFlare = !!(sel as any)?.isFlare || (!!(sel as any)?.url && !sel.char);
+              const isStickerImg = !!(sel as any)?.isSticker && !!(sel as any)?.url;
+              const canTint = !!(sel as any)?.url;
 
               return (
                 <div
@@ -204,27 +315,52 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                   onPointerDownCapture={(e) => e.stopPropagation()}
                 >
                   <div className="text-[12px] text-neutral-200 font-bold mb-2 flex justify-between items-center">
-                    <span>Emoji Controls</span>
+                    <span>{isFlare ? 'Flare Controls' : 'Emoji Controls'}</span>
                     <span className="text-neutral-500 font-normal text-[10px]">
-                      {sel.id.split('_')[1] || 'emoji'}
+                      {sel.id.split('_')[1] || (isFlare ? 'flare' : 'emoji')}
                     </span>
                   </div>
 
-                  <div className="mb-3 flex items-center justify-between">
-                    <div className="text-[34px] select-none">{sel.char}</div>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div className="text-[34px] select-none">
+                      {isFlare || isStickerImg ? (
+                        <img
+                          src={(sel as any).url}
+                          alt="preview"
+                          className="h-12 w-12 object-contain pointer-events-none select-none"
+                          draggable={false}
+                        />
+                      ) : (
+                        sel.char
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <div className="text-[10px] text-neutral-400">
+                        Pos: {(liveEmojiPos && liveEmojiPos.id === sel.id
+                          ? liveEmojiPos.x
+                          : Number(sel.x ?? 0)
+                        ).toFixed(1)} / {(liveEmojiPos && liveEmojiPos.id === sel.id
+                          ? liveEmojiPos.y
+                          : Number(sel.y ?? 0)
+                        ).toFixed(1)}
+                      </div>
+                      <div className="text-[10px] text-neutral-500">
+                        Scale: {Math.round((sel.scale || 1) * 100)}%
+                      </div>
                     <button
                       type="button"
                       className="text-[11px] rounded-md border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 px-3 py-2"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        updateEmoji(format, sel.id, {
-                          locked: !locked,
-                        });
-                      }}
-                    >
-                      {locked ? 'Unlock' : 'Lock'}
-                    </button>
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          updateEmoji(format, sel.id, {
+                            locked: !locked,
+                          });
+                        }}
+                      >
+                        {locked ? 'Unlock' : 'Lock'}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="mb-3">
@@ -239,9 +375,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                       step={0.05}
                       value={sel.scale ?? 1}
                       onChange={(e) => {
-                        updateEmoji(format, sel.id, {
-                          scale: Number(e.target.value),
-                        });
+                        updateEmojiRaf.current?.(sel.id, { scale: Number(e.target.value) });
                       }}
                       className="w-full accent-blue-500 h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer"
                       disabled={locked}
@@ -260,9 +394,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                       step={0.05}
                       value={sel.opacity ?? 1}
                       onChange={(e) => {
-                        updateEmoji(format, sel.id, {
-                          opacity: Number(e.target.value),
-                        });
+                        updateEmojiRaf.current?.(sel.id, { opacity: Number(e.target.value) });
                       }}
                       className="w-full accent-blue-500 h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer"
                       disabled={locked}
@@ -281,14 +413,33 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                       step={1}
                       value={sel.rotation ?? 0}
                       onChange={(e) => {
-                        updateEmoji(format, sel.id, {
-                          rotation: Number(e.target.value),
-                        });
+                        updateEmojiRaf.current?.(sel.id, { rotation: Number(e.target.value) });
                       }}
                       className="w-full accent-blue-500 h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer"
                       disabled={locked}
                     />
                   </div>
+
+                  {canTint && (
+                    <div className="mb-3">
+                      <div className="text-[11px] text-neutral-400 mb-1 flex justify-between">
+                        <span>Tint</span>
+                        <span>{Math.round((sel as any).tint ?? 0)}°</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={-180}
+                        max={180}
+                        step={5}
+                      value={(sel as any).tint ?? 0}
+                      onChange={(e) => {
+                          updateEmojiRaf.current?.(sel.id, { tint: Number(e.target.value) });
+                        }}
+                        className="w-full accent-blue-500 h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer"
+                        disabled={locked}
+                      />
+                    </div>
+                  )}
 
                   <button
                     className="w-full mt-1 text-[12px] bg-red-900/20 hover:bg-red-900/40 border border-red-900/50 hover:border-red-500 text-red-200 rounded-md py-2 transition-all flex items-center justify-center gap-2"
@@ -505,9 +656,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                       value={sel.scale ?? 1}
                       disabled={locked}
                       onChange={(e) =>
-                        updatePortrait(format, sel.id, {
-                          scale: Number(e.target.value),
-                        })
+                        updatePortraitRaf.current?.(sel.id, { scale: Number(e.target.value) })
                       }
                       className="w-full h-1 rounded-lg appearance-none cursor-pointer bg-neutral-700 accent-blue-500"
                     />
@@ -526,9 +675,26 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                       value={(sel as any).opacity ?? 1}
                       disabled={locked}
                       onChange={(e) =>
-                        updatePortrait(format, sel.id, {
-                          opacity: Number(e.target.value),
-                        })
+                        updatePortraitRaf.current?.(sel.id, { opacity: Number(e.target.value) })
+                      }
+                      className="w-full h-1 rounded-lg appearance-none cursor-pointer bg-neutral-700 accent-blue-500"
+                    />
+                  </div>
+
+                  <div className="mb-4">
+                    <div className="text-[11px] text-neutral-400 mb-1 flex justify-between">
+                      <span>Tint</span>
+                      <span>{Math.round((sel as any).tint ?? 0)}°</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={-180}
+                      max={180}
+                      step={5}
+                      value={(sel as any).tint ?? 0}
+                      disabled={locked}
+                      onChange={(e) =>
+                        updatePortraitRaf.current?.(sel.id, { tint: Number(e.target.value) })
                       }
                       className="w-full h-1 rounded-lg appearance-none cursor-pointer bg-neutral-700 accent-blue-500"
                     />
@@ -685,6 +851,15 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                     max={180}
                     step={5}
                     onChange={(v) => update({ rotation: v })}
+                  />
+
+                  <SliderRow
+                    label="Tint"
+                    value={(sel as any).tint ?? 0}
+                    min={-180}
+                    max={180}
+                    step={5}
+                    onChange={(v) => update({ tint: v })}
                   />
 
                   <button

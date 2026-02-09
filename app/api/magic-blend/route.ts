@@ -390,7 +390,7 @@ async function runStabilityEdit(opts: {
 // -----------------------------
 export async function POST(req: Request) {
   let stage = "init";
-  let activeProvider: "stability" | "openai" | "replicate" | undefined;
+  let activeProvider: "stability" | "openai" | "replicate" | "nano" | undefined;
   try {
     stage = "check-keys";
     if (!OPENAI_API_KEY && !AI_API_KEY && !STABILITY_API_KEY) {
@@ -415,10 +415,12 @@ export async function POST(req: Request) {
       background: string;
       style?: MagicBlendStyle;
       format?: "square" | "story" | "portrait";
-      provider?: "stability" | "openai" | "replicate";
+      provider?: "stability" | "openai" | "replicate" | "nano";
       extraPrompt?: string;
       cameraZoom?: string;
     };
+    const resolvedProvider =
+      provider === "nano" ? "replicate" : provider;
     activeProvider = provider;
 
     stage = "validate-inputs";
@@ -554,16 +556,21 @@ export async function POST(req: Request) {
         ? `\n\nAdditional directives:\n${extraPrompt.trim()}`
         : "";
 
+    const nanoTone =
+      provider === "nano"
+        ? `\n\nStyle tone:\n- nightlife editorial, moody, cinematic\n- avoid corporate/stock photo look\n- gritty texture, candid energy\n- no sterile studio feel`
+        : "";
+
     const finalPrompt = `${BASE_PROMPT}
 
 ${STYLE_SUFFIX[safeStyle]}
 
-${backgroundLock}${extraBlock}`;
+${backgroundLock}${extraBlock}${nanoTone}`;
 
     // --- Single unified pass with TWO reference images (Imagine Art style) ---
     const sizeStr = format === "story" ? "1024x1792" : "1024x1024";
 
-    if (provider === "replicate") {
+    if (resolvedProvider === "replicate") {
       stage = "replicate:prep";
       const safeSubjBuf = await safeCropSubject(subjBuf);
       const safeCompositeBuf = await buildComposite(safeSubjBuf);
@@ -608,7 +615,7 @@ ${backgroundLock}${extraBlock}`;
       }
     }
 
-    if (provider === "openai") {
+    if (resolvedProvider === "openai") {
       stage = "openai:run";
       const outUrl = await runOpenAIEdit({
         image: preCompositeBuf,

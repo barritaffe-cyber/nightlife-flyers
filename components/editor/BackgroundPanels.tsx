@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import * as React from 'react';
-import { Collapsible, Chip, Stepper, ColorDot } from './controls';
+import { Collapsible, Chip, Stepper } from './controls';
 
 type Props = {
   selectedPanel: string | null;
@@ -29,26 +29,12 @@ type Props = {
   vibeUploadInputRef: React.RefObject<HTMLInputElement | null>;
   handleUploadDesignFromVibe: (file: File) => Promise<void>;
   bgScale: number;
-  bgPosX: number;
-  bgPosY: number;
   bgBlur: number;
-  bgFog?: number;
-  setBgFog?: (v: number) => void;
-  bgWarmGlow?: number;
-  setBgWarmGlow?: (v: number) => void;
-  bgNeonHaze?: number;
-  setBgNeonHaze?: (v: number) => void;
-  bgTint?: string;
-  setBgTint?: (v: string) => void;
-  bgTintStrength?: number;
-  setBgTintStrength?: (v: number) => void;
   setHue: (v: number) => void;
-  setHaze: (v: number) => void;
   setVignette: (v: boolean) => void;
   setVignetteStrength: (v: number) => void;
   setBgBlur: (v: number) => void;
   hue: number;
-  haze: number;
   vignetteStrength: number;
   hasSubject?: boolean;
   onGenerateSubject?: () => void;
@@ -62,8 +48,20 @@ type Props = {
   setSubjectAttire?: (v: string) => void;
   subjectShot?: string;
   setSubjectShot?: (v: string) => void;
+  subjectEnergy?: string;
+  setSubjectEnergy?: (v: string) => void;
+  subjectPose?: string;
+  setSubjectPose?: (v: string) => void;
   genProvider: 'auto' | 'nano' | 'openai' | 'venice';
   setGenProvider: (v: 'auto' | 'nano' | 'openai' | 'venice') => void;
+  onBackgroundPreviewClick?: (p: {
+    nx: number;
+    ny: number;
+    iw: number;
+    ih: number;
+    clientX: number;
+    clientY: number;
+  }) => void;
 };
 
 function BackgroundPanels({
@@ -91,26 +89,12 @@ function BackgroundPanels({
   bgScale,
   bgFitMode,
   setBgFitMode,
-  bgPosX,
-  bgPosY,
   bgBlur,
-  bgFog = 0,
-  setBgFog,
-  bgWarmGlow = 0,
-  setBgWarmGlow,
-  bgNeonHaze = 0,
-  setBgNeonHaze,
-  bgTint = '#000000',
-  setBgTint,
-  bgTintStrength = 0,
-  setBgTintStrength,
   setBgBlur,
   setHue,
-  setHaze,
   setVignette,
   setVignetteStrength,
   hue,
-  haze,
   vignetteStrength,
   hasSubject = false,
   onGenerateSubject,
@@ -124,9 +108,41 @@ function BackgroundPanels({
   setSubjectAttire,
   subjectShot = 'three-quarter',
   setSubjectShot,
+  subjectEnergy = 'vibe',
+  setSubjectEnergy,
+  subjectPose = 'hands-up',
+  setSubjectPose,
   genProvider,
   setGenProvider,
+  onBackgroundPreviewClick,
 }: Props) {
+  const [previewDims, setPreviewDims] = React.useState<{ w: number; h: number }>({
+    w: 0,
+    h: 0,
+  });
+  const previewRef = React.useRef<HTMLImageElement | null>(null);
+
+  const handlePreviewClick = React.useCallback(
+    (e: React.MouseEvent<HTMLImageElement>) => {
+      if (!onBackgroundPreviewClick) return;
+      const img = e.currentTarget;
+      const rect = img.getBoundingClientRect();
+      const nx = (e.clientX - rect.left) / rect.width;
+      const ny = (e.clientY - rect.top) / rect.height;
+      const iw = img.naturalWidth || previewDims.w || 1;
+      const ih = img.naturalHeight || previewDims.h || 1;
+      onBackgroundPreviewClick({
+        nx: Math.max(0, Math.min(1, nx)),
+        ny: Math.max(0, Math.min(1, ny)),
+        iw,
+        ih,
+        clientX: e.clientX,
+        clientY: e.clientY,
+      });
+    },
+    [onBackgroundPreviewClick, previewDims.w, previewDims.h]
+  );
+
   return (
     <>
       <div
@@ -239,10 +255,18 @@ function BackgroundPanels({
             <div className="space-y-2">
               <div className="aspect-square w-full overflow-hidden rounded-lg border border-neutral-700 bg-neutral-900/60 relative">
                 <img
+                  ref={previewRef}
                   src={bgUploadUrl || bgUrl!}
                   alt="Background preview"
                   className={`w-full h-full ${bgFitMode ? "object-contain" : "object-cover"}`}
                   draggable={false}
+                  onLoad={(e) =>
+                    setPreviewDims({
+                      w: e.currentTarget.naturalWidth,
+                      h: e.currentTarget.naturalHeight,
+                    })
+                  }
+                  onClick={handlePreviewClick}
                 />
               </div>
 
@@ -288,7 +312,7 @@ function BackgroundPanels({
                   OpenAI
                 </Chip>
                 <Chip small active={genProvider === 'venice'} onClick={() => setGenProvider('venice')}>
-                  Venice
+                  Imagine
                 </Chip>
               </div>
 
@@ -298,14 +322,19 @@ function BackgroundPanels({
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-[11px] mb-2">
                   <label className="space-y-1">
-                    <span className="text-neutral-400">Gender</span>
+                    <span className="text-neutral-400">Identity</span>
                     <select
                       className="w-full rounded-md border border-neutral-700 bg-neutral-900/60 px-2 py-1"
                       value={subjectGender}
                       onChange={(e) => setSubjectGender?.(e.target.value)}
                     >
-                      {['any', 'man', 'woman'].map((opt) => (
-                        <option key={opt} value={opt}>{opt}</option>
+                      {[
+                        { v: 'any', label: 'Any' },
+                        { v: 'woman', label: 'Female / femme-presenting' },
+                        { v: 'man', label: 'Male / masc-presenting' },
+                        { v: 'nonbinary', label: 'Non-binary / androgynous' },
+                      ].map((opt) => (
+                        <option key={opt.v} value={opt.v}>{opt.label}</option>
                       ))}
                     </select>
                   </label>
@@ -316,8 +345,17 @@ function BackgroundPanels({
                       value={subjectEthnicity}
                       onChange={(e) => setSubjectEthnicity?.(e.target.value)}
                     >
-                      {['any', 'black', 'white', 'latino', 'east-asian', 'indian', 'middle-eastern', 'mixed'].map((opt) => (
-                        <option key={opt} value={opt}>{opt}</option>
+                      {[
+                        { v: 'any', label: 'Any' },
+                        { v: 'black', label: 'Black' },
+                        { v: 'white', label: 'Caucasian' },
+                        { v: 'latino', label: 'Latina / Latino' },
+                        { v: 'east-asian', label: 'East Asian' },
+                        { v: 'indian', label: 'Indian' },
+                        { v: 'middle-eastern', label: 'Middle Eastern' },
+                        { v: 'mixed', label: 'Mixed' },
+                      ].map((opt) => (
+                        <option key={opt.v} value={opt.v}>{opt.label}</option>
                       ))}
                     </select>
                   </label>
@@ -328,24 +366,48 @@ function BackgroundPanels({
                       value={subjectAttire}
                       onChange={(e) => setSubjectAttire?.(e.target.value)}
                     >
-                      {['club-glam', 'luxury', 'festival', 'all-white', 'streetwear'].map((opt) => (
+                      {['club-glam', 'luxury', 'festival', 'all-white', 'streetwear', 'cyberpunk'].map((opt) => (
                         <option key={opt} value={opt}>{opt}</option>
                       ))}
                     </select>
                   </label>
-                  <label className="space-y-1">
-                    <span className="text-neutral-400">Shot</span>
-                    <select
-                      className="w-full rounded-md border border-neutral-700 bg-neutral-900/60 px-2 py-1"
-                      value={subjectShot}
-                      onChange={(e) => setSubjectShot?.(e.target.value)}
-                    >
-                      {['full-body', 'three-quarter', 'waist-up', 'chest-up', 'close-up'].map((opt) => (
-                        <option key={opt} value={opt}>{opt}</option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
+                <label className="space-y-1">
+                  <span className="text-neutral-400">Framing</span>
+                  <select
+                    className="w-full rounded-md border border-neutral-700 bg-neutral-900/60 px-2 py-1"
+                    value={subjectShot}
+                    onChange={(e) => setSubjectShot?.(e.target.value)}
+                  >
+                    {['full-body', 'three-quarter', 'waist-up', 'chest-up', 'close-up'].map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="space-y-1">
+                  <span className="text-neutral-400">Energy</span>
+                  <select
+                    className="w-full rounded-md border border-neutral-700 bg-neutral-900/60 px-2 py-1"
+                    value={subjectEnergy}
+                    onChange={(e) => setSubjectEnergy?.(e.target.value)}
+                  >
+                    {['calm', 'vibe', 'wild'].map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="space-y-1">
+                  <span className="text-neutral-400">Pose</span>
+                  <select
+                    className="w-full rounded-md border border-neutral-700 bg-neutral-900/60 px-2 py-1"
+                    value={subjectPose}
+                    onChange={(e) => setSubjectPose?.(e.target.value)}
+                  >
+                    {['dancing', 'hands-up', 'performance', 'dj'].map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
                 <div className="flex items-center gap-2 text-[11px]">
                   <Chip small onClick={onGenerateSubject} disabled={isGeneratingSubject}>
                     {isGeneratingSubject ? "Generating…" : "Generate subject"}
@@ -398,86 +460,25 @@ function BackgroundPanels({
           right={
             <Chip
               small
-              onClick={() => {
-                setHue(0);
-                setHaze(0.5);
-                setVignette(true);
-                setVignetteStrength(0.55);
-                setBgPosX(50);
-                setBgPosY(50);
-                setBgScale(1);
-                setBgBlur(0);
-                setBgFog?.(0);
-                setBgWarmGlow?.(0);
-                setBgNeonHaze?.(0);
-                setBgTintStrength?.(0);
-              }}
+            onClick={() => {
+              setHue(0);
+              setVignette(true);
+              setVignetteStrength(0.55);
+              setBgScale(1);
+              setBgBlur(0);
+            }}
             >
               Reset
             </Chip>
           }
         >
-          <div className="grid grid-cols-3 gap-3 mb-2">
-            <Stepper
-              label="Fog"
-              value={bgFog}
-              setValue={setBgFog ?? (() => {})}
-              min={0}
-              max={1}
-              step={0.05}
-              digits={2}
-            />
-            <Stepper
-              label="Warm Glow"
-              value={bgWarmGlow}
-              setValue={setBgWarmGlow ?? (() => {})}
-              min={0}
-              max={1}
-              step={0.05}
-              digits={2}
-            />
-            <Stepper
-              label="Neon Haze"
-              value={bgNeonHaze}
-              setValue={setBgNeonHaze ?? (() => {})}
-              min={0}
-              max={1}
-              step={0.05}
-              digits={2}
-            />
-          </div>
-
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex items-center gap-2 text-[11px] text-neutral-300">
-              <span>Tint</span>
-              <ColorDot value={bgTint} onChange={(v) => setBgTint?.(v)} />
-            </div>
-            <div className="flex-1">
-              <Stepper
-                label="Tint Strength"
-                value={bgTintStrength}
-                setValue={setBgTintStrength ?? (() => {})}
-                min={0}
-                max={1}
-                step={0.05}
-                digits={2}
-              />
-            </div>
-          </div>
-
           <div className="grid grid-cols-3 gap-3">
-            <Stepper label="Haze" value={haze} setValue={setHaze} min={0} max={1} step={0.02} digits={2} />
+            <Stepper label="Scale" value={bgScale} setValue={setBgScale} min={0.5} max={5} step={0.1} digits={2} />
             <Stepper label="Hue" value={hue} setValue={setHue} min={-180} max={180} step={1} />
             <Stepper label="Vignette" value={vignetteStrength} setValue={setVignetteStrength} min={0} max={0.9} step={0.02} digits={2} />
           </div>
 
-          <div className="grid grid-cols-3 gap-3 mt-2">
-            <Stepper label="Scale" value={bgScale} setValue={setBgScale} min={0.5} max={5} step={0.1} digits={2} />
-            <Stepper label="BG X %" value={bgPosX} setValue={setBgPosX} min={0} max={100} step={1} />
-            <Stepper label="BG Y %" value={bgPosY} setValue={setBgPosY} min={0} max={100} step={1} />
-          </div>
-
-          <div className="mt-2 pt-2 border-t border-white/5">
+          <div className="mt-2">
             <Stepper label="Gaussian Blur (px)" value={bgBlur} setValue={setBgBlur} min={0} max={20} step={0.5} digits={1} />
           </div>
         </Collapsible>

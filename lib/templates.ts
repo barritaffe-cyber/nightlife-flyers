@@ -1,6 +1,95 @@
 import { PRESETS } from '../lib/presets';
 import type { Emoji } from "../app/types/emoji";
 
+// Quick reference: emoji characters we commonly bake into templates
+export const EMOJI_CHARS: string[] = [
+  '🎉','🎊','✨','🎭','🎈','🥳','💋',
+  '💜','💛','💚','💙',
+  '🔥','🌟'
+];
+
+
+// Nightlife graphics (same icons as Library panel, with color token)
+const NIGHTLIFE_GRAPHIC_TEMPLATES: Record<string, string> = {
+  hookah:
+    '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none" stroke="{{COLOR}}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M58 14L70 14L70 26L58 26Z"/>' +
+      '<path d="M54 26L74 26L80 40L74 52L54 52L48 40Z"/>' +
+      '<path d="M64 52L64 78"/>' +
+      '<path d="M52 86L76 86L76 98L52 98Z"/>' +
+      '<path d="M80 36H92Q104 36 104 48V66"/>' +
+      '<path d="M100 66L110 66"/>' +
+    '</svg>',
+  bottle:
+    '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none" stroke="{{COLOR}}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M54 14H74V24H54Z"/>' +
+      '<path d="M58 24H70V36"/>' +
+      '<path d="M58 36Q58 32 62 32H66Q70 32 70 36V88Q70 98 64 100Q58 98 58 88Z"/>' +
+      '<path d="M58 88H70"/>' +
+      '<path d="M58 96H70"/>' +
+      '<path d="M80 54H96V80H80Z"/>' +
+      '<path d="M88 80V98"/>' +
+      '<path d="M82 98H94"/>' +
+    '</svg>',
+  bucket:
+    '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none" stroke="{{COLOR}}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M32 44H96L90 108Q64 116 38 108L32 44Z"/>' +
+      '<path d="M38 50H90"/>' +
+      '<path d="M34 60Q22 76 26 100Q30 116 50 112"/>' +
+      '<path d="M94 60Q106 76 102 100Q98 116 78 112"/>' +
+      '<path d="M44 44L52 36L62 44L54 52Z"/>' +
+      '<path d="M56 44L64 36L74 44L66 52Z"/>' +
+      '<path d="M68 44L76 36L86 44L78 52Z"/>' +
+      '<path d="M74 18L86 30L80 36L68 24Z"/>' +
+      '<path d="M70 24L80 34L76 72L66 66Z"/>' +
+    '</svg>',
+  drink:
+    '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none" stroke="{{COLOR}}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M28 8A14 14 0 1 1 27.99 8Z"/>' +
+      '<path d="M40 18L100 18L74 52L66 52Z"/>' +
+      '<path d="M48 32L92 32"/>' +
+      '<path d="M70 52L70 86"/>' +
+      '<path d="M52 98L88 98"/>' +
+      '<path d="M34 58A20 20 0 1 1 33.99 58Z"/>' +
+      '<path d="M34 78L34 64"/>' +
+      '<path d="M34 78L24 84"/>' +
+      '<path d="M34 56L34 60"/>' +
+      '<path d="M34 96L34 92"/>' +
+      '<path d="M12 78L16 78"/>' +
+      '<path d="M56 78L52 78"/>' +
+    '</svg>',
+  venue:
+    '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none" stroke="{{COLOR}}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M64 20C46 20 32 34 32 52C32 76 64 108 64 108C64 108 96 76 96 52C96 34 82 20 64 20Z"/>' +
+      '<path d="M64 52A10 10 0 1 0 64 32A10 10 0 0 0 64 52Z"/>' +
+    '</svg>',
+  music:
+    '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none" stroke="{{COLOR}}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M56 32L96 24V80"/>' +
+      '<path d="M56 32V88"/>' +
+      '<path d="M56 88A8 8 0 1 0 48 80A8 8 0 0 0 56 88Z"/>' +
+      '<path d="M96 80A8 8 0 1 0 88 72A8 8 0 0 0 96 80Z"/>' +
+    '</svg>',
+  time:
+    '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none" stroke="{{COLOR}}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M64 28V60L82 70"/>' +
+      '<path d="M64 112A48 48 0 1 0 64 16A48 48 0 0 0 64 112Z"/>' +
+    '</svg>',
+};
+
+// Reusable preset you can drop into any template's emojiList
+export const NIGHTLIFE_GRAPHICS_PRESET: Emoji[] = [
+  { id: "graphic_hookah_sq", kind: "flare", char: "", svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.hookah, iconColor: "#ffffff", isFlare: true, isSticker: true, blendMode: "normal", x: 10, y: 88, scale: 0.3, rotation: 0, opacity: 1, locked: false },
+  { id: "graphic_bottle_service_sq", kind: "flare", char: "", svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.bottle, iconColor: "#ffffff", isFlare: true, isSticker: true, blendMode: "normal", x: 24, y: 88, scale: 0.28, rotation: 0, opacity: 1, locked: false },
+  { id: "graphic_bucket_deals_sq", kind: "flare", char: "", svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.bucket, iconColor: "#ffffff", isFlare: true, isSticker: true, blendMode: "normal", x: 38, y: 88, scale: 0.28, rotation: 0, opacity: 1, locked: false },
+  { id: "graphic_drink_specials_sq", kind: "flare", char: "", svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.drink, iconColor: "#ffffff", isFlare: true, isSticker: true, blendMode: "normal", x: 52, y: 88, scale: 0.28, rotation: 0, opacity: 1, locked: false },
+  { id: "graphic_venue_sq", kind: "flare", char: "", svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.venue, iconColor: "#ffffff", isFlare: true, isSticker: true, blendMode: "normal", x: 66, y: 88, scale: 0.24, rotation: 0, opacity: 1, locked: false },
+  { id: "graphic_music_sq", kind: "flare", char: "", svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.music, iconColor: "#ffffff", isFlare: true, isSticker: true, blendMode: "normal", x: 80, y: 88, scale: 0.28, rotation: 0, opacity: 1, locked: false },
+  { id: "graphic_time_sq", kind: "flare", char: "", svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.time, iconColor: "#ffffff", isFlare: true, isSticker: true, blendMode: "normal", x: 90, y: 88, scale: 0.28, rotation: 0, opacity: 1, locked: false },
+];
+
+
+
 
 // === SUPPORTED TEMPLATE FORMATS ============================================
 export type Format = 'square' | 'story';
@@ -318,6 +407,36 @@ export const TEMPLATE_GALLERY: TemplateSpec[] = [
         portraitX: 72,
         portraitY: 52,
         portraitScale: 0.7,
+
+        // Library items baked into template (emoji + flare)
+        emojiList: [
+          {
+            id: 'wm_confetti_sq',
+            kind: 'emoji',
+            char: '🌟',
+            x: 50,
+            y: 90.5,
+            scale: 0.26,
+            rotation: 0,
+            opacity: 1,
+            locked: false,
+          },
+          {
+            id: 'wm_flare_sq',
+            kind: 'flare',
+            char: '',
+            url: '/flares/flare01.png',
+            isFlare: true,
+            blendMode: 'screen',
+            x: 48.8,
+            y: 21.4,
+            scale: 4,
+            rotation: 0,
+            opacity: 0.45,
+            locked: true,
+          },
+        ],
+        
       },
       story: {
         headline: 'WHITE\nNIGHT',
@@ -363,6 +482,34 @@ export const TEMPLATE_GALLERY: TemplateSpec[] = [
         portraitX: 72,
         portraitY: 52,
         portraitScale: 0.65,
+
+        emojiList: [
+          {
+            id: 'wm_confetti_st',
+            kind: 'emoji',
+            char: '🌟',
+            x: 50.1,
+            y: 85,
+            scale: 0.80,
+            rotation: 0,
+            opacity: 1,
+            locked: false,
+          },
+          {
+            id: 'wm_flare_st',
+            kind: 'flare',
+            char: '',
+            url: '/flares/flare01.png',
+            isFlare: true,
+            blendMode: 'screen',
+            x: 65.3,
+            y: 25,
+            scale: 5,
+            rotation: 0,
+            opacity: 0.45,
+            locked: true,
+          },
+        ],
       },
     },
   },
@@ -1774,6 +1921,390 @@ export const TEMPLATE_GALLERY: TemplateSpec[] = [
     },
   },
   {
+    id: 'atlanta',
+    label: 'Atlanta — Skyline Nights',
+    tags: ['Urban', 'City'],
+    style: 'urban',
+    bgPrompt: '',
+    preview: '/templates/atlanta.jpg',
+    formats: {
+      square: {
+        headline: 'ATL\nNIGHTS',
+        headlineFamily: 'Bebas Neue',
+        headlineSize: 96,
+        headlineHeight: 0.9,
+        headColor: '#ffffff',
+        headX: 32,
+        headY: 28,
+        headAlign: 'center',
+        headShadow: true,
+        headShadowStrength: 1,
+
+        details: 'SAT • 10 PM\nDJ SETS + DRINKS\n21+ ONLY',
+        detailsLineHeight: 0.62,
+        detailsX: 33.5,
+        detailsY: 70,
+        bodyColor: '#dbeafe',
+        detailsAlign: 'center',
+        detailsFamily: 'Inter',
+        detailsSize: 16,
+
+        venue: 'PEACHTREE ROOFTOP',
+        venueX: 25,
+        venueY: 82,
+        venueColor: '#f7c202',
+        venueSize: 26,
+        venueFamily: 'LEMONMILK-Light',
+        venueShadow: true,
+        venueShadowStrength: 1,
+
+        head2Enabled: false,
+        subtagEnabled: false,
+
+        bgPosX: 50,
+        bgPosY: 50,
+        bgScale: 1.2,
+        vignette: true,
+        vignetteStrength: 0.2,
+
+        textColWidth: 58,
+        align: 'center',
+        textAlign: 'center',
+      },
+      story: {
+        headline: 'ATL\nNIGHTS',
+        headlineFamily: 'Bebas Neue',
+        headlineSize: 140,
+        headlineHeight: 0.9,
+        headColor: '#ffffff',
+        headX: 19.3,
+        headY: 28.8,
+        headAlign: 'center',
+        headShadow: true,
+        headShadowStrength: 1,
+
+        details: 'SAT • 10 PM\nDJ SETS + DRINKS\n21+ ONLY',
+        detailsLineHeight: 0.74,
+        detailsX: 33.5,
+        detailsY: 70.9,
+        bodyColor: '#dbeafe',
+        detailsAlign: 'center',
+        detailsFamily: 'Inter',
+        detailsSize: 18,
+
+        venue: 'PEACHTREE ROOFTOP',
+        venueX: 23.4,
+        venueY: 78.3,
+        venueColor: '#f7c202',
+        venueSize: 30,
+        venueFamily: 'LEMONMILK-Light',
+        venueShadow: true,
+        venueShadowStrength: 1,
+
+        head2Enabled: false,
+        subtagEnabled: false,
+
+        bgPosX: 50,
+        bgPosY: 50,
+        bgScale: 1.2,
+        vignette: true,
+        vignetteStrength: 0.2,
+
+        textColWidth: 60,
+        align: 'center',
+        textAlign: 'center',
+      },
+    },
+  },
+  {
+    id: 'la-lux',
+    label: 'LA — Luxe Afterhours',
+    tags: ['Luxury', 'Urban'],
+    style: 'urban',
+    bgPrompt: '',
+    preview: '/templates/la-lux.jpg',
+    formats: {
+      square: {
+        headline: 'LA\nLUXE',
+        headlineFamily: 'Bebas Neue',
+        headlineSize: 98,
+        headlineHeight: 0.9,
+        headColor: '#ffffff',
+        headX: 32,
+        headY: 28,
+        headAlign: 'center',
+        headShadow: true,
+        headShadowStrength: 1,
+
+        details: 'FRI • 11 PM\nLATE NIGHT SET\nGUEST LIST OPEN',
+        detailsLineHeight: 0.62,
+        detailsX: 33.5,
+        detailsY: 70,
+        bodyColor: '#e5e7eb',
+        detailsAlign: 'center',
+        detailsFamily: 'Inter',
+        detailsSize: 16,
+
+        venue: 'SUNSET ROOFTOP',
+        venueX: 25,
+        venueY: 82,
+        venueColor: '#f7c202',
+        venueSize: 26,
+        venueFamily: 'LEMONMILK-Light',
+        venueShadow: true,
+        venueShadowStrength: 1,
+
+        head2Enabled: false,
+        subtagEnabled: false,
+
+        bgPosX: 50,
+        bgPosY: 50,
+        bgScale: 1.2,
+        vignette: true,
+        vignetteStrength: 0.2,
+
+        textColWidth: 58,
+        align: 'center',
+        textAlign: 'center',
+      },
+      story: {
+        headline: 'LA\nLUXE',
+        headlineFamily: 'Bebas Neue',
+        headlineSize: 140,
+        headlineHeight: 0.9,
+        headColor: '#ffffff',
+        headX: 19.3,
+        headY: 28.8,
+        headAlign: 'center',
+        headShadow: true,
+        headShadowStrength: 1,
+
+        details: 'FRI • 11 PM\nLATE NIGHT SET\nGUEST LIST OPEN',
+        detailsLineHeight: 0.74,
+        detailsX: 33.5,
+        detailsY: 70.9,
+        bodyColor: '#e5e7eb',
+        detailsAlign: 'center',
+        detailsFamily: 'Inter',
+        detailsSize: 18,
+
+        venue: 'SUNSET ROOFTOP',
+        venueX: 23.4,
+        venueY: 78.3,
+        venueColor: '#f7c202',
+        venueSize: 30,
+        venueFamily: 'LEMONMILK-Light',
+        venueShadow: true,
+        venueShadowStrength: 1,
+
+        head2Enabled: false,
+        subtagEnabled: false,
+
+        bgPosX: 50,
+        bgPosY: 50,
+        bgScale: 1.2,
+        vignette: true,
+        vignetteStrength: 0.2,
+
+        textColWidth: 60,
+        align: 'center',
+        textAlign: 'center',
+      },
+    },
+  },
+  {
+    id: 'miami2',
+    label: 'Miami — Ocean Drive',
+    tags: ['Tropical', 'Beach'],
+    style: 'tropical',
+    bgPrompt: '',
+    preview: '/templates/miami2.jpg',
+    formats: {
+      square: {
+        headline: 'MIAMI\nNIGHTS',
+        headlineFamily: 'Bebas Neue',
+        headlineSize: 96,
+        headlineHeight: 0.9,
+        headColor: '#ffffff',
+        headX: 32,
+        headY: 28,
+        headAlign: 'center',
+        headShadow: true,
+        headShadowStrength: 1,
+
+        details: 'SAT • 9 PM\nTROPICAL HOUSE\nOPEN BAR TILL 10',
+        detailsLineHeight: 0.62,
+        detailsX: 33.5,
+        detailsY: 70,
+        bodyColor: '#a5f3fc',
+        detailsAlign: 'center',
+        detailsFamily: 'Inter',
+        detailsSize: 16,
+
+        venue: 'OCEAN DRIVE',
+        venueX: 25,
+        venueY: 82,
+        venueColor: '#ff7ad9',
+        venueSize: 26,
+        venueFamily: 'LEMONMILK-Light',
+        venueShadow: true,
+        venueShadowStrength: 1,
+
+        head2Enabled: false,
+        subtagEnabled: false,
+
+        bgPosX: 50,
+        bgPosY: 50,
+        bgScale: 1.2,
+        vignette: true,
+        vignetteStrength: 0.2,
+
+        textColWidth: 58,
+        align: 'center',
+        textAlign: 'center',
+      },
+      story: {
+        headline: 'MIAMI\nNIGHTS',
+        headlineFamily: 'Bebas Neue',
+        headlineSize: 140,
+        headlineHeight: 0.9,
+        headColor: '#ffffff',
+        headX: 19.3,
+        headY: 28.8,
+        headAlign: 'center',
+        headShadow: true,
+        headShadowStrength: 1,
+
+        details: 'SAT • 9 PM\nTROPICAL HOUSE\nOPEN BAR TILL 10',
+        detailsLineHeight: 0.74,
+        detailsX: 33.5,
+        detailsY: 70.9,
+        bodyColor: '#a5f3fc',
+        detailsAlign: 'center',
+        detailsFamily: 'Inter',
+        detailsSize: 18,
+
+        venue: 'OCEAN DRIVE',
+        venueX: 23.4,
+        venueY: 78.3,
+        venueColor: '#ff7ad9',
+        venueSize: 30,
+        venueFamily: 'LEMONMILK-Light',
+        venueShadow: true,
+        venueShadowStrength: 1,
+
+        head2Enabled: false,
+        subtagEnabled: false,
+
+        bgPosX: 50,
+        bgPosY: 50,
+        bgScale: 1.2,
+        vignette: true,
+        vignetteStrength: 0.2,
+
+        textColWidth: 60,
+        align: 'center',
+        textAlign: 'center',
+      },
+    },
+  },
+  {
+    id: 'new-york',
+    label: 'New York — Midnight City',
+    tags: ['Urban', 'City'],
+    style: 'urban',
+    bgPrompt: '',
+    preview: '/templates/new-york.png',
+    formats: {
+      square: {
+        headline: 'NYC\nMIDNIGHT',
+        headlineFamily: 'Bebas Neue',
+        headlineSize: 92,
+        headlineHeight: 0.9,
+        headColor: '#ffffff',
+        headX: 32,
+        headY: 28,
+        headAlign: 'center',
+        headShadow: true,
+        headShadowStrength: 1,
+
+        details: 'FRI • 10 PM\nCITY LIGHTS\nVIP TABLES',
+        detailsLineHeight: 0.62,
+        detailsX: 33.5,
+        detailsY: 70,
+        bodyColor: '#dbeafe',
+        detailsAlign: 'center',
+        detailsFamily: 'Inter',
+        detailsSize: 16,
+
+        venue: 'SOHO LOUNGE',
+        venueX: 25,
+        venueY: 82,
+        venueColor: '#90cdf4',
+        venueSize: 26,
+        venueFamily: 'LEMONMILK-Light',
+        venueShadow: true,
+        venueShadowStrength: 1,
+
+        head2Enabled: false,
+        subtagEnabled: false,
+
+        bgPosX: 50,
+        bgPosY: 50,
+        bgScale: 1.2,
+        vignette: true,
+        vignetteStrength: 0.2,
+
+        textColWidth: 58,
+        align: 'center',
+        textAlign: 'center',
+      },
+      story: {
+        headline: 'NYC\nMIDNIGHT',
+        headlineFamily: 'Bebas Neue',
+        headlineSize: 134,
+        headlineHeight: 0.9,
+        headColor: '#ffffff',
+        headX: 19.3,
+        headY: 28.8,
+        headAlign: 'center',
+        headShadow: true,
+        headShadowStrength: 1,
+
+        details: 'FRI • 10 PM\nCITY LIGHTS\nVIP TABLES',
+        detailsLineHeight: 0.74,
+        detailsX: 33.5,
+        detailsY: 70.9,
+        bodyColor: '#dbeafe',
+        detailsAlign: 'center',
+        detailsFamily: 'Inter',
+        detailsSize: 18,
+
+        venue: 'SOHO LOUNGE',
+        venueX: 23.4,
+        venueY: 78.3,
+        venueColor: '#90cdf4',
+        venueSize: 30,
+        venueFamily: 'LEMONMILK-Light',
+        venueShadow: true,
+        venueShadowStrength: 1,
+
+        head2Enabled: false,
+        subtagEnabled: false,
+
+        bgPosX: 50,
+        bgPosY: 50,
+        bgScale: 1.2,
+        vignette: true,
+        vignetteStrength: 0.2,
+
+        textColWidth: 60,
+        align: 'center',
+        textAlign: 'center',
+      },
+    },
+  },
+  {
     id: 'techno_warehouse',
     label: 'Techno — Industrial Fog',
     tags: ['Techno', 'Urban'],
@@ -1890,6 +2421,228 @@ export const TEMPLATE_GALLERY: TemplateSpec[] = [
         align: 'center',
         textAlign: 'center',
 
+      },
+    },
+  },
+  {
+    id: 'mardi_gras',
+    label: 'Mardi Gras — Purple & Gold',
+    tags: ['Mardi Gras', 'Festival', 'Party'],
+    style: 'tropical',
+    bgPrompt: '',
+    preview: '/templates/mardi_gras.jpg',
+    formats: {
+      square: {
+        backgroundUrl: '/templates/mardi_gras.jpg',
+        bgPosX: 50,
+        bgPosY: 50,
+        bgScale: 1,
+        vignette: true,
+        vignetteStrength: 0.25,
+
+        // Library items (emoji / stickers / flares)
+        // Add more here to preload Library assets with the template.
+        emojiList: [
+          {
+            id: 'mgr_confetti_sq',
+            kind: 'emoji',
+            char: '🎉',
+            x: 18,
+            y: 22,
+            scale: 0.28,
+            rotation: -10,
+            opacity: 1,
+            locked: false,
+          },
+          {
+            id: 'mgr_mask_sq',
+            kind: 'emoji',
+            char: '🎭',
+            x: 82,
+            y: 68,
+            scale: 0.26,
+            rotation: 8,
+            opacity: 1,
+            locked: false,
+          },
+          {
+            id: 'mgr_flare_sq',
+            kind: 'flare',
+            char: '',
+            url: '/flares/flare01.png',
+            isFlare: true,
+            blendMode: 'screen',
+            x: 72,
+            y: 30,
+            scale: 1.4,
+            rotation: 0,
+            opacity: 0.85,
+            locked: false,
+          },
+        ],
+
+        headline: 'MARDI\nGRAS',
+        headlineFamily: 'Bebas Neue',
+        headlineSize: 110,
+        headlineHeight: 0.9,
+        headColor: '#f7c202',
+        headX: 8,
+        headY: 16,
+        headAlign: 'left',
+        headShadow: true,
+        headShadowStrength: 0.35,
+
+        head2Enabled: true,
+        head2line: 'CARNIVAL EDITION',
+        head2Family: 'Nexa-Heavy',
+        head2Color: '#00c08a',
+        head2Size: 28,
+        head2X: 8,
+        head2Y: 43,
+        head2Align: 'left',
+        head2Shadow: true,
+        head2ShadowStrength: 0.25,
+
+        details: 'FEB 25 • 9 PM\nCOSTUMES WELCOME\nOPEN BAR',
+        detailsFamily: 'Inter',
+        detailsSize: 18,
+        detailsLineHeight: 0.75,
+        detailsColor: '#e5e7eb',
+        detailsX: 8,
+        detailsY: 58,
+        detailsAlign: 'left',
+        detailsShadow: true,
+        detailsShadowStrength: 0.25,
+
+        venue: 'BOURBON LOUNGE',
+        venueFamily: 'LEMONMILK-Light',
+        venueColor: '#c084fc',
+        venueSize: 30,
+        venueX: 8,
+        venueY: 73,
+        venueAlign: 'left',
+        venueShadow: true,
+        venueShadowStrength: 0.3,
+
+        subtagEnabled: true,
+        subtag: 'NEW ORLEANS',
+        subtagFamily: 'Nexa-Heavy',
+        subtagTextColor: '#f7c202',
+        subtagBgColor: '#111827',
+        subtagAlpha: 0.7,
+        subtagX: 8,
+        subtagY: 85,
+        subtagSize: 18,
+        subtagShadow: false,
+
+        textColWidth: 70,
+        align: 'left',
+        textAlign: 'left',
+      },
+      story: {
+        backgroundUrl: '/templates/mardi_gras.jpg',
+        bgPosX: 50,
+        bgPosY: 50,
+        bgScale: 1.05,
+        vignette: true,
+        vignetteStrength: 0.28,
+
+        emojiList: [
+          {
+            id: 'mgr_confetti_st',
+            kind: 'emoji',
+            char: '🎉',
+            x: 20,
+            y: 24,
+            scale: 0.30,
+            rotation: -12,
+            opacity: 1,
+            locked: false,
+          },
+          {
+            id: 'mgr_mask_st',
+            kind: 'emoji',
+            char: '🎭',
+            x: 80,
+            y: 64,
+            scale: 0.28,
+            rotation: 6,
+            opacity: 1,
+            locked: false,
+          },
+          {
+            id: 'mgr_flare_st',
+            kind: 'flare',
+            char: '',
+            url: '/flares/flare01.png',
+            isFlare: true,
+            blendMode: 'screen',
+            x: 70,
+            y: 28,
+            scale: 1.5,
+            rotation: 0,
+            opacity: 0.85,
+            locked: false,
+          },
+        ],
+
+        headline: 'MARDI\nGRAS',
+        headlineFamily: 'Bebas Neue',
+        headlineSize: 150,
+        headlineHeight: 0.9,
+        headColor: '#f7c202',
+        headX: 10,
+        headY: 14,
+        headAlign: 'left',
+        headShadow: true,
+        headShadowStrength: 0.35,
+
+        head2Enabled: true,
+        head2line: 'CARNIVAL EDITION',
+        head2Family: 'Nexa-Heavy',
+        head2Color: '#00c08a',
+        head2Size: 32,
+        head2X: 10,
+        head2Y: 37,
+        head2Align: 'left',
+        head2Shadow: true,
+        head2ShadowStrength: 0.25,
+
+        details: 'FEB 25 • 9 PM\nCOSTUMES WELCOME\nOPEN BAR',
+        detailsFamily: 'Inter',
+        detailsSize: 20,
+        detailsLineHeight: 0.82,
+        detailsColor: '#e5e7eb',
+        detailsX: 10,
+        detailsY: 52,
+        detailsAlign: 'left',
+        detailsShadow: true,
+        detailsShadowStrength: 0.25,
+
+        venue: 'BOURBON LOUNGE',
+        venueFamily: 'LEMONMILK-Light',
+        venueColor: '#c084fc',
+        venueSize: 34,
+        venueX: 10,
+        venueY: 70,
+        venueAlign: 'left',
+        venueShadow: true,
+        venueShadowStrength: 0.3,
+
+        subtagEnabled: true,
+        subtag: 'NEW ORLEANS',
+        subtagFamily: 'Nexa-Heavy',
+        subtagTextColor: '#f7c202',
+        subtagBgColor: '#111827',
+        subtagAlpha: 0.7,
+        subtagX: 10,
+        subtagY: 82,
+        subtagSize: 18,
+        subtagShadow: false,
+
+        textColWidth: 76,
+        align: 'left',
+        textAlign: 'left',
       },
     },
   },
