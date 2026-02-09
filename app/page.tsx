@@ -54,7 +54,7 @@ type TemplateWithFormats = TemplateSpec & {
   formats?: Record<string, TemplateBase>;
 };
 
-type GenGender = "any" | "man" | "woman";
+type GenGender = "any" | "woman" | "man" | "nonbinary";
 type GenEthnicity =
   | "any"
   | "black"
@@ -65,7 +65,7 @@ type GenEthnicity =
   | "middle-eastern"
   | "mixed";
 type GenEnergy = "calm" | "vibe" | "wild";
-type GenAttire = "streetwear" | "club-glam" | "luxury" | "festival" | "all-white";
+type GenAttire = "streetwear" | "club-glam" | "luxury" | "festival" | "all-white" | "cyberpunk";
 type GenColorway = "neon" | "monochrome" | "warm" | "cool" | "gold-black";
 type GenAttireColor =
   | "black"
@@ -283,6 +283,8 @@ function clamp01(n: number) {
 function clamp100(n: number) {
   return Math.max(0, Math.min(100, n));
 }
+// Background positions are 0..100; keep a dedicated clamp for clarity
+const clampBg = clamp100;
 
 function makeReadCtx(canvas: HTMLCanvasElement) {
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
@@ -359,6 +361,8 @@ const CINEMATIC_REF_LIBRARY = [
   { id: "spicy", label: "Spicy Hot", src: "/cinematic-refs/spicy.png" },
   { id: "frozen", label: "Frozen", src: "/cinematic-refs/frozen.png" },
   { id: "white-gold", label: "White Gold", src: "/cinematic-refs/white-gold.png" },
+  { id: "african", label: "African", src: "/cinematic-refs/african.png" },
+  { id: "pink", label: "Pink", src: "/cinematic-refs/pink.png" },
 ] as const;
 
 const WRAP_LIBRARY = [
@@ -996,10 +1000,12 @@ const AI_REFERENCE_SAMPLES: Record<
     "middle-eastern": "/ai-reference/woman/ethnicity/middle-eastern-woman.jpg",
     mixed: "/ai-reference/woman/ethnicity/mixed-woman.jpg",
   },
+  nonbinary: {},
 };
 
 const getReferenceSample = (gender: GenGender, ethnicity: GenEthnicity) => {
   if (gender === "any" || ethnicity === "any") return null;
+  if (gender !== "man" && gender !== "woman") return null; // reference library only covers these
   return AI_REFERENCE_SAMPLES[gender]?.[ethnicity] ?? null;
 };
 
@@ -1064,6 +1070,7 @@ const NIGHTLIFE_ATTIRE_BY_GENDER = {
     luxury: "luxury nightlife suit, tailored blazer, silk shirt, velvet or satin accents, upscale accessories, couture quality, no t-shirt",
     festival: "festival menswear, bold patterns, layered accessories, expressive styling, statement jewelry, textured fabrics",
     "all-white": "all-white tailored suit, crisp shirt, monochrome styling, premium textures, clean editorial finish",
+    cyberpunk: "cyberpunk techwear, glossy synthetic fabrics, neon accents, reflective visor shades with neon reflections, LED trims, futuristic accessories",
   },
   woman: {
     streetwear: "fashion streetwear, cropped leather jacket, sleek bodysuit, bold textures, statement heels, layered jewelry, flyer-ready nightlife styling",
@@ -1071,6 +1078,7 @@ const NIGHTLIFE_ATTIRE_BY_GENDER = {
     luxury: "luxury nightlife dress, silk or satin gown, structured blazer with metallic hardware, statement jewelry, elegant heels, couture quality, flyer-ready editorial look",
     festival: "festival glam, crochet or fringe top, sequins, layered accessories, expressive styling, sparkling details, flyer-ready energy",
     "all-white": "all-white luxury look, white satin blazer or silk slip dress, lace accents, minimal jewelry, premium fabric, flyer-ready editorial finish",
+    cyberpunk: "cyberpunk nightlife look, glossy techwear, neon accents, reflective visor shades with neon reflections, LED trims, futuristic accessories",
   },
   any: {
     streetwear: "premium streetwear, statement jacket, layered textures, bold accents, runway-ready styling",
@@ -1078,12 +1086,14 @@ const NIGHTLIFE_ATTIRE_BY_GENDER = {
     luxury: "luxury nightlife outfit, tailored silhouette, premium materials, couture quality, no t-shirt",
     festival: "festival styling, layered accessories, expressive styling, sparkle accents, textured fabrics",
     "all-white": "all-white attire, clean monochrome styling, premium fabric, editorial finish",
+    cyberpunk: "cyberpunk nightlife look, glossy techwear, neon accents, reflective visor shades with neon reflections, LED trims, futuristic accessories",
   },
 } as const;
 
 const getAttirePrompt = (gender: GenGender, attire: GenAttire) => {
   if (gender === "man") return NIGHTLIFE_ATTIRE_BY_GENDER.man[attire];
   if (gender === "woman") return NIGHTLIFE_ATTIRE_BY_GENDER.woman[attire];
+  // gender-neutral / nonbinary fallbacks use inclusive phrasing
   return NIGHTLIFE_ATTIRE_BY_GENDER.any[attire];
 };
 
@@ -1443,10 +1453,14 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
   bgX: number;
   bgY: number;
   bgScale: number;
+  bgRotate: number;
   bgFitMode: boolean;
   setBgX: (v: number) => void;
   setBgY: (v: number) => void;
+  setBgRotate: (v: number) => void;
   bgBlur: number;
+  bgLocked: boolean;
+  setBgLocked: (v: boolean) => void;
 
   headRotate: number; head2Rotate: number; detailsRotate: number; details2Rotate: number; venueRotate: number; subtagRotate: number; logoRotate: number;
   portraitBoxW: number; portraitBoxH: number; portraitLocked?: boolean; hideUiForExport?: boolean; headAlign: Align;
@@ -1577,7 +1591,7 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
     head2Enabled, head2, head2X, head2Y, head2SizePx, head2Family, head2Align, head2LineHeight, head2ColWidth, head2Fx, head2Alpha, head2Color,
     // Subtag styles
     subtagBold, subtagItalic, subtagUnderline, subtagSize, subtagAlign, 
-    bgX, bgY, setBgX, setBgY, bgScale, bgFitMode, bgBlur,
+    bgX, bgY, setBgX, setBgY, bgScale, bgRotate, setBgRotate, bgFitMode, bgBlur, bgLocked, setBgLocked,
 
      /* SHADOW ENABLE */
       headShadow,
@@ -1696,6 +1710,43 @@ const LockButton = ({
   const [bgNatSize, setBgNatSize] = React.useState<{ w: number; h: number } | null>(null);
   const [bgIsLandscape, setBgIsLandscape] = useState(false);
   const bgImgRef = React.useRef<HTMLImageElement | null>(null);
+
+  const previewBg = React.useCallback(
+    (el: HTMLElement, state: { scale: number; x: number; y: number; rotate: number }) => {
+      const img = bgImgRef.current;
+      if (!img || !bgNatSize) return;
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      const iw = bgNatSize.w;
+      const ih = bgNatSize.h;
+      const baseScale = bgFitMode ? Math.min(w / iw, h / ih) : Math.max(w / iw, h / ih);
+      const dw = iw * baseScale * state.scale;
+      const dh = ih * baseScale * state.scale;
+      const tx = (w - dw) * (state.x / 100);
+      const ty = (h - dh) * (state.y / 100);
+      img.style.width = `${dw}px`;
+      img.style.height = `${dh}px`;
+      img.style.transform = `translate3d(${tx}px, ${ty}px,0) rotate(${state.rotate}deg)`;
+    },
+    [bgNatSize, bgFitMode]
+  );
+
+  const scheduleBgPreview = React.useCallback(
+    (el: HTMLElement) => {
+      if (bgPreviewRaf.current != null) return;
+      bgPreviewRaf.current = requestAnimationFrame(() => {
+        bgPreviewRaf.current = null;
+        const g = bgGesture.current;
+        if (!g) return;
+        const x = g.curX ?? g.startX;
+        const y = g.curY ?? g.startY;
+        const s = g.curScale ?? g.startScale;
+        const r = g.curRotate ?? g.startRotate;
+        previewBg(el, { scale: s, x, y, rotate: r });
+      });
+    },
+    [previewBg]
+  );
 
   const bgMetrics = React.useMemo(() => {
     if (!bgNatSize) return null;
@@ -1978,6 +2029,7 @@ const drag = useRef<{
   hPct?: number;
   curX?: number;
   curY?: number;
+  curScale?: number;
   baseX?: number;
   baseY?: number;
   pointerId?: number;
@@ -1995,6 +2047,25 @@ const posSnap = (v: number) => (snap ? Math.round(v) : v);
 
 const bgDragRaf = useRef<number | null>(null);
 const bgDragQueued = useRef<{ x: number; y: number } | null>(null);
+const bgPreviewRaf = useRef<number | null>(null);
+
+// Unified background gesture state (pan + pinch) for mobile
+const bgGesture = useRef<{
+  startX: number;
+  startY: number;
+  startScale: number;
+  startRotate: number;
+  mode: 'pan' | 'pinch';
+  pointers: Map<number, { x: number; y: number; sx: number; sy: number }>;
+  startCx?: number;
+  startCy?: number;
+  startDist?: number;
+  startAngle?: number;
+  curX?: number;
+  curY?: number;
+  curScale?: number;
+  curRotate?: number;
+} | null>(null);
 
 
 
@@ -2044,8 +2115,9 @@ function scheduleBgDragMove(el: HTMLElement, x: number, y: number) {
 
     const img = el.querySelector('img') as HTMLElement | null;
     if (img) {
-      img.style.left = `${rangeX * (clampedX / 100)}px`;
-      img.style.top = `${rangeY * (clampedY / 100)}px`;
+      const tx = rangeX * (clampedX / 100);
+      const ty = rangeY * (clampedY / 100);
+      img.style.transform = `translate3d(${tx}px, ${ty}px,0)`;
     }
   });
 }
@@ -2269,8 +2341,8 @@ const onMoveImmediate = (() => {
       const deltaYPct = ((clientY - startY) / rect.height) * 100;
 
       // Subtract delta for panning feel
-      const nx = clamp01(baseX - deltaXPct);
-      const ny = clamp01(baseY - deltaYPct);
+          const nx = clampBg(baseX - deltaXPct);
+          const ny = clampBg(baseY - deltaYPct);
 
       if (canvasRefs.background) {
         canvasRefs.background.style.setProperty("background-position", `${nx}% ${ny}%`, "important");
@@ -2432,6 +2504,7 @@ return (
   }}
 
   onWheel={(e) => {
+    if (bgLocked) return;
     if (moveTarget !== "background") return;
     if (!e.ctrlKey && !e.metaKey) return;
 
@@ -2447,8 +2520,8 @@ return (
     const k = (newScale - bgScale) / newScale;
     onBgScale?.(newScale);
 
-    const nx = clamp01(bgPosX + (mx - 50) * k);
-    const ny = clamp01(bgPosY + (my - 50) * k);
+    const nx = clampBg(bgPosX + (mx - 50) * k);
+    const ny = clampBg(bgPosY + (my - 50) * k);
     onBgMove?.(nx, ny);
   }}
   style={{
@@ -2496,8 +2569,8 @@ return (
         willChange: "transform",
 
         pointerEvents: "auto",
-        cursor: moveTarget === "background" ? "grabbing" : "grab",
-        touchAction: isMobileView && moveTarget !== "background" ? "pan-y" : "none",
+        cursor: bgLocked ? "not-allowed" : moveTarget === "background" ? "grabbing" : "grab",
+        touchAction: "none",
         filter: `hue-rotate(${hue}deg) contrast(${1 + clarity * 0.2}) saturate(${1 + clarity * 0.4}) blur(${bgBlur}px)`,
       }}
 
@@ -2517,75 +2590,151 @@ return (
         store.setMoveTarget("background");
       }}
       onPointerDown={(e) => {
+        if (bgLocked) return;
         if (isMobileView && !mobileDragEnabled) return;
         e.preventDefault();
         e.stopPropagation();
 
         const el = e.currentTarget;
-        try {
-          el.setPointerCapture(e.pointerId);
-        } catch {}
+        try { el.setPointerCapture(e.pointerId); } catch {}
 
         const store = useFlyerState.getState();
-
         onRecordMove?.("background", bgX, bgY, "background");
-
-        // ✅ PATCH: background interaction clears any active element halo immediately
         store.setSelectedPortraitId(null);
         store.setDragging(null);
-
-        // ✅ open background panels + set move mode
         store.setMoveTarget("background");
         store.setSelectedPanel("background");
 
-        // --- INIT DRAG ---
         el.dataset.bgdrag = "1";
-        el.dataset.px = String(e.clientX);
-        el.dataset.py = String(e.clientY);
-        el.dataset.sx = String(bgX);
-        el.dataset.sy = String(bgY);
-        el.dataset.nx = String(bgX);
-        el.dataset.ny = String(bgY);
-
-        el.dataset.rx = String(bgMetrics?.rangeX ?? 0);
-        el.dataset.ry = String(bgMetrics?.rangeY ?? 0);
-
         el.style.transition = "none";
+
+        // init gesture ref
+        bgGesture.current = {
+          startX: bgX,
+          startY: bgY,
+          startScale: bgScale,
+          startRotate: bgRotate,
+          mode: "pan",
+          pointers: new Map([[e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY }]]),
+          curX: bgX,
+          curY: bgY,
+          curScale: bgScale,
+          curRotate: bgRotate,
+        };
+        scheduleBgPreview(el);
       }}
       onPointerMove={(e) => {
         const el = e.currentTarget;
         if (el.dataset.bgdrag !== "1") return;
 
-        scheduleBgDragMove(el, e.clientX, e.clientY);
+        const g = bgGesture.current;
+        if (!g) return;
+        const rect = el.getBoundingClientRect();
 
-        // ❌ REMOVED: Live onBgMove call.
-        // The UI numbers will stay static until you drop.
+        // update pointer position
+        const existing = g.pointers.get(e.pointerId);
+        if (existing) {
+          existing.x = e.clientX;
+          existing.y = e.clientY;
+        } else {
+          g.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY });
+        }
+
+        if (g.pointers.size >= 2 && bgNatSize) {
+          // pinch
+          const pts = [...g.pointers.values()].slice(0, 2);
+          const cxPx = (pts[0].x + pts[1].x) / 2;
+          const cyPx = (pts[0].y + pts[1].y) / 2;
+          const dist = Math.max(10, Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y));
+          if (!g.startDist) g.startDist = dist;
+          if (!g.startCx || !g.startCy) {
+            g.startCx = ((cxPx - rect.left) / rect.width) * 100;
+            g.startCy = ((cyPx - rect.top) / rect.height) * 100;
+          }
+          const ang = Math.atan2(pts[1].y - pts[0].y, pts[1].x - pts[0].x);
+          if (g.startAngle == null) g.startAngle = ang;
+
+          const scaleRaw = g.startScale * (dist / g.startDist);
+          const newScale = Math.max(0.5, Math.min(3.0, scaleRaw));
+          const cxPct = clamp100(((cxPx - rect.left) / rect.width) * 100);
+          const cyPct = clamp100(((cyPx - rect.top) / rect.height) * 100);
+          const k = (newScale - g.startScale) / newScale;
+          const nx = clampBg(g.startX + (cxPct - 50) * k);
+          const ny = clampBg(g.startY + (cyPct - 50) * k);
+
+          const deltaAng = ang - g.startAngle;
+          const deg = ((g.startRotate + (deltaAng * 180) / Math.PI) % 360 + 360) % 360;
+          g.mode = "pinch";
+          g.curScale = newScale;
+          g.curX = nx;
+          g.curY = ny;
+          g.curRotate = deg;
+          scheduleBgPreview(el);
+          return;
+        }
+
+        // single-finger pan
+        const p = g.pointers.values().next().value;
+        if (!p) return;
+        const dxPct = ((p.x - p.sx) / rect.width) * 100;
+        const dyPct = ((p.y - p.sy) / rect.height) * 100;
+        const nx = clampBg(g.startX - dxPct);
+        const ny = clampBg(g.startY - dyPct);
+        g.curX = nx;
+        g.curY = ny;
+        scheduleBgPreview(el);
       }}
       onPointerUp={(e) => {
         const el = e.currentTarget;
         if (el.dataset.bgdrag !== "1") return;
+        try { el.releasePointerCapture(e.pointerId); } catch {}
+
+        const g = bgGesture.current;
+        if (g) {
+          g.pointers.delete(e.pointerId);
+          if (g.pointers.size > 0) {
+            // keep gesture alive with remaining pointer(s)
+            g.startX = g.curX ?? g.startX;
+            g.startY = g.curY ?? g.startY;
+            g.startScale = g.curScale ?? g.startScale;
+            g.startRotate = g.curRotate ?? g.startRotate;
+            g.startDist = undefined;
+            g.startAngle = undefined;
+            // reset anchors for remaining pointers
+            g.pointers.forEach((p) => { p.sx = p.x; p.sy = p.y; });
+            el.dataset.bgdrag = "1";
+            scheduleBgPreview(el);
+            return;
+          }
+        }
+
         el.dataset.bgdrag = "0";
 
-        try {
-          el.releasePointerCapture(e.pointerId);
-        } catch {}
-
-        if (bgDragRaf.current != null) {
-          cancelAnimationFrame(bgDragRaf.current);
-          bgDragRaf.current = null;
-        }
+        if (bgDragRaf.current != null) { cancelAnimationFrame(bgDragRaf.current); bgDragRaf.current = null; }
         bgDragQueued.current = null;
+        if (bgPreviewRaf.current != null) { cancelAnimationFrame(bgPreviewRaf.current); bgPreviewRaf.current = null; }
 
-        // 3. FINAL COMMIT (React Update)
-        // This triggers ONE single re-render at the end.
-        const finalX = parseFloat(el.dataset.nx || "") || bgX;
-        const finalY = parseFloat(el.dataset.ny || "") || bgY;
+        const finalX = g?.curX ?? bgX;
+        const finalY = g?.curY ?? bgY;
+        const finalScale = g?.curScale ?? bgScale;
+        const finalRotate = g?.curRotate ?? bgRotate;
 
         setBgX(finalX);
         setBgY(finalY);
+        setBgRotate(finalRotate);
+        onBgMove?.(finalX, finalY);
+        onBgScale?.(finalScale);
 
-        if (onBgMove) onBgMove(finalX, finalY);
+        bgGesture.current = null;
         if (isMobileView) onMobileDragEnd?.();
+      }}
+      onPointerCancel={() => {
+        bgGesture.current = null;
+        bgDragQueued.current = null;
+        if (bgDragRaf.current != null) cancelAnimationFrame(bgDragRaf.current);
+        bgDragRaf.current = null;
+        if (bgPreviewRaf.current != null) cancelAnimationFrame(bgPreviewRaf.current);
+        bgPreviewRaf.current = null;
       }}
     >
       <img
@@ -2606,9 +2755,9 @@ return (
           pointerEvents: "none",
           userSelect: "none",
           position: "absolute",
-          left: `${bgMetrics?.dx ?? 0}px`,
-          top: `${bgMetrics?.dy ?? 0}px`,
-          transform: "none",
+          left: 0,
+          top: 0,
+          transform: `translate3d(${bgMetrics?.dx ?? 0}px, ${bgMetrics?.dy ?? 0}px,0) rotate(${bgRotate}deg)`,
           width: bgMetrics ? `${bgMetrics.dw}px` : "100%",
           height: bgMetrics ? `${bgMetrics.dh}px` : "100%",
           minWidth: "0",
@@ -4190,25 +4339,6 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
           }}
         />
 
-        {/* B. OPTICAL FLARES / LIGHTING (Screen Mode) */}
-        {portraits[format]?.filter((p: any) => p.isFlare).map((flare: any) => (
-           <img 
-             key={flare.id}
-             src={flare.url}
-             alt="flare"
-             style={{
-               position: 'absolute',
-               left: `${flare.x}%`,
-               top: `${flare.y}%`,
-               transform: `translate(-50%, -50%) scale(${flare.scale}) rotate(${flare.rotation || 0}deg)`,
-               mixBlendMode: 'screen', 
-               opacity: flare.opacity ?? 1,
-               width: 'auto',
-               height: 'auto',
-               pointerEvents: 'none'
-             }}
-           />
-        ))}
       </div>
     </div>
     
@@ -5627,7 +5757,6 @@ ctx.putImageData(cleared, 0, 0);
 
 // 3) Crop tightly to remaining opaque pixels
 const finalData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-// eslint-disable-next-line @typescript-eslint/no-use-before-define
 return cropToAlpha(finalData);
 
 }
@@ -6099,6 +6228,7 @@ export default function Page() {
           format: format,
           cameraZoom: blendCameraZoom,
           extraPrompt,
+          provider: "nano",
         }),
       });
 
@@ -6792,13 +6922,13 @@ React.useEffect(() => {
 function persistPortraitSlots(next: string[]) {
   const normalized = normalizePortraitSlots(next);
   setPortraitSlots(normalized);
-  try { localStorage.setItem('nf:portraitSlots', JSON.stringify(normalized)); } catch {}
+  try { safeSetJsonSmall('nf:portraitSlots', normalized, ['nf:portraitLibrary']); } catch {}
 }
 
 function persistPortraitSlotSources(next: string[]) {
   const normalized = normalizePortraitSlots(next);
   setPortraitSlotSources(normalized);
-  try { localStorage.setItem('nf:portraitSlotSources', JSON.stringify(normalized)); } catch {}
+  try { safeSetJsonSmall('nf:portraitSlotSources', normalized, ['nf:portraitLibrary']); } catch {}
 }
 
 const portraitSlotPickerRef = useRef<HTMLInputElement>(null);
@@ -6972,6 +7102,59 @@ const [showOnboard, setShowOnboard] = useState<boolean>(false);
 const [tourStep, setTourStep] = useState<number | null>(null);
 const [tourRect, setTourRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
 const [tourTip, setTourTip] = useState<{ top: number; left: number; centered?: boolean } | null>(null);
+const [mobileControlsOpen, setMobileControlsOpen] = React.useState(true);
+const [mobileControlsTab, setMobileControlsTab] = React.useState<"design" | "assets">("design");
+const [isMobileView, setIsMobileView] = React.useState(
+  typeof window !== "undefined" && window.innerWidth < 1024
+);
+
+React.useEffect(() => {
+  const update = () => {
+    const vv = window.visualViewport;
+    const w = vv?.width ?? window.innerWidth;
+    setIsMobileView(w < 1024);
+  };
+  update();
+  const vv = window.visualViewport;
+  window.addEventListener("resize", update);
+  window.addEventListener("orientationchange", update);
+  vv?.addEventListener("resize", update);
+  vv?.addEventListener("scroll", update);
+  return () => {
+    window.removeEventListener("resize", update);
+    window.removeEventListener("orientationchange", update);
+    vv?.removeEventListener("resize", update);
+    vv?.removeEventListener("scroll", update);
+  };
+}, []);
+// Desktop-only background click-to-edit (Lovart-style) — kept behind flag to avoid regressions
+const ENABLE_DESKTOP_BG_CLICK_EDIT = true;
+const ENABLE_CANVAS_BG_CLICK = false;
+const [bgEditPopover, setBgEditPopover] = React.useState<{
+  open: boolean;
+  x: number; // screen px for popover placement
+  y: number;
+  nx: number; // normalized click (0-1) relative to artboard
+  ny: number;
+  iw: number; // intrinsic image width
+  ih: number; // intrinsic image height
+  prompt: string;
+  loading: boolean;
+  error: string | null;
+}>({
+  open: false,
+  x: 0,
+  y: 0,
+  nx: 0.5,
+  ny: 0.5,
+  iw: 0,
+  ih: 0,
+  prompt: "",
+  loading: false,
+  error: null,
+});
+const tourMeasureRaf = React.useRef<number | null>(null);
+const prevTourStep = React.useRef<number | null>(null);
 
 // read AFTER hydration
 useEffect(() => {
@@ -7003,15 +7186,6 @@ const openTourPanel = React.useCallback(
     setUiMode("design");
     setMobileControlsOpen(true);
     setMobileControlsTab(tab);
-    const scrollToTarget = () => {
-      const el = document.getElementById(targetId);
-      if (!el) return;
-      scrollToEl(el, "center");
-    };
-    window.setTimeout(() => {
-      setSelectedPanel(panel);
-      window.setTimeout(scrollToTarget, 220);
-    }, 80);
   },
   [setSelectedPanel]
 );
@@ -7022,53 +7196,158 @@ const scrollToArtboard = React.useCallback(() => {
   scrollToEl(el, "center");
 }, []);
 
+const MOBILE_ONLY_TOUR_STEP_IDS = new Set(["text_tab", "design_tab"]);
+
 const TOUR_STEPS = [
   {
     id: 'templates',
     title: 'Pick a template',
     body: 'Start with a template so the typography and spacing are already dialed in.',
-    selector: '[data-tour="templates"]',
+    selector: '#template-panel',
     onEnter: () => {
-      openTourPanel("template", "design", "template-panel");
+      setUiMode("design");
+      if (isMobileView) {
+        setMobileControlsOpen(true);
+        setMobileControlsTab("design");
+      }
+      setTimeout(() => {
+        document.querySelector("#template-panel")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
+    },
+  },
+  {
+    id: 'text_tab',
+    title: 'Text tools',
+    body: 'Use the Text tab to edit your headline and copy.',
+    selector: '[data-tour="mobile-text-tab"]',
+    onEnter: () => {
+      setUiMode("design");
+      if (!isMobileView) return;
+      setMobileControlsOpen(true);
+      setMobileControlsTab("design");
+      setSelectedPanel(null);
+    },
+  },
+  {
+    id: 'design_tab',
+    title: 'Design tools',
+    body: 'Use the Design tab for backgrounds, assets, and effects.',
+    selector: '[data-tour="mobile-design-tab"]',
+    onEnter: () => {
+      setUiMode("design");
+      if (!isMobileView) return;
+      setMobileControlsOpen(true);
+      setMobileControlsTab("assets");
+      setSelectedPanel(null);
     },
   },
   {
     id: 'background',
     title: 'Set the background',
     body: 'Upload your own or use AI Background to generate the vibe.',
-    selector: '[data-tour="background"]',
+    selector: '#ai-background-panel', 
     onEnter: () => {
-      openTourPanel("ai_background", "assets", "ai-background-panel");
+      setUiMode("design");
+      if (isMobileView) {
+        setMobileControlsOpen(true);
+        setMobileControlsTab("assets"); // background controls live under the Design/Assets tab labeled "Design"
+      }
+      setSelectedPanel(null); // ensure panels are closed while switching to Design tab
+      setTimeout(() => {
+        const target = document.querySelector("#ai-background-panel");
+        target?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
+    },
+  },
+  {
+    id: 'magic_blend',
+    title: 'Magic Blend',
+    body: 'Fuse your subject and background into a single cinematic photo with Magic Blend.',
+    selector: '#magic-blend-panel',
+    onEnter: () => {
+      setUiMode("design");
+      if (isMobileView) {
+        setMobileControlsOpen(true);
+        setMobileControlsTab("assets");
+      }
+      
+      // Close all panels; keep them closed during the tour
+      setSelectedPanel(null);
+
+      setTimeout(() => {
+        const target = document.querySelector("#magic-blend-panel");
+        target?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
     },
   },
   {
     id: 'artboard',
     title: 'Edit on the canvas',
     body: 'Tap any text or asset to edit. Drag to position. Use Move/Snap/Guides for alignment.',
-    selector: '[data-tour="artboard"]',
+    selector: '#artboard',
     onEnter: () => {
       setUiMode("design");
+      // REQUIREMENT: Close all collapsibles so we only see the canvas
+      setSelectedPanel(null); 
       window.setTimeout(scrollToArtboard, 180);
+    },
+  },
+  {
+    id: 'gestures',
+    title: 'Use gestures',
+    body: 'Pinch to zoom/rotate and drag with one finger to move the background and assets.',
+    selector: '#artboard',
+    onEnter: () => {
+      setUiMode("design");
+      setSelectedPanel(null);
+      window.setTimeout(scrollToArtboard, 180);
+    },
+  },
+  {
+    id: 'cinematic3d',
+    title: 'Cinematic 3D',
+    body: 'Create 3D effects from our templates here.',
+    selector: '[data-tour="cinematic"]',
+    onEnter: () => {
+      setUiMode("design");
+      if (isMobileView) {
+        setMobileControlsOpen(true);
+        setMobileControlsTab("design");
+      }
+      setSelectedPanel(null);
+      setTimeout(() => {
+        document.querySelector('[data-tour="cinematic"]')?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
     },
   },
   {
     id: 'headline',
     title: 'Tune your headline',
     body: 'Change font, size, and alignment to set the tone of the flyer.',
-    selector: '[data-tour="headline"]',
+    selector: '#headline-panel',
     onEnter: () => {
-      openTourPanel("headline", "design", "headline-panel");
+      setUiMode("design");
+      if (isMobileView) {
+        setMobileControlsOpen(true);
+        setMobileControlsTab("design");
+      }
+      setTimeout(() => {
+        document.querySelector("#headline-panel")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
     },
   },
-  {
-    id: 'library',
-    title: 'Add assets',
-    body: 'Use Library for flares, graphics, emojis, and cutouts.',
-    selector: '[data-tour="library"]',
-    onEnter: () => {
-      openTourPanel("icons", "assets", "library-panel");
-    },
+ {
+  id: 'account',
+  title: 'Account & logout',
+  body: 'Tap the circle to view your account info and log out.',
+  selector: '#account-logo-button, #account-logo-button-mobile',
+  onEnter: () => {
+    setUiMode("design");
+    setSelectedPanel(null);
+    // Jump to the very top so the logo is in view
+    window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
   },
+},
   {
     id: 'export',
     title: 'Export clean',
@@ -7076,50 +7355,245 @@ const TOUR_STEPS = [
     selector: '[data-tour="export"]',
     onEnter: () => {
       setUiMode("finish");
+      setSelectedPanel(null); // Close side panels for export
     },
   },
 ] as const;
 
+const isTourStepVisible = React.useCallback(
+  (stepId: string) => isMobileView || !MOBILE_ONLY_TOUR_STEP_IDS.has(stepId),
+  [isMobileView]
+);
+
+const getNextTourStep = React.useCallback(
+  (from: number, dir: 1 | -1) => {
+    let next = from + dir;
+    while (
+      next >= 0 &&
+      next < TOUR_STEPS.length &&
+      !isTourStepVisible(TOUR_STEPS[next].id)
+    ) {
+      next += dir;
+    }
+    return next;
+  },
+  [isTourStepVisible]
+);
+
+const visibleTourStepCount = React.useMemo(
+  () =>
+    TOUR_STEPS.reduce(
+      (acc, step) => acc + (isTourStepVisible(step.id) ? 1 : 0),
+      0
+    ),
+  [isTourStepVisible]
+);
+
+const visibleTourStepNumber = React.useMemo(() => {
+  if (tourStep == null) return 0;
+  let count = 0;
+  for (let i = 0; i <= tourStep; i += 1) {
+    if (isTourStepVisible(TOUR_STEPS[i].id)) count += 1;
+  }
+  return count;
+}, [tourStep, isTourStepVisible]);
+
 useEffect(() => {
   if (!showOnboard) return;
+  setSelectedPanel(null); // close all collapsibles when tour starts
+  useFlyerState.getState().setSelectedPanel(null); // also reset store-selected panel
   setTourStep(0);
 }, [showOnboard]);
 
 useEffect(() => {
   if (tourStep == null) return;
+  const currentStep = TOUR_STEPS[tourStep];
+  if (!currentStep) return;
+  if (isTourStepVisible(currentStep.id)) return;
+  const next = getNextTourStep(tourStep, 1);
+  if (next >= 0 && next < TOUR_STEPS.length) {
+    setTourStep(next);
+  } else {
+    setTourStep(null);
+  }
+}, [tourStep, isTourStepVisible, getNextTourStep]);
+
+useEffect(() => {
+  if (tourStep == null) return;
+  if (prevTourStep.current !== tourStep) {
+    setSelectedPanel(null); // close panels once per step change
+    useFlyerState.getState().setSelectedPanel(null); // also reset store-selected panel
+    prevTourStep.current = tourStep;
+  }
+
   const step = TOUR_STEPS[tourStep];
   step?.onEnter?.();
+
   const resolveEl = () =>
     step?.selector ? (document.querySelector(step.selector) as HTMLElement | null) : null;
-  const update = () => {
-    const target = resolveEl();
-    if (!target) {
-      setTourRect(null);
-      setTourTip({ top: window.innerHeight * 0.5, left: window.innerWidth * 0.5, centered: true });
+
+  let rafId = 0;
+  let lastRect: { top: number; left: number; width: number; height: number } | null = null;
+  let lastTip: { top: number; left: number; centered?: boolean } | null = null;
+  let missingSince: number | null = null;
+
+  const measure = () => {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  // 1. Resolve Element
+  let el: HTMLElement | null = null;
+  const resolveMobileTab = (label: "text" | "design") => {
+    const tabBars = Array.from(
+      document.querySelectorAll('[data-tour="mobile-tabs"]')
+    ) as HTMLElement[];
+    if (!tabBars.length) return null;
+    for (const bar of tabBars) {
+      const btns = Array.from(bar.querySelectorAll("button"));
+      const match = btns.find(
+        (btn) => btn.textContent?.trim().toLowerCase() === label
+      ) as HTMLElement | undefined;
+      if (match) {
+        const r = match.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) return match;
+      }
+    }
+    // Fallback: return the first match even if hidden
+    const firstBar = tabBars[0];
+    const firstMatch = Array.from(firstBar.querySelectorAll("button")).find(
+      (btn) => btn.textContent?.trim().toLowerCase() === label
+    ) as HTMLElement | undefined;
+    return firstMatch ?? null;
+  };
+
+  if (step?.id === "text_tab") {
+    el = resolveMobileTab("text");
+  } else if (step?.id === "design_tab") {
+    el = resolveMobileTab("design");
+  } else if (step?.id === "background") {
+    // Specifically target the AI panel within the expanded sidebar
+    el = document.querySelector("#ai-background-panel") as HTMLElement | null;
+  } else if (step?.id === "artboard" || step?.id === "gestures") {
+    el = document.getElementById("artboard");
+  } else if (step?.id === "account") {
+    const mobileLogo = document.getElementById("account-logo-button-mobile") as HTMLElement | null;
+    const desktopLogo = document.getElementById("account-logo-button") as HTMLElement | null;
+    el = (window.innerWidth < 1024 ? mobileLogo : desktopLogo) ?? mobileLogo ?? desktopLogo;
+  } else {
+    el = resolveEl();
+  }
+
+  const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+  const handleMissing = () => {
+    if (missingSince == null) missingSince = now;
+    if (now - missingSince < 250) return;
+    setTourRect(null);
+    setTourTip({ top: vh * 0.5, left: vw * 0.5, centered: true });
+    lastRect = null;
+    lastTip = null;
+  };
+
+  if (el) {
+    const r = el.getBoundingClientRect();
+
+    // If the element is hidden, keep the last rect briefly to avoid flicker
+    if (r.height === 0 || r.width === 0) {
+      handleMissing();
       return;
     }
-    const r = target.getBoundingClientRect();
-    setTourRect({ top: r.top, left: r.left, width: r.width, height: r.height });
-    setTourTip({ top: window.innerHeight * 0.5, left: window.innerWidth * 0.5, centered: true });
-  };
-  const el = resolveEl();
-  const raf = requestAnimationFrame(() => requestAnimationFrame(update));
-  const timer = window.setTimeout(update, 220);
-  const onResize = () => update();
-  const onScroll = () => update();
-  window.addEventListener("resize", onResize);
-  window.addEventListener("scroll", onScroll, { passive: true });
-  let observer: ResizeObserver | null = null;
-  if (el && "ResizeObserver" in window) {
-    observer = new ResizeObserver(() => update());
-    observer.observe(el);
+    missingSince = null;
+
+    const nextRect = { top: r.top, left: r.left, width: r.width, height: r.height };
+    if (
+      !lastRect ||
+      Math.abs(lastRect.top - nextRect.top) > 0.5 ||
+      Math.abs(lastRect.left - nextRect.left) > 0.5 ||
+      Math.abs(lastRect.width - nextRect.width) > 0.5 ||
+      Math.abs(lastRect.height - nextRect.height) > 0.5
+    ) {
+      setTourRect(nextRect);
+      lastRect = nextRect;
+    }
+
+    const estH = 150;
+    const estW = 280;
+    const clamp = (v: number, mn: number, mx: number) => Math.min(mx, Math.max(mn, v));
+    
+    let tipTop: number;
+    let tipLeft = r.left + r.width * 0.5;
+    let centered = true;
+
+      if (step?.id === "artboard" || step?.id === "gestures") {
+      // REQUIREMENT: Middle of the canvas
+      tipTop = r.top + (r.height * 0.5) - (estH * 0.5);
+    } else if (step?.id === "text_tab") {
+      // Place popup to the right of the highlighted tab
+      tipTop = r.top + (r.height * 0.5) - (estH * 0.5);
+      tipLeft = r.right + 12;
+      centered = false;
+    } else if (step?.id === "design_tab") {
+      // Place popup to the left of the highlighted tab
+      tipTop = r.top + (r.height * 0.5) - (estH * 0.5);
+      tipLeft = r.left - estW - 12;
+      centered = false;
+    } else {
+      // REQUIREMENT: 5 pixels BELOW the neon ring
+      // element_bottom + 6px (neon padding) + 5px (gap) = 11px
+      tipTop = r.bottom + 11;
+    }
+
+    const minLeft = centered ? estW / 2 + 8 : 8;
+    const maxLeft = centered ? vw - estW / 2 - 8 : vw - estW - 8;
+    let safeLeft = clamp(tipLeft, minLeft, maxLeft);
+    let safeTop = clamp(tipTop, 8, vh - estH - 8);
+
+    if (step?.id === "design_tab") {
+      // Place popup's top-left below the highlight with a 5px gap
+      centered = false;
+      safeLeft = r.left;
+      safeTop = r.bottom + 10;
+    }
+
+    const nextTip = { top: safeTop, left: safeLeft, centered };
+    if (
+      !lastTip ||
+      Math.abs(lastTip.top - nextTip.top) > 0.5 ||
+      Math.abs(lastTip.left - nextTip.left) > 0.5 ||
+      lastTip.centered !== nextTip.centered
+    ) {
+      setTourTip(nextTip);
+      lastTip = nextTip;
+    }
+  } else {
+    // Fallback if element not found (keep last rect briefly to avoid flicker)
+    handleMissing();
   }
+
+};
+
+  // Allow panels to open before we scroll; then force the element to screen-center
+  window.setTimeout(() => {
+    const target = resolveEl();
+    if (target) {
+      const rect = target.getBoundingClientRect();
+      const scrollY = window.scrollY + rect.top + rect.height / 2 - window.innerHeight / 2;
+      const scrollX = window.scrollX + rect.left + rect.width / 2 - window.innerWidth / 2;
+      window.scrollTo({ top: scrollY, left: scrollX, behavior: "smooth" });
+    }
+  }, 120);
+
+  const loop = () => {
+    measure();
+    rafId = requestAnimationFrame(loop);
+  };
+  rafId = requestAnimationFrame(loop);
+
+  const onResize = () => requestAnimationFrame(measure);
+  window.addEventListener("resize", onResize);
+
   return () => {
-    cancelAnimationFrame(raf);
-    clearTimeout(timer);
+    cancelAnimationFrame(rafId);
     window.removeEventListener("resize", onResize);
-    window.removeEventListener("scroll", onScroll);
-    observer?.disconnect();
   };
 }, [tourStep]);
 
@@ -8118,13 +8592,98 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
   const [subtagSize, setSubtagSize] = useState<number>(20);
 
  // === AUTO-LOAD LOCAL FONTS WHEN SELECTED =============================
-  useEffect(() => { ensureFontLoaded(bodyFamily); }, [bodyFamily]);
-  useEffect(() => { ensureFontLoaded(venueFamily); }, [venueFamily]);
-  useEffect(() => { ensureFontLoaded(subtagFamily); }, [subtagFamily]);
-  useEffect(() => { ensureFontLoaded(head2Family); }, [head2Family]);
+useEffect(() => { ensureFontLoaded(bodyFamily); }, [bodyFamily]);
+useEffect(() => { ensureFontLoaded(venueFamily); }, [venueFamily]);
+useEffect(() => { ensureFontLoaded(subtagFamily); }, [subtagFamily]);
+useEffect(() => { ensureFontLoaded(head2Family); }, [head2Family]);
  
 
-
+// Map current text selection to a size controller for pinch scaling
+const getTextSizeController = React.useCallback(() => {
+  const target = useFlyerState.getState().moveTarget;
+  switch (target) {
+    case "headline":
+      return {
+        target,
+        get: () => (headSizeAuto ? headMaxPx : headManualPx),
+        set: (v: number) => {
+          if (headSizeAuto) {
+            setHeadMaxPx(v);
+          } else {
+            setHeadManualPx(v);
+          }
+          setTextStyle("headline", format, { sizePx: v });
+        },
+        min: 36,
+        max: 300,
+      };
+    case "headline2":
+      return {
+        target,
+        get: () => head2SizePx,
+        set: (v: number) => {
+          setHead2SizePx(v);
+          setTextStyle("headline2", format, { sizePx: v });
+        },
+        min: 24,
+        max: 180,
+      };
+    case "details":
+      return {
+        target,
+        get: () => bodySize,
+        set: (v: number) => {
+          setBodySize(v);
+        },
+        min: 10,
+        max: 32,
+      };
+    case "details2":
+      return {
+        target,
+        get: () => details2Size,
+        set: (v: number) => {
+          setDetails2Size(v);
+        },
+        min: 10,
+        max: 80,
+      };
+    case "venue":
+      return {
+        target,
+        get: () => venueSize,
+        set: (v: number) => {
+          setVenueSize(v);
+        },
+        min: 10,
+        max: 96,
+      };
+    case "subtag":
+      return {
+        target,
+        get: () => subtagSize,
+        set: (v: number) => {
+          setSubtagSize(v);
+        },
+        min: 10,
+        max: 48,
+      };
+    default:
+      return null;
+  }
+}, [
+  format,
+  headSizeAuto,
+  headMaxPx,
+  headManualPx,
+  head2SizePx,
+  bodySize,
+  details2Size,
+  venueSize,
+  subtagSize,
+  setSessionValue,
+  setTextStyle,
+]);
   
   /* media */
   const [bgUrl, setBgUrl] = useState<string | null>(null);
@@ -8178,6 +8737,8 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
   const [leak, setLeak]   = useState(0.25);  // light leaks intensity (0–1)
   const [hue, setHue] = useState(0);
   const [bgScale, setBgScale] = useState(1.0);
+  const [bgRotate, setBgRotate] = useState(0);
+  const [bgLocked, setBgLocked] = useState(false);
   const [bgFitMode, setBgFitMode] = useState(false);
   const [bgX, setBgX] = useState(50);
   const [bgY, setBgY] = useState(50);
@@ -8226,30 +8787,6 @@ const [bgBlur, setBgBlur] = useState(0);
       `hue-rotate(${(hue + hueTint).toFixed(3)}deg)`,
     ].join(' ');
   }, [exp, contrast, saturation, warmth, hue, tint, gamma, vibrance]);
-
-const [isMobileView, setIsMobileView] = React.useState(
-  typeof window !== "undefined" && window.innerWidth < 1024
-);
-
-React.useEffect(() => {
-  const update = () => {
-    const vv = window.visualViewport;
-    const w = vv?.width ?? window.innerWidth;
-    setIsMobileView(w < 1024);
-  };
-  update();
-  const vv = window.visualViewport;
-  window.addEventListener("resize", update);
-  window.addEventListener("orientationchange", update);
-  vv?.addEventListener("resize", update);
-  vv?.addEventListener("scroll", update);
-  return () => {
-    window.removeEventListener("resize", update);
-    window.removeEventListener("orientationchange", update);
-    vv?.removeEventListener("resize", update);
-    vv?.removeEventListener("scroll", update);
-  };
-}, []);
 
   const masterFilterCss = React.useMemo(() => {
     const base = masterFilter;
@@ -8548,22 +9085,8 @@ const switchFormat = React.useCallback((next: Format) => {
     locked: portraitLocked,
   };
 
-  // === NEW LOGIC: if a template is active, apply its layout variant ===
-  const tpl = templateId
-    ? TEMPLATE_GALLERY.find(t => t.id === templateId)
-    : null;
-
   // switch format first
   setFormat(next);
-
-  // after format state updates, reapply template variant (layout positions)
-  if (tpl) {
-    
-    // delay slightly to ensure React state commits before reapplying
-    setTimeout(() => {
-      applyTemplate(tpl, { targetFormat: next });
-    }, 10);
-  }
 
 }, [
   format,
@@ -8575,14 +9098,14 @@ const switchFormat = React.useCallback((next: Format) => {
   templateId,
 ]);
 
-// Re-apply template bgScale after bg image swaps (mobile load timing).
+// Re-apply template bgScale after BG image swaps (but NOT on format toggle, to keep per-format scale)
 React.useEffect(() => {
   if (templateBgScaleRef.current !== null && templateBgScaleRef.current !== undefined) {
     setBgScale(templateBgScaleRef.current);
   } else {
     setBgScale(1.3);
   }
-}, [bgUrl, bgUploadUrl, format]);
+}, [bgUrl, bgUploadUrl]);
 
 
 // ============================================================================
@@ -8674,6 +9197,7 @@ React.useEffect(() => {
   }, [viewport.w, viewport.h, canvasSize.w, canvasSize.h]);
 const scaledCanvasW = Math.round(canvasSize.w * canvasScale);
 const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
+const mobileFloatSticky = isMobileView && format === "story";
 
   const handleClearIconSelection = React.useCallback(() => setSelIconId(null), []);
   const handleMobileDragEnd = React.useCallback(() => {}, []);
@@ -9649,33 +10173,64 @@ const generateSubjectForBackground = async () => {
       'high detail but not over-sharpened, professional photography quality',
     ].join(', ');
 
+    const subjectProvider =
+      genProvider === "auto" ? "nano" : (genProvider as "nano" | "openai" | "venice");
+    const isVeniceSubject = subjectProvider === "venice";
+
     const safeAttireMap: Record<GenAttire, string> = {
-      "club-glam": "high-fashion eveningwear, tasteful, fully clothed, no revealing cuts",
-      luxury: "luxury designer outfit, tailored, elegant, fully clothed",
-      festival: "stylish festival outfit, modest, layered fabrics",
-      "all-white": "all-white luxury attire, tailored, tasteful",
-      streetwear: "premium streetwear, layered fit, fully clothed",
+      "club-glam":
+        "nightlife club-glam look, metallic bodycon mini dress or leather/latex catsuit, plunging cowl-neck mini, high-shine fabric, statement accessories, fashion-forward styling",
+      luxury:
+        "luxury nightlife outfit, designer details, bold styling, premium fabrics, confident vibe",
+      festival:
+        "festival-nightlife styling, vibrant layers, bold textures, fashion-forward look",
+      "all-white":
+        "all-white party attire, nightlife styling, sharp tailoring, luxe accents",
+      streetwear:
+        "nightclub streetwear, layered fit, premium textures, bold styling",
+      cyberpunk:
+        "cyberpunk nightlife look, glossy techwear, neon accents, reflective visor shades with neon reflections, LED trims, futuristic accessories",
     };
+    const veniceAttireMap: Record<GenAttire, string> = {
+      "club-glam":
+        "club-glam nightlife look, metallic bodycon mini dress or leather/latex catsuit, plunging cowl-neck mini, high-shine fabric, statement accessories, fashion-forward styling",
+      luxury:
+        "luxury nightlife outfit, designer details, bold styling, confident presence",
+      festival:
+        "festival-nightlife outfit, vibrant layers, bold styling, fashion-forward",
+      "all-white":
+        "all-white party attire, nightlife styling, sharp tailoring, luxe accents",
+      streetwear:
+        "nightclub streetwear, layered fit, premium textures, bold styling",
+      cyberpunk:
+        "cyberpunk nightlife look, glossy techwear, neon accents, reflective visor shades with neon reflections, LED trims, futuristic accessories",
+    };
+
     const safePoseMap: Record<GenPose, string> = {
       dancing: "joyful dance movement, expressive but tasteful",
       "hands-up": "celebratory hands up, energetic and friendly",
       performance: "performer stance, confident and composed",
       dj: "DJ pose, focused and professional",
     };
+    const posePrompt = isVeniceSubject
+      ? NIGHTLIFE_SUBJECT_TOKENS.pose[genPose]
+      : safePoseMap[genPose];
     const genderPrompt =
       genGender === "any"
         ? ""
         : genGender === "man"
-        ? "Subject profile: male (man), adult. Keep gender exactly as stated."
-        : "Subject profile: female (woman), adult. Keep gender exactly as stated.";
+        ? "Subject profile: male (male-presenting), adult. Keep gender as stated."
+        : genGender === "woman"
+        ? "Subject profile: female (female-presenting), adult. Keep gender as stated."
+        : "Subject profile: non-binary / androgynous, adult. Keep expression neutral.";
 
     const ethnicityPrompt =
       genEthnicity === "any"
         ? ""
         : {
             black: "Subject ethnicity: Black. Keep natural Black facial features and rich brown skin tone. Do not lighten skin.",
-            white: "Subject ethnicity: white / Caucasian. Keep facial features and fair-to-olive skin tone consistent. Do not darken skin.",
-            latino: "Subject ethnicity: Latino / Hispanic. Keep facial features and warm medium skin tone consistent. Do not lighten skin.",
+            white: "Subject ethnicity: Caucasian. Keep facial features and fair-to-olive skin tone consistent. Do not darken skin.",
+            latino: "Subject ethnicity: Latina / Latino (Hispanic). Keep facial features and warm medium skin tone consistent. Do not lighten skin.",
             "east-asian": "Subject ethnicity: East Asian. Keep East Asian facial features and natural skin tone. Do not change ethnicity.",
             indian: "Subject ethnicity: South Asian / Indian. Keep facial features and brown skin tone consistent. Do not lighten skin.",
             "middle-eastern": "Subject ethnicity: Middle Eastern. Keep facial features and olive-to-tan skin tone. Do not change ethnicity.",
@@ -9687,19 +10242,27 @@ const generateSubjectForBackground = async () => {
         ? "tack-sharp focus, natural skin texture, visible pores, no beauty filter, no skin smoothing, 85mm f/1.8, Sony A7R IV, studio sharpness"
         : "";
 
+    const referenceClause = referenceSample
+      ? "use the reference sample for facial structure, skin tone, and hairstyle; keep likeness without copying clothing or pose"
+      : "";
+
     const subjectPrompt = [
       genderPrompt,
       ethnicityPrompt,
+      "all subjects are adults (21+), nightlife / club environment, fashion-forward, editorial photography",
       NIGHTLIFE_SUBJECT_TOKENS.energy[genEnergy],
-      safePoseMap[genPose],
+      posePrompt,
       NIGHTLIFE_SUBJECT_TOKENS.shot[genShot],
-      "adult subject, 21+, tasteful fashion, premium nightlife styling",
-      safeAttireMap[genAttire],
+      isVeniceSubject
+        ? "adult subject, 21+, nightlife styling, fashion-forward, avoid corporate look unless requested"
+        : "adult subject, 21+, tasteful fashion, premium nightlife styling",
+      (isVeniceSubject ? veniceAttireMap : safeAttireMap)[genAttire],
       NIGHTLIFE_SUBJECT_TOKENS.attireColor[genAttireColor],
       NIGHTLIFE_SUBJECT_TOKENS.colorway[genColorway],
       NIGHTLIFE_SUBJECT_TOKENS.lighting[genLighting],
       femaleSharpnessPreset,
       NIGHTLIFE_SUBJECT_TOKENS.fashionBoost,
+      referenceClause,
     ]
       .filter(Boolean)
       .join(', ');
@@ -9710,49 +10273,63 @@ const generateSubjectForBackground = async () => {
     > = {
       "full-body": {
         camera:
-          "full body, head-to-toe visible, 35mm lens, eye-level, 10–15ft distance, no cropped limbs",
-        negatives: "cropped limbs, cut-off head, tight crop",
+          "full body, head-to-toe visible, full head included, 10–15% headroom above hair, hands visible, 35mm lens, eye-level, 10–15ft distance, no cropped limbs",
+        negatives: "cropped limbs, cut-off head, forehead cut, cropped hands, tight crop, missing head top, hairline cropped",
       },
       "three-quarter": {
         camera:
-          "three-quarter, mid-thigh up, 50mm lens, eye-level, 6–8ft distance",
-        negatives: "full body, tight crop, cropped limbs",
+          "three-quarter shot (mid-thigh to top of head), 10–15% headroom, full head included, both hands fully visible, elbows in frame, 50mm lens, eye-level, 6–8ft distance",
+        negatives: "full body, waist-up, chest-up, close-up, tight crop, cropped limbs, cut-off head, forehead cut, cropped hands, missing elbows, knees cropped, hairline cropped",
       },
       "waist-up": {
         camera:
-          "waist-up, 70–85mm lens, eye-level, 4–6ft distance, hands visible near waist or hips",
-        negatives: "full body, cropped arms, tight crop",
+          "waist-up, 70–85mm lens, eye-level, 4–6ft distance, 10–15% headroom, hands visible near waist or hips, full head included, full arms in frame",
+        negatives: "full body, cropped arms, tight crop, cut-off head, forehead cut, cropped hands, hairline cropped",
       },
       "chest-up": {
         camera:
-          "chest-up, 85–105mm lens, eye-level, 3–4ft distance, shoulders visible",
-        negatives: "full body, cropped head, tight crop",
+          "chest-up, 85–105mm lens, eye-level, 3–4ft distance, 10–15% headroom, shoulders visible, full head included, hands may rest at lower frame edge",
+        negatives: "full body, cropped head, tight crop, forehead cut, missing chin, hairline cropped",
       },
       "close-up": {
         camera:
-          "close-up portrait, 85–105mm lens, eye-level, face fills frame but not cropped",
-        negatives: "full body, wide shot, cropped head",
+          "close-up portrait, 85–105mm lens, eye-level, face fills frame but not cropped, full head visible, chin and hairline intact, 8–10% headroom",
+        negatives: "full body, wide shot, cropped head, forehead cut, missing chin, hairline cropped",
       },
     };
 
     const shot = shotSpec[genShot];
+    const nightlifeBoost =
+      "high-energy nightlife vibe, candid club photo feel, moody neon lighting, cinematic contrast, gritty texture, low-light flash, fashion-forward styling";
+    const corporateNegatives =
+      "corporate headshot, business attire, office setting, stock photo, brochure look, sterile lighting, clean studio backdrop";
+
+    const framingSafety =
+      "framing safety: include full head and hairline with extra headroom, keep hands fully in frame, avoid any cropping at edges";
+
     const prompt = [
       "single subject on neutral dark backdrop for easy cutout",
       "clean studio background, no props, no text, no logos",
-      "fully clothed, non-suggestive attire, no lingerie, no swimwear, no nudity, no implied nudity",
+      isVeniceSubject
+        ? "tasteful nightlife styling, no explicit nudity, no explicit sexual content"
+        : "fully clothed, non-suggestive attire, no lingerie, no swimwear, no nudity, no implied nudity",
       subjectPrompt,
       safeHumanPrompt,
+      !isVeniceSubject ? nightlifeBoost : "",
       shot.camera,
+      framingSafety,
+      "extra headroom: leave margin above hair, full hair and forehead visible, include full hands in frame per pose",
       "shot on Sony A7R IV, 85mm prime lens, f/2, 1/160s, ISO 400, studio strobe key, RAW photo, subtle film grain, unretouched editorial look",
       "no background scene, isolate subject only",
       "high detail, cinematic nightlife styling",
       "sharp focus, crisp facial detail, no motion blur, no gaussian blur, no soft focus",
-      `negative prompt: suggestive content, skimpy clothing, exposed undergarments, revealing cuts, sheer fabric, explicit themes, blur, soft focus, airbrushed skin, plastic skin, doll-like, beauty filter, cgi, 3d render, illustration, cartoon, wax figure, low quality, extra people, ${shot.negatives}`,
+      "entire head visible, hairline intact, fingers and hands visible, no crops, framing matches camera spec",
+      `negative prompt: suggestive content, skimpy clothing, exposed undergarments, revealing cuts, sheer fabric, explicit themes, blur, soft focus, airbrushed skin, plastic skin, doll-like, beauty filter, cgi, 3d render, illustration, cartoon, wax figure, low quality, extra people, ${shot.negatives}${!isVeniceSubject ? `, ${corporateNegatives}` : ""}`,
       "Do not change ethnicity or skin tone. Do not default to caucasian features if profile is non-white. Keep stated gender.",
     ].join(", ");
 
     async function requestSubject(
-      provider: "nano" | "venice",
+      provider: "nano" | "openai" | "venice",
       includeReference: boolean
     ): Promise<string> {
       const res = await fetch("/api/gen-image", {
@@ -9762,7 +10339,11 @@ const generateSubjectForBackground = async () => {
           prompt,
           format: format === "story" ? "story" : "square",
           provider,
+          // Use reference only as soft style guidance, not face lock
           reference: includeReference ? referenceSample || undefined : undefined,
+          referenceHint: includeReference && referenceSample
+            ? "Use the reference for facial structure, skin tone, and hairstyle. Do not copy clothing or pose. Keep likeness without being identical."
+            : undefined,
         }),
       });
       const j = await res.json().catch(() => ({} as any));
@@ -9778,10 +10359,14 @@ const generateSubjectForBackground = async () => {
     let rawUrl = "";
     let usedNano = false;
     try {
-      rawUrl = await requestSubject("nano", true); // primary: OpenAI-backed nano
-      usedNano = true;
+      rawUrl = await requestSubject(
+        subjectProvider,
+        subjectProvider !== "venice"
+      );
+      usedNano = subjectProvider !== "venice";
     } catch (err: any) {
-      // Fallback to Venice (text-only) if nano fails (e.g., key/network)
+      // Fallback to Venice only when OpenAI-backed provider fails
+      if (subjectProvider === "venice") throw err;
       rawUrl = await requestSubject("venice", false);
     }
 
@@ -9873,6 +10458,10 @@ const generateSubjectForBackground = async () => {
     const usableCutout = cutout;
     await setPortraitUrlSafe(usableCutout);
     setBlendSubject(usableCutout);
+    // Ensure subject is visible on canvas (centered, sensible scale)
+    setPortraitX(50);
+    setPortraitY(55);
+    setPortraitScale(0.9);
     setSelectedPanel("magic_blend");
     useFlyerState.getState().setSelectedPanel("magic_blend");
     let slotIdx = portraitSlots.findIndex((s) => !s);
@@ -10293,7 +10882,12 @@ const buildEdgeAwareLassoMask = (
     try {
       saveDesign('__autosave__');
       localStorage.setItem('nf:lastDesign', exportDesignJSON());
-      localStorage.setItem('NLF:auto:savedAt', String(Date.now()));
+    safeLocalSet('NLF:auto:savedAt', String(Date.now()), [
+      'nf:portraitSlots',
+      'nf:portraitLibrary',
+      'nf:logoSlots',
+      'nf:lastDesign',
+    ]);
       lastSnapRef.current = snap;
     } catch {}
   }, 600);
@@ -12692,6 +13286,38 @@ const onBgMoveRaf = useRafThrottle((x: number, y: number) => {
 const onLogoMoveRaf      = useRafThrottle((x: number, y: number) => { setLogoX(x); setLogoY(y); });
 const onPortraitMoveRaf  = useRafThrottle((x: number, y: number) => { setPortraitX(x); setPortraitY(y); });
 
+// Local storage usage helper
+const getLocalStorageUsage = React.useCallback(() => {
+  try {
+    let bytes = 0;
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i) || "";
+      const v = localStorage.getItem(k) || "";
+      bytes += k.length + v.length;
+    }
+    return { bytes, mb: bytes / (1024 * 1024) };
+  } catch {
+    return { bytes: 0, mb: 0 };
+  }
+}, []);
+
+// Estimate browser quota (best-effort)
+const [storageQuotaMB, setStorageQuotaMB] = React.useState<number | null>(null);
+React.useEffect(() => {
+  let cancelled = false;
+  if (typeof navigator !== 'undefined' && navigator.storage?.estimate) {
+    navigator.storage.estimate().then((res: any) => {
+      if (cancelled) return;
+      if (res && typeof res.quota === 'number') {
+        setStorageQuotaMB(res.quota / (1024 * 1024));
+      }
+    }).catch(() => {
+      /* ignore — quota optional */
+    });
+  }
+  return () => { cancelled = true; };
+}, []);
+
 
 // ===== STORAGE SAFETY HELPERS (ADD ABOVE "/* SUBTAG: persist per-format position/rotation whenever it changes */") =====
 function isQuotaError(err: any) {
@@ -12710,8 +13336,33 @@ function safeLocalSet(key: string, value: string, pruneKeys: string[] = []) {
     }
     try {
       localStorage.setItem(key, value);
+      return;
     } catch {
       alert('Storage is full. Use "Project → Clear Storage" or avoid saving large images.');
+      return;
+    }
+  }
+}
+
+const MAX_LS_WRITE_LEN = 600_000; // ~0.6MB string guard to avoid quota blowups
+function safeSetJsonSmall(key: string, obj: any, pruneKeys: string[] = []) {
+  try {
+    const str = JSON.stringify(obj);
+    if (str.length > MAX_LS_WRITE_LEN) return false;
+    localStorage.setItem(key, str);
+    return true;
+  } catch (err: any) {
+    if (!isQuotaError(err)) return false;
+    for (const k of pruneKeys) {
+      try { localStorage.removeItem(k); } catch {}
+    }
+    try {
+      const str = JSON.stringify(obj);
+      if (str.length > MAX_LS_WRITE_LEN) return false;
+      localStorage.setItem(key, str);
+      return true;
+    } catch {
+      return false;
     }
   }
 }
@@ -12831,7 +13482,8 @@ const portraitCanvas = React.useMemo(() => {
     return mt === "portrait";
   };
 
-  const backLayer = list.filter((p: any) => !!p?.isFlare || !!p?.isSticker);
+  // Render stickers here; flares are rendered in the dedicated flareCanvas layer
+  const backLayer = list.filter((p: any) => !!p?.isSticker);
   const frontLayer = list.filter(
     (p: any) => !(p as any).isFlare && !(p as any).isSticker
   );
@@ -12848,6 +13500,11 @@ const portraitCanvas = React.useMemo(() => {
       shadowBlur > 0
         ? `drop-shadow(0 ${shadowOffset}px ${shadowBlur}px rgba(0,0,0,${shadowAlpha}))`
         : "none";
+    const tintDeg = Number((p as any).tint ?? 0);
+    const filterParts = [];
+    if (shadowFilter !== "none") filterParts.push(shadowFilter);
+    if (tintDeg !== 0) filterParts.push(`hue-rotate(${tintDeg}deg)`);
+    const combinedFilter = filterParts.length ? filterParts.join(" ") : "none";
     const unlocking = unlockingIds.includes(p.id);
     const labelScale = Number(p.scale ?? 1);
     const labelTop = Math.max(60, Math.min(90, 50 + 35 * labelScale));
@@ -12999,7 +13656,7 @@ const portraitCanvas = React.useMemo(() => {
                 willChange: "transform",
                 mixBlendMode: ((p as any).blendMode ?? "normal") as any,
                 opacity: (p as any).opacity ?? 1,
-                filter: shadowFilter,
+                filter: combinedFilter,
               }}
             />
           )}
@@ -13113,48 +13770,25 @@ const portraitCanvas = React.useMemo(() => {
 // === PORTRAIT LAYER END (Consolidated: Handles Portraits AND Flares) ===
 
 
-// === FLARE OVERLAY LAYER (Dynamic from state) ===
-const portraitList = portraits[format] ?? [];
-
-///////filter 
-<svg width="0" height="0" className="absolute">
-  <filter id="flareKeyBlack" colorInterpolationFilters="sRGB">
-    {/* Build a mask alpha from luminance */}
-    <feColorMatrix
-      in="SourceGraphic"
-      type="matrix"
-      values="
-        1 0 0 0 0
-        0 1 0 0 0
-        0 0 1 0 0
-        0.2126 0.7152 0.0722 0 0
-      "
-      result="lumAlpha"
-    />
-    {/* Crush darks harder -> transparent */}
-    <feComponentTransfer in="lumAlpha" result="alphaBoost">
-      <feFuncA type="linear" slope="3.4" intercept="-0.28" />
-    </feComponentTransfer>
-    {/* Apply that alpha to the original image */}
-    <feComposite in="SourceGraphic" in2="alphaBoost" operator="in" />
-  </filter>
-</svg>
 
 
-const flareCanvas = (
-  <div
-    id="flare-layer-root"
-    style={{
-      position: "absolute",
-      inset: 0,
-      pointerEvents: "none",
-      overflow: "hidden",
-      zIndex: 30, // above portraits if you want
-    }}
-  >
-    {(portraits?.[format] || [])
-      .filter((p) => Boolean((p as any).isFlare))
-      .map((p) => {
+// === FLARE OVERLAY LAYER (Dynamic from state, with own drag/select) ===
+const flareCanvas = React.useMemo(() => {
+  const list = portraits?.[format] || [];
+  const flares = list.filter((p: any) => !!(p as any).isFlare);
+
+  return (
+    <div
+      id="flare-layer-root"
+      style={{
+        position: "absolute",
+        inset: 0,
+        pointerEvents: "none",
+        overflow: "hidden",
+        zIndex: 30,
+      }}
+    >
+      {flares.map((p: any) => {
         const isSelected = selectedPortraitId === p.id;
         const locked = !!p.locked;
 
@@ -13164,18 +13798,12 @@ const flareCanvas = (
             className="absolute"
             onPointerDown={(e) => {
               if (locked) return;
-
               e.preventDefault();
               e.stopPropagation();
 
               const el = e.currentTarget as HTMLElement;
+              try { el.setPointerCapture(e.pointerId); } catch {}
 
-              // capture pointer
-              try {
-                el.setPointerCapture(e.pointerId);
-              } catch {}
-
-              // init drag
               el.dataset.pdrag = "1";
               el.dataset.isMoved = "0";
               el.dataset.px = String(e.clientX);
@@ -13184,16 +13812,9 @@ const flareCanvas = (
               el.dataset.sy = String(p.y);
 
               const root = document.getElementById("flare-layer-root");
-              if (root) {
-                const b = root.getBoundingClientRect();
-                el.dataset.cw = String(b.width);
-                el.dataset.ch = String(b.height);
-              } else {
-                el.dataset.cw = "0";
-                el.dataset.ch = "0";
-              }
-
-              // reset offsets
+              const b = root?.getBoundingClientRect();
+              el.dataset.cw = String(b?.width ?? 0);
+              el.dataset.ch = String(b?.height ?? 0);
               el.style.setProperty("--pdx", "0px");
               el.style.setProperty("--pdy", "0px");
             }}
@@ -13206,69 +13827,42 @@ const flareCanvas = (
               const dx = e.clientX - px;
               const dy = e.clientY - py;
 
-              // threshold to avoid click jitter
               if (el.dataset.isMoved === "0" && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
                 el.dataset.isMoved = "1";
               }
-
               if (el.dataset.isMoved === "1") {
                 el.style.setProperty("--pdx", `${dx}px`);
                 el.style.setProperty("--pdy", `${dy}px`);
               }
             }}
             onPointerUp={(e) => {
-  const el = e.currentTarget as HTMLElement;
-  if (el.dataset.pdrag !== "1") return;
+              const el = e.currentTarget as HTMLElement;
+              if (el.dataset.pdrag !== "1") return;
+              el.dataset.pdrag = "0";
 
-  el.dataset.pdrag = "0";
+              const isMoved = el.dataset.isMoved === "1";
+              const cw = Number(el.dataset.cw || "0");
+              const ch = Number(el.dataset.ch || "0");
+              const dx = e.clientX - Number(el.dataset.px || "0");
+              const dy = e.clientY - Number(el.dataset.py || "0");
+              const startX = Number(el.dataset.sx || "0");
+              const startY = Number(el.dataset.sy || "0");
 
-  // click vs drag
-  if (el.dataset.isMoved === "1") {
-    const startLeft = Number(el.dataset.sx || "0");
-    const startTop = Number(el.dataset.sy || "0");
-    const cw = Number(el.dataset.cw || "0");
-    const ch = Number(el.dataset.ch || "0");
+              if (isMoved && cw > 5 && ch > 5) {
+                const finalX = startX + (dx / cw) * 100;
+                const finalY = startY + (dy / ch) * 100;
+                useFlyerState.getState().updatePortrait(format, p.id, { x: finalX, y: finalY });
+              }
 
-    const px = Number(el.dataset.px || "0");
-    const py = Number(el.dataset.py || "0");
-    const dx = e.clientX - px;
-    const dy = e.clientY - py;
+              el.style.setProperty("--pdx", "0px");
+              el.style.setProperty("--pdy", "0px");
+              try { el.releasePointerCapture(e.pointerId); } catch {}
 
-    if (cw > 5 && ch > 5) {
-      const finalPctX = startLeft + (dx / cw) * 100;
-      const finalPctY = startTop + (dy / ch) * 100;
-
-      // reset visual
-      el.style.setProperty("--pdx", "0px");
-      el.style.setProperty("--pdy", "0px");
-
-      // commit
-      useFlyerState.getState().updatePortrait(format, p.id, {
-        x: finalPctX,
-        y: finalPctY,
-      });
-    }
-  }
-
-  // ✅ ALWAYS select on pointer up (works for click and after drag)
-  // ✅ BUT route panel + moveTarget based on type (NOT always portrait)
-  const store = useFlyerState.getState();
-
-  if (!isSelected) store.setSelectedPortraitId(p.id);
-
-  const id = String(p?.id || "");
-  const isLogo = id.startsWith("logo_") || !!(p as any)?.isLogo;
-  const isFlare = !!(p as any)?.isFlare;
-  const isSticker = !!(p as any)?.isSticker;
-
-  store.setSelectedPanel(isLogo ? "logo" : isFlare || isSticker ? "icons" : "portrait");
-  store.setMoveTarget(isLogo ? "logo" : isFlare || isSticker ? "icon" : "portrait");
-
-  try {
-    el.releasePointerCapture(e.pointerId);
-  } catch {}
-}}
-
+              const store = useFlyerState.getState();
+              if (!isSelected) store.setSelectedPortraitId(p.id);
+              store.setSelectedPanel("icons");
+              store.setMoveTarget("icon");
+            }}
             style={{
               left: `${p.x}%`,
               top: `${p.y}%`,
@@ -13279,11 +13873,11 @@ const flareCanvas = (
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              pointerEvents: !locked && isSelected ? "auto" : "none",
+              // Let locked flares go click-through except for their lock button
+              pointerEvents: locked ? "none" : "auto",
               cursor: !locked && isSelected ? "grab" : "default",
-              touchAction: !locked && isSelected ? "none" : "auto",
-
-              // optional selection glow (safe, no controls)
+              // Always disable native scroll/zoom on flares so drag doesn't scroll the page
+              touchAction: locked ? "auto" : "none",
               filter: isSelected ? "drop-shadow(0 0 10px rgba(255,255,255,0.22))" : "none",
             }}
           >
@@ -13292,24 +13886,66 @@ const flareCanvas = (
               alt=""
               draggable={false}
               style={{
-                transform: `scale(${p.scale ?? 1})`,
+                transform: `scale(${p.scale ?? 1}) rotate(${(p as any).rotation ?? 0}deg)`,
                 maxWidth: "140vh",
                 maxHeight: "140vh",
                 objectFit: "contain",
                 pointerEvents: "none",
                 userSelect: "none",
-
-                // ✅ blend + opacity
                 mixBlendMode: ((p as any).blendMode ?? "screen") as any,
                 opacity: (p as any).opacity ?? 1,
+                filter: (() => {
+                  const tintDeg = Number((p as any).tint ?? 0);
+                  if (!tintDeg) return "none";
+                  return `hue-rotate(${tintDeg}deg)`;
+                })(),
               }}
             />
+
+            {locked && (
+              <button
+                type="button"
+                aria-label="Unlock"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const store = useFlyerState.getState();
+                  store.updatePortrait(format, p.id, { locked: false });
+                  store.setSelectedPortraitId(p.id);
+                  store.setSelectedPanel("icons");
+                  store.setMoveTarget("icon");
+                }}
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  top: "50%",
+                  transform: "translate(-50%, -50%)",
+                  zIndex: 9999,
+                  width: 28,
+                  height: 28,
+                  borderRadius: 999,
+                  border: "1px solid rgba(255,255,255,0.7)",
+                  background: "rgba(0,0,0,0.7)",
+                  color: "#fff",
+                  display: "grid",
+                  placeItems: "center",
+                  fontSize: 13,
+                  pointerEvents: "auto",
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M7 11V8a5 5 0 0 1 10 0" />
+                  <rect x="5" y="11" width="14" height="9" rx="2" />
+                  <circle cx="12" cy="15.5" r="1.2" fill="currentColor" />
+                </svg>
+              </button>
+            )}
           </div>
         );
       })}
-  </div>
-);
-
+    </div>
+  );
+}, [portraits, format, selectedPortraitId]);
 
 
 // ===== EXPORT HELPERS (DROP THIS BLOCK RIGHT ABOVE `return (`) =====
@@ -13681,6 +14317,7 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       applyIfDefined(data.bgScale, setBgScale);
       applyIfDefined(data.bgFitMode, setBgFitMode);
       applyIfDefined(data.bgBlur, setBgBlur);
+      applyIfDefined(data.bgRotate, setBgRotate);
 
       // ✅ restore positions/rotations
       applyIfDefined(data.headX, setHeadX);
@@ -13972,9 +14609,15 @@ const applyTemplate = React.useCallback<
     const existing: Partial<TemplateBase> = freshSession[fmt] ?? {};
 
     // 2) MERGE
-    const merged: Partial<TemplateBase> = opts?.initialLoad
-      ? { ...variant, ...existing }
-      : { ...existing, ...variant };
+    let merged: Partial<TemplateBase>;
+    if (tpl.id === "__session__") {
+      // Session payload should be authoritative; don’t reapply template defaults.
+      merged = { ...variant };
+    } else {
+      merged = opts?.initialLoad
+        ? { ...variant, ...existing }
+        : { ...existing, ...variant };
+    }
 
     // 3) SESSION: initialLoad should be authoritative and non-dirty
     if (opts?.initialLoad) {
@@ -14010,6 +14653,7 @@ const applyTemplate = React.useCallback<
     setSubtagY(merged.subtagY ?? 10);
     setBgPosX(merged.bgPosX ?? (merged as any).bgX ?? 50);
     setBgPosY(merged.bgPosY ?? (merged as any).bgY ?? 50);
+    setBgRotate((merged as any).bgRotate ?? 0);
     setPortraitX(merged.portraitX ?? 50);
     setPortraitY(merged.portraitY ?? 50);
     setLogoX(merged.logoX ?? 6);
@@ -14105,7 +14749,8 @@ const applyTemplate = React.useCallback<
     setSubtagAlpha(merged.pillAlpha ?? merged.subtagAlpha ?? 1);
 
     // 1. Fix Shadow Enable
-    const shadowOn = merged.textFx?.shadowEnabled ?? merged.headShadow ?? true;
+    // Headline shadow follows the explicit headShadow flag first; fall back to textFx only if set
+    const shadowOn = merged.headShadow ?? merged.textFx?.shadowEnabled ?? false;
     setHeadShadow(shadowOn);
 
     // 2. Fix Shadow Strength
@@ -14117,6 +14762,94 @@ const applyTemplate = React.useCallback<
     setSubtagEnabled(fmt, merged.subtagEnabled ?? true);
     setHeadline2Enabled(fmt, merged.head2Enabled ?? false);
     setDetails2Enabled(fmt, merged.details2Enabled ?? false);
+
+    // background rotation fallback to prevent bleed across formats
+    setBgRotate((merged as any).bgRotate ?? 0);
+
+    // --- LIBRARY STATE (portraits/flares/stickers & emojis) ---
+    // When loading the gallery template the first time, ignore any persisted
+    // library payloads so we don’t resurrect stale graphics from a prior session.
+    if (!opts?.initialLoad) {
+      if ((merged as any).portraits) {
+        store.setPortraits(fmt, (merged as any).portraits as any);
+      }
+      if ((merged as any).emojis) {
+        store.setEmojis(fmt, (merged as any).emojis as any);
+      }
+    }
+    if ((merged as any).icons) {
+      setIconList((merged as any).icons as any);
+    }
+
+    // --- LIBRARY PAYLOADS FROM TEMPLATE (EMOJI / FLARE / STICKER) ---
+    // Apply template-baked assets on first load
+    if (opts?.initialLoad && Array.isArray((merged as any).emojiList)) {
+      // Clear existing assets for this format before applying template-baked ones
+      store.setEmojis(fmt, []);
+      store.setPortraits(fmt, []);
+      const list: any[] = (merged as any).emojiList || [];
+
+      // Emojis (text glyphs)
+      const emojiPayload = list
+        .filter((e) => (e.kind === "emoji") || (!!e.char && !e.url && !e.isFlare && !e.isSticker))
+        .map((e) => ({
+          id: e.id || `emoji_${Math.random().toString(36).slice(2, 7)}`,
+          kind: "emoji" as const,
+          char: e.char || "✨",
+          x: e.x ?? 50,
+          y: e.y ?? 50,
+          scale: e.scale ?? 1,
+          rotation: e.rotation ?? 0,
+          opacity: e.opacity ?? 1,
+          locked: !!e.locked,
+          tint: e.tint ?? 0,
+        }));
+
+      if (emojiPayload.length) {
+        store.setEmojis(fmt, emojiPayload);
+      }
+
+      // Flares / stickers as portraits (keeps existing behavior)
+      const flarePayload = list
+        .filter((e) => e.isFlare || e.isSticker || e.url || e.svgTemplate)
+        .map((e) => {
+          const svgTemplate =
+            typeof e.svgTemplate === "string" ? e.svgTemplate : undefined;
+          const iconColor =
+            typeof e.iconColor === "string" ? e.iconColor : undefined;
+          let url = e.url || "";
+
+          if (svgTemplate) {
+            const nextSvg = svgTemplate.replace(
+              "{{COLOR}}",
+              iconColor || "#ffffff"
+            );
+            const svgBase64 = btoa(unescape(encodeURIComponent(nextSvg)));
+            url = `data:image/svg+xml;base64,${svgBase64}`;
+          }
+
+          return {
+            id: e.id || `flare_${Math.random().toString(36).slice(2, 7)}`,
+            url,
+            x: e.x ?? 50,
+            y: e.y ?? 50,
+            scale: e.scale ?? 0.8,
+            rotation: e.rotation ?? 0,
+            opacity: e.opacity ?? 0.9,
+            locked: !!e.locked,
+            blendMode: e.blendMode ?? (e.isFlare ? "screen" : "normal"),
+            isFlare: !!e.isFlare,
+            isSticker: !!e.isSticker,
+            tint: e.tint ?? 0,
+            svgTemplate,
+            iconColor: iconColor || (svgTemplate ? "#ffffff" : undefined),
+          };
+        });
+
+      if (flarePayload.length) {
+        store.setPortraits(fmt, flarePayload);
+      }
+    }
 
    // --- COLORS/FX ---
 // 1. HEADLINE 1 (Main)
@@ -14210,14 +14943,15 @@ const STARTUP_TEMPLATE_MAP: Record<string, TemplateSpec | undefined> = {
 // === SYNC HELPER: Saves all current local state to the global session ===
 const syncCurrentStateToSession = () => {
 
-  const currentScale = templateBgScaleRef.current ?? bgScale;
+  // Always persist the live background scale (not the template default)
+  const currentScale = bgScale;
   const currentData = {
     // ------------------------------------------------
     // 1. HEADLINE 1 (The Main Title)
     // ------------------------------------------------
     headline,
     headlineFamily,
-    //headColor: color,              // ✅ Added (was likely missing)
+    headColor: textFx.color,        // keep explicit flat color for loaders that expect it
     align,                   // Main alignment
     lineHeight,
     textColWidth,            // Max width
@@ -14233,8 +14967,10 @@ const syncCurrentStateToSession = () => {
     headX,
     headY,
     headRotate,
-    // FX
-    textFx: { ...textFx },   // Deep copy to prevent ref issues
+    // FX (keep shadow flags in sync with headline shadow toggle)
+    textFx: { ...textFx, shadowEnabled: headShadow, shadow: headShadowStrength },   // Deep copy to prevent ref issues
+    headShadow,
+    headShadowStrength,
 
     // ------------------------------------------------
     // 2. HEADLINE 2 (The Sub-Headline)
@@ -14301,6 +15037,7 @@ const syncCurrentStateToSession = () => {
     // Styles
     details2Uppercase,       // ✅ Added
     details2Italic,          // ✅ Added
+    // details2Underline is not used in applyTemplate; skip to avoid undefined
     // Shadows
     details2Shadow,
     details2ShadowStrength,
@@ -14355,6 +15092,7 @@ const syncCurrentStateToSession = () => {
     bgPosY,
     bgScale: currentScale,
     bgBlur,
+    bgRotate,
     // Portrait Image
     portraitX,
     portraitY,
@@ -14369,6 +15107,11 @@ const syncCurrentStateToSession = () => {
     vignetteStrength, // Number
     //texture,          // ✅ Added
     //textureOpacity,   // ✅ Added
+
+    // LIBRARY ITEMS (per-format)
+    portraits: portraits?.[format] || [],
+    emojis: emojis?.[format] || [],
+    icons: iconList || [],
   };
 
   // 1️⃣ WRITE SESSION DATA
@@ -14399,7 +15142,7 @@ const applySessionForFormat = (fmt: Format) => {
     formats: fmt === "square" ? { square: session } : { story: session },
   };
 
-  applyTemplate(sessionTemplate, { targetFormat: fmt, initialLoad: true });
+  applyTemplate(sessionTemplate, { targetFormat: fmt, initialLoad: false });
   return true;
 };
 
@@ -14482,16 +15225,13 @@ React.useEffect(() => {
 
 /* ===== AUTOSAVE: SMART SAVE/LOAD (BEGIN) ===== */
 const [hasSavedDesign, setHasSavedDesign] = React.useState(false);
-const [mobileControlsOpen, setMobileControlsOpen] = React.useState(true);
-const [mobileControlsTab, setMobileControlsTab] = React.useState<"design" | "assets">(
-  "design"
-);
 const [uiMode, setUiMode] = React.useState<"design" | "finish">("design");
 const [floatingEditorVisible, setFloatingEditorVisible] = React.useState(false);
 const [floatingAssetVisible, setFloatingAssetVisible] = React.useState(false);
 const [floatingBgVisible, setFloatingBgVisible] = React.useState(false);
 
 const floatingAssetRef = React.useRef<HTMLDivElement | null>(null);
+const floatingTextRef = React.useRef<HTMLDivElement | null>(null);
 const assetFocusLockRef = React.useRef(false);
 const [lastMoveStack, setLastMoveStack] = React.useState<{
   kind:
@@ -14534,6 +15274,7 @@ const activeTextControls = React.useMemo(() => {
     case "headline":
       return {
         label: "Headline",
+        text: headline,
         font: headlineFamily,
         fonts: HEADLINE_FONTS_LOCAL,
         size: headSizeAuto ? headMaxPx : headManualPx,
@@ -14546,6 +15287,7 @@ const activeTextControls = React.useMemo(() => {
         lineStep: 0.02,
         color: textFx?.color,
         onColor: (v: string) => setTextFx((p) => ({ ...p, color: v })),
+        onText: (v: string) => setHeadline(v),
         onFont: (v: string) => {
           setHeadlineFamily(v);
           setTextStyle("headline", format, { family: v });
@@ -14561,6 +15303,7 @@ const activeTextControls = React.useMemo(() => {
     case "head2":
       return {
         label: "Sub Headline",
+        text: head2,
         font: head2Family,
         fonts: HEADLINE2_FONTS_LOCAL,
         size: head2SizePx,
@@ -14573,6 +15316,7 @@ const activeTextControls = React.useMemo(() => {
         lineStep: 0.05,
         color: head2Color,
         onColor: (v: string) => setHead2Color(v),
+        onText: (v: string) => setHead2(v),
         onFont: (v: string) => setHead2Family(v),
         onSize: (v: number) => setHead2SizePx(v),
         onLine: (v: number) => setHead2LineHeight(v),
@@ -14580,6 +15324,7 @@ const activeTextControls = React.useMemo(() => {
     case "details":
       return {
         label: "Details",
+        text: details,
         font: detailsFamily,
         fonts: BODY_FONTS_LOCAL,
         size: bodySize,
@@ -14592,6 +15337,7 @@ const activeTextControls = React.useMemo(() => {
         lineStep: 0.05,
         color: bodyColor,
         onColor: (v: string) => setBodyColor(v),
+        onText: (v: string) => setDetails(v),
         onFont: (v: string) => setDetailsFamily(v),
         onSize: (v: number) => setBodySize(v),
         onLine: (v: number) => setDetailsLineHeight(v),
@@ -14599,6 +15345,7 @@ const activeTextControls = React.useMemo(() => {
     case "details2":
       return {
         label: "Details 2",
+        text: details2,
         font: details2Family ?? bodyFamily,
         fonts: BODY_FONTS2_LOCAL,
         size: details2Size,
@@ -14611,6 +15358,7 @@ const activeTextControls = React.useMemo(() => {
         lineStep: 0.05,
         color: details2Color,
         onColor: (v: string) => setDetails2Color(v),
+        onText: (v: string) => setDetails2(v),
         onFont: (v: string) => setDetails2Family(v),
         onSize: (v: number) => setDetails2Size(v),
         onLine: (v: number) => setDetails2LineHeight(v),
@@ -14618,6 +15366,7 @@ const activeTextControls = React.useMemo(() => {
     case "venue":
       return {
         label: "Venue",
+        text: venue,
         font: venueFamily,
         fonts: VENUE_FONTS_LOCAL,
         size: venueSize,
@@ -14630,6 +15379,7 @@ const activeTextControls = React.useMemo(() => {
         lineStep: 0.05,
         color: venueColor,
         onColor: (v: string) => setVenueColor(v),
+        onText: (v: string) => setVenue(v),
         onFont: (v: string) => setVenueFamily(v),
         onSize: (v: number) => setVenueSize(v),
         onLine: (v: number) => setVenueLineHeight(v),
@@ -14637,6 +15387,7 @@ const activeTextControls = React.useMemo(() => {
     case "subtag":
       return {
         label: "Subtag",
+        text: subtag,
         font: subtagFamily,
         fonts: SUBTAG_FONTS_LOCAL,
         size: subtagSize,
@@ -14649,6 +15400,7 @@ const activeTextControls = React.useMemo(() => {
         lineStep: 0.05,
         color: subtagTextColor,
         onColor: (v: string) => setSubtagTextColor(v),
+        onText: (v: string) => setSubtag(v),
         onFont: (v: string) => setSubtagFamily(v),
         onSize: (v: number) => setSubtagSize(v),
         onLine: () => {},
@@ -14676,6 +15428,12 @@ const activeTextControls = React.useMemo(() => {
   setHead2Family,
   setHead2SizePx,
   setHead2LineHeight,
+  headline,
+  head2,
+  details,
+  details2,
+  venue,
+  subtag,
   detailsFamily,
   bodySize,
   detailsLineHeight,
@@ -14719,13 +15477,22 @@ const activeAssetControls = React.useMemo(() => {
     if (!sel) return null;
     return {
       label: "Emoji",
+      idLabel: `${sel.id}`,
+      posX: sel.x ?? 0,
+      posY: sel.y ?? 0,
       scale: sel.scale ?? 1,
       opacity: sel.opacity ?? 1,
+      rotation: sel.rotation ?? 0,
       locked: !!sel.locked,
+      tint: typeof sel.tint === "number" ? sel.tint : 0,
       onScale: (v: number) =>
         useFlyerState.getState().updateEmoji(format, sel.id, { scale: v }),
       onOpacity: (v: number) =>
         useFlyerState.getState().updateEmoji(format, sel.id, { opacity: v }),
+      onRotate: (v: number) =>
+        useFlyerState.getState().updateEmoji(format, sel.id, { rotation: v }),
+      onTint: (v: number) =>
+        useFlyerState.getState().updateEmoji(format, sel.id, { tint: v }),
       onToggleLock: () =>
         useFlyerState.getState().updateEmoji(format, sel.id, {
           locked: !sel.locked,
@@ -14748,11 +15515,17 @@ const activeAssetControls = React.useMemo(() => {
     if (isAsset) {
       return {
         label: sel.isFlare ? "Flare" : sel.isSticker ? "Graphic" : "3D Text",
+        idLabel: `${sel.id}`,
+        posX: sel.x ?? 0,
+        posY: sel.y ?? 0,
         scale: sel.scale ?? 1,
         opacity: sel.opacity ?? 1,
         locked: !!sel.locked,
         showColor: hasIconColor,
         colorValue: (sel as any).iconColor || "#ffffff",
+        rotation: sel.rotation ?? 0,
+        // Always expose tint so the slider appears even if the asset didn't set a default
+        tint: typeof (sel as any).tint === "number" ? (sel as any).tint : 0,
         onColor: (value: string) => {
           const template = String((sel as any).svgTemplate || "");
           const nextSvg = template.replace("{{COLOR}}", value);
@@ -14771,6 +15544,10 @@ const activeAssetControls = React.useMemo(() => {
           useFlyerState.getState().updatePortrait(format, sel.id, { scale: v }),
         onOpacity: (v: number) =>
           useFlyerState.getState().updatePortrait(format, sel.id, { opacity: v }),
+        onTint: (v: number) =>
+          useFlyerState.getState().updatePortrait(format, sel.id, { tint: v }),
+        onRotate: (v: number) =>
+          useFlyerState.getState().updatePortrait(format, sel.id, { rotation: v }),
         onToggleLock: () =>
           useFlyerState.getState().updatePortrait(format, sel.id, {
             locked: !sel.locked,
@@ -14782,12 +15559,15 @@ const activeAssetControls = React.useMemo(() => {
       };
     }
 
-    return {
-      label: "Portrait",
-      scale: sel.scale ?? 1,
-      opacity: sel.opacity ?? 1,
-      locked: !!sel.locked,
-      showOpacity: false,
+      return {
+        label: "Portrait",
+        idLabel: `${sel.id}`,
+        posX: sel.x ?? 0,
+        posY: sel.y ?? 0,
+        scale: sel.scale ?? 1,
+        opacity: sel.opacity ?? 1,
+        locked: !!sel.locked,
+        showOpacity: false,
       cleanup: {
         shrinkPx: cleanupParams.shrinkPx,
         featherPx: cleanupParams.featherPx,
@@ -14821,16 +15601,32 @@ const activeAssetControls = React.useMemo(() => {
   setCleanupAndRun,
 ]);
 
+const hasAssetControls = !!activeAssetControls;
+
+// On mobile, always show asset float when an asset is active
+React.useEffect(() => {
+  if (isMobileView && activeAssetControls) setFloatingAssetVisible(true);
+}, [isMobileView, activeAssetControls]);
+
 const activeBgControls = React.useMemo(() => {
   if (selectedPanel !== "background" && moveTarget !== "background") return null;
   return {
     label: "Background",
     scale: bgScale,
     blur: bgBlur,
+    hue,
+    vignette: vignetteStrength,
+    locked: bgLocked,
+    onToggleLock: () => setBgLocked((v) => !v),
     onScale: (v: number) => setBgScale(v),
     onBlur: (v: number) => setBgBlur(v),
+    onHue: (v: number) => setHue(v),
+    onVignette: (v: number) => {
+      setVignetteStrength(v);
+      setVignette(v > 0.0001);
+    },
   };
-}, [selectedPanel, moveTarget, bgScale, bgBlur]);
+}, [selectedPanel, moveTarget, bgScale, bgBlur, hue, vignetteStrength, bgLocked]);
 
 const recordMove = React.useCallback(
   (move: {
@@ -14946,6 +15742,7 @@ const undoAssetPosition = React.useCallback(() => {
 
 const mobileControlsTabs = (
   <div
+    data-tour="mobile-tabs"
     className="lg:hidden flex items-center justify-center gap-2 px-4 py-2 bg-neutral-950/90 border-b border-neutral-800"
     onPointerDownCapture={(e) => {
       if (floatingAssetRef.current && floatingAssetRef.current.contains(e.target as Node)) {
@@ -14957,6 +15754,7 @@ const mobileControlsTabs = (
     <button
       type="button"
       onClick={() => setMobileControlsTab("design")}
+      data-tour="mobile-text-tab"
       className={`px-3 py-1 rounded text-[11px] font-semibold border ${
         mobileControlsTab === "design"
           ? "border-blue-400 text-blue-300 bg-blue-500/10"
@@ -14968,6 +15766,7 @@ const mobileControlsTabs = (
     <button
       type="button"
       onClick={() => setMobileControlsTab("assets")}
+      data-tour="mobile-design-tab"
       className={`px-3 py-1 rounded text-[11px] font-semibold border ${
         mobileControlsTab === "assets"
           ? "border-blue-400 text-blue-300 bg-blue-500/10"
@@ -15010,23 +15809,6 @@ React.useEffect(() => {
 }, [activeTextControls]);
 
 React.useEffect(() => {
-  if (!mobileControlsOpen) return;
-  let raf = 0;
-  const onScroll = () => {
-    if (raf) return;
-    raf = requestAnimationFrame(() => {
-      raf = 0;
-      setFloatingEditorVisible(false);
-    });
-  };
-  window.addEventListener("scroll", onScroll, { passive: true });
-  return () => {
-    window.removeEventListener("scroll", onScroll);
-    if (raf) cancelAnimationFrame(raf);
-  };
-}, [mobileControlsOpen]);
-
-React.useEffect(() => {
   if (typeof window === "undefined") return;
   const update = () => setIsMobileView(window.innerWidth < 1024);
   update();
@@ -15035,20 +15817,26 @@ React.useEffect(() => {
 }, []);
 
 React.useEffect(() => {
-  if (typeof window === "undefined") return;
-  const update = () => setIsMobileView(window.innerWidth < 1024);
-  update();
-  window.addEventListener("resize", update);
-  return () => window.removeEventListener("resize", update);
-}, []);
-
-React.useEffect(() => {
-  if (activeAssetControls) {
+  // Open when asset controls exist; close when they disappear
+  if (hasAssetControls) {
     setFloatingAssetVisible(true);
-  } else {
+  }
+  if (!hasAssetControls) {
+    assetFocusLockRef.current = false;
     setFloatingAssetVisible(false);
   }
-}, [activeAssetControls]);
+}, [hasAssetControls]);
+
+// If user switches to a non-asset target, clear selections and close the asset float
+React.useEffect(() => {
+  const mt = moveTarget;
+  if (mt !== "icon" && mt !== "portrait") {
+    assetFocusLockRef.current = false;
+    setSelectedEmojiId(null);
+    setSelectedPortraitId(null);
+    setFloatingAssetVisible(false);
+  }
+}, [moveTarget]);
 
 React.useEffect(() => {
   if (activeBgControls) {
@@ -15059,74 +15847,192 @@ React.useEffect(() => {
   }
 }, [activeBgControls]);
 
+// Consolidated scroll/touch hide logic for mobile floats
 React.useEffect(() => {
-  if (!mobileControlsOpen) return;
+  if (!mobileControlsOpen && !mobileFloatSticky) return;
   let raf = 0;
-  const onScroll = () => {
-    if (raf) return;
-    raf = requestAnimationFrame(() => {
-      raf = 0;
-      if (floatingAssetVisible) return;
-      if (
-        typeof document !== "undefined" &&
-        (assetFocusLockRef.current ||
-          (floatingAssetRef.current &&
-            floatingAssetRef.current.contains(document.activeElement)))
-      ) {
-        return;
-      }
-      setFloatingAssetVisible(false);
-    });
-  };
-  window.addEventListener("scroll", onScroll, { passive: true });
-  return () => {
-    window.removeEventListener("scroll", onScroll);
-    if (raf) cancelAnimationFrame(raf);
-  };
-}, [mobileControlsOpen, floatingAssetVisible]);
-
-React.useEffect(() => {
-  if (!mobileControlsOpen) return;
-  let raf = 0;
-  const onScroll = () => {
-    if (raf) return;
-    raf = requestAnimationFrame(() => {
-      raf = 0;
-      setFloatingBgVisible(false);
-    });
-  };
-  window.addEventListener("scroll", onScroll, { passive: true });
-  return () => {
-    window.removeEventListener("scroll", onScroll);
-    if (raf) cancelAnimationFrame(raf);
-  };
-}, [mobileControlsOpen]);
-
-React.useEffect(() => {
-  if (!storageReady) return;
-  const resumeFlag =
-    typeof sessionStorage !== "undefined" &&
-    sessionStorage.getItem("nf:resume") === "1";
-  const saved =
-    typeof localStorage !== "undefined"
-      ? localStorage.getItem("nf:lastDesign")
-      : null;
-
-  if (resumeFlag && saved) {
-    try {
-      importDesignJSON(saved);
-      setShowStartup(false);
-    } catch {
-      setHasSavedDesign(true);
+  const onUserScroll = (ev?: Event) => {
+    if (useFlyerState.getState().isLiveDragging) return;
+    if (assetFocusLockRef.current) return;
+    const path = (ev as any)?.composedPath?.();
+    const active = document.activeElement;
+    if (
+      (floatingTextRef.current &&
+        (path?.includes(floatingTextRef.current) ||
+          (active && floatingTextRef.current.contains(active)))) ||
+      (floatingAssetRef.current &&
+        (path?.includes(floatingAssetRef.current) ||
+          (active && floatingAssetRef.current.contains(active))))
+    ) {
+      return;
     }
-    try { sessionStorage.removeItem("nf:resume"); } catch {}
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      setFloatingEditorVisible(false);
+      setFloatingAssetVisible(false);
+      setFloatingBgVisible(false);
+      setSelectedEmojiId(null);
+      setSelectedPortraitId(null);
+    });
+  };
+  document.addEventListener("scroll", onUserScroll as any, { passive: true, capture: true });
+  window.addEventListener("scroll", onUserScroll as any, { passive: true });
+  window.addEventListener("touchmove", onUserScroll as any, { passive: true });
+  window.addEventListener("wheel", onUserScroll as any, { passive: true });
+  const release = () => {
+    assetFocusLockRef.current = false;
+  };
+  window.addEventListener("pointerup", release, { passive: true });
+  window.addEventListener("touchend", release, { passive: true });
+  return () => {
+    document.removeEventListener("scroll", onUserScroll as any, { capture: true } as any);
+    window.removeEventListener("scroll", onUserScroll as any);
+    window.removeEventListener("touchmove", onUserScroll as any);
+    window.removeEventListener("wheel", onUserScroll as any);
+    window.removeEventListener("pointerup", release);
+    window.removeEventListener("touchend", release);
+    if (raf) cancelAnimationFrame(raf);
+  };
+}, [mobileControlsOpen, mobileFloatSticky]);
+
+// Desktop-only: background click-to-edit prototype (guarded by flag)
+React.useEffect(() => {
+  if (!ENABLE_DESKTOP_BG_CLICK_EDIT) return;
+  const art = document.getElementById("artboard");
+  if (!art) return;
+  if (!ENABLE_CANVAS_BG_CLICK) return;
+
+  const onClick = (e: MouseEvent) => {
+    // Desktop only
+    if (isMobileView) return;
+    if (e.button !== 0) return;
+    // avoid clashes with drag/pinch
+    if (useFlyerState.getState().isLiveDragging) return;
+    const rect = art.getBoundingClientRect();
+    const nx = (e.clientX - rect.left) / rect.width;
+    const ny = (e.clientY - rect.top) / rect.height;
+    setBgEditPopover({
+      open: true,
+      x: e.clientX,
+      y: e.clientY,
+      nx,
+      ny,
+      iw: 0,
+      ih: 0,
+      prompt: "",
+      loading: false,
+      error: null,
+    });
+  };
+
+  art.addEventListener("click", onClick, true);
+  return () => art.removeEventListener("click", onClick, true);
+}, [isMobileView]);
+
+// Close the prototype popover on escape/scroll
+React.useEffect(() => {
+  if (!bgEditPopover.open) return;
+  const onEsc = (e: KeyboardEvent) => {
+    if (e.key === "Escape") setBgEditPopover((s) => ({ ...s, open: false }));
+  };
+  const onScroll = () => setBgEditPopover((s) => ({ ...s, open: false }));
+  window.addEventListener("keydown", onEsc);
+  window.addEventListener("scroll", onScroll, { passive: true });
+  return () => {
+    window.removeEventListener("keydown", onEsc);
+    window.removeEventListener("scroll", onScroll);
+  };
+}, [bgEditPopover.open]);
+
+// Desktop-only: run point->mask->inpaint (via API) for background
+const runBgEdit = React.useCallback(async () => {
+  if (!ENABLE_DESKTOP_BG_CLICK_EDIT) return;
+  if (isMobileView) return;
+  const imageUrl = bgUploadUrl || bgUrl;
+  if (!imageUrl) {
+    setBgEditPopover((s) => ({ ...s, error: "No background image to edit." }));
     return;
   }
-
-  if (saved) {
-    setHasSavedDesign(true);
-    setShowStartup(false);
+  if (!bgEditPopover.prompt.trim()) {
+    setBgEditPopover((s) => ({ ...s, error: "Enter a prompt first." }));
+    return;
   }
+  setBgEditPopover((s) => ({ ...s, loading: true, error: null }));
+  try {
+    const res = await fetch("/api/edit-region", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        imageUrl,
+        x: bgEditPopover.nx,
+        y: bgEditPopover.ny,
+        prompt: bgEditPopover.prompt,
+        imageWidth: bgEditPopover.iw,
+        imageHeight: bgEditPopover.ih,
+      }),
+    });
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(txt || "Edit failed");
+    }
+    const data = await res.json();
+    if (!data?.newImageUrl) throw new Error("No image returned");
+    // Preload to avoid flicker
+    const img = new Image();
+    img.src = data.newImageUrl;
+    await img.decode().catch(() => {});
+    setBgUrl(data.newImageUrl);
+    setBgUploadUrl(null);
+    useFlyerState.getState().setSession((prev: any) => ({
+      ...prev,
+      [format]: { ...(prev?.[format] || {}), bgUrl: data.newImageUrl },
+    }));
+    setBgEditPopover((s) => ({ ...s, loading: false, open: false }));
+  } catch (err: any) {
+    setBgEditPopover((s) => ({
+      ...s,
+      loading: false,
+      error:
+        err?.message ||
+        "Edit failed. Check API token, model access, or try a simpler prompt.",
+    }));
+  }
+}, [bgUploadUrl, bgUrl, bgEditPopover.nx, bgEditPopover.ny, bgEditPopover.prompt, format, isMobileView]);
+
+// Trigger edit from the raw background preview (sidebar)
+const handleBgPanelClick = React.useCallback(
+  (p: {
+    nx: number;
+    ny: number;
+    iw: number;
+    ih: number;
+    clientX: number;
+    clientY: number;
+  }) => {
+    if (!ENABLE_DESKTOP_BG_CLICK_EDIT) return;
+    setBgEditPopover({
+      open: true,
+      x: p.clientX,
+      y: p.clientY,
+      nx: p.nx,
+      ny: p.ny,
+      iw: p.iw,
+      ih: p.ih,
+      prompt: "",
+      loading: false,
+      error: null,
+    });
+  },
+  []
+);
+
+// Disable resume-on-load: always start fresh.
+React.useEffect(() => {
+  if (!storageReady) return;
+  try { sessionStorage.removeItem("nf:resume"); } catch {}
+  try { localStorage.removeItem("nf:lastDesign"); } catch {}
+  // do not auto-import or hide startup
 }, [storageReady]);
 /* ===== AUTOSAVE: SMART SAVE/LOAD (END) ===== */
 
@@ -15781,10 +16687,12 @@ const emojiCanvas = React.useMemo(() => {
     // ✅ select existing emoji (no newId, no addEmoji)
     store.setSelectedEmojiId(em.id);
     setSelectedEmojiId(em.id);
+    setFloatingAssetVisible(true);
 
     // ✅ SAME AS FLARES: keep correct controls open
     store.setFocus("icon", "emoji");
-    store.setSelectedPanel("emoji");
+    store.setSelectedPanel("icons");
+    setSelectedPanel("icons");
     store.setMoveTarget("icon");
   }}
   // DRAG START
@@ -15805,8 +16713,10 @@ const emojiCanvas = React.useMemo(() => {
     // ✅ SAME AS FLARES: select + route FIRST
     store.setSelectedEmojiId(em.id);
     setSelectedEmojiId(em.id);
+    setFloatingAssetVisible(true);
     store.setFocus("icon", "emoji");
-    store.setSelectedPanel("emoji");
+    store.setSelectedPanel("icons");
+    setSelectedPanel("icons");
     store.setMoveTarget("icon");
 
     const el = e.currentTarget as unknown as HTMLElement;
@@ -15901,6 +16811,7 @@ const emojiCanvas = React.useMemo(() => {
       fontSize: "64px",
       lineHeight: 1,
       opacity: em.opacity ?? 1,
+      filter: `hue-rotate(${Number(em.tint ?? 0)}deg)`,
     }}
   >
     {em.char}
@@ -15923,6 +16834,7 @@ const emojiCanvas = React.useMemo(() => {
         // ✅ select + keep emoji panel open (flare-style)
         store.setSelectedEmojiId(em.id);
         setSelectedEmojiId(em.id);
+        setFloatingAssetVisible(true);
         store.setFocus("icon", "emoji");
         store.setSelectedPanel("emoji");
         store.setMoveTarget("icon");
@@ -15932,21 +16844,25 @@ const emojiCanvas = React.useMemo(() => {
         left: "50%",
         top: "50%",
         transform: `translate(-50%, -50%) scale(${btnScale})`,
-        width: 24,
-        height: 24,
+        width: 28,
+        height: 28,
         borderRadius: 999,
-        border: "1px solid rgba(255,255,255,0.35)",
-        background: "rgba(0,0,0,0.65)",
-        color: "white",
+        border: "1px solid rgba(255,255,255,0.7)",
+        background: "rgba(0,0,0,0.7)",
+        color: "#fff",
         display: "grid",
         placeItems: "center",
-        fontSize: 12,
+        fontSize: 13,
         cursor: "pointer",
         pointerEvents: "auto",
         zIndex: 9999,
       }}
     >
-      🔓
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M7 11V8a5 5 0 0 1 10 0" />
+        <rect x="5" y="11" width="14" height="9" rx="2" />
+        <circle cx="12" cy="15.5" r="1.2" fill="currentColor" />
+      </svg>
     </button>
   )}
 </div>
@@ -16071,6 +16987,7 @@ return (
           {/* LEFT: Brand */}
              <div className="hidden lg:flex items-center gap-3">
               <button
+                id="account-logo-button"
                 type="button"
                 onClick={openAccountPanel}
                 onPointerUp={openAccountPanel}
@@ -16154,6 +17071,7 @@ return (
               </Chip>
 
               <button
+                id="account-logo-button-mobile"
                 type="button"
                 onClick={openAccountPanel}
                 onPointerUp={openAccountPanel}
@@ -16215,11 +17133,6 @@ return (
                 <Chip small active={exportScale===2} onClick={()=>setExportScale(2)}>2x</Chip>
                 <Chip small active={exportScale===4} onClick={()=>setExportScale(4)}>4x</Chip>
               </div>
-              <div className="flex items-center gap-2 text-[11px]">
-                <Chip small onClick={handleExportJSON} title="Save Project as JSON">
-                  <span>Save</span>
-                </Chip>
-              </div>
               <div className="ml-auto">
                 <Chip
                   small
@@ -16240,64 +17153,118 @@ return (
 {/* ===== UI: PAGE HEADER (END) ===== */}
 
 {/* --- ONBOARDING STRIP (only after hydration, only first open) --- */}
-{hydrated && tourStep != null && (
+ {hydrated && tourStep != null && (
   <div className="fixed inset-0 z-[2000] pointer-events-none">
-    {tourRect && (
-      <div
-        className="absolute rounded-xl border border-white/70 shadow-[0_0_24px_rgba(120,227,255,0.45)] pointer-events-none"
-        style={{
-          top: tourRect.top - 6,
-          left: tourRect.left - 6,
-          width: tourRect.width + 12,
-          height: tourRect.height + 12,
-          boxShadow: "0 0 0 9999px rgba(0,0,0,0.55)",
-        }}
-      />
-    )}
+    <style jsx global>{`
+      @keyframes neonPulse {
+        0%, 100% {
+          border-color: rgba(0, 212, 255, 1);
+          box-shadow:
+            0 0 0 9999px rgba(0, 0, 0, 0.85),
+            0 0 15px #00d4ff,
+            inset 0 0 10px #00d4ff;
+        }
+        50% {
+          border-color: rgba(0, 212, 255, 0.5);
+          box-shadow:
+            0 0 0 9999px rgba(0, 0, 0, 0.85),
+            0 0 25px #00d4ff,
+            inset 0 0 15px #00d4ff;
+          filter: brightness(1.1);
+        }
+      }
+    `}</style>
+
+    {tourRect && (() => {
+      const stepNow = tourStep != null ? TOUR_STEPS[tourStep] : null;
+      const isCircle = stepNow?.id === "account";
+      const pad = isCircle ? 4 : 6;
+      return (
+        <div
+          className="fixed border-2 border-[#00d4ff] pointer-events-none z-[2001]"
+          style={{
+            top: tourRect.top - pad,
+            left: tourRect.left - pad,
+            width: tourRect.width + pad * 2,
+            height: tourRect.height + pad * 2,
+            borderRadius: isCircle ? "9999px" : "12px",
+            boxShadow: "0 0 0 9999px rgba(0,0,0,0.85), 0 0 15px #00d4ff, inset 0 0 10px #00d4ff",
+            transition: "all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)",
+            animation: "neonPulse 1.5s ease-in-out infinite",
+            willChange: "top, left, width, height",
+          }}
+        />
+      );
+    })()}
     {tourTip && (
       <div
-        className="absolute w-[260px] rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur px-3 py-3 text-white shadow-[0_12px_30px_rgba(0,0,0,0.45)] pointer-events-auto"
+        className="fixed z-[3001] pointer-events-auto"
         style={{
           top: tourTip.top,
           left: tourTip.left,
-          transform: tourTip.centered ? "translate(-50%, -50%)" : undefined,
+          transform: tourTip.centered ? "translate(-50%, 0)" : undefined,
+          transition: "all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)",
         }}
       >
-        <div className="text-[11px] uppercase tracking-wider text-neutral-400">
-          Step {tourStep + 1} / {TOUR_STEPS.length}
-        </div>
-        <div className="mt-1 text-sm font-semibold">{TOUR_STEPS[tourStep].title}</div>
-        <div className="mt-2 text-[12px] text-neutral-300">
-          {TOUR_STEPS[tourStep].body}
-        </div>
-        <div className="mt-3 flex items-center gap-2">
+        {TOUR_STEPS[tourStep].id !== "artboard" && (
+          <div
+            className="absolute left-1/2 -top-2 -translate-x-1/2 w-0 h-0"
+            style={{
+              borderLeft: "8px solid transparent",
+              borderRight: "8px solid transparent",
+              borderBottom: "8px solid rgba(23,23,26,0.95)",
+              filter: "drop-shadow(0 -1px 1px rgba(0, 212, 255, 0.3))",
+            }}
+          />
+        )}
+        <div className="relative w-[280px] rounded-2xl border border-white/10 bg-neutral-900/95 backdrop-blur-xl p-4 shadow-2xl">
           <button
             type="button"
-            className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
-            onClick={() => {
-              if (tourStep === 0) {
-                markOnboarded();
-                return;
-              }
-              setTourStep((s) => (s == null ? null : Math.max(0, s - 1)));
-            }}
+            className="absolute right-3 top-3 text-[10px] uppercase tracking-tight text-neutral-400 hover:text-white"
+            onClick={markOnboarded}
           >
-            {tourStep === 0 ? "Skip" : "Back"}
+            Skip
           </button>
-          <button
-            type="button"
-            className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
-            onClick={() => {
-              if (tourStep >= TOUR_STEPS.length - 1) {
-                markOnboarded();
-                setUiMode("design");
-                return;
-              }
-              setTourStep((s) => (s == null ? null : s + 1));
-            }}
-          >
-            {tourStep >= TOUR_STEPS.length - 1 ? "Done" : "Next"}
-          </button>
+          <div className="text-[11px] uppercase tracking-widest text-[#00d4ff] font-bold mb-1">
+            Step {visibleTourStepNumber} / {visibleTourStepCount}
+          </div>
+          <div className="text-sm text-white font-semibold">{TOUR_STEPS[tourStep].title}</div>
+          <div className="text-[12px] text-neutral-200 mt-2 leading-relaxed">
+            {TOUR_STEPS[tourStep].body}
+          </div>
+          <div className="mt-4 flex justify-between items-center">
+            <button
+              type="button"
+              className="text-[10px] text-neutral-500 hover:text-white uppercase tracking-tight"
+              onClick={() => {
+                if (tourStep == null) return;
+                const prev = getNextTourStep(tourStep, -1);
+                if (prev < 0) {
+                  markOnboarded();
+                  return;
+                }
+                setTourStep(prev);
+              }}
+            >
+              {tourStep === 0 ? "Skip" : "Back"}
+            </button>
+            <button
+              type="button"
+              className="px-4 py-1.5 rounded-lg bg-[#00d4ff] text-black text-xs font-bold hover:brightness-110 transition-all"
+              onClick={() => {
+                if (tourStep == null) return;
+                const next = getNextTourStep(tourStep, 1);
+                if (next >= TOUR_STEPS.length) {
+                  markOnboarded();
+                  setUiMode("design");
+                  return;
+                }
+                setTourStep(next);
+              }}
+            >
+              {tourStep >= TOUR_STEPS.length - 1 ? "Finish" : "Next"}
+            </button>
+          </div>
         </div>
       </div>
     )}
@@ -16594,6 +17561,31 @@ style={{ top: STICKY_TOP }}
       return;
     }
 
+    const marginPct = 10;
+
+    // Library items (emoji / flare / graphic)
+    if (active === "icon") {
+      const store = useFlyerState.getState();
+      const emList = Array.isArray(emojis) ? emojis : emojis?.[format] || [];
+      const emojiSel = selectedEmojiId
+        ? emList.find((e: any) => e.id === selectedEmojiId)
+        : null;
+      const flareSel = selectedPortraitId
+        ? (portraits?.[format] || []).find(
+            (p: any) => p.id === selectedPortraitId && (p.isFlare || p.isSticker)
+          )
+        : null;
+
+      if (emojiSel) {
+        store.updateEmoji(format, emojiSel.id, { x: marginPct, y: emojiSel.y ?? 50 });
+      } else if (flareSel) {
+        store.updatePortrait(format, flareSel.id, { x: marginPct, y: flareSel.y ?? 50 });
+      } else {
+        alert("Select a flare/graphic/emoji to align.");
+      }
+      return;
+    }
+
     if (active === "background") {
       setBgPosX(0);
       return;
@@ -16647,6 +17639,29 @@ style={{ top: STICKY_TOP }}
 
     if (!active) {
       alert("❌ Nothing selected");
+      return;
+    }
+
+    // Library items (emoji / flare / graphic)
+    if (active === "icon") {
+      const store = useFlyerState.getState();
+      const emList = Array.isArray(emojis) ? emojis : emojis?.[format] || [];
+      const emojiSel = selectedEmojiId
+        ? emList.find((e: any) => e.id === selectedEmojiId)
+        : null;
+      const flareSel = selectedPortraitId
+        ? (portraits?.[format] || []).find(
+            (p: any) => p.id === selectedPortraitId && (p.isFlare || p.isSticker)
+          )
+        : null;
+
+      if (emojiSel) {
+        store.updateEmoji(format, emojiSel.id, { x: 50, y: emojiSel.y ?? 50 });
+      } else if (flareSel) {
+        store.updatePortrait(format, flareSel.id, { x: 50, y: flareSel.y ?? 50 });
+      } else {
+        alert("Select a flare/graphic/emoji to align.");
+      }
       return;
     }
 
@@ -16708,6 +17723,37 @@ style={{ top: STICKY_TOP }}
       return;
     }
 
+    const marginPct = 10;
+
+    // Library items (emoji / flare / graphic)
+    if (active === "icon") {
+      const store = useFlyerState.getState();
+      const emList = Array.isArray(emojis) ? emojis : emojis?.[format] || [];
+      const emojiSel = selectedEmojiId
+        ? emList.find((e: any) => e.id === selectedEmojiId)
+        : null;
+      const flareSel = selectedPortraitId
+        ? (portraits?.[format] || []).find(
+            (p: any) => p.id === selectedPortraitId && (p.isFlare || p.isSticker)
+          )
+        : null;
+
+      if (emojiSel) {
+        store.updateEmoji(format, emojiSel.id, {
+          x: 100 - marginPct,
+          y: emojiSel.y ?? 50,
+        });
+      } else if (flareSel) {
+        store.updatePortrait(format, flareSel.id, {
+          x: 100 - marginPct,
+          y: flareSel.y ?? 50,
+        });
+      } else {
+        alert("Select a flare/graphic/emoji to align.");
+      }
+      return;
+    }
+
     if (active === "background") {
       setBgPosX(100);
       return;
@@ -16731,8 +17777,6 @@ style={{ top: STICKY_TOP }}
     const cRect = root.getBoundingClientRect();
     const hRect = el.getBoundingClientRect();
 
-    // Align Right = (canvasWidth - elementWidth - 10% margin)
-    const marginPct = 10; // same as your original logic
     const newX =
       ((cRect.width - hRect.width - (cRect.width * marginPct) / 100) /
         cRect.width) *
@@ -16798,12 +17842,31 @@ style={{ top: STICKY_TOP }}
       case "subtag":    x = subtagX; y = subtagY; break;
       case "portrait":  x = portraitX; y = portraitY; break;
       case "logo":      x = logoX; y = logoY; break;
-      
-      case "background": 
-        x = bgPosX; 
-        y = bgPosY; 
-        label = "Background"; 
+
+      case "background":
+        x = bgPosX;
+        y = bgPosY;
+        label = "Background";
         break;
+
+      // Map library items to the same feed
+      case "icon": {
+        const em = selectedEmojiId
+          ? (Array.isArray(emojis) ? emojis : emojis?.[format] || []).find((e: any) => e.id === selectedEmojiId)
+          : null;
+        const flare = selectedPortraitId
+          ? (portraits?.[format] || []).find((p: any) => p.id === selectedPortraitId && (p.isFlare || p.isSticker))
+          : null;
+
+        if (em) {
+          x = em.x ?? 0; y = em.y ?? 0; label = em.char ? `Emoji ${em.char}` : "Emoji";
+        } else if (flare) {
+          x = flare.x ?? 0; y = flare.y ?? 0; label = flare.isFlare ? "Flare" : "Graphic";
+        } else {
+          return <span>Icon selected</span>;
+        }
+        break;
+      }
 
       default: return <span>{moveTarget} selected</span>;
     }
@@ -16826,7 +17889,7 @@ style={{ top: STICKY_TOP }}
 {/* === /PATCH === */}
 
 {/* UI: CINEMATIC HEADLINE (BEGIN) */}
-<div className="relative rounded-xl border border-neutral-700 transition">
+<div className="relative rounded-xl border border-neutral-700 transition" data-tour="cinematic">
   <div className="p-3">
     <div className="text-[12px] font-semibold text-neutral-200">Cinematic Headline</div>
     <button
@@ -17980,7 +19043,7 @@ style={{ top: STICKY_TOP }}
     </div>
 
     <div className="text-[11px] text-neutral-400 mt-2">
-      <b>Pro Tip:</b> Keep Texture around 0.30–0.40 for that "printed flyer" look.
+      <b>Pro Tip:</b> Keep Texture around 0.30–0.40 for that &quot;printed flyer&quot; look.
     </div>
   </Collapsible>
 </div>
@@ -18121,6 +19184,19 @@ style={{ top: STICKY_TOP }}
 
 </aside>
 
+{/* Global animation for scan line */}
+<style jsx global>{`
+  @keyframes scanLine {
+    0% { top: 0%; opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+  }
+  .animate-scan {
+    animation: scanLine 2s linear infinite;
+  }
+`}</style>
+
   {/* ---------- Center: Artboard & Guides ---------- */}
   <section
   className="order-1 lg:order-2 lg:sticky self-start flex flex-col items-center gap-3 w-full"
@@ -18250,14 +19326,20 @@ style={{ top: STICKY_TOP }}
             // 1) Switch format
             setFormat(next);
 
+            // Prime bgRotate with the target format's saved value (or 0) to avoid visual bleed
+            const nextSession = useFlyerState.getState().session?.[next];
+            if (nextSession && typeof (nextSession as any).bgRotate === "number") {
+              setBgRotate((nextSession as any).bgRotate);
+            } else {
+              setBgRotate(0);
+            }
+
             // 2) Re-hydrate the UI from SESSION for that format (session wins)
             const tpl = TEMPLATE_GALLERY.find((t) => t.id === templateId);
-
-            if (tpl) {
+            const appliedSession = applySessionForFormat(next);
+            if (!appliedSession && tpl) {
               // initialLoad=true => { ...variant, ...existingSession }
               applyTemplate(tpl, { targetFormat: next, initialLoad: true });
-            } else {
-              applySessionForFormat(next);
             }
 
             // 3) Cleanup
@@ -18413,8 +19495,12 @@ style={{ top: STICKY_TOP }}
             clarity={clarity}
             detailsLineHeight={detailsLineHeight}
             bgScale={bgScale}
+            bgRotate={bgRotate}
+            setBgRotate={setBgRotate}
             bgFitMode={bgFitMode}
             bgBlur={bgBlur}
+            bgLocked={bgLocked}
+            setBgLocked={setBgLocked}
             bgX={bgPosX}  // Pass the state variable
             bgY={bgPosY}
             setBgX={setBgPosX} // Pass the setter
@@ -18452,7 +19538,6 @@ style={{ top: STICKY_TOP }}
             onMobileDragEnd={handleMobileDragEnd}
           />
           </div>
-          
           {/* 🔥 FIXED: Elements moved INSIDE motion.div so they fade out */}
           {portraitCanvas}
           {emojiCanvas}
@@ -18466,10 +19551,12 @@ style={{ top: STICKY_TOP }}
   </div>
 
   {activeTextControls && floatingEditorVisible && (
-    <div className="lg:hidden w-full flex justify-center px-3 pt-3">
+    <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 flex justify-center px-3 z-[1200]" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
       <div
-        className="rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur px-3 py-2 shadow-[0_12px_30px_rgba(0,0,0,0.45)]"
+        className="rounded-2xl border border-white/5 bg-neutral-900/85 backdrop-blur-xl px-3 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/5"
         style={{ width: scaledCanvasW, maxWidth: "100%" }}
+        ref={floatingTextRef}
+        data-floating-controls="text"
         onPointerDownCapture={(e) => e.stopPropagation()}
         onTouchStartCapture={(e) => e.stopPropagation()}
       >
@@ -18478,7 +19565,8 @@ style={{ top: STICKY_TOP }}
           <span className="text-neutral-300">•</span>
           <span>{activeTextControls.label === "Details 2" ? "More Details" : activeTextControls.label}</span>
           {activeTextControls.color && (
-            <div className="ml-auto">
+            <div className="ml-auto flex items-center gap-1">
+              <span className="text-[10px] uppercase tracking-wider text-neutral-400">Color</span>
               <ColorDot
                 value={activeTextControls.color}
                 onChange={(v) => activeTextControls.onColor?.(v)}
@@ -18486,42 +19574,72 @@ style={{ top: STICKY_TOP }}
             </div>
           )}
         </div>
-        <div className="mt-2 grid grid-cols-[minmax(120px,1fr)_80px] gap-2 items-center">
-          <FontPicker
-            value={activeTextControls.font}
-            options={activeTextControls.fonts ?? []}
-            onChange={(v) => activeTextControls.onFont?.(v)}
+        <div className="mt-2">
+          <textarea
+            rows={2}
+            value={activeTextControls.text ?? ""}
+            onChange={(e) => activeTextControls.onText?.(e.target.value)}
+            placeholder="Edit text"
+            inputMode="text"
+            className="w-full rounded-md bg-neutral-900 border border-white/10 px-3 py-2 text-[16px] text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-fuchsia-500"
+            style={{ resize: "none" }}
           />
-          <input
-            type="range"
-            min={activeTextControls.sizeMin}
-            max={activeTextControls.sizeMax}
-            step={activeTextControls.sizeStep}
-            value={Number(activeTextControls.size || 0)}
-            onChange={(e) => activeTextControls.onSize?.(Number(e.target.value))}
-            className="accent-fuchsia-500"
-            style={{ touchAction: "pan-x" }}
-          />
-          <div className="text-[10px] text-neutral-400">Line</div>
-          <input
-            type="range"
-            min={activeTextControls.lineMin}
-            max={activeTextControls.lineMax}
-            step={activeTextControls.lineStep}
-            value={Number(activeTextControls.lineHeight || 0)}
-            onChange={(e) => activeTextControls.onLine?.(Number(e.target.value))}
-            className="accent-indigo-400"
-            style={{ touchAction: "pan-x" }}
-          />
+        </div>
+        <div className="mt-2 space-y-2">
+          <div className="w-full">
+            <FontPicker
+              value={activeTextControls.font}
+              options={activeTextControls.fonts ?? []}
+              onChange={(v) => activeTextControls.onFont?.(v)}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3 items-center">
+            <div>
+              <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
+                <span>Size</span>
+                <div className="w-12 text-right text-[10px] text-white font-semibold">
+                  {Number(activeTextControls.size || 0).toFixed(0)}
+                </div>
+              </div>
+              <input
+                type="range"
+                min={activeTextControls.sizeMin}
+                max={activeTextControls.sizeMax}
+                step={activeTextControls.sizeStep}
+                value={Number(activeTextControls.size || 0)}
+                onChange={(e) => activeTextControls.onSize?.(Number(e.target.value))}
+                className="w-full accent-fuchsia-500"
+                style={{ touchAction: "pan-x" }}
+              />
+            </div>
+            <div>
+              <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
+                <span>Line</span>
+                <div className="w-12 text-right text-[10px] text-white font-semibold">
+                  {Number(activeTextControls.lineHeight || 0).toFixed(2)}
+                </div>
+              </div>
+              <input
+                type="range"
+                min={activeTextControls.lineMin}
+                max={activeTextControls.lineMax}
+                step={activeTextControls.lineStep}
+                value={Number(activeTextControls.lineHeight || 0)}
+                onChange={(e) => activeTextControls.onLine?.(Number(e.target.value))}
+                className="w-full accent-indigo-400"
+                style={{ touchAction: "pan-x" }}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>
   )}
 
   {activeAssetControls && floatingAssetVisible && (
-    <div className="lg:hidden w-full flex justify-center px-3 pt-3">
+    <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 flex justify-center px-3 z-[1200]" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
       <div
-        className="rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur px-3 py-2 shadow-[0_12px_30px_rgba(0,0,0,0.45)]"
+        className="rounded-2xl border border-white/5 bg-neutral-900/85 backdrop-blur-xl px-3 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/5"
         style={{ width: scaledCanvasW, maxWidth: "100%" }}
         ref={floatingAssetRef}
         data-floating-controls="asset"
@@ -18536,7 +19654,8 @@ style={{ top: STICKY_TOP }}
           <span className="text-neutral-300">•</span>
           <span>{activeAssetControls.label}</span>
           {activeAssetControls.showColor && (
-            <div className="ml-auto">
+            <div className="ml-2 flex items-center gap-1">
+              <span className="text-[10px] uppercase tracking-wider text-neutral-400">Color</span>
               <ColorDot
                 value={activeAssetControls.colorValue || "#ffffff"}
                 onChange={(v) => activeAssetControls.onColor?.(v)}
@@ -18546,40 +19665,118 @@ style={{ top: STICKY_TOP }}
         </div>
         <div className="mt-2 grid grid-cols-2 gap-3 items-center">
           <div>
-            <div className="text-[10px] text-neutral-400 mb-1">Scale</div>
-            <input
-              type="range"
-              min={0.1}
-              max={5}
-              step={0.05}
-              value={Number(activeAssetControls.scale || 0)}
-              onChange={(e) => activeAssetControls.onScale(Number(e.target.value))}
-              className="w-full accent-fuchsia-500"
-              style={{ touchAction: "pan-x" }}
-              disabled={activeAssetControls.locked}
-            />
+            <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
+              <span>Scale</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="range"
+                min={0.1}
+                max={5}
+                step={0.05}
+                value={Number(activeAssetControls.scale || 0)}
+                onChange={(e) => activeAssetControls.onScale(Number(e.target.value))}
+                onInput={(e) => activeAssetControls.onScale(Number((e.target as HTMLInputElement).value))}
+                className="flex-1 accent-fuchsia-500"
+                style={{ touchAction: "none" }}
+                onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
+                onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
+                onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
+                disabled={activeAssetControls.locked}
+              />
+              <div className="w-12 text-right text-[10px] text-white font-semibold">
+                {Number(activeAssetControls.scale || 0).toFixed(2)}
+              </div>
+            </div>
           </div>
           {activeAssetControls.showOpacity !== false && (
             <div>
-              <div className="text-[10px] text-neutral-400 mb-1">Opacity</div>
-              <input
+              <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
+                <span>Opacity</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
                 type="range"
                 min={0}
                 max={1}
                 step={0.05}
                 value={Number(activeAssetControls.opacity || 0)}
                 onChange={(e) => activeAssetControls.onOpacity?.(Number(e.target.value))}
-                className="w-full accent-indigo-400"
-                style={{ touchAction: "pan-x" }}
+                onInput={(e) => activeAssetControls.onOpacity?.(Number((e.target as HTMLInputElement).value))}
+                className="flex-1 accent-indigo-400"
+                style={{ touchAction: "none" }}
+                onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
+                onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
+                onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
                 disabled={activeAssetControls.locked}
               />
+              <div className="w-12 text-right text-[10px] text-white font-semibold">
+                  {Math.round(Number(activeAssetControls.opacity || 0) * 100)}%
+                </div>
+              </div>
+            </div>
+          )}
+          {activeAssetControls.tint != null && (
+            <div>
+              <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
+                <span>Tint</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                type="range"
+                min={-180}
+                max={180}
+                step={5}
+                value={Number(activeAssetControls.tint || 0)}
+                onChange={(e) => activeAssetControls.onTint?.(Number(e.target.value))}
+                onInput={(e) => activeAssetControls.onTint?.(Number((e.target as HTMLInputElement).value))}
+                className="flex-1 accent-amber-400"
+                style={{ touchAction: "none" }}
+                onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
+                onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
+                onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
+                disabled={activeAssetControls.locked}
+              />
+              <div className="w-12 text-right text-[10px] text-white font-semibold">
+                  {Math.round(Number(activeAssetControls.tint || 0))}°
+                </div>
+              </div>
+            </div>
+          )}
+          {activeAssetControls.rotation != null && (
+            <div>
+              <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
+                <span>Rotate</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                type="range"
+                min={-180}
+                max={180}
+                step={5}
+                value={Number(activeAssetControls.rotation || 0)}
+                onChange={(e) => activeAssetControls.onRotate?.(Number(e.target.value))}
+                onInput={(e) => activeAssetControls.onRotate?.(Number((e.target as HTMLInputElement).value))}
+                className="flex-1 accent-sky-400"
+                style={{ touchAction: "none" }}
+                onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
+                onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
+                onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
+                disabled={activeAssetControls.locked}
+              />
+              <div className="w-12 text-right text-[10px] text-white font-semibold">
+                  {Math.round(Number(activeAssetControls.rotation || 0))}°
+                </div>
+              </div>
             </div>
           )}
         </div>
         {activeAssetControls.cleanup && (
           <div className="mt-2 grid grid-cols-2 gap-3 items-center">
             <div>
-              <div className="text-[10px] text-neutral-400 mb-1">Shrink edge</div>
+              <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
+                <span>Shrink edge</span>
+              </div>
               <input
                 type="range"
                 min={0}
@@ -18587,13 +19784,22 @@ style={{ top: STICKY_TOP }}
                 step={0.5}
                 value={Number(activeAssetControls.cleanup.shrinkPx || 0)}
                 onChange={(e) => activeAssetControls.cleanup?.onShrink?.(Number(e.target.value))}
+                onInput={(e) => activeAssetControls.cleanup?.onShrink?.(Number((e.target as HTMLInputElement).value))}
                 className="w-full accent-amber-400"
-                style={{ touchAction: "pan-x" }}
+                style={{ touchAction: "none" }}
+                onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
+                onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
+                onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
                 disabled={activeAssetControls.locked}
               />
+              <div className="text-[10px] text-neutral-400 text-right mt-1">
+                {Number(activeAssetControls.cleanup.shrinkPx || 0).toFixed(1)} px
+              </div>
             </div>
             <div>
-              <div className="text-[10px] text-neutral-400 mb-1">Feather</div>
+              <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
+                <span>Feather</span>
+              </div>
               <input
                 type="range"
                 min={0}
@@ -18601,10 +19807,17 @@ style={{ top: STICKY_TOP }}
                 step={0.5}
                 value={Number(activeAssetControls.cleanup.featherPx || 0)}
                 onChange={(e) => activeAssetControls.cleanup?.onFeather?.(Number(e.target.value))}
+                onInput={(e) => activeAssetControls.cleanup?.onFeather?.(Number((e.target as HTMLInputElement).value))}
                 className="w-full accent-emerald-400"
-                style={{ touchAction: "pan-x" }}
+                style={{ touchAction: "none" }}
+                onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
+                onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
+                onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
                 disabled={activeAssetControls.locked}
               />
+              <div className="text-[10px] text-neutral-400 text-right mt-1">
+                {Number(activeAssetControls.cleanup.featherPx || 0).toFixed(1)} px
+              </div>
             </div>
           </div>
         )}
@@ -18651,9 +19864,9 @@ style={{ top: STICKY_TOP }}
   )}
 
   {activeBgControls && floatingBgVisible && (
-    <div className="lg:hidden w-full flex justify-center px-3 pt-3">
+    <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 flex justify-center px-3 z-[1200]" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
       <div
-        className="rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur px-3 py-2 shadow-[0_12px_30px_rgba(0,0,0,0.45)]"
+        className="rounded-2xl border border-white/5 bg-neutral-900/85 backdrop-blur-xl px-3 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/5"
         style={{ width: scaledCanvasW, maxWidth: "100%" }}
         onPointerDownCapture={(e) => e.stopPropagation()}
         onTouchStartCapture={(e) => e.stopPropagation()}
@@ -18665,37 +19878,158 @@ style={{ top: STICKY_TOP }}
         </div>
         <div className="mt-2 grid grid-cols-2 gap-3 items-center">
           <div>
-            <div className="text-[10px] text-neutral-400 mb-1">Scale</div>
-            <input
-              type="range"
-              min={1}
-              max={5}
-              step={0.1}
-              value={Number(activeBgControls.scale || 1)}
-              onChange={(e) => activeBgControls.onScale(Number(e.target.value))}
-              className="w-full accent-fuchsia-500"
-              style={{ touchAction: "pan-x" }}
-            />
+            <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
+              <span>Scale</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="range"
+                min={1}
+                max={5}
+                step={0.1}
+                value={Number(activeBgControls.scale || 1)}
+                onChange={(e) => activeBgControls.onScale(Number(e.target.value))}
+                className="flex-1 accent-fuchsia-500"
+                style={{ touchAction: "pan-x" }}
+              />
+              <div className="w-12 text-right text-[10px] text-white font-semibold">
+                {Number(activeBgControls.scale || 1).toFixed(2)}
+              </div>
+            </div>
           </div>
           <div>
-            <div className="text-[10px] text-neutral-400 mb-1">Blur</div>
-            <input
-              type="range"
-              min={0}
-              max={20}
-              step={0.5}
-              value={Number(activeBgControls.blur || 0)}
-              onChange={(e) => activeBgControls.onBlur(Number(e.target.value))}
-              className="w-full accent-indigo-400"
-              style={{ touchAction: "pan-x" }}
-            />
+            <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
+              <span>Blur</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="range"
+                min={0}
+                max={20}
+                step={0.5}
+                value={Number(activeBgControls.blur || 0)}
+                onChange={(e) => activeBgControls.onBlur(Number(e.target.value))}
+                className="flex-1 accent-indigo-400"
+                style={{ touchAction: "pan-x" }}
+              />
+              <div className="w-12 text-right text-[10px] text-white font-semibold">
+                {Number(activeBgControls.blur || 0).toFixed(1)}
+              </div>
+            </div>
           </div>
+          <div>
+            <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
+              <span>Hue</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="range"
+                min={-180}
+                max={180}
+                step={5}
+                value={Number(activeBgControls.hue || 0)}
+                onChange={(e) => activeBgControls.onHue?.(Number(e.target.value))}
+                className="flex-1 accent-amber-400"
+                style={{ touchAction: "pan-x" }}
+              />
+              <div className="w-12 text-right text-[10px] text-white font-semibold">
+                {Math.round(Number(activeBgControls.hue || 0))}°
+              </div>
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
+              <span>Vignette</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.02}
+                value={Number(activeBgControls.vignette || 0)}
+                onChange={(e) => activeBgControls.onVignette?.(Number(e.target.value))}
+                className="flex-1 accent-emerald-400"
+                style={{ touchAction: "pan-x" }}
+              />
+              <div className="w-12 text-right text-[10px] text-white font-semibold">
+                {Number(activeBgControls.vignette || 0).toFixed(2)}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="mt-2">
+          <button
+            type="button"
+            className="w-full rounded-md border border-white/10 bg-white/10 px-3 py-2 text-[12px] text-white hover:bg-white/15"
+            onClick={() => activeBgControls.onToggleLock?.()}
+          >
+            {activeBgControls.locked ? "Unlock Background" : "Lock Background"}
+          </button>
         </div>
       </div>
     </div>
   )}
 
 </section>
+
+{/* Desktop-only background edit popover (prototype, off by default) */}
+{ENABLE_DESKTOP_BG_CLICK_EDIT && bgEditPopover.open && (
+  <div
+    className="fixed z-[4000] max-w-sm rounded-xl border border-white/10 bg-neutral-900/95 backdrop-blur px-3 py-2 shadow-2xl text-white"
+    style={{ left: bgEditPopover.x + 12, top: bgEditPopover.y + 12 }}
+  >
+    <div className="text-xs font-semibold mb-1">
+      {bgEditPopover.loading ? "AI is thinking..." : "Background Edit (beta)"}
+    </div>
+    <div className="text-[11px] text-neutral-300 mb-1">
+      {bgEditPopover.error || "Run a localized edit at the clicked spot."}
+    </div>
+    <div className="mt-2">
+      <input
+        value={bgEditPopover.prompt}
+        onChange={(e) => setBgEditPopover((s) => ({ ...s, prompt: e.target.value }))}
+        className="w-full rounded-md bg-neutral-800 border border-neutral-700 text-[12px] px-2 py-1.5 text-white"
+        placeholder="e.g. add neon clouds"
+        disabled={bgEditPopover.loading}
+      />
+    </div>
+    <div className="mt-2 flex justify-end gap-2">
+      <button
+        className="text-[11px] px-2 py-1 rounded bg-neutral-800 border border-neutral-700 disabled:opacity-50"
+        onClick={runBgEdit}
+        disabled={bgEditPopover.loading}
+      >
+        {bgEditPopover.loading ? "Applying..." : "Apply"}
+      </button>
+      <button
+        className="text-[11px] px-2 py-1 rounded bg-neutral-800 border border-neutral-700"
+        onClick={() => setBgEditPopover((s) => ({ ...s, open: false }))}
+      >
+        Close
+      </button>
+    </div>
+  </div>
+)}
+
+{/* Scanning overlay + animation (desktop click-to-edit) */}
+{ENABLE_DESKTOP_BG_CLICK_EDIT && bgEditPopover.open && bgEditPopover.loading && (
+  <div
+    className="fixed pointer-events-none z-[3999] overflow-hidden"
+    style={{
+      left: Math.max(0, bgEditPopover.x - 100),
+      top: Math.max(0, bgEditPopover.y - 100),
+      width: 200,
+      height: 200,
+      border: "2px solid rgba(0, 212, 255, 0.5)",
+      borderRadius: 12,
+    }}
+  >
+    <div className="absolute inset-0 bg-[#00d4ff]/5 animate-pulse" />
+    <div className="absolute top-0 left-0 w-full h-[2px] bg-[#00d4ff] shadow-[0_0_15px_#00d4ff] animate-scan" />
+  </div>
+)}
+
 {/* ---------- Right Panel ---------- */}
 <aside
 className={clsx(
@@ -18706,62 +20040,6 @@ className={clsx(
 style={{ top: STICKY_TOP }}
 >               
   {uiMode === "design" && mobileControlsOpen && mobileControlsTabs}
-
-{/* UI: PROJECT PORTABLE SAVE (BEGIN) */}
-<Collapsible
-          title="Project"
-          storageKey="p:designs"
-          defaultOpen={false}
-        >
-          <div className="space-y-2">
-            {/* Save to a portable .json file */}
-            <button
-              type="button"
-              onClick={handleSaveProject}
-              className="w-full text-[12px] px-3 py-2 rounded bg-neutral-900/70 border border-neutral-700 hover:bg-neutral-800"
-              title="Save your current session as a portable file"
-            >
-              Save Design
-            </button>
-
-            {/* Load from a .json file */}
-            <label className="block w-full text-[12px] px-3 py-2 rounded bg-neutral-900/70 border border-neutral-700 hover:bg-neutral-800 cursor-pointer text-center">
-              Load Design
-              <input
-                type="file"
-                accept="application/json"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0]; if (!f) return;
-                  const r = new FileReader();
-                  r.onload = () => {
-                    try {
-                      importDesignJSON(String(r.result));
-                      alert('Loaded ✓');
-                    } catch {
-                      alert('Invalid or unsupported design file');
-                    }
-                  };
-                  r.readAsText(f);
-                  e.currentTarget.value = '';
-                }}
-              />
-            </label>
-
-            <div className="text-[11px] text-neutral-400">
-              Saves as a single <code>.json</code> you can reopen later on any device.
-            </div>
-            <button
-              type="button"
-              onClick={clearHeavyStorage}
-              className="mt-2 w-full text-[12px] px-3 py-2 rounded bg-neutral-900/70 border border-neutral-700 hover:bg-neutral-800"
-              title="Remove large cached items (portraits/logos/background candidates) from localStorage"
-            >
-              Clear Storage
-            </button>
-          </div>
-</Collapsible>
-{/* UI: PROJECT PORTABLE SAVE (END) */}
 
 {/* UI: BRAND KIT LITE (BEGIN) */}
 {/* =============================================================================
@@ -19000,8 +20278,6 @@ style={{ top: STICKY_TOP }}
   vibeUploadInputRef={vibeUploadInputRef}
   handleUploadDesignFromVibe={handleUploadDesignFromVibe}
   bgScale={bgScale}
-  bgPosX={bgPosX}
-  bgPosY={bgPosY}
   bgBlur={bgBlur}
   hasSubject={!!portraitUrl}
   onGenerateSubject={generateSubjectForBackground}
@@ -19015,16 +20291,19 @@ style={{ top: STICKY_TOP }}
   setSubjectAttire={(v) => setGenAttire(v as any)}
   subjectShot={genShot}
   setSubjectShot={(v) => setGenShot(v as any)}
+  subjectEnergy={genEnergy}
+  setSubjectEnergy={(v) => setGenEnergy(v as any)}
+  subjectPose={genPose}
+  setSubjectPose={(v) => setGenPose(v as any)}
   setBgBlur={setBgBlur}
   setHue={setHue}
-  setHaze={setHaze}
   setVignette={setVignette}
   setVignetteStrength={setVignetteStrength}
   hue={hue}
-  haze={haze}
   vignetteStrength={vignetteStrength}
   genProvider={genProvider}
   setGenProvider={setGenProvider}
+  onBackgroundPreviewClick={handleBgPanelClick}
 />
 
 
@@ -19049,12 +20328,12 @@ style={{ top: STICKY_TOP }}
 {/* UI: LIBRARY (END) */}
 
 
-{/* UI: PORTRAITS — COMBINED SLOTS (BEGIN) */}
-<div
-  className={
-    selectedPanel === "portrait"
-      ? "relative rounded-xl border border-blue-400 transition"
-      : "relative rounded-xl border border-neutral-700 transition"
+  {/* UI: PORTRAITS — COMBINED SLOTS (BEGIN) */}
+  <div
+    className={
+      selectedPanel === "portrait"
+        ? "relative rounded-xl border border-blue-400 transition"
+        : "relative rounded-xl border border-neutral-700 transition"
   }
 >
   <Collapsible
@@ -19525,8 +20804,89 @@ style={{ top: STICKY_TOP }}
       )}
     </div>
   </Collapsible>
-</div>
-{/* UI: PORTRAITS — COMBINED SLOTS (END) */}
+  </div>
+  {/* UI: PORTRAITS — COMBINED SLOTS (END) */}
+
+{/* UI: PROJECT PORTABLE SAVE (BEGIN) */}
+<Collapsible
+          title="Project"
+          storageKey="p:designs"
+          defaultOpen={false}
+        >
+          <div className="space-y-2">
+            {/* Save to a portable .json file */}
+            <button
+              type="button"
+              onClick={handleSaveProject}
+              className="w-full text-[12px] px-3 py-2 rounded bg-neutral-900/70 border border-neutral-700 hover:bg-neutral-800"
+              title="Save your current session as a portable file"
+            >
+              Save Design
+            </button>
+
+            {/* Load from a .json file */}
+            <label className="block w-full text-[12px] px-3 py-2 rounded bg-neutral-900/70 border border-neutral-700 hover:bg-neutral-800 cursor-pointer text-center">
+              Load Design
+              <input
+                type="file"
+                accept="application/json"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0]; if (!f) return;
+                  const r = new FileReader();
+                  r.onload = () => {
+                    try {
+                      importDesignJSON(String(r.result));
+                      alert('Loaded ✓');
+                    } catch {
+                      alert('Invalid or unsupported design file');
+                    }
+                  };
+                  r.readAsText(f);
+                  e.currentTarget.value = '';
+                }}
+              />
+            </label>
+
+            <div className="text-[11px] text-neutral-400">
+              Saves as a single <code>.json</code> you can reopen later on any device.
+            </div>
+            {(() => {
+              const usage = getLocalStorageUsage();
+              const quotaMb = storageQuotaMB ?? 5; // best-effort default if browser won't report
+              const free = storageQuotaMB != null
+                ? Math.max(0, quotaMb - usage.mb)
+                : null;
+              return (
+                <>
+                  <div className="flex items-center justify-between text-[11px] text-neutral-400">
+                    <span>Local storage used</span>
+                    <span className="text-white font-semibold">
+                      {usage.mb.toFixed(2)} MB
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-neutral-400">
+                    <span>Remaining (est.)</span>
+                    <span className="text-white font-semibold">
+                      {free != null
+                        ? `${free.toFixed(2)} MB of ${quotaMb.toFixed(1)} MB`
+                        : 'Calculating…'}
+                    </span>
+                  </div>
+                </>
+              );
+            })()}
+            <button
+              type="button"
+              onClick={clearHeavyStorage}
+              className="mt-2 w-full text-[12px] px-3 py-2 rounded bg-neutral-900/70 border border-neutral-700 hover:bg-neutral-800"
+              title="Remove large cached items (portraits/logos/background candidates) from localStorage"
+            >
+              Clear Storage
+            </button>
+          </div>
+</Collapsible>
+{/* UI: PROJECT PORTABLE SAVE (END) */}
 
 
 </aside>
