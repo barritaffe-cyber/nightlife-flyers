@@ -148,6 +148,9 @@ type Portrait = {
   blendMode?: string;
   label?: string;
   showLabel?: boolean;
+  labelBg?: boolean;
+  labelSize?: number;
+  labelColor?: string;
   isSticker?: boolean;
   isFlare?: boolean;
   tint?: number;          // hue-rotate degrees for tinting overlays/flares
