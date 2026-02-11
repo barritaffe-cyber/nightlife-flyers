@@ -21189,11 +21189,17 @@ style={{ top: STICKY_TOP }}
                 <label className="text-[10px] uppercase tracking-wider text-neutral-500 font-bold">
                   Text to Replace
                 </label>
-                <input
+                <textarea
                   value={cinematicTextInput}
-                  onChange={(e) => setCinematicTextInput(e.target.value)}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/\r/g, "");
+                    const lines = raw.split("\n");
+                    const next = lines.length > 2 ? lines.slice(0, 2).join("\n") : raw;
+                    setCinematicTextInput(next);
+                  }}
+                  rows={2}
                   className="mt-2 w-full rounded-lg p-3 bg-black/50 text-white text-center text-xl font-bold border border-white/10 focus:border-fuchsia-500 outline-none"
-                  placeholder="LOVE"
+                  placeholder={"BOTTLE\nSERVICE"}
                 />
               </div>
 
