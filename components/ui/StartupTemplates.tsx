@@ -11,8 +11,8 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({ onSelect, importDes
   const templates = [
     {
       key: "club",
-      label: "Club Night",
-      desc: "High-energy lighting & neon tones",
+      label: "Miami Nights",
+      desc: "Ocean Drive glow & neon nightlife",
       icon: (
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M12 3l1.8 4.7L19 9l-4.2 3.3L16.2 18 12 15.3 7.8 18l1.4-5.7L5 9l5.2-1.3L12 3z" />
@@ -21,8 +21,8 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({ onSelect, importDes
     },
     {
       key: "tropical",
-      label: "Tropical Sunset",
-      desc: "Beach, palm trees, warm sunset glow",
+      label: "Latin Tropical Street",
+      desc: "Street party energy with warm color",
       icon: (
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M12 4v6m0 0l4-4m-4 4L8 6" />
@@ -32,8 +32,8 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({ onSelect, importDes
     },
     {
       key: "luxury",
-      label: "Luxury Event",
-      desc: "Gold accents, marble textures, upscale vibe",
+      label: "Atlanta Skyline",
+      desc: "City lights, late-night skyline mood",
       icon: (
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M12 3l8 9-8 9-8-9 8-9z" />
@@ -43,8 +43,8 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({ onSelect, importDes
     },
     {
       key: "urban",
-      label: "Urban Party",
-      desc: "Dark club, strobes, graffiti background",
+      label: "Hip Hop Block Party",
+      desc: "Street party energy, raw crowd vibe",
       icon: (
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M3 20h18" />

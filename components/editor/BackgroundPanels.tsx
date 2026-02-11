@@ -34,8 +34,10 @@ type Props = {
   setVignette: (v: boolean) => void;
   setVignetteStrength: (v: number) => void;
   setBgBlur: (v: number) => void;
+  setBgRotate: (v: number) => void;
   hue: number;
   vignetteStrength: number;
+  bgRotate: number;
   hasSubject?: boolean;
   onGenerateSubject?: () => void;
   isGeneratingSubject?: boolean;
@@ -96,6 +98,8 @@ function BackgroundPanels({
   setVignetteStrength,
   hue,
   vignetteStrength,
+  bgRotate,
+  setBgRotate,
   hasSubject = false,
   onGenerateSubject,
   isGeneratingSubject = false,
@@ -147,11 +151,7 @@ function BackgroundPanels({
     <>
       <div
         id="background-panel"
-        className={
-          selectedPanel === 'background'
-            ? 'relative rounded-xl border border-blue-400'
-            : 'relative rounded-xl border border-neutral-700 transition'
-        }
+        className="relative rounded-xl transition"
       >
         <Collapsible
           title="Background"
@@ -159,6 +159,11 @@ function BackgroundPanels({
           isOpen={selectedPanel === 'background'}
           onToggle={() =>
             setSelectedPanel(selectedPanel === 'background' ? null : 'background')
+          }
+          panelClassName={
+            selectedPanel === 'background'
+              ? 'ring-1 ring-inset ring-[#00FFF0]/70'
+              : undefined
           }
           titleClassName={
             selectedPanel === 'background'
@@ -438,17 +443,18 @@ function BackgroundPanels({
       </div>
 
       <div
-        className={
-          selectedPanel === 'background' || selectedPanel === 'bgfx'
-            ? 'relative rounded-xl border border-blue-400 transition'
-            : 'relative rounded-xl border border-neutral-700 transition'
-        }
+        className="relative rounded-xl transition"
       >
         <Collapsible
           title="Background Effects"
           storageKey="p:bgfx"
           defaultOpen={false}
           isOpen={selectedPanel === 'background' || selectedPanel === 'bgfx'}
+          panelClassName={
+            selectedPanel === 'background' || selectedPanel === 'bgfx'
+              ? 'ring-1 ring-inset ring-[#00FFF0]/70'
+              : undefined
+          }
           titleClassName={
             selectedPanel === 'bgfx'
               ? 'text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]'
@@ -466,6 +472,7 @@ function BackgroundPanels({
               setVignetteStrength(0.55);
               setBgScale(1);
               setBgBlur(0);
+              setBgRotate(0);
             }}
             >
               Reset
@@ -478,8 +485,9 @@ function BackgroundPanels({
             <Stepper label="Vignette" value={vignetteStrength} setValue={setVignetteStrength} min={0} max={0.9} step={0.02} digits={2} />
           </div>
 
-          <div className="mt-2">
+          <div className="mt-2 grid grid-cols-2 gap-3">
             <Stepper label="Gaussian Blur (px)" value={bgBlur} setValue={setBgBlur} min={0} max={20} step={0.5} digits={1} />
+            <Stepper label="Rotation (°)" value={bgRotate} setValue={setBgRotate} min={-180} max={180} step={1} />
           </div>
         </Collapsible>
       </div>

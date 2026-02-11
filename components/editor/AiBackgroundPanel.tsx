@@ -154,7 +154,7 @@ function AiBackgroundPanel({
       isOpen={isOpen}
       onToggle={onToggle}
       panelClassName={
-        isOpen ? "ring-1 ring-[#00d4ff]/35 shadow-[0_0_18px_rgba(0,212,255,0.18)]" : undefined
+        isOpen ? "ring-1 ring-inset ring-[#00FFF0]/70" : undefined
       }
     >
        <div className="space-y-3">

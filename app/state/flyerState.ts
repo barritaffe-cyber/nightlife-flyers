@@ -151,6 +151,7 @@ type Portrait = {
   isSticker?: boolean;
   isFlare?: boolean;
   tint?: number;          // hue-rotate degrees for tinting overlays/flares
+  tintMode?: "hue" | "colorize";
   svgTemplate?: string;
   iconColor?: string;
   cleanup?: CleanupParams;

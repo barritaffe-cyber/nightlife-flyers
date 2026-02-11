@@ -40,5 +40,7 @@ export const FONT_FILE_MAP: Record<string, string> = {
   "ChettaVissto": "/fonts/ChettaVissto.ttf",
   "Antone DEMO": "/fonts/antone-demo.ttf",
   "Antonio": "/fonts/Antonio.ttf",
-  "Maglisto": "/fonts/Maglisto.ttf"
+  "Maglisto": "/fonts/Maglisto.ttf",
+  "Octin College Rg": "/fonts/Octin College Rg.ttf",
+  "OpenScript": "/fonts/OpenScript.ttf"
 };

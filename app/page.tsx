@@ -484,6 +484,10 @@ const FLARE_LIBRARY = [
   { id: "sun02", src: "/flares/sun02.png", name: "Cool Sun" },
   { id: "sun03", src: "/flares/sun03.png", name: "Red Sun" },
   { id: "sun04", src: "/flares/sun04.png", name: "Green Sun" },
+  { id: "cloud01", src: "/clouds/cloud01.png", name: "Cloud 01", tintMode: "colorize" },
+  { id: "cloud02", src: "/clouds/cloud02.png", name: "Cloud 02", tintMode: "colorize" },
+  { id: "cloud03", src: "/clouds/cloud03.png", name: "Cloud 03", tintMode: "colorize" },
+  { id: "cloud04", src: "/clouds/cloud04.png", name: "Cloud 04", tintMode: "colorize" },
 ] as const;
 
 /* ===== TEMPLATE GALLERY (UPDATED) ===== */
@@ -504,7 +508,7 @@ const TemplateGalleryPanel = React.memo(({
   const [q, setQ] = React.useState('');
   const deferredQ = React.useDeferredValue(q);
   const [tag, setTag] = React.useState<string>('All');
-  const [visibleCount, setVisibleCount] = React.useState(18);
+  const [visibleCount, setVisibleCount] = React.useState(20);
 
   const allTags = React.useMemo(() => {
     const s = new Set<string>();
@@ -521,7 +525,7 @@ const TemplateGalleryPanel = React.memo(({
   }, [items, deferredQ, tag]);
 
   React.useEffect(() => {
-    setVisibleCount(18);
+    setVisibleCount(20);
   }, [tag, deferredQ]);
 
   const visible = React.useMemo(
@@ -936,6 +940,20 @@ const PRESETS: PromptPreset[] = [
       'dimly lit VIP lounge, plush red velvet booths, thick hookah smoke swirling, neon purple accent lights, expensive bottle service setup with sparklers, moody R&B atmosphere, shallow depth of field',
   },
   {
+    key: 'bottle_service_lux',
+    label: 'Bottle Service (Luxury)',
+    style: 'urban',
+    prompt:
+      'high-end Los Angeles nightclub bottle service scene, VIP table glowing under soft club lights, fashion-forward guests dressed in modern luxury, champagne bottles with sparklers raised in the air, sleek black, gold, and champagne color palette, polished marble tables, velvet seating, chrome accents, rooftop or upscale Hollywood club atmosphere, confident, effortless luxury energy, city lights in the background, editorial nightlife photography, clean composition, premium feel, eye-level camera, wide and three-quarter shots, exclusive, expensive, unforgettable',
+  },
+  {
+    key: 'block_party_vibrant',
+    label: 'Vibrant Urban Block Party',
+    style: 'urban',
+    prompt:
+      'vibrant urban block party energy, packed city street filled with music and movement, natural movement, joyful expressions, crowd interaction, dance-circle energy, bold streetwear, summer fits, colorful outfits, sunlight mixing with stage lights and banners, food trucks, speakers, street decorations, hands in the air, people laughing and dancing, community celebration vibe, high-energy outdoor party atmosphere, handheld photography feel, immersive street-level perspective, wide crowd shots, eye-level street perspective, slight motion blur in the background, authentic, raw, real',
+  },
+  {
     key: 'berlin_techno',
     label: 'Berlin Industrial',
     style: 'urban',
@@ -1269,6 +1287,10 @@ function hexToRgba(hex: string, alpha: number) {
 // --- rotation helper (top-level util) ---
 const isRotated = (deg: number) => (((deg % 360) + 360) % 360) !== 0;
 const normDeg = (d:number) => ((d % 360) + 360) % 360;
+const normDeg180 = (d:number) => {
+  const n = normDeg(d);
+  return n > 180 ? n - 360 : n;
+};
 
 
 
@@ -7995,6 +8017,7 @@ const addEmojiToCanvas = (emoji: string) => {
       rotation: 0,
       opacity: 1,
       locked: false,
+      tint: 0,
     },
   ]);
 
@@ -8752,7 +8775,10 @@ const getTextSizeController = React.useCallback(() => {
   const [leak, setLeak]   = useState(0.25);  // light leaks intensity (0–1)
   const [hue, setHue] = useState(0);
   const [bgScale, setBgScale] = useState(1.0);
-  const [bgRotate, setBgRotate] = useState(0);
+  const [bgRotate, _setBgRotate] = useState(0);
+  const setBgRotate = React.useCallback((n: number) => {
+    _setBgRotate(normDeg180(n));
+  }, []);
   const [bgLocked, setBgLocked] = useState(false);
   const [bgFitMode, setBgFitMode] = useState(false);
   const [bgX, setBgX] = useState(50);
@@ -8866,10 +8892,24 @@ const clearSelection = (e?: any) => {
       el?.closest("#portrait-layer-root") ||
       el?.closest("#emoji-layer-root");
 
-
+    const inSidePanel = (() => {
+      if (typeof e.clientX !== "number" || typeof e.clientY !== "number") return false;
+      const panels = ["mobile-controls-panel", "right-controls-panel"];
+      return panels.some((id) => {
+        const panel = document.getElementById(id);
+        if (!panel) return false;
+        const rect = panel.getBoundingClientRect();
+        return (
+          e.clientX >= rect.left &&
+          e.clientX <= rect.right &&
+          e.clientY >= rect.top &&
+          e.clientY <= rect.bottom
+        );
+      });
+    })();
 
     // ✅ EARLY RETURN: do not clear selections on UI/canvas-layer clicks
-    if (isUiClick) return;
+    if (isUiClick || inSidePanel) return;
   }
 
   // ✅ only runs for true “blank canvas” clicks
@@ -10626,10 +10666,8 @@ const buildEdgeAwareLassoMask = (
       .focus-ring:focus-visible { outline: 2px solid #6366f1; outline-offset: 2px; }
       [role="button"] { cursor: pointer; }
 
-      .panel { scrollbar-width: thin; scrollbar-color: #3b3b42 #17171b; }
-      .panel::-webkit-scrollbar { height: 6px; width: 6px; }
-      .panel::-webkit-scrollbar-thumb { background: #3b3b42; border-radius: 6px; }
-      .panel::-webkit-scrollbar-track { background: #17171b; }
+      #mobile-controls-panel { scrollbar-width: none; }
+      #mobile-controls-panel::-webkit-scrollbar { width: 0; height: 0; }
       .panel input[type="text"], .panel input[type="number"], .panel input[type="file"], .panel textarea, .panel select {
         background-color: #17171b !important; color: #fff !important; border: 1px solid #3b3b42 !important;
       }
@@ -11319,7 +11357,7 @@ useEffect(() => {
                       },
 
         hiphop_graffiti: {
-          label: 'Hip-Hop / Graffiti Alley',
+          label: 'Hip Hop Block Party',
           state: {
             format: 'square',
             headline: 'HIP-HOP NIGHT',
@@ -13446,8 +13484,8 @@ const portraitCanvas = React.useMemo(() => {
   const classify = (item: any) => {
     const id = String(item?.id || "");
     const isLogo = id.startsWith("logo_") || !!item?.isLogo;
-    const isFlare = !!item?.isFlare;
     const isSticker = !!item?.isSticker;
+    const isFlare = !!item?.isFlare && !isSticker;
     return { isLogo, isFlare, isSticker };
   };
 
@@ -13524,6 +13562,19 @@ const portraitCanvas = React.useMemo(() => {
     const labelScale = Number(p.scale ?? 1);
     const labelTop = Math.max(60, Math.min(90, 50 + 35 * labelScale));
     const labelGap = 8;
+    const labelBg = (p as any).labelBg ?? true;
+    const labelSize = Number.isFinite((p as any).labelSize)
+      ? Math.max(8, Math.min(18, Number((p as any).labelSize)))
+      : 10;
+    const labelColor =
+      typeof (p as any).labelColor === "string"
+        ? String((p as any).labelColor)
+        : "white";
+    const labelText =
+      typeof (p as any).label === "string" ? String((p as any).label) : "";
+    const labelMultiline = labelText.includes("\n");
+    const labelPaddingY = labelBg ? Math.max(1, Math.round(labelSize * 0.15)) : 0;
+    const labelPaddingX = labelBg ? Math.max(4, Math.round(labelSize * 0.45)) : 0;
 
     const triggerUnlock = () => {
       if (!locked) return;
@@ -13682,20 +13733,21 @@ const portraitCanvas = React.useMemo(() => {
                 left: "50%",
                 top: `${labelTop}%`,
                 transform: `translate(-50%, ${labelGap}px)`,
-                padding: "2px 6px",
-                borderRadius: 999,
-                fontSize: 10,
+                padding: labelBg ? `${labelPaddingY}px ${labelPaddingX}px` : "0",
+                borderRadius: labelBg && labelMultiline ? 10 : 999,
+                fontSize: labelSize,
                 letterSpacing: "0.06em",
                 textTransform: "uppercase",
-                background: "rgba(0,0,0,0.55)",
-                border: "1px solid rgba(255,255,255,0.15)",
-                color: "white",
-                whiteSpace: "nowrap",
+                background: labelBg ? "rgba(0,0,0,0.55)" : "transparent",
+                border: labelBg ? "1px solid rgba(255,255,255,0.15)" : "none",
+                color: labelColor,
+                whiteSpace: "pre-line",
+                textAlign: "center",
                 pointerEvents: "none",
                 opacity: 0.9,
               }}
             >
-              {(p as any).label}
+              {labelText}
             </div>
           )}
         </div>
@@ -13790,7 +13842,7 @@ const portraitCanvas = React.useMemo(() => {
 // === FLARE OVERLAY LAYER (Dynamic from state, with own drag/select) ===
 const flareCanvas = React.useMemo(() => {
   const list = portraits?.[format] || [];
-  const flares = list.filter((p: any) => !!(p as any).isFlare);
+  const flares = list.filter((p: any) => !!(p as any).isFlare && !(p as any).isSticker);
 
   return (
     <div
@@ -13911,7 +13963,11 @@ const flareCanvas = React.useMemo(() => {
                 opacity: (p as any).opacity ?? 1,
                 filter: (() => {
                   const tintDeg = Number((p as any).tint ?? 0);
+                  const tintMode = (p as any).tintMode ?? "hue";
                   if (!tintDeg) return "none";
+                  if (tintMode === "colorize") {
+                    return `sepia(1) saturate(6) hue-rotate(${tintDeg}deg)`;
+                  }
                   return `hue-rotate(${tintDeg}deg)`;
                 })(),
               }}
@@ -14367,7 +14423,8 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       applyIfDefined(data.logoRotate, setLogoRotate);
 
       // ✅ restore typography
-      applyIfDefined(data.lineHeight, setLineHeight);
+      const headlineLH = data.headlineLineHeight ?? data.headlineHeight ?? data.lineHeight;
+      applyIfDefined(headlineLH, setLineHeight);
       applyIfDefined(data.textColWidth, setTextColWidth);
 
       applyIfDefined(data.headSizeAuto, setHeadSizeAuto);
@@ -14691,12 +14748,13 @@ const applyTemplate = React.useCallback<
     setHeadlineFamily(merged.headlineFamily ?? 'Inter');
     setHeadAlign((merged.headAlign as any) ?? 'center');
     setAlign((merged.align as any) ?? 'center');
-    setLineHeight(merged.headlineLineHeight ?? merged.lineHeight ?? 0.9);
+    setLineHeight(merged.headlineLineHeight ?? merged.headlineHeight ?? merged.lineHeight ?? 0.9);
     setTextColWidth(merged.textColWidth ?? 80);
     
     setHeadSizeAuto(merged.headSizeAuto ?? false);
     setHead2SizePx(merged.head2Size ?? 40);
     setHead2Family(merged.head2Family ?? 'Bebas Neue');
+    setHead2Align((merged.head2Align as any) ?? 'center');
     
     setHeadManualPx(merged.headlineSize ?? 80);
     setHeadMaxPx(merged.headMaxPx ?? 120); 
@@ -14706,6 +14764,7 @@ const applyTemplate = React.useCallback<
     setDetailsFamily(merged.detailsFamily ?? 'Inter');
     setDetails2Size(merged.details2Size ?? 12);
     setDetails2Family(merged.details2Family ?? 'Inter');
+    setDetails2LineHeight(merged.details2LineHeight ?? 1.2);
 
     setDetailsAlign((merged.detailsAlign as any) ?? 'center');
     setBodySize(merged.detailsSize ?? 16);
@@ -14717,6 +14776,7 @@ const applyTemplate = React.useCallback<
     setVenueAlign((merged.venueAlign as any) ?? 'center');
     setVenueColor(merged.venueColor ?? '#ffffff');
     setVenueSize(merged.venueSize ?? 30);
+    setVenueLineHeight(merged.venueLineHeight ?? 1);
 
     setSubtagFamily(merged.subtagFamily ?? 'Inter');
     setSubtagSize(merged.subtagSize ?? 12);
@@ -14797,72 +14857,100 @@ const applyTemplate = React.useCallback<
     }
 
     // --- LIBRARY PAYLOADS FROM TEMPLATE (EMOJI / FLARE / STICKER) ---
-    // Apply template-baked assets on first load
-    if (opts?.initialLoad && Array.isArray((merged as any).emojiList)) {
-      // Clear existing assets for this format before applying template-baked ones
-      store.setEmojis(fmt, []);
-      store.setPortraits(fmt, []);
-      const list: any[] = (merged as any).emojiList || [];
+    // Apply template-baked assets on first load; otherwise clear library so nothing leaks.
+    if (opts?.initialLoad) {
+      const hasEmojiList = Array.isArray((merged as any).emojiList);
+      if (!hasEmojiList) {
+        store.setEmojis(fmt, []);
+        store.setPortraits(fmt, []);
+        store.setSelectedEmojiId(null);
+        store.setSelectedPortraitId(null);
+      } else {
+        // Clear existing assets for this format before applying template-baked ones
+        store.setEmojis(fmt, []);
+        store.setPortraits(fmt, []);
+        const list: any[] = (merged as any).emojiList || [];
 
-      // Emojis (text glyphs)
-      const emojiPayload = list
-        .filter((e) => (e.kind === "emoji") || (!!e.char && !e.url && !e.isFlare && !e.isSticker))
-        .map((e) => ({
-          id: e.id || `emoji_${Math.random().toString(36).slice(2, 7)}`,
-          kind: "emoji" as const,
-          char: e.char || "✨",
-          x: e.x ?? 50,
-          y: e.y ?? 50,
-          scale: e.scale ?? 1,
-          rotation: e.rotation ?? 0,
-          opacity: e.opacity ?? 1,
-          locked: !!e.locked,
-          tint: e.tint ?? 0,
-        }));
-
-      if (emojiPayload.length) {
-        store.setEmojis(fmt, emojiPayload);
-      }
-
-      // Flares / stickers as portraits (keeps existing behavior)
-      const flarePayload = list
-        .filter((e) => e.isFlare || e.isSticker || e.url || e.svgTemplate)
-        .map((e) => {
-          const svgTemplate =
-            typeof e.svgTemplate === "string" ? e.svgTemplate : undefined;
-          const iconColor =
-            typeof e.iconColor === "string" ? e.iconColor : undefined;
-          let url = e.url || "";
-
-          if (svgTemplate) {
-            const nextSvg = svgTemplate.replace(
-              "{{COLOR}}",
-              iconColor || "#ffffff"
-            );
-            const svgBase64 = btoa(unescape(encodeURIComponent(nextSvg)));
-            url = `data:image/svg+xml;base64,${svgBase64}`;
-          }
-
-          return {
-            id: e.id || `flare_${Math.random().toString(36).slice(2, 7)}`,
-            url,
+        // Emojis (text glyphs)
+        const emojiPayload = list
+          .filter((e) => (e.kind === "emoji") || (!!e.char && !e.url && !e.isFlare && !e.isSticker))
+          .map((e) => ({
+            id: e.id || `emoji_${Math.random().toString(36).slice(2, 7)}`,
+            kind: "emoji" as const,
+            char: e.char || "✨",
             x: e.x ?? 50,
             y: e.y ?? 50,
-            scale: e.scale ?? 0.8,
+            scale: e.scale ?? 1,
             rotation: e.rotation ?? 0,
-            opacity: e.opacity ?? 0.9,
+            opacity: e.opacity ?? 1,
             locked: !!e.locked,
-            blendMode: e.blendMode ?? (e.isFlare ? "screen" : "normal"),
-            isFlare: !!e.isFlare,
-            isSticker: !!e.isSticker,
             tint: e.tint ?? 0,
-            svgTemplate,
-            iconColor: iconColor || (svgTemplate ? "#ffffff" : undefined),
-          };
-        });
+          }));
 
-      if (flarePayload.length) {
-        store.setPortraits(fmt, flarePayload);
+        if (emojiPayload.length) {
+          store.setEmojis(fmt, emojiPayload);
+        }
+
+        // Flares / stickers as portraits (keeps existing behavior)
+        const flarePayload = list
+          .filter((e) => e.isFlare || e.isSticker || e.url || e.svgTemplate)
+          .map((e) => {
+            const svgTemplate =
+              typeof e.svgTemplate === "string" ? e.svgTemplate : undefined;
+            const iconColor =
+              typeof e.iconColor === "string" ? e.iconColor : undefined;
+            let url = e.url || "";
+            const label =
+              typeof e.label === "string"
+                ? e.label
+                : typeof e.char === "string"
+                ? e.char
+                : "";
+            const showLabel =
+              typeof e.showLabel === "boolean" ? e.showLabel : !!label;
+            const labelBg =
+              typeof e.labelBg === "boolean" ? e.labelBg : true;
+            const labelSize =
+              typeof e.labelSize === "number" ? e.labelSize : undefined;
+            const labelColor =
+              typeof e.labelColor === "string" ? e.labelColor : undefined;
+
+            if (svgTemplate) {
+              const nextSvg = svgTemplate.replace(
+                "{{COLOR}}",
+                iconColor || "#ffffff"
+              );
+              const svgBase64 = btoa(unescape(encodeURIComponent(nextSvg)));
+              url = `data:image/svg+xml;base64,${svgBase64}`;
+            }
+
+            return {
+              id: e.id || `flare_${Math.random().toString(36).slice(2, 7)}`,
+              url,
+              x: e.x ?? 50,
+              y: e.y ?? 50,
+              scale: e.scale ?? 0.8,
+              rotation: e.rotation ?? 0,
+              opacity: e.opacity ?? 0.9,
+              locked: !!e.locked,
+              blendMode: e.blendMode ?? (e.isFlare ? "screen" : "normal"),
+              isFlare: !!e.isFlare,
+              isSticker: !!e.isSticker,
+              tint: e.tint ?? 0,
+              tintMode: e.tintMode ?? "hue",
+              label: label || undefined,
+              showLabel,
+              labelBg,
+              labelSize,
+              labelColor,
+              svgTemplate,
+              iconColor: iconColor || (svgTemplate ? "#ffffff" : undefined),
+            };
+          });
+
+        if (flarePayload.length) {
+          store.setPortraits(fmt, flarePayload);
+        }
       }
     }
 
@@ -14881,7 +14969,11 @@ const applyTemplate = React.useCallback<
       
       // Map other styles for safety
       bold: incomingFx.bold ?? merged.headlineBold ?? prev.bold,
-      uppercase: incomingFx.uppercase ?? merged.headlineUppercase ?? prev.uppercase,
+      uppercase:
+        incomingFx.uppercase ??
+        merged.headlineUppercase ??
+        merged.headUppercase ??
+        prev.uppercase,
       
       // Fallback for color: textFx.color -> headColor -> white
       color: incomingFx.color ?? merged.headColor ?? '#ffffff',
@@ -14915,8 +15007,9 @@ const applyTemplateFromGallery = React.useCallback(
 
     const fmt = opts?.targetFormat ?? format;
     const store = useFlyerState.getState();
-    store.setSession((prev) => ({ ...prev, [fmt]: {} }));
-    store.setSessionDirty((prev) => ({ ...prev, [fmt]: false }));
+    // Clear both formats so the story side doesn't inherit stale session values.
+    store.setSession((prev) => ({ ...prev, square: {}, story: {} }));
+    store.setSessionDirty((prev) => ({ ...prev, square: false, story: false }));
 
     setTemplateId(tpl.id);
     setActiveTemplate(tpl);
@@ -14948,10 +15041,10 @@ const findTemplateById = (id: string) =>
   TEMPLATE_GALLERY.find((t) => t.id === id);
 
 const STARTUP_TEMPLATE_MAP: Record<string, TemplateSpec | undefined> = {
-  club: TEMPLATE_GALLERY[0],
-  tropical: findTemplateById("hiphop_graffiti"),
-  luxury: findTemplateById("rnb_velvet"),
-  urban: findTemplateById("hiphop_lowrider"),
+  club: findTemplateById("miami2"),
+  tropical: findTemplateById("latin_street_tropical"),
+  luxury: findTemplateById("atlanta"),
+  urban: findTemplateById("hiphop_graffiti"),
   loaded: TEMPLATE_GALLERY[4] ?? TEMPLATE_GALLERY[0], // fallback
 };
 
@@ -15189,9 +15282,9 @@ const handleTemplateSelect = React.useCallback(
     try {
       // ✅ Map each vibe to a real template index
       const vibeToTemplateId: Record<string, string> = {
-        club: TEMPLATE_GALLERY[0]?.id ?? "edm_neon",
-        tropical: "hiphop_lowrider",
-        luxury: "rnb_velvet",
+        club: "miami2",
+        tropical: "latin_street_tropical",
+        luxury: "atlanta",
         urban: "hiphop_graffiti",
       };
 
@@ -15526,10 +15619,25 @@ const activeAssetControls = React.useMemo(() => {
     const isLogo = String(sel.id || "").startsWith("logo_") || !!(sel as any).isLogo;
     const isAsset = sel.isFlare || sel.isSticker || isLogo;
     const hasIconColor = !!(sel as any).isSticker && typeof (sel as any).svgTemplate === "string";
+    const assetName = (() => {
+      const label = typeof (sel as any).label === "string" ? String((sel as any).label).trim() : "";
+      if (label) return label;
+      const baseId = String(sel.id || "").split("_")[1] || "";
+      if (sel.isFlare) {
+        return FLARE_LIBRARY.find((f) => f.id === baseId)?.name || null;
+      }
+      if (sel.isSticker) {
+        return GRAPHIC_STICKERS.find((g) => g.id === baseId)?.name || null;
+      }
+      if (isLogo) return "3D Text";
+      return null;
+    })();
+    const assetLabel =
+      assetName || (sel.isFlare ? "Flare" : sel.isSticker ? "Graphic" : "3D Text");
 
     if (isAsset) {
       return {
-        label: sel.isFlare ? "Flare" : sel.isSticker ? "Graphic" : "3D Text",
+        label: assetLabel,
         idLabel: `${sel.id}`,
         posX: sel.x ?? 0,
         posY: sel.y ?? 0,
@@ -15555,6 +15663,20 @@ const activeAssetControls = React.useMemo(() => {
         labelValue: String((sel as any).label ?? ""),
         onLabel: (v: string) =>
           useFlyerState.getState().updatePortrait(format, sel.id, { label: v }),
+        labelSize: Number.isFinite((sel as any).labelSize)
+          ? Number((sel as any).labelSize)
+          : 10,
+        onLabelSize: (v: number) =>
+          useFlyerState.getState().updatePortrait(format, sel.id, { labelSize: v }),
+        onToggleLabel: () =>
+          useFlyerState.getState().updatePortrait(format, sel.id, {
+            showLabel: !(sel as any).showLabel,
+          }),
+        labelBg: (sel as any).labelBg ?? true,
+        onToggleLabelBg: () =>
+          useFlyerState.getState().updatePortrait(format, sel.id, {
+            labelBg: !((sel as any).labelBg ?? true),
+          }),
         onScale: (v: number) =>
           useFlyerState.getState().updatePortrait(format, sel.id, { scale: v }),
         onOpacity: (v: number) =>
@@ -15567,6 +15689,7 @@ const activeAssetControls = React.useMemo(() => {
           useFlyerState.getState().updatePortrait(format, sel.id, {
             locked: !sel.locked,
           }),
+        deleteLabel: `Delete ${assetLabel}`,
         onDelete: () => {
           removePortrait(format, sel.id);
           useFlyerState.getState().setSelectedPortraitId(null);
@@ -15864,6 +15987,7 @@ React.useEffect(() => {
 
 // Consolidated scroll/touch hide logic for mobile floats
 React.useEffect(() => {
+  if (!isMobileView) return;
   if (!mobileControlsOpen && !mobileFloatSticky) return;
   let raf = 0;
   const onUserScroll = (ev?: Event) => {
@@ -15909,7 +16033,7 @@ React.useEffect(() => {
     window.removeEventListener("touchend", release);
     if (raf) cancelAnimationFrame(raf);
   };
-}, [mobileControlsOpen, mobileFloatSticky]);
+}, [isMobileView, mobileControlsOpen, mobileFloatSticky]);
 
 // Desktop-only: background click-to-edit prototype (guarded by flag)
 React.useEffect(() => {
@@ -17173,19 +17297,10 @@ return (
     <style jsx global>{`
       @keyframes neonPulse {
         0%, 100% {
-          border-color: rgba(0, 212, 255, 1);
-          box-shadow:
-            0 0 0 9999px rgba(0, 0, 0, 0.85),
-            0 0 15px #00d4ff,
-            inset 0 0 10px #00d4ff;
+          border-color: rgba(0, 255, 240, 1);
         }
         50% {
-          border-color: rgba(0, 212, 255, 0.5);
-          box-shadow:
-            0 0 0 9999px rgba(0, 0, 0, 0.85),
-            0 0 25px #00d4ff,
-            inset 0 0 15px #00d4ff;
-          filter: brightness(1.1);
+          border-color: rgba(0, 255, 240, 0.5);
         }
       }
     `}</style>
@@ -17196,14 +17311,14 @@ return (
       const pad = isCircle ? 4 : 6;
       return (
         <div
-          className="fixed border-2 border-[#00d4ff] pointer-events-none z-[2001]"
+          className="fixed border-2 border-[#00FFF0] pointer-events-none z-[2001]"
           style={{
             top: tourRect.top - pad,
             left: tourRect.left - pad,
             width: tourRect.width + pad * 2,
             height: tourRect.height + pad * 2,
             borderRadius: isCircle ? "9999px" : "12px",
-            boxShadow: "0 0 0 9999px rgba(0,0,0,0.85), 0 0 15px #00d4ff, inset 0 0 10px #00d4ff",
+            boxShadow: "0 0 0 9999px rgba(0,0,0,0.85)",
             transition: "all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)",
             animation: "neonPulse 1.5s ease-in-out infinite",
             willChange: "top, left, width, height",
@@ -17240,7 +17355,7 @@ return (
           >
             Skip
           </button>
-          <div className="text-[11px] uppercase tracking-widest text-[#00d4ff] font-bold mb-1">
+          <div className="text-[11px] uppercase tracking-widest text-[#00FFF0] font-bold mb-1">
             Step {visibleTourStepNumber} / {visibleTourStepCount}
           </div>
           <div className="text-sm text-white font-semibold">{TOUR_STEPS[tourStep].title}</div>
@@ -17265,7 +17380,7 @@ return (
             </button>
             <button
               type="button"
-              className="px-4 py-1.5 rounded-lg bg-[#00d4ff] text-black text-xs font-bold hover:brightness-110 transition-all"
+              className="px-4 py-1.5 rounded-lg bg-[#00FFF0] text-black text-xs font-bold hover:brightness-110 transition-all"
               onClick={() => {
                 if (tourStep == null) return;
                 const next = getNextTourStep(tourStep, 1);
@@ -17510,8 +17625,8 @@ style={{ top: STICKY_TOP }}
   <div
     className={
       selectedPanel === "template"
-        ? "relative rounded-xl border border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.1)] transition-all"
-        : "relative rounded-xl border border-neutral-700 transition-all"
+        ? "relative rounded-xl ring-1 ring-inset ring-[#00FFF0]/70 transition-all"
+        : "relative rounded-xl transition-all"
     }
   >
     <TemplateGalleryPanel
@@ -17904,7 +18019,7 @@ style={{ top: STICKY_TOP }}
 {/* === /PATCH === */}
 
 {/* UI: CINEMATIC HEADLINE (BEGIN) */}
-<div className="relative rounded-xl border border-neutral-700 transition" data-tour="cinematic">
+<div className="relative rounded-xl transition" data-tour="cinematic">
   <div className="p-3">
     <div className="text-[12px] font-semibold text-neutral-200">Cinematic Headline</div>
     <button
@@ -17921,11 +18036,7 @@ style={{ top: STICKY_TOP }}
 <div
   id="logo-panel"
   ref={logoPanelRef}
-  className={
-    selectedPanel === "logo"
-      ? "relative rounded-xl border border-blue-400 transition"
-      : "relative rounded-xl border border-neutral-700 transition"
-  }
+  className="relative rounded-xl transition"
 >
   <Collapsible
     title="Logo / 3D"
@@ -17944,6 +18055,9 @@ style={{ top: STICKY_TOP }}
         }, 0);
       }
     }}
+    panelClassName={
+      selectedPanel === "logo" ? "ring-1 ring-inset ring-[#00FFF0]/70" : undefined
+    }
     titleClassName={
       selectedPanel === "logo"
         ? "text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]"
@@ -18154,6 +18268,15 @@ style={{ top: STICKY_TOP }}
         />
 
         <SliderRow
+          label="Tint"
+          value={Number((sel as any).tint ?? 0)}
+          min={-180}
+          max={180}
+          step={5}
+          onChange={(v) => update({ tint: v })}
+        />
+
+        <SliderRow
           label="Drop Shadow"
           value={shadowBlur}
           min={0}
@@ -18249,11 +18372,7 @@ style={{ top: STICKY_TOP }}
 
 {/* UI: HEADLINE (BEGIN) */}
 <div
-  className={
-    selectedPanel === "headline"
-      ? "relative rounded-xl border border-blue-400 transition"
-      : "relative rounded-xl border border-neutral-700 transition"
-  }
+  className="relative rounded-xl transition"
   data-tour="headline"
   id="headline-panel"
 >
@@ -18265,6 +18384,11 @@ style={{ top: STICKY_TOP }}
       useFlyerState
         .getState()
         .setSelectedPanel(selectedPanel === "headline" ? null : "headline")
+    }
+    panelClassName={
+      selectedPanel === "headline"
+        ? "ring-1 ring-inset ring-[#00FFF0]/70"
+        : undefined
     }
     right={
       <div className="flex items-center gap-3 text-[11px]">
@@ -18315,6 +18439,18 @@ style={{ top: STICKY_TOP }}
     }
   >
     <div className="p-0">
+      <div className="mb-2">
+        <FontPicker
+          label="Font"
+          value={headlineFamily}
+          options={HEADLINE_FONTS_LOCAL}
+          onChange={(v) => {
+            setHeadlineFamily(v);
+            setTextStyle("headline", format, { family: v });
+          }}
+        />
+      </div>
+
       {/* TEXT INPUT */}
       <textarea
         value={headline}
@@ -18354,18 +18490,6 @@ style={{ top: STICKY_TOP }}
         )}
       </div>
 
-      <div className="mt-2">
-        <FontPicker
-          label="Font"
-          value={headlineFamily}
-          options={HEADLINE_FONTS_LOCAL}
-          onChange={(v) => {
-            setHeadlineFamily(v);
-            setTextStyle("headline", format, { family: v });
-          }}
-        />
-      </div>
-
       {/* TOGGLES ROW (No Gradient/Stroke) */}
       <div className="flex flex-wrap items-center gap-2 mt-2">
         <Chip small active={textFx.uppercase} onClick={() => setTextFx((v) => ({ ...v, uppercase: !v.uppercase }))}>Upper</Chip>
@@ -18383,16 +18507,15 @@ style={{ top: STICKY_TOP }}
           <span className="opacity-80">Color</span>
           <ColorDot
             value={textFx.color}
-            onChange={(c) =>
-              setTextFx((prev) => {
-                const next = { ...prev, color: c };
-                setSessionValue(format, "textFx", next);
-                return next;
-              })
-            }
+            onChange={(c) => {
+              const next = { ...textFx, color: c };
+              setTextFx(next);
+              setSessionValue(format, "textFx", next);
+            }}
           />
         </div>
       </div>
+
     </div>
   </Collapsible>
 </div>
@@ -18402,11 +18525,7 @@ style={{ top: STICKY_TOP }}
 
 {/* UI: HEADLINE 2 (BEGIN) */}
 <div
-  className={
-    selectedPanel === "head2"
-      ? "relative rounded-xl border border-blue-400 transition"
-      : "relative rounded-xl border border-neutral-700 transition"
-  }
+  className="relative rounded-xl transition"
 >
   <Collapsible
     title="Sub Headline"
@@ -18416,6 +18535,9 @@ style={{ top: STICKY_TOP }}
       useFlyerState
         .getState()
         .setSelectedPanel(selectedPanel === "head2" ? null : "head2")
+    }
+    panelClassName={
+      selectedPanel === "head2" ? "ring-1 ring-inset ring-[#00FFF0]/70" : undefined
     }
     right={
       <div className="flex items-center gap-3 text-[11px]">
@@ -18595,11 +18717,7 @@ style={{ top: STICKY_TOP }}
 
 {/* UI: SUBTAG (BEGIN) */}
 <div
-  className={
-    selectedPanel === "subtag"
-      ? "relative rounded-xl border border-blue-400 transition"
-      : "relative rounded-xl border border-neutral-700 transition"
-  }
+  className="relative rounded-xl transition"
 >
   <Collapsible
     title="Subtag"
@@ -18609,6 +18727,9 @@ style={{ top: STICKY_TOP }}
       useFlyerState
         .getState()
         .setSelectedPanel(selectedPanel === "subtag" ? null : "subtag")
+    }
+    panelClassName={
+      selectedPanel === "subtag" ? "ring-1 ring-inset ring-[#00FFF0]/70" : undefined
     }
     right={
       <div className="flex items-center gap-3 text-[11px]">
@@ -18703,11 +18824,7 @@ style={{ top: STICKY_TOP }}
 
 {/* UI: DETAILS (BEGIN) */}
 <div
-  className={
-    selectedPanel === "details"
-      ? "relative rounded-xl border border-blue-400 transition"
-      : "relative rounded-xl border border-neutral-700 transition"
-  }
+  className="relative rounded-xl transition"
 >
   <Collapsible
     title="Details"
@@ -18717,6 +18834,9 @@ style={{ top: STICKY_TOP }}
       useFlyerState
         .getState()
         .setSelectedPanel(selectedPanel === "details" ? null : "details")
+    }
+    panelClassName={
+      selectedPanel === "details" ? "ring-1 ring-inset ring-[#00FFF0]/70" : undefined
     }
     right={
       <div className="flex items-center gap-3 text-[11px] h-8">
@@ -18795,11 +18915,7 @@ style={{ top: STICKY_TOP }}
 
 {/* UI: DETAILS 2 (BEGIN) */}
 <div
-  className={
-    selectedPanel === "details2"
-      ? "relative rounded-xl border border-blue-400 transition"
-      : "relative rounded-xl border border-neutral-700 transition"
-  }
+  className="relative rounded-xl transition"
 >
   <Collapsible
     title="More Details"
@@ -18809,6 +18925,11 @@ style={{ top: STICKY_TOP }}
       useFlyerState
         .getState()
         .setSelectedPanel(selectedPanel === "details2" ? null : "details2")
+    }
+    panelClassName={
+      selectedPanel === "details2"
+        ? "ring-1 ring-inset ring-[#00FFF0]/70"
+        : undefined
     }
     right={
       <div className="flex items-center gap-3 text-[11px]">
@@ -18897,11 +19018,7 @@ style={{ top: STICKY_TOP }}
 
 {/* UI: VENUE (BEGIN) */}
 <div
-  className={
-    selectedPanel === "venue"
-      ? "relative rounded-xl border border-blue-400 transition"
-      : "relative rounded-xl border border-neutral-700 transition"
-  }
+  className="relative rounded-xl transition"
 >
   <Collapsible
     title="Venue"
@@ -18911,6 +19028,9 @@ style={{ top: STICKY_TOP }}
       useFlyerState
         .getState()
         .setSelectedPanel(selectedPanel === "venue" ? null : "venue")
+    }
+    panelClassName={
+      selectedPanel === "venue" ? "ring-1 ring-inset ring-[#00FFF0]/70" : undefined
     }
     right={
       <div className="flex items-center gap-3 text-[11px] h-8">
@@ -18992,11 +19112,7 @@ style={{ top: STICKY_TOP }}
 {/* UI: CINEMATIC OVERLAYS (BEGIN) */}
 <div
   id="cinema-panel"
-  className={
-    selectedPanel === "cinema"
-      ? "relative rounded-xl border border-blue-400 transition"
-      : "relative rounded-xl border border-neutral-700 transition"
-  }
+  className="relative rounded-xl transition"
 >
   <Collapsible
     title="Cinematic Overlays"
@@ -19006,6 +19122,11 @@ style={{ top: STICKY_TOP }}
       useFlyerState
         .getState()
         .setSelectedPanel(selectedPanel === "cinema" ? null : "cinema")
+    }
+    panelClassName={
+      selectedPanel === "cinema"
+        ? "ring-1 ring-inset ring-[#00FFF0]/70"
+        : undefined
     }
     titleClassName={
       selectedPanel === "cinema"
@@ -19067,11 +19188,7 @@ style={{ top: STICKY_TOP }}
 {/* UI: MASTER COLOR GRADE (BEGIN) */}
 <div
   id="mastergrade-panel"
-  className={
-    selectedPanel === "mastergrade"
-      ? "relative rounded-xl border border-blue-400 transition"
-      : "relative rounded-xl border border-neutral-700 transition"
-  }
+  className="relative rounded-xl transition"
 >
   <Collapsible
     title="Master Color Grade"
@@ -19081,6 +19198,11 @@ style={{ top: STICKY_TOP }}
       useFlyerState
         .getState()
         .setSelectedPanel(selectedPanel === "mastergrade" ? null : "mastergrade")
+    }
+    panelClassName={
+      selectedPanel === "mastergrade"
+        ? "ring-1 ring-inset ring-[#00FFF0]/70"
+        : undefined
     }
     titleClassName={
       selectedPanel === "mastergrade"
@@ -19836,7 +19958,7 @@ style={{ top: STICKY_TOP }}
             </div>
           </div>
         )}
-        {activeAssetControls.showLabel && (
+        {activeAssetControls.onToggleLabel && (
           <div
             className="mt-2"
             onPointerDownCapture={() => {
@@ -19844,18 +19966,63 @@ style={{ top: STICKY_TOP }}
               setFloatingAssetVisible(true);
             }}
           >
-            <div className="text-[10px] text-neutral-400 mb-1">Label</div>
-            <input
-              value={activeAssetControls.labelValue || ""}
-              onChange={(e) => activeAssetControls.onLabel?.(e.target.value)}
-              onFocus={() => setFloatingAssetVisible(true)}
-              onBlur={() => {
-                assetFocusLockRef.current = false;
-              }}
-              className="w-full rounded-md bg-neutral-900 border border-neutral-700 text-[11px] px-2 py-1.5 text-white"
-              placeholder="Label"
-              disabled={activeAssetControls.locked}
-            />
+            <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
+              <span>Label</span>
+              <button
+                type="button"
+                onClick={() => activeAssetControls.onToggleLabel?.()}
+                className="px-2 py-1 rounded border border-neutral-700 bg-neutral-900/60 hover:bg-neutral-800 text-[10px]"
+                disabled={activeAssetControls.locked}
+              >
+                {activeAssetControls.showLabel ? "Hide" : "Show"}
+              </button>
+            </div>
+            <div className="mt-2 flex items-center justify-between text-[10px] text-neutral-400">
+              <span>Label BG</span>
+              <button
+                type="button"
+                onClick={() => activeAssetControls.onToggleLabelBg?.()}
+                className="px-2 py-1 rounded border border-neutral-700 bg-neutral-900/60 hover:bg-neutral-800 text-[10px]"
+                disabled={activeAssetControls.locked || !activeAssetControls.showLabel}
+              >
+                {activeAssetControls.labelBg ? "Hide" : "Show"}
+              </button>
+            </div>
+            {activeAssetControls.showLabel && (
+              <>
+                <input
+                  className="mt-2 w-full rounded-md bg-neutral-900 border border-neutral-700 text-[11px] px-2 py-1.5 text-white"
+                  value={activeAssetControls.labelValue || ""}
+                  onChange={(e) => activeAssetControls.onLabel?.(e.target.value)}
+                  onFocus={() => setFloatingAssetVisible(true)}
+                  onBlur={() => {
+                    assetFocusLockRef.current = false;
+                  }}
+                  placeholder="Label"
+                  disabled={activeAssetControls.locked}
+                />
+                <div className="mt-2">
+                  <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
+                    <span>Label Size</span>
+                    <span>{Math.round(Number(activeAssetControls.labelSize || 10))}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={8}
+                    max={18}
+                    step={1}
+                    value={Number(activeAssetControls.labelSize || 10)}
+                    onChange={(e) => activeAssetControls.onLabelSize?.(Number(e.target.value))}
+                    onInput={(e) =>
+                      activeAssetControls.onLabelSize?.(Number((e.target as HTMLInputElement).value))
+                    }
+                    className="w-full accent-blue-400"
+                    style={{ touchAction: "none" }}
+                    disabled={activeAssetControls.locked}
+                  />
+                </div>
+              </>
+            )}
           </div>
         )}
         <div className="mt-2 grid grid-cols-2 gap-2">
@@ -19871,7 +20038,7 @@ style={{ top: STICKY_TOP }}
             onClick={() => activeAssetControls.onDelete?.()}
             className="text-[11px] rounded-md border border-red-700 bg-red-900/30 text-red-200 hover:bg-red-900/40 px-2 py-1.5"
           >
-            Delete
+            {activeAssetControls.deleteLabel || "Delete"}
           </button>
         </div>
       </div>
@@ -20040,13 +20207,14 @@ style={{ top: STICKY_TOP }}
       borderRadius: 12,
     }}
   >
-    <div className="absolute inset-0 bg-[#00d4ff]/5 animate-pulse" />
-    <div className="absolute top-0 left-0 w-full h-[2px] bg-[#00d4ff] shadow-[0_0_15px_#00d4ff] animate-scan" />
+    <div className="absolute inset-0 bg-[#00FFF0]/5 animate-pulse" />
+    <div className="absolute top-0 left-0 w-full h-[2px] bg-[#00FFF0] shadow-[0_0_15px_#00FFF0] animate-scan" />
   </div>
 )}
 
 {/* ---------- Right Panel ---------- */}
 <aside
+id="right-controls-panel"
 className={clsx(
   "order-3 lg:sticky self-start max-h-none lg:max-h-[calc(100vh-120px)] overflow-visible lg:overflow-y-auto space-y-3 lg:pr-1",
   mobileControlsOpen && mobileControlsTab === "assets" ? "block" : "hidden",
@@ -20311,6 +20479,8 @@ style={{ top: STICKY_TOP }}
   subjectPose={genPose}
   setSubjectPose={(v) => setGenPose(v as any)}
   setBgBlur={setBgBlur}
+  bgRotate={bgRotate}
+  setBgRotate={setBgRotate}
   setHue={setHue}
   setVignette={setVignette}
   setVignetteStrength={setVignetteStrength}
@@ -20345,11 +20515,7 @@ style={{ top: STICKY_TOP }}
 
   {/* UI: PORTRAITS — COMBINED SLOTS (BEGIN) */}
   <div
-    className={
-      selectedPanel === "portrait"
-        ? "relative rounded-xl border border-blue-400 transition"
-        : "relative rounded-xl border border-neutral-700 transition"
-  }
+    className="relative rounded-xl transition"
 >
   <Collapsible
     title="Portraits"
@@ -20369,6 +20535,11 @@ style={{ top: STICKY_TOP }}
         }
         store.setSelectedPanel(next);
       })()
+    }
+    panelClassName={
+      selectedPanel === "portrait"
+        ? "ring-1 ring-inset ring-[#00FFF0]/70"
+        : undefined
     }
     titleClassName={
       selectedPanel === "portrait"

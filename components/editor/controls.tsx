@@ -170,7 +170,10 @@ export function FontPicker({
         </span>
       </button>
       {open && (
-        <div className="absolute z-[60] mt-1 w-full max-h-64 overflow-auto rounded border border-neutral-700 bg-[#0f0f12] shadow-xl">
+        <div
+          className="absolute z-[60] mt-1 w-full max-h-[60vh] overflow-auto rounded border border-neutral-700 bg-[#0f0f12] shadow-xl pb-2"
+          style={{ scrollPaddingBottom: 8 }}
+        >
           {options.map((f) => (
             <button
               key={f}

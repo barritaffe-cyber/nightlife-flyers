@@ -142,7 +142,25 @@ html, body {
 /* --- STABLE PATH: Dear Script (Demo_Font) --- */
 @font-face {
   font-family: "Dear Script (Demo_Font)";
-  src: url("/fonts/dear-script-demo-font.ttf") format("truetype");
+  src: url("/fonts/dear-script-demo-font.ttf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- STABLE PATH: Octin College Rg --- */
+@font-face {
+  font-family: "Octin College Rg";
+  src: url("/fonts/Octin College Rg.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- STABLE PATH: OpenScript --- */
+@font-face {
+  font-family: "OpenScript";
+  src: url("/fonts/OpenScript.ttf") format("truetype");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -389,5 +407,4 @@ html, body {
   background: var(--nf-track-active);
   border-radius: 999px;
 }
-
 

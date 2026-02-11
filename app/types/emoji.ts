@@ -11,6 +11,12 @@ export type Emoji = {
   locked: boolean;
   opacity: number;
   tint?: number;        // hue-rotate degrees for tinting (optional)
+  label?: string;       // optional on-canvas label for stickers/flares
+  showLabel?: boolean;
+  labelBg?: boolean;
+  labelSize?: number;
+  labelColor?: string;
+  tintMode?: "hue" | "colorize";
 
   // Optional fields for library assets (stickers/flares/images)
   url?: string;          // image source for stickers/flares

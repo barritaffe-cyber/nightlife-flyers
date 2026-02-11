@@ -58,17 +58,18 @@ function MagicBlendPanel({
   return (
     <div className="mt-3" id="magic-blend-panel" data-tour="magic-blend">
       <div
-        className={
-          selectedPanel === 'magic_blend'
-            ? 'relative rounded-xl border border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.1)] transition-all'
-            : 'relative rounded-xl border border-neutral-700 transition-all'
-        }
+        className="relative rounded-xl transition-all"
       >
         <Collapsible
           title="Magic Blend"
           storageKey="p:magic_blend"
           isOpen={selectedPanel === 'magic_blend'}
           onToggle={onToggle}
+          panelClassName={
+            selectedPanel === 'magic_blend'
+              ? 'ring-1 ring-inset ring-[#00FFF0]/70'
+              : undefined
+          }
           titleClassName={selectedPanel === 'magic_blend' ? 'text-amber-400' : ''}
         >
           <div className="text-[11px] text-neutral-400 mb-4 leading-relaxed">

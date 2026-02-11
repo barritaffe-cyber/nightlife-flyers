@@ -21,6 +21,7 @@ type FlareItem = {
   id: string;
   name: string;
   src: string;
+  tintMode?: "hue" | "colorize";
 };
 
 type LibraryPanelProps = {
@@ -87,6 +88,20 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
     const addEmoji = useFlyerState((s) => s.addEmoji);
     const updateEmoji = useFlyerState((s) => s.updateEmoji);
     const removeEmoji = useFlyerState((s) => s.removeEmoji);
+
+    const getAssetName = (asset: any) => {
+      if (!asset) return null;
+      const label = typeof asset.label === "string" ? asset.label.trim() : "";
+      if (label) return label;
+      const baseId = String(asset.id || "").split("_")[1] || "";
+      if (asset.isFlare) {
+        return flareLibrary.find((f) => f.id === baseId)?.name || "Flare";
+      }
+      if (asset.isSticker) {
+        return graphicStickers.find((s) => s.id === baseId)?.name || "Graphic";
+      }
+      return null;
+    };
 
     // build throttles once store actions are available
     React.useEffect(() => {
@@ -172,11 +187,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
     return (
       <div className="mt-3" id="library-panel" data-tour="library">
         <div
-          className={
-            selectedPanel === 'icons'
-              ? 'relative rounded-xl border border-blue-400'
-              : 'relative rounded-xl border border-neutral-700 transition'
-          }
+          className="relative rounded-xl transition"
         >
           <Collapsible
             title="Library"
@@ -187,6 +198,11 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
               setSelectedPanel(next);
               setMoveTarget(next ? 'icon' : null);
             }}
+            panelClassName={
+              selectedPanel === 'icons'
+                ? 'ring-1 ring-inset ring-[#00FFF0]/70'
+                : undefined
+            }
             titleClassName={
               selectedPanel === 'icons'
                 ? 'text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]'
@@ -305,7 +321,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
               const locked = !!sel.locked;
               const isFlare = !!(sel as any)?.isFlare || (!!(sel as any)?.url && !sel.char);
               const isStickerImg = !!(sel as any)?.isSticker && !!(sel as any)?.url;
-              const canTint = !!(sel as any)?.url;
+              const canTint = true;
 
               return (
                 <div
@@ -544,6 +560,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                         scale: 0.5,
                         locked: false,
                         isSticker: true,
+                        label: sticker.name,
                       } as any);
                       setSelectedPortraitId(id);
                       setSelectedPanel('icons');
@@ -609,21 +626,76 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                       />
                     </div>
                   )}
-                  {(sel as any).showLabel && (
-                    <div className="mb-3">
-                      <label className="block text-[11px] text-neutral-300 mb-1">Label</label>
-                      <input
-                        value={String((sel as any).label ?? '')}
-                        onChange={(e) =>
-                          updatePortrait(format, sel.id, {
-                            label: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-md bg-neutral-900 border border-neutral-700 px-2 py-1.5 text-[11px] text-white"
-                        placeholder="Label"
-                      />
-                    </div>
-                  )}
+                  {(() => {
+                    const showLabel = !!(sel as any).showLabel;
+                    const labelBg = (sel as any).labelBg ?? true;
+                    return (
+                      <div className="mb-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-[11px] text-neutral-300">Label</label>
+                          <button
+                            type="button"
+                            disabled={locked}
+                            onClick={() =>
+                              updatePortrait(format, sel.id, { showLabel: !showLabel })
+                            }
+                            className="text-[10px] px-2 py-1 rounded border border-neutral-700 bg-neutral-900/60 hover:bg-neutral-800 disabled:opacity-60"
+                          >
+                            {showLabel ? "Hide" : "Show"}
+                          </button>
+                        </div>
+                        <div className="mt-2 mb-2 flex items-center justify-between">
+                          <span className="text-[11px] text-neutral-400">Label BG</span>
+                          <button
+                            type="button"
+                            disabled={locked || !showLabel}
+                            onClick={() =>
+                              updatePortrait(format, sel.id, {
+                                labelBg: !labelBg,
+                              })
+                            }
+                            className="text-[10px] px-2 py-1 rounded border border-neutral-700 bg-neutral-900/60 hover:bg-neutral-800 disabled:opacity-60"
+                          >
+                            {labelBg ? "Hide" : "Show"}
+                          </button>
+                        </div>
+                        {showLabel && (
+                          <>
+                            <input
+                              value={String((sel as any).label ?? '')}
+                              onChange={(e) =>
+                                updatePortrait(format, sel.id, {
+                                  label: e.target.value,
+                                })
+                              }
+                              className="w-full rounded-md bg-neutral-900 border border-neutral-700 px-2 py-1.5 text-[11px] text-white"
+                              placeholder="Label"
+                            />
+                            <div className="mt-2">
+                              <div className="text-[11px] text-neutral-400 mb-1 flex justify-between">
+                                <span>Label Size</span>
+                                <span>{Math.round(Number((sel as any).labelSize ?? 10))}px</span>
+                              </div>
+                              <input
+                                type="range"
+                                min={8}
+                                max={18}
+                                step={1}
+                                value={Number((sel as any).labelSize ?? 10)}
+                                disabled={locked}
+                                onChange={(e) =>
+                                  updatePortraitRaf.current?.(sel.id, {
+                                    labelSize: Number(e.target.value),
+                                  })
+                                }
+                                className="w-full h-1 rounded-lg appearance-none cursor-pointer bg-neutral-700 accent-blue-500"
+                              />
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   <select
                     className="w-full mb-3 text-[11px] bg-neutral-900 border border-neutral-700 rounded-md py-2 px-2 text-white outline-none"
@@ -719,7 +791,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                         setSelectedPortraitId(null);
                       }}
                     >
-                      Delete
+                      {`Delete ${getAssetName(sel) || "Graphic"}`}
                     </button>
                   </div>
                 </div>
@@ -754,6 +826,8 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                         opacity: 0.9,
                         rotation: 0,
                         isFlare: true,
+                        label: flare.name,
+                        tintMode: flare.tintMode,
                       } as any);
 
                       setSelectedPortraitId(id);
@@ -826,6 +900,64 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                     {locked ? 'Unlock' : 'Lock'}
                   </button>
 
+                  {(() => {
+                    const showLabel = !!(sel as any).showLabel;
+                    const labelBg = (sel as any).labelBg ?? true;
+                    return (
+                      <div className="mb-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-[11px] text-neutral-300">Label</label>
+                          <button
+                            type="button"
+                            disabled={locked}
+                            onClick={() => update({ showLabel: !showLabel })}
+                            className="text-[10px] px-2 py-1 rounded border border-neutral-700 bg-neutral-900/60 hover:bg-neutral-800 disabled:opacity-60"
+                          >
+                            {showLabel ? "Hide" : "Show"}
+                          </button>
+                        </div>
+                        <div className="mt-2 mb-2 flex items-center justify-between">
+                          <span className="text-[11px] text-neutral-400">Label BG</span>
+                          <button
+                            type="button"
+                            disabled={locked || !showLabel}
+                            onClick={() => update({ labelBg: !labelBg })}
+                            className="text-[10px] px-2 py-1 rounded border border-neutral-700 bg-neutral-900/60 hover:bg-neutral-800 disabled:opacity-60"
+                          >
+                            {labelBg ? "Hide" : "Show"}
+                          </button>
+                        </div>
+                        {showLabel && (
+                          <>
+                            <input
+                              value={String((sel as any).label ?? '')}
+                              onChange={(e) => update({ label: e.target.value })}
+                              className="w-full rounded-md bg-neutral-900 border border-neutral-700 px-2 py-1.5 text-[11px] text-white"
+                              placeholder="Label"
+                              disabled={locked}
+                            />
+                            <div className="mt-2">
+                              <div className="text-[11px] text-neutral-400 mb-1 flex justify-between">
+                                <span>Label Size</span>
+                                <span>{Math.round(Number((sel as any).labelSize ?? 10))}px</span>
+                              </div>
+                              <input
+                                type="range"
+                                min={8}
+                                max={18}
+                                step={1}
+                                value={Number((sel as any).labelSize ?? 10)}
+                                disabled={locked}
+                                onChange={(e) => update({ labelSize: Number(e.target.value) })}
+                                className="w-full h-1 rounded-lg appearance-none cursor-pointer bg-neutral-700 accent-blue-500"
+                              />
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   <SliderRow
                     label="Opacity"
                     value={(sel as any).opacity ?? 1}
@@ -869,7 +1001,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                       setSelectedPortraitId(null);
                     }}
                   >
-                    Delete Flare
+                    {`Delete ${getAssetName(sel) || "Flare"}`}
                   </button>
                 </div>
               );
