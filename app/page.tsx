@@ -13564,8 +13564,8 @@ const portraitCanvas = React.useMemo(() => {
     const labelGap = 8;
     const labelBg = (p as any).labelBg ?? true;
     const labelSize = Number.isFinite((p as any).labelSize)
-      ? Math.max(8, Math.min(18, Number((p as any).labelSize)))
-      : 10;
+      ? Math.max(7, Math.min(14, Number((p as any).labelSize)))
+      : 9;
     const labelColor =
       typeof (p as any).labelColor === "string"
         ? String((p as any).labelColor)
@@ -15665,7 +15665,7 @@ const activeAssetControls = React.useMemo(() => {
           useFlyerState.getState().updatePortrait(format, sel.id, { label: v }),
         labelSize: Number.isFinite((sel as any).labelSize)
           ? Number((sel as any).labelSize)
-          : 10,
+          : 9,
         onLabelSize: (v: number) =>
           useFlyerState.getState().updatePortrait(format, sel.id, { labelSize: v }),
         onToggleLabel: () =>
@@ -15968,7 +15968,7 @@ React.useEffect(() => {
 // If user switches to a non-asset target, clear selections and close the asset float
 React.useEffect(() => {
   const mt = moveTarget;
-  if (mt !== "icon" && mt !== "portrait") {
+  if (mt !== "icon" && mt !== "portrait" && mt !== "logo") {
     assetFocusLockRef.current = false;
     setSelectedEmojiId(null);
     setSelectedPortraitId(null);
@@ -15995,7 +15995,12 @@ React.useEffect(() => {
     if (assetFocusLockRef.current) return;
     const path = (ev as any)?.composedPath?.();
     const active = document.activeElement;
+    const isLockTarget = (node: EventTarget | null | undefined) =>
+      node instanceof Element &&
+      !!node.closest?.('[data-mobile-float-lock="true"]');
     if (
+      isLockTarget((ev as any)?.target) ||
+      path?.some?.((n: any) => isLockTarget(n)) ||
       (floatingTextRef.current &&
         (path?.includes(floatingTextRef.current) ||
           (active && floatingTextRef.current.contains(active)))) ||
@@ -20004,14 +20009,14 @@ style={{ top: STICKY_TOP }}
                 <div className="mt-2">
                   <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
                     <span>Label Size</span>
-                    <span>{Math.round(Number(activeAssetControls.labelSize || 10))}px</span>
+                    <span>{Math.round(Number(activeAssetControls.labelSize || 9))}px</span>
                   </div>
                   <input
                     type="range"
-                    min={8}
-                    max={18}
+                    min={7}
+                    max={14}
                     step={1}
-                    value={Number(activeAssetControls.labelSize || 10)}
+                    value={Number(activeAssetControls.labelSize || 9)}
                     onChange={(e) => activeAssetControls.onLabelSize?.(Number(e.target.value))}
                     onInput={(e) =>
                       activeAssetControls.onLabelSize?.(Number((e.target as HTMLInputElement).value))
