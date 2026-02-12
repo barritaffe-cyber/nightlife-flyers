@@ -674,14 +674,14 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                             <div className="mt-2">
                               <div className="text-[11px] text-neutral-400 mb-1 flex justify-between">
                                 <span>Label Size</span>
-                                <span>{Math.round(Number((sel as any).labelSize ?? 10))}px</span>
+                              <span>{Math.round(Number((sel as any).labelSize ?? 9))}px</span>
                               </div>
                               <input
                                 type="range"
-                                min={8}
-                                max={18}
+                                min={7}
+                                max={14}
                                 step={1}
-                                value={Number((sel as any).labelSize ?? 10)}
+                                value={Number((sel as any).labelSize ?? 9)}
                                 disabled={locked}
                                 onChange={(e) =>
                                   updatePortraitRaf.current?.(sel.id, {
@@ -939,14 +939,14 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                             <div className="mt-2">
                               <div className="text-[11px] text-neutral-400 mb-1 flex justify-between">
                                 <span>Label Size</span>
-                                <span>{Math.round(Number((sel as any).labelSize ?? 10))}px</span>
+                                <span>{Math.round(Number((sel as any).labelSize ?? 9))}px</span>
                               </div>
                               <input
                                 type="range"
-                                min={8}
-                                max={18}
+                                min={7}
+                                max={14}
                                 step={1}
-                                value={Number((sel as any).labelSize ?? 10)}
+                                value={Number((sel as any).labelSize ?? 9)}
                                 disabled={locked}
                                 onChange={(e) => update({ labelSize: Number(e.target.value) })}
                                 className="w-full h-1 rounded-lg appearance-none cursor-pointer bg-neutral-700 accent-blue-500"

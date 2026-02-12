@@ -82,7 +82,7 @@
   }, [open]);
 
   return (
-    <div className={`relative ${className ?? ''}`} ref={wrapRef}>
+    <div className={`relative ${className ?? ''}`} ref={wrapRef} data-mobile-float-lock="true">
       {label && <div className="text-[11px] text-neutral-400 mb-1">{label}</div>}
       <button
         type="button"
@@ -102,6 +102,7 @@
         createPortal(
           <div
             ref={menuRef}
+            data-mobile-float-lock="true"
             className="fixed z-[9999] overflow-auto rounded border border-neutral-700 bg-[#0f0f12] shadow-xl pb-2"
             style={{
               top: menuPos.top,
