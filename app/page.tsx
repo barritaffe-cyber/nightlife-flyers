@@ -17190,6 +17190,7 @@ return (
                 small
                 active={format === "square"}
                 disabled={!(bgUploadUrl || bgUrl)}
+                deferHeavy
                 onClick={() => {
                   if (format === "square") return;
                   syncCurrentStateToSession();
@@ -17204,6 +17205,7 @@ return (
                 small
                 active={format === "story"}
                 disabled={!(bgUploadUrl || bgUrl)}
+                deferHeavy
                 onClick={() => {
                   if (format === "story") return;
                   syncCurrentStateToSession();
@@ -17244,6 +17246,7 @@ return (
               ) : (
                 <Chip
                   small
+                  deferHeavy
                   onClick={() => {
                     setUiMode("finish");
                     setSelectedPanel("mastergrade");
@@ -17280,6 +17283,7 @@ return (
               <div className="ml-auto">
                 <Chip
                   small
+                  deferHeavy
                   onClick={handleExportStart}
                   title="Preview and export"
                 >
