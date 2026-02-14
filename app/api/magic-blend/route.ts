@@ -19,6 +19,12 @@ const STABILITY_API_URL =
 // -----------------------------
 const BASE_PROMPT = `Cinematic photo composite. Integrate the subject into the background environment so it looks shot in-camera.
 
+Core matching requirements (must match Image 2):
+- light direction
+- color temperature
+- contrast level
+- shadow softness
+
 Blend requirements (critical):
 - match the background lighting direction, color temperature, and contrast
 - relight the entire subject using Image 2 as the lighting source (face, hair, skin, clothing, hands, legs, shoes)
@@ -50,16 +56,20 @@ Lighting interaction:
 - if there are no beams, do not add beams
 - atmosphere allowed when requested by the style; avoid heavy fog
 - subject should block light beams and receive color spill from the scene
+- subtle environmental color spill from surroundings onto skin and clothing
 - match scene-specific highlight/shadow placement on every region of the subject, not just face/upper body
 - no studio lighting, no beauty lighting, no flat fill
 - if the scene is dark and moody, keep the subject darker and cinematic (no bright/exposed subject)
-- add left and right edge key lights sampled from the scene’s colors to sculpt the subject
+- edge light and rim light are allowed only where matching practical light sources exist in Image 2
 
 Look:
 - strong contrast with clean blacks/highlights
 - natural skin tones influenced by scene lighting
+- realistic exposure and dynamic range across face, skin, clothing, and hair
 - no halos, no glow outlines, no sticker/cutout look
 - no text, no logos, no watermarks, no extra people
+- no face distortion, identity change, or altered facial features
+- no overexposed skin, artificial glow, flat lighting, or studio lighting
 
 Safety:
 - fully clothed, family-friendly, non-suggestive attire`;
@@ -70,118 +80,44 @@ Safety:
 type MagicBlendStyle = "club" | "tropical" | "jazz_bar" | "outdoor_summer";
 
 const STYLE_SUFFIX: Record<MagicBlendStyle, string> = {
-  club: `Environment styling:
-- modern nightclub or concert venue
-- cyan and magenta neon tube lighting with bright accents
-- visible atmospheric haze so beams and light cones read clearly (medium+ density)
-- 50mm lens, pronounced depth of field with background bokeh; subject stays sharp
-- overhead blue/cyan key light (club spot) with warm side rim from practicals
-- visible light cones in haze; moody contrast with bright highlights
-- strong directional rim light from neon sources (clearly visible on hair/shoulders)
-- stronger key/fill contrast with deep shadow pockets (avoid flat lighting)
-- colored rim light and floor bounce should match background lights and feel energetic
-- add subtle motion energy via light streaks and slight background motion blur (subject stays sharp)
-- prioritize the subject with stronger local contrast and clarity
-- make the background noticeably softer so the subject pops
-- boost subject energy with brighter speculars and vivid neon color spill
-- tighter framing / camera zoom toward the subject for premium focus
-- rim light should visibly sculpt the subject’s silhouette and edges
-- dynamic rim lighting wraps shoulders, hair, arms; rim lights interact with silhouette
-- light atmospheric smoke interacts with the subject: smoke passes in front of and behind for depth
-- light smoke around legs, very subtle around waist; smoke catches rim lights and glows with scene color
-- light bloom on distant lights only (no bloom on the subject’s face)
-- visual energy funnels toward the subject as the scene’s focal point
-- architectural lighting, glossy surfaces, high-end atmosphere
-Lighting (club – tighten atmosphere):
-- strong directional key light from existing club fixtures (cyan/blue)
-- visible rim light on hair/shoulders from behind (magenta or warm amber)
-- clear backlight separation (subject edges glow slightly from scene lights)
-- deep shadow pockets on the subject’s far side (no flat fill)
-- localized neon reflections on skin + fabric (specular hits, not overall glow)
-- background is darker and softer than subject (strong depth separation)
-- moderate haze only where light beams exist (not blanket fog)
-- add subtle floor bounce from colored lights near the subject’s legs
+  club: `Club style bias:
+- preserve the exact venue in Image 2; no environment replacement
+- favor moody nightlife contrast and practical-light realism
+- emphasize believable neon/practical spill only where those sources are present
+- keep distant background slightly softer than subject for depth
+- optional subtle haze only around existing fixtures and beams
 
 Avoid:
-- tropical elements (palms, beach, sunset, tiki decor)
-- jazz bar cues (smoke-filled lounge, brass instruments, vintage bar ambience)
-- outdoor daytime lighting or bright sun 
- - no extra people, no silhouettes, no background figures`,
+- daylight look, flat studio fill, fake CGI glow
+- inventing new lights, structures, or crowd subjects`,
   tropical: `Environment styling:
-- tropical night venue or rooftop lounge
-- warm ambient lighting with palms or outdoor elements
-- golden and warm accent lights mixed with subtle color
-- relaxed but vibrant atmosphere
-- minimal atmosphere; no visible beams unless already present
-- keep the background scene intact and unchanged
-- warm lantern glow and string lights; cozy evening vibe
-- shallow depth of field with soft bokeh on lights; subject stays sharp
-- subject receives warm wrap light and soft rim from practicals
-- contact shadow and gentle ground bounce to anchor the subject
-- atmospheric smoke in front and behind the subject for depth
-- light smoke around legs, very subtle around waist
+- preserve the exact venue in Image 2; no environment replacement
+- warm evening nightlife tone with realistic practical spill and soft highlights
+- subtle atmosphere only if already supported by the scene
+- keep natural skin tones and physically plausible shadow falloff
 
 Avoid:
 - nightclub lasers or stage strobes
-- heavy magenta club lighting or EDM concert beams
-- jazz bar interior cues (dark lounge, leather booths, brass instruments)
-- concert lighting rigs, beam arrays, or stage spotlights`,
+- heavy magenta club lighting or EDM concert beams`,
   jazz_bar: `Environment styling (intimate jazz bar):
-- warm amber practicals (bar pendants, lamps, candles) dominate the scene
-- rich, moody bar interior with bottle backlighting and wood/brick textures
-- soft bokeh on background bottles and lights; subject stays sharp
-- cinematic, low-key lighting with deep shadows and glowing highlights
-- cozy, intimate, premium atmosphere (luxury lounge, not chaotic)
-- no outdoor rooftop cues or skyline
-
-Lighting integration:
-- warm key light from practicals; subtle warm rim on hair/shoulders
-- subject must pick up amber color spill from nearby lights (skin and fabric)
-- realistic contact shadow to ground the subject; avoid studio-flat lighting
-
-Color & lighting modifiers:
-- warm golds, ambers, candlelight orange
-- subtle deep reds/browns in shadows
-- soft bloom on distant lights only
+- preserve the exact venue in Image 2; no environment replacement
+- intimate low-key mood with practical amber spill where lamps/bars exist
+- keep realistic shadow gradients and avoid over-bright skin lift
+- maintain premium editorial texture, not glossy studio polish
 
 Avoid:
-- rooftop or skyline views
 - nightclub strobe lighting
 - neon rave colors
-- overcrowded party
-- flat lighting
-- no text, no logos, no watermarks`,
+- flat lighting`,
   outdoor_summer: `Environment styling:
-- vibrant daytime outdoor party by the water (lake, pool, or beachside deck)
-- bright natural sunlight with warm golden highlights and clean shadows
-- visible water spray/mist in the air catching sunlight for energy
-- lively crowd energy with raised hands and candid movement
-- sun-kissed skin tones, bright colorful summer outfits
-- shallow depth of field; background crowd softened, subject sharp
-- golden hour sunlight option: warm sun flare, lens flare orbs, and glowing foliage
-- soft airy atmosphere with light bloom and warm amber tones
-
-Color grading:
-- warm highlights, rich natural skin tones
-- vibrant but controlled saturation
-- deep contrast without crushing shadows
-
-Mood:
-- carefree, energetic, celebratory
-- daytime festival / pool party vibe
-
-Style keywords:
-- cinematic summer, daytime party, lifestyle promo
-- lively crowd energy, premium outdoor event
-
-Quality:
-- crisp detail, modern editorial look, high-end
-- no low-res, no artifacts, no warped faces
+- preserve the exact environment in Image 2; no environment replacement
+- bright natural outdoor light behavior with realistic sun direction and cast shadows
+- breathable summer atmosphere with controlled saturation and skin realism
+- maintain scene depth and horizon/perspective consistency
 
 Avoid:
 - nightclub lasers, concert strobes, or heavy club lighting
-- dark indoor jazz bar interiors
-- smoky haze typical of clubs (keep only light outdoor heat haze)`,
+- dark indoor jazz bar interiors`,
 
 };
 
@@ -233,6 +169,261 @@ async function toBufferFromAnyImage(input: string): Promise<Buffer> {
 
 function bufferToDataUrlPng(buf: Buffer) {
   return `data:image/png;base64,${buf.toString("base64")}`;
+}
+
+type SceneLightingProfile = {
+  keyDirection: string;
+  verticalBias: string;
+  temperature: string;
+  contrast: string;
+  shadowSoftness: string;
+  brightness: string;
+  saturation: string;
+  highlightHex: string;
+  shadowHex: string;
+};
+
+type CameraZoom = "full body" | "three-quarter" | "waist-up" | "chest-up" | "auto";
+
+function normalizeCameraZoom(raw: string): CameraZoom {
+  const z = String(raw || "auto").trim().toLowerCase();
+  if (z === "full body" || z === "full-body") return "full body";
+  if (z === "three-quarter" || z === "three quarter" || z === "3/4") return "three-quarter";
+  if (z === "waist-up" || z === "waist up") return "waist-up";
+  if (z === "chest-up" || z === "chest up" || z === "close-up" || z === "close up") return "chest-up";
+  return "auto";
+}
+
+function toHexByte(v: number) {
+  return Math.max(0, Math.min(255, Math.round(v)))
+    .toString(16)
+    .padStart(2, "0");
+}
+
+function rgbToHex(r: number, g: number, b: number) {
+  return `#${toHexByte(r)}${toHexByte(g)}${toHexByte(b)}`;
+}
+
+function luminance(r: number, g: number, b: number) {
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function getCameraFramingLock(
+  rawZoom: string,
+  format: "square" | "story" | "portrait",
+  lowAngleHint = false
+) {
+  const z = normalizeCameraZoom(rawZoom);
+  const base =
+    "Camera framing lock (strict): selected framing is a hard requirement. Keep the subject in the same placement anchor from Image 1. Do not recenter. Do not shift horizon. Do not change perspective.";
+  const lensCritical =
+    "Lens matching (critical): match scene lens perspective from Image 2. Wide room/deep perspective -> 24-35mm. Natural perspective -> 50mm. Cinematic compression -> 85mm+. Do not default to generic portrait compression.";
+
+  if (z === "full body") {
+    const lowAngleLine = lowAngleHint
+      ? "- low angle full-body shot, slight upward perspective, 28mm lens"
+      : "- camera at eye level, 35mm lens perspective consistent with background";
+    return `${base}
+- full-body framing: head-to-toe visible, feet visible, no cropped limbs
+- realistic full body shot with natural stance on the ground plane
+${lowAngleLine}
+- preserve natural body proportions; no stretch
+- keep headroom and foot room balanced
+- feet must be grounded with realistic contact shadow under shoes
+- correct scale relative to surrounding architecture and objects
+- adjust perspective and scale to match the environment naturally
+- ${lensCritical}`;
+  }
+  if (z === "three-quarter") {
+    return `${base}
+- three-quarter body shot: frame from mid-thigh to top of head
+- natural perspective consistent with background depth and horizon
+- camera at subject chest height, 50mm lens
+- both hands should remain visible when present in Image 1
+- avoid tight crop and avoid full-body zoom-out
+- adjust perspective and scale to match the environment naturally
+- ${lensCritical}`;
+  }
+  if (z === "waist-up") {
+    return `${base}
+- waist-up framing: frame from waist/upper-hip to top of head
+- waist-up portrait with realistic shoulder width and torso proportions
+- eye-level camera, 50mm lens natural perspective
+- preserve shoulder width and arm proportions
+- do not collapse into chest-up or close-up
+- adjust perspective and scale to match the environment naturally
+- ${lensCritical}`;
+  }
+  if (z === "chest-up") {
+    return `${base}
+- close-up portrait framing: frame from upper chest to top of head
+- 85mm lens compression; shallow depth of field only if scene supports it
+- keep full hairline and chin visible; no forehead/chin crop
+- do not zoom out to waist/full body
+- adjust perspective and scale to match the environment naturally
+- ${lensCritical}`;
+  }
+  const formatHint =
+    format === "story"
+      ? "vertical composition priority"
+      : format === "portrait"
+      ? "4:5 portrait composition priority"
+      : "square composition priority";
+  return `${base}
+- honor ${formatHint}
+- keep subject size and crop matched to Image 1
+- prioritize lens/perspective consistency with Image 2 over generic portrait look
+- adjust perspective and scale to match the environment naturally
+- ${lensCritical}`;
+}
+
+async function analyzeSceneLighting(bgCanvas: Buffer): Promise<SceneLightingProfile> {
+  const tiny = await sharp(bgCanvas)
+    .resize(96, 96, { fit: "cover" })
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const { data, info } = tiny;
+  const w = info.width;
+  const h = info.height;
+  const ch = info.channels;
+  const cx = w / 2;
+  const cy = h / 2;
+
+  let lumSum = 0;
+  let lumSqSum = 0;
+  let satSum = 0;
+  let total = 0;
+
+  let leftLum = 0;
+  let rightLum = 0;
+  let topLum = 0;
+  let bottomLum = 0;
+  let leftCount = 0;
+  let rightCount = 0;
+  let topCount = 0;
+  let bottomCount = 0;
+
+  let rSum = 0;
+  let gSum = 0;
+  let bSum = 0;
+
+  let hiR = 0;
+  let hiG = 0;
+  let hiB = 0;
+  let hiCount = 0;
+
+  let loR = 0;
+  let loG = 0;
+  let loB = 0;
+  let loCount = 0;
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * ch;
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const lum = luminance(r, g, b);
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const sat = max - min;
+
+      total += 1;
+      lumSum += lum;
+      lumSqSum += lum * lum;
+      satSum += sat;
+      rSum += r;
+      gSum += g;
+      bSum += b;
+
+      if (x < cx) {
+        leftLum += lum;
+        leftCount += 1;
+      } else {
+        rightLum += lum;
+        rightCount += 1;
+      }
+      if (y < cy) {
+        topLum += lum;
+        topCount += 1;
+      } else {
+        bottomLum += lum;
+        bottomCount += 1;
+      }
+
+      if (lum >= 188) {
+        hiR += r;
+        hiG += g;
+        hiB += b;
+        hiCount += 1;
+      }
+      if (lum <= 70) {
+        loR += r;
+        loG += g;
+        loB += b;
+        loCount += 1;
+      }
+    }
+  }
+
+  const meanLum = lumSum / Math.max(total, 1);
+  const varLum = lumSqSum / Math.max(total, 1) - meanLum * meanLum;
+  const stdLum = Math.sqrt(Math.max(0, varLum));
+  const meanSat = satSum / Math.max(total, 1);
+  const meanR = rSum / Math.max(total, 1);
+  const meanB = bSum / Math.max(total, 1);
+
+  const leftMean = leftLum / Math.max(leftCount, 1);
+  const rightMean = rightLum / Math.max(rightCount, 1);
+  const topMean = topLum / Math.max(topCount, 1);
+  const bottomMean = bottomLum / Math.max(bottomCount, 1);
+
+  const horizDelta = leftMean - rightMean;
+  const vertDelta = topMean - bottomMean;
+
+  let keyDirection = "mixed ambient";
+  if (Math.abs(horizDelta) >= 6 || Math.abs(vertDelta) >= 6) {
+    const horiz =
+      Math.abs(horizDelta) >= 6 ? (horizDelta > 0 ? "left" : "right") : "";
+    const vert =
+      Math.abs(vertDelta) >= 6 ? (vertDelta > 0 ? "top" : "bottom") : "";
+    keyDirection = horiz && vert ? `${vert}-${horiz}` : horiz || vert;
+  }
+
+  const verticalBias =
+    vertDelta > 6 ? "top-bright" : vertDelta < -6 ? "bottom-bright" : "balanced";
+  const temperature =
+    meanR - meanB > 12 ? "warm" : meanR - meanB < -12 ? "cool" : "neutral";
+  const contrast = stdLum > 60 ? "high" : stdLum > 35 ? "medium" : "low";
+  const shadowSoftness =
+    contrast === "high" ? "hard-edged" : contrast === "medium" ? "medium" : "soft";
+  const brightness = meanLum > 148 ? "bright" : meanLum > 95 ? "mid" : "dark";
+  const saturation = meanSat > 70 ? "vivid" : meanSat > 38 ? "moderate" : "muted";
+
+  const hiAvg = {
+    r: hiCount ? hiR / hiCount : meanR,
+    g: hiCount ? hiG / hiCount : gSum / Math.max(total, 1),
+    b: hiCount ? hiB / hiCount : meanB,
+  };
+  const loAvg = {
+    r: loCount ? loR / loCount : meanR * 0.35,
+    g: loCount ? loG / loCount : (gSum / Math.max(total, 1)) * 0.35,
+    b: loCount ? loB / loCount : meanB * 0.35,
+  };
+
+  return {
+    keyDirection,
+    verticalBias,
+    temperature,
+    contrast,
+    shadowSoftness,
+    brightness,
+    saturation,
+    highlightHex: rgbToHex(hiAvg.r, hiAvg.g, hiAvg.b),
+    shadowHex: rgbToHex(loAvg.r, loAvg.g, loAvg.b),
+  };
 }
 
 async function pollForCompletion(url: string, token: string): Promise<string> {
@@ -358,8 +549,8 @@ async function runStabilityEdit(opts: {
   const height = opts.size === "1024x1792" ? 1792 : opts.size === "1792x1024" ? 1024 : 1024;
   form.append("width", String(width));
   form.append("height", String(height));
-  // Lean slightly toward composition preservation so subject framing drifts less.
-  form.append("strength", "0.5");
+  // Keep denoise in the safer identity-preserving range for composites.
+  form.append("strength", "0.42");
 
   const res = await fetch(STABILITY_API_URL, {
     method: "POST",
@@ -454,8 +645,8 @@ export async function POST(req: Request) {
       format === "story" ? "9:16" : format === "portrait" ? "4:5" : "1:1";
 
     // --- Precomposite subject onto background (conditioning image) ---
-    const sizeW = format === "story" ? 1024 : 1024;
-    const sizeH = format === "story" ? 1792 : 1024;
+    const sizeW = format === "story" ? 1024 : format === "portrait" ? 1024 : 1024;
+    const sizeH = format === "story" ? 1792 : format === "portrait" ? 1280 : 1024;
     const baseSize = Math.min(sizeW, sizeH);
 
     // 1) Background canvas (this is the "truth" reference)
@@ -465,6 +656,7 @@ export async function POST(req: Request) {
       .resize(sizeW, sizeH, { fit: "cover" })
       .png()
       .toBuffer();
+    const sceneProfile = await analyzeSceneLighting(bgCanvas);
 
     // 2) Subject buffer
     stage = "load-subject";
@@ -472,17 +664,17 @@ export async function POST(req: Request) {
 
     // Subject framing: bigger & slightly lifted (poster feel)
     // NOTE: if background adherence is still weak, drop this to 0.88–0.92
-    const zoom = String(cameraZoom || "auto").toLowerCase();
+    const zoom = normalizeCameraZoom(cameraZoom);
     const zoomScaleMap: Record<string, number> = {
-      "full body": format === "story" ? 0.72 : 0.8,
-      "three-quarter": format === "story" ? 0.86 : 0.9,
-      "waist-up": format === "story" ? 1.02 : 1.05,
-      "chest-up": format === "story" ? 1.12 : 1.18,
-      auto: safeStyle === "club" ? 1.08 : 0.96,
+      "full body": format === "story" ? 0.66 : format === "portrait" ? 0.7 : 0.72,
+      "three-quarter": format === "story" ? 0.82 : format === "portrait" ? 0.86 : 0.88,
+      "waist-up": format === "story" ? 1.08 : format === "portrait" ? 1.14 : 1.18,
+      "chest-up": format === "story" ? 1.26 : format === "portrait" ? 1.34 : 1.4,
+      auto: safeStyle === "club" ? 0.98 : 0.92,
     };
     const subjectScale = Math.max(
-      0.65,
-      Math.min(1.25, zoomScaleMap[zoom] ?? zoomScaleMap.auto)
+      0.58,
+      Math.min(1.45, zoomScaleMap[zoom] ?? zoomScaleMap.auto)
     );
     const subjSize = Math.min(
       Math.round(baseSize * subjectScale),
@@ -490,23 +682,28 @@ export async function POST(req: Request) {
       sizeH
     );
     const subjLeft = Math.max(0, Math.round((sizeW - subjSize) / 2));
-    const yLift = Math.round(baseSize * (safeStyle === "tropical" ? 0.02 : 0.06));
+    const yLiftMap: Record<CameraZoom, number> = {
+      "full body": -0.02,
+      "three-quarter": 0.02,
+      "waist-up": 0.08,
+      "chest-up": 0.14,
+      auto: safeStyle === "tropical" ? 0.01 : 0.05,
+    };
+    const yLift = Math.round(baseSize * (yLiftMap[zoom] ?? yLiftMap.auto));
     const subjTop = Math.max(0, Math.round((sizeH - subjSize) / 2) - yLift);
 
     async function safeCropSubject(buf: Buffer) {
       try {
         const meta = await sharp(buf).metadata();
         if (!meta.width || !meta.height) return buf;
-        const cropRatio =
-          zoom === "full body"
-            ? 0.98
-            : zoom === "three-quarter"
-            ? 0.9
-            : zoom === "waist-up"
-            ? 0.78
-            : zoom === "chest-up"
-            ? 0.68
-            : 0.75;
+        const cropRatioByZoom: Record<CameraZoom, number> = {
+          "full body": 1,
+          "three-quarter": 0.82,
+          "waist-up": 0.66,
+          "chest-up": 0.52,
+          auto: 0.78,
+        };
+        const cropRatio = cropRatioByZoom[zoom] ?? cropRatioByZoom.auto;
         const cropH = Math.max(1, Math.round(meta.height * cropRatio));
         return await sharp(buf)
           .extract({ left: 0, top: 0, width: meta.width, height: cropH })
@@ -566,6 +763,25 @@ export async function POST(req: Request) {
 - Keep the same time of day and lighting direction as Image 2.
 - Do not change the weather or season.
 - Only add subtle atmosphere and a few small accent lights; no scene overhaul.`;
+    const sceneCueBlock = `Scene-derived lighting lock (strict, from Image 2):
+- key direction: ${sceneProfile.keyDirection}
+- vertical brightness bias: ${sceneProfile.verticalBias}
+- color temperature: ${sceneProfile.temperature}
+- contrast level: ${sceneProfile.contrast}
+- shadow softness: ${sceneProfile.shadowSoftness}
+- scene brightness: ${sceneProfile.brightness}
+- scene saturation: ${sceneProfile.saturation}
+- highlight color cue: ${sceneProfile.highlightHex}
+- shadow color cue: ${sceneProfile.shadowHex}
+
+Rules:
+- relight subject using this direction/contrast/temperature/shadow-softness profile
+- keep highlight spill close to ${sceneProfile.highlightHex}; keep occluded regions near ${sceneProfile.shadowHex}
+- no light source invention and no global relight that conflicts with Image 2`;
+    const lowAngleHint = /low[\s-]?angle|upward perspective|camera from below/i.test(
+      String(extraPrompt || "")
+    );
+    const cameraFramingBlock = getCameraFramingLock(cameraZoom, format, lowAngleHint);
 
     const extraBlock =
       typeof extraPrompt === "string" && extraPrompt.trim()
@@ -579,12 +795,17 @@ export async function POST(req: Request) {
 
     const finalPrompt = `${BASE_PROMPT}
 
+${sceneCueBlock}
+
+${cameraFramingBlock}
+
 ${STYLE_SUFFIX[safeStyle]}
 
 ${backgroundLock}${extraBlock}${nanoTone}`;
 
     // --- Single unified pass with TWO reference images (Imagine Art style) ---
-    const sizeStr = format === "story" ? "1024x1792" : "1024x1024";
+    const sizeStr =
+      format === "story" ? "1024x1792" : format === "portrait" ? "1024x1024" : "1024x1024";
 
     if (resolvedProvider === "replicate") {
       stage = "replicate:prep";
@@ -620,6 +841,7 @@ ${backgroundLock}${extraBlock}${nanoTone}`;
           `Preserve the background from Image 2 exactly. ` +
           `Keep subject framing matched to Image 1 (same placement, scale, and pose). ` +
           `Relight the subject using only Image 2 scene lighting for seamless integration. ` +
+          `Use scene cues: key ${sceneProfile.keyDirection}, temperature ${sceneProfile.temperature}, contrast ${sceneProfile.contrast}. ` +
           `Family-friendly, non-suggestive styling.`;
         stage = "replicate:safe-run";
         const outUrl = await runFlux({
