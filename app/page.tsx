@@ -14685,10 +14685,12 @@ const applyTemplate = React.useCallback<
     if (tpl.id === "__session__") {
       // Session payload should be authoritative; don’t reapply template defaults.
       merged = { ...variant };
+    } else if (opts?.initialLoad) {
+      // Fresh template apply should never inherit prior template coordinates/state.
+      merged = { ...variant };
     } else {
-      merged = opts?.initialLoad
-        ? { ...variant, ...existing }
-        : { ...existing, ...variant };
+      // Session rehydrate/edit flow: keep user edits for missing fields.
+      merged = { ...existing, ...variant };
     }
 
     // 3) SESSION: initialLoad should be authoritative and non-dirty
