@@ -12660,9 +12660,17 @@ async function inlineImagesForExport(
     const absSrc = rawSrc.startsWith('http')
       ? rawSrc
       : new URL(rawSrc, window.location.href).toString();
+    const isSameOrigin = (() => {
+      try {
+        return new URL(absSrc).origin === window.location.origin;
+      } catch {
+        return false;
+      }
+    })();
     if (!cache.has(absSrc)) {
       try {
-        if (opts?.forceProxy) {
+        // In forced-proxy mode, still allow same-origin direct fetches.
+        if (opts?.forceProxy && !isSameOrigin) {
           throw new Error('force proxy');
         }
         const res = await fetch(absSrc, { mode: 'cors', credentials: 'omit' });
@@ -12751,12 +12759,28 @@ async function inlineBackgroundImagesForExport(
     for (const url of urls) {
       let dataUrl: string | null = null;
       try {
-        const res = await fetch(`/api/image-proxy?url=${encodeURIComponent(url)}`, {
-          cache: "no-store",
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data?.dataUrl) dataUrl = data.dataUrl;
+        const isSameOrigin = (() => {
+          try {
+            return new URL(url).origin === window.location.origin;
+          } catch {
+            return false;
+          }
+        })();
+
+        // In forced-proxy mode, still allow same-origin direct fetches.
+        if (opts?.forceProxy && isSameOrigin) {
+          const sameOriginRes = await fetch(url, { cache: "no-store", credentials: "omit" });
+          if (!sameOriginRes.ok) throw new Error("fetch failed");
+          const sameOriginBlob = await sameOriginRes.blob();
+          dataUrl = await blobToDataURL(sameOriginBlob);
+        } else {
+          const res = await fetch(`/api/image-proxy?url=${encodeURIComponent(url)}`, {
+            cache: "no-store",
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data?.dataUrl) dataUrl = data.dataUrl;
+          }
         }
       } catch {}
       if (dataUrl) {

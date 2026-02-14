@@ -4,6 +4,9 @@ import React from "react";
 import { supabaseBrowser } from "../../lib/supabase/client";
 import { getDeviceType, getOrCreateDeviceId } from "../../lib/auth/device";
 
+// Testing mode default: auth gate is OFF unless explicitly enabled.
+const AUTH_GATE_ENABLED = process.env.NEXT_PUBLIC_AUTH_GATE_ENABLED === "1";
+
 export default function AuthGate({
   onStatusChange,
 }: {
@@ -15,6 +18,13 @@ export default function AuthGate({
   }>(null);
 
   React.useEffect(() => {
+    if (!AUTH_GATE_ENABLED) {
+      onStatusChange?.("active");
+      setBlocked(null);
+      setLoading(false);
+      return;
+    }
+
     let mounted = true;
     const run = async () => {
       try {

@@ -21,7 +21,10 @@ const BASE_PROMPT = `Cinematic photo composite. Integrate the subject into the b
 
 Blend requirements (critical):
 - match the background lighting direction, color temperature, and contrast
+- relight the entire subject using Image 2 as the lighting source (face, hair, skin, clothing, hands, legs, shoes)
+- keep lighting physically consistent across the whole body (same key/fill/rim logic, falloff, and shadow softness)
 - add realistic contact shadows at feet/base and soft ambient occlusion around edges
+- add believable cast shadows from the subject onto nearby ground/surfaces when those shadows should exist
 - add subtle edge color bleed and light wrap from the environment
 - match lens and depth-of-field; soften cutout edges slightly
 - preserve subject identity, face, hairstyle, clothing, and pose from Image 1
@@ -30,6 +33,13 @@ Blend requirements (critical):
 Grounding:
 - align subject scale and perspective to the background
 - keep the subject on a believable ground plane (no floating)
+
+Framing lock (critical):
+- treat Image 1 as a hard placement map for the subject
+- keep subject position, scale, and orientation matched to Image 1
+- do not recenter, reframe, zoom out, or shift the subject to another area
+- do not alter pose, limb placement, or body angle
+- if any instruction conflicts, preserve Image 1 framing first
 
 Background integrity:
 - preserve the background scene from Image 2 (no new objects, no major layout changes)
@@ -40,6 +50,7 @@ Lighting interaction:
 - if there are no beams, do not add beams
 - atmosphere allowed when requested by the style; avoid heavy fog
 - subject should block light beams and receive color spill from the scene
+- match scene-specific highlight/shadow placement on every region of the subject, not just face/upper body
 - no studio lighting, no beauty lighting, no flat fill
 - if the scene is dark and moody, keep the subject darker and cinematic (no bright/exposed subject)
 - add left and right edge key lights sampled from the scene’s colors to sculpt the subject
@@ -347,7 +358,8 @@ async function runStabilityEdit(opts: {
   const height = opts.size === "1024x1792" ? 1792 : opts.size === "1792x1024" ? 1024 : 1024;
   form.append("width", String(width));
   form.append("height", String(height));
-  form.append("strength", "0.6");
+  // Lean slightly toward composition preservation so subject framing drifts less.
+  form.append("strength", "0.5");
 
   const res = await fetch(STABILITY_API_URL, {
     method: "POST",
@@ -539,6 +551,8 @@ export async function POST(req: Request) {
 - Image 2 is the background reference and should remain recognizable.
 - Preserve the background’s layout, architecture, and key features from Image 2.
 - Do not replace the environment or move the scene.
+- Subject relighting must be derived from Image 2 lighting only (direction, color, intensity, contrast).
+- Subject framing must remain matched to Image 1 (same placement, scale, and pose).
 - It is allowed to intensify existing lighting, haze, and neon accents to match subject energy.
 - It is allowed to add atmospheric smoke around the subject for depth, even if subtle in Image 2.
 - Keep the same time of day and lighting direction as Image 2.`
@@ -547,6 +561,8 @@ export async function POST(req: Request) {
 - Image 2 is the background reference and MUST be preserved exactly.
 - Preserve the background’s layout, architecture, structure, and key features from Image 2.
 - Do not replace the environment. Do not invent a new background. Do not move the scene.
+- Subject relighting must be derived from Image 2 lighting only (direction, color, intensity, contrast).
+- Subject framing must remain matched to Image 1 (same placement, scale, and pose).
 - Keep the same time of day and lighting direction as Image 2.
 - Do not change the weather or season.
 - Only add subtle atmosphere and a few small accent lights; no scene overhaul.`;
@@ -602,7 +618,9 @@ ${backgroundLock}${extraBlock}${nanoTone}`;
           `Preserve the exact subject identity from Image 1 (face, skin tone, hair, clothing). ` +
           `Do not change ethnicity, age, or gender. ` +
           `Preserve the background from Image 2 exactly. ` +
-          `Family-friendly, non-suggestive, neutral lighting.`;
+          `Keep subject framing matched to Image 1 (same placement, scale, and pose). ` +
+          `Relight the subject using only Image 2 scene lighting for seamless integration. ` +
+          `Family-friendly, non-suggestive styling.`;
         stage = "replicate:safe-run";
         const outUrl = await runFlux({
           imageDataUrls: [safeCompositeDataUrl2, bgOnlyDataUrl],
