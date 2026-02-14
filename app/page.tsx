@@ -15627,6 +15627,10 @@ const activeAssetControls = React.useMemo(() => {
         useFlyerState.getState().updateEmoji(format, sel.id, { rotation: v }),
       onTint: (v: number) =>
         useFlyerState.getState().updateEmoji(format, sel.id, { tint: v }),
+      onPosX: (v: number) =>
+        useFlyerState.getState().updateEmoji(format, sel.id, { x: clamp100(v) }),
+      onPosY: (v: number) =>
+        useFlyerState.getState().updateEmoji(format, sel.id, { y: clamp100(v) }),
       onToggleLock: () =>
         useFlyerState.getState().updateEmoji(format, sel.id, {
           locked: !sel.locked,
@@ -15709,6 +15713,10 @@ const activeAssetControls = React.useMemo(() => {
           useFlyerState.getState().updatePortrait(format, sel.id, { opacity: v }),
         onTint: (v: number) =>
           useFlyerState.getState().updatePortrait(format, sel.id, { tint: v }),
+        onPosX: (v: number) =>
+          useFlyerState.getState().updatePortrait(format, sel.id, { x: clamp100(v) }),
+        onPosY: (v: number) =>
+          useFlyerState.getState().updatePortrait(format, sel.id, { y: clamp100(v) }),
         onRotate: (v: number) =>
           useFlyerState.getState().updatePortrait(format, sel.id, { rotation: v }),
         onToggleLock: () =>
@@ -19835,6 +19843,100 @@ style={{ top: STICKY_TOP }}
             </div>
           )}
         </div>
+        {activeAssetControls.onPosX && activeAssetControls.onPosY && (
+          <div className="mt-2 grid grid-cols-2 gap-3 items-center">
+            <div>
+              <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
+                <span>X</span>
+                <span className="text-white font-semibold">
+                  {Number(activeAssetControls.posX || 0).toFixed(1)}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  className="px-2 py-1 rounded border border-neutral-700 bg-neutral-900/60 text-[10px]"
+                  onClick={() =>
+                    activeAssetControls.onPosX?.(clamp100(Number(activeAssetControls.posX || 0) - 1))
+                  }
+                  disabled={activeAssetControls.locked}
+                >
+                  -
+                </button>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={0.1}
+                  value={Number(activeAssetControls.posX || 0)}
+                  onChange={(e) => activeAssetControls.onPosX?.(Number(e.target.value))}
+                  onInput={(e) => activeAssetControls.onPosX?.(Number((e.target as HTMLInputElement).value))}
+                  className="flex-1 accent-emerald-400"
+                  style={{ touchAction: "none" }}
+                  onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
+                  onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
+                  onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
+                  disabled={activeAssetControls.locked}
+                />
+                <button
+                  type="button"
+                  className="px-2 py-1 rounded border border-neutral-700 bg-neutral-900/60 text-[10px]"
+                  onClick={() =>
+                    activeAssetControls.onPosX?.(clamp100(Number(activeAssetControls.posX || 0) + 1))
+                  }
+                  disabled={activeAssetControls.locked}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
+                <span>Y</span>
+                <span className="text-white font-semibold">
+                  {Number(activeAssetControls.posY || 0).toFixed(1)}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  className="px-2 py-1 rounded border border-neutral-700 bg-neutral-900/60 text-[10px]"
+                  onClick={() =>
+                    activeAssetControls.onPosY?.(clamp100(Number(activeAssetControls.posY || 0) - 1))
+                  }
+                  disabled={activeAssetControls.locked}
+                >
+                  -
+                </button>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={0.1}
+                  value={Number(activeAssetControls.posY || 0)}
+                  onChange={(e) => activeAssetControls.onPosY?.(Number(e.target.value))}
+                  onInput={(e) => activeAssetControls.onPosY?.(Number((e.target as HTMLInputElement).value))}
+                  className="flex-1 accent-teal-400"
+                  style={{ touchAction: "none" }}
+                  onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
+                  onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
+                  onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
+                  disabled={activeAssetControls.locked}
+                />
+                <button
+                  type="button"
+                  className="px-2 py-1 rounded border border-neutral-700 bg-neutral-900/60 text-[10px]"
+                  onClick={() =>
+                    activeAssetControls.onPosY?.(clamp100(Number(activeAssetControls.posY || 0) + 1))
+                  }
+                  disabled={activeAssetControls.locked}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="mt-2 grid grid-cols-2 gap-3 items-center">
           <div>
             <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
