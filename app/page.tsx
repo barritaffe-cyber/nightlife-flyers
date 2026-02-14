@@ -19848,21 +19848,8 @@ style={{ top: STICKY_TOP }}
             <div>
               <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
                 <span>X</span>
-                <span className="text-white font-semibold">
-                  {Number(activeAssetControls.posX || 0).toFixed(1)}
-                </span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  className="px-2 py-1 rounded border border-neutral-700 bg-neutral-900/60 text-[10px]"
-                  onClick={() =>
-                    activeAssetControls.onPosX?.(clamp100(Number(activeAssetControls.posX || 0) - 1))
-                  }
-                  disabled={activeAssetControls.locked}
-                >
-                  -
-                </button>
+              <div className="flex items-center gap-2">
                 <input
                   type="range"
                   min={0}
@@ -19878,36 +19865,16 @@ style={{ top: STICKY_TOP }}
                   onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
                   disabled={activeAssetControls.locked}
                 />
-                <button
-                  type="button"
-                  className="px-2 py-1 rounded border border-neutral-700 bg-neutral-900/60 text-[10px]"
-                  onClick={() =>
-                    activeAssetControls.onPosX?.(clamp100(Number(activeAssetControls.posX || 0) + 1))
-                  }
-                  disabled={activeAssetControls.locked}
-                >
-                  +
-                </button>
+                <div className="w-12 text-right text-[10px] text-white font-semibold">
+                  {Number(activeAssetControls.posX || 0).toFixed(1)}
+                </div>
               </div>
             </div>
             <div>
               <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
                 <span>Y</span>
-                <span className="text-white font-semibold">
-                  {Number(activeAssetControls.posY || 0).toFixed(1)}
-                </span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  className="px-2 py-1 rounded border border-neutral-700 bg-neutral-900/60 text-[10px]"
-                  onClick={() =>
-                    activeAssetControls.onPosY?.(clamp100(Number(activeAssetControls.posY || 0) - 1))
-                  }
-                  disabled={activeAssetControls.locked}
-                >
-                  -
-                </button>
+              <div className="flex items-center gap-2">
                 <input
                   type="range"
                   min={0}
@@ -19923,16 +19890,9 @@ style={{ top: STICKY_TOP }}
                   onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
                   disabled={activeAssetControls.locked}
                 />
-                <button
-                  type="button"
-                  className="px-2 py-1 rounded border border-neutral-700 bg-neutral-900/60 text-[10px]"
-                  onClick={() =>
-                    activeAssetControls.onPosY?.(clamp100(Number(activeAssetControls.posY || 0) + 1))
-                  }
-                  disabled={activeAssetControls.locked}
-                >
-                  +
-                </button>
+                <div className="w-12 text-right text-[10px] text-white font-semibold">
+                  {Number(activeAssetControls.posY || 0).toFixed(1)}
+                </div>
               </div>
             </div>
           </div>
