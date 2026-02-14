@@ -1083,6 +1083,111 @@ const NIGHTLIFE_SUBJECT_TOKENS = {
   },
 } as const;
 
+const NIGHTLIFE_BACKGROUND_TOKENS: Record<
+  GenStyle,
+  {
+    venues: string[];
+    practicals: string[];
+    traces: string[];
+    camera: string[];
+  }
+> = {
+  urban: {
+    venues: [
+      "working back-alley club entrance with queue barriers and security stanchions",
+      "underground dance basement with scuffed concrete and taped cable runs",
+      "after-hours warehouse floor with truss towers and stacked flight cases",
+    ],
+    practicals: [
+      "motivated light from bar fridges, exit signs, and sodium spill through the doorway",
+      "hard edge beams from moving heads cutting through real haze",
+      "mixed warm practical bulbs and cool streetlight contamination",
+    ],
+    traces: [
+      "sticky dancefloor reflections, gaffer tape marks, drink-ring residue on steel counters",
+      "confetti fragments, wristbands, and footprint wear patterns near the booth",
+      "cigarette haze residue and condensation on metal shutter surfaces",
+    ],
+    camera: [
+      "event-documentary wide shot on 28mm, realistic handheld micro-tilt",
+      "35mm nightlife editorial frame with natural lens breathing and depth falloff",
+      "low-angle environmental capture with foreground parallax for depth",
+    ],
+  },
+  neon: {
+    venues: [
+      "active neon dance venue with LED wall seams, laser emitters, and mirrored columns",
+      "futuristic nightclub corridor with reflective acrylic, DMX fixtures, and rigging points",
+      "high-energy main room with elevated DJ riser, side stacks, and light bars",
+    ],
+    practicals: [
+      "practical magenta-cyan spill from LED strips and booth screens",
+      "strobe freeze accents with rolling haze catching laser geometry",
+      "light motivated by pixel tubes and under-bar glow, not studio softboxes",
+    ],
+    traces: [
+      "fingerprint smears on chrome railings and glossy acrylic panels",
+      "micro confetti, spilled tonic reflections, and shoe scuffs on black flooring",
+      "heat haze around fixtures and subtle smoke density layering",
+    ],
+    camera: [
+      "dynamic 24mm club interior with perspective depth and realistic highlight roll-off",
+      "35mm event still with controlled bloom, no CGI smoothness",
+      "immersive wide frame with believable lens flare from practical sources",
+    ],
+  },
+  vintage: {
+    venues: [
+      "lived-in disco lounge with worn velvet booths, mirrored ball rig, and brass railings",
+      "retro music hall with analog stage lighting cans and wood parquet dancefloor",
+      "classic cocktail club interior with art deco millwork and candlelit tables",
+    ],
+    practicals: [
+      "motivated tungsten practicals, dim table lamps, and warm stage spill",
+      "subtle amber spotlight haze with low-intensity back practicals",
+      "halation from real bulbs and reflective brass surfaces",
+    ],
+    traces: [
+      "glassware condensation rings, coaster marks, and polished floor wear",
+      "vinyl crates, cable snakes, and used setlist pages near the booth",
+      "soft cigarette haze layering with dust drifting through warm beams",
+    ],
+    camera: [
+      "cinematic 35mm frame with gentle film grain and authentic texture retention",
+      "classic event photo composition with balanced practical exposure",
+      "environmental bar interior shot preserving shadow detail and warm highlights",
+    ],
+  },
+  tropical: {
+    venues: [
+      "night beach club deck with DJ cabana, bamboo textures, and pool-edge dance zone",
+      "rooftop tropical lounge with palm silhouettes, rattan furniture, and cocktail bar",
+      "open-air jungle party terrace with woven fixtures and wood stage platform",
+    ],
+    practicals: [
+      "practical warm string lights and under-pool cyan bounce shaping the scene",
+      "torch and lantern spill mixed with moonlit edge highlights",
+      "bar practicals and uplights driving illumination, not flat ambient fill",
+    ],
+    traces: [
+      "wet deck footprints, water droplets on glass rails, and salt-haze diffusion",
+      "discarded flower petals, napkins, and lived-in service details near tables",
+      "humid air bloom around lights with subtle condensation on surfaces",
+    ],
+    camera: [
+      "nightlife travel-editorial wide shot with deep layered environment",
+      "28mm environmental frame with realistic humidity haze and natural contrast",
+      "event-photo composition with foreground depth cues and practical-light falloff",
+    ],
+  },
+};
+
+const NIGHTLIFE_BACKGROUND_ENERGY: Record<GenEnergy, string> = {
+  calm: "late-night cool-down energy, intimate but still alive",
+  vibe: "peak social-hour nightlife energy, magnetic atmosphere, premium crowd memory",
+  wild: "high-intensity after-midnight energy, explosive production feel, maximum club tension",
+};
+
 const NIGHTLIFE_ATTIRE_BY_GENDER = {
   man: {
     streetwear: "premium streetwear, statement bomber or leather jacket, layered textures, designer sneakers, bold accessories, runway-ready styling",
@@ -9949,6 +10054,8 @@ const generateBackground = async (opts: GenOpts = {}) => {
         tropical: 'warm sunset tones, palm silhouettes, rooftop ambience, summer nightlife',
         vintage: 'film grain disco, retro outfits, nostalgic glam lighting',
       }[styleForThisRun] ?? '';
+      const S = STYLE_DB[styleForThisRun];
+      const rng = mulberry32(s);
 
      
 
@@ -10067,18 +10174,61 @@ const generateBackground = async (opts: GenOpts = {}) => {
          }
 
       } else {
-         // [EMPTY LOGIC]
-         subjectPrompt = 'no people, empty architectural space, background texture only';
-         cameraSpec = 'wide angle architectural photography, shallow depth of field, soft bokeh, cinematic atmosphere';
-         compositionRule = `wide open negative space on the ${textSide} side`;
-         qualityBooster = '8k resolution, highly detailed, photorealistic, depth of field';
-         negativePrompt = '|| people, person, face, silhouette, crowd, man, woman, body, text, watermark';
+         const styleBg = NIGHTLIFE_BACKGROUND_TOKENS[styleForThisRun];
+         const venue = pickN(styleBg.venues, 1, rng)[0] ?? '';
+         const practicals = pickN(styleBg.practicals, 1, rng)[0] ?? '';
+         const traces = pickN(styleBg.traces, 2, rng).join(', ');
+         const bgCamera = pickN(styleBg.camera, 1, rng)[0] ?? '';
+         const bgMicro = pickN(S.micro, 2, rng).join(', ');
+         const negativeSpacePct = requestedFormat === 'story' ? 45 : 40;
+
+         subjectPrompt = [
+           'authentic nightlife environment only, no visible people',
+           venue,
+           practicals,
+           traces,
+           NIGHTLIFE_BACKGROUND_ENERGY[genEnergy],
+           'space feels recently occupied and culturally real, never staged or showroom-clean',
+         ]
+           .filter(Boolean)
+           .join(', ');
+
+         cameraSpec = [
+           bgCamera,
+           'event-documentary capture',
+           'physically plausible practical-light direction',
+           'realistic highlight roll-off and preserved shadow texture',
+         ]
+           .filter(Boolean)
+           .join(', ');
+
+         compositionRule =
+           requestedFormat === 'story'
+             ? `vertical 9:16 flyer composition, reserve at least ${negativeSpacePct}% clean negative space on the ${textSide} side for typography, strongest highlights and detail on the opposite side, layered depth from foreground to back wall`
+             : `square 1:1 flyer composition, reserve at least ${negativeSpacePct}% clean negative space on the ${textSide} side for typography, strongest highlights and detail on the opposite side, layered depth from foreground to back wall`;
+
+         qualityBooster = [
+           '8k resolution, highly detailed photorealistic nightlife production design',
+           'authentic materials and venue wear, subtle atmospheric haze, cinematic depth',
+           'rich blacks without crushed shadows, natural contrast, no plastic smoothness',
+           bgMicro,
+         ]
+           .filter(Boolean)
+           .join(', ');
+
+         negativePrompt = [
+           '|| people, person, face, silhouette, crowd, man, woman, body, text, watermark',
+           'daylight office, conference room, sterile architecture render, empty museum',
+           'hotel lobby, wedding hall, suburban living room, generic stock photo backdrop',
+           'flat ambient lighting, low-contrast fog wash, cartoon, CGI, 3d render',
+         ].join(', ');
       }
 
       // --- D. RANDOMIZED DETAILS ---
-      const S = STYLE_DB[styleForThisRun];
-      const rng = mulberry32(s);
       const details = pickN([...S.locations, ...S.lighting, ...S.micro], 4, rng).join(', ');
+      const nightlifeRealismDirective = allowPeople
+        ? 'authentic nightlife documentary realism, practical club lighting motivated by scene sources'
+        : 'true nightlife venue realism, culturally authentic club atmosphere, no stock-photo minimalism';
 
       // --- E. FINAL ASSEMBLY ---
       const referenceClause = referenceSample
@@ -10111,6 +10261,7 @@ const generateBackground = async (opts: GenOpts = {}) => {
         details,
         cameraSpec,
         compositionRule,
+        nightlifeRealismDirective,
         qualityBooster,
         referenceClause,
         negativePrompt
@@ -10125,8 +10276,8 @@ const generateBackground = async (opts: GenOpts = {}) => {
         provider,
         sampler: "DPM++ 2M Karras",
         // Lower scale for crowds allows for more natural "messiness"
-        cfgScale: (allowPeople && inferred?.type === 'crowd') ? 5.5 : 6.5,
-        steps: 30,
+        cfgScale: !allowPeople ? 7 : ((allowPeople && inferred?.type === 'crowd') ? 5.5 : 6.5),
+        steps: allowPeople ? 30 : 34,
         refiner: true,
         hiresFix: true,
         denoiseStrength: 0.3,
@@ -15885,9 +16036,15 @@ const undoAssetPosition = React.useCallback(() => {
       break;
   }
   setLastMoveStack((prev) => prev.slice(0, -1));
+  if (isMobileView && activeAssetControls) {
+    // Keep asset float open after undo to avoid control flicker/closure.
+    setFloatingAssetVisible(true);
+  }
 }, [
   lastMoveStack,
   format,
+  isMobileView,
+  activeAssetControls,
   updateIcon,
   updateEmoji,
   updatePortrait,
@@ -15917,6 +16074,10 @@ const mobileControlsTabs = (
     data-tour="mobile-tabs"
     className="lg:hidden flex items-center justify-center gap-2 px-4 py-2 bg-neutral-950/90 border-b border-neutral-800"
     onPointerDownCapture={(e) => {
+      const t = e.target as Element | null;
+      if (t?.closest?.('[data-mobile-float-lock="true"]')) {
+        return;
+      }
       if (floatingAssetRef.current && floatingAssetRef.current.contains(e.target as Node)) {
         return;
       }
@@ -15950,6 +16111,7 @@ const mobileControlsTabs = (
     <button
       type="button"
       onClick={undoAssetPosition}
+      data-mobile-float-lock="true"
       disabled={!lastMoveStack.length}
       className={`px-3 py-1 rounded text-[11px] font-semibold border ${
         lastMoveStack.length
@@ -19834,7 +19996,7 @@ style={{ top: STICKY_TOP }}
           <span className="text-neutral-300">•</span>
           <span>{activeAssetControls.label}</span>
           {activeAssetControls.showColor && (
-            <div className="ml-2 flex items-center gap-1">
+            <div className="ml-auto flex items-center gap-1">
               <span className="text-[10px] uppercase tracking-wider text-neutral-400">Color</span>
               <ColorDot
                 value={activeAssetControls.colorValue || "#ffffff"}
