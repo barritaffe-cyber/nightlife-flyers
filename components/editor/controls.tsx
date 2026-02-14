@@ -198,55 +198,61 @@ export function FontPicker({
   );
 }
 
-export function Chip({
-   active,
-   onClick,
-   children,
-   small,
-   disabled,
-   title,
-   className,
- }: {
-   active?: boolean;
-   onClick?: () => void;
-   children: React.ReactNode;
-   small?: boolean;
-   disabled?: boolean;
-   title?: string;
-   className?: string;
- }) {
-   const handleKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
-     if (disabled) return;
-     if (e.key === 'Enter' || e.key === ' ') {
-       e.preventDefault();
-       onClick?.();
-     }
-   };
- 
-   return (
-     <div
-       role="button"
-       tabIndex={disabled ? -1 : 0}
-       onClick={disabled ? undefined : onClick}
-       onKeyDown={handleKey}
-       title={title}
-       aria-pressed={!!active}
-       aria-disabled={disabled ? true : undefined}
-       className={clsx(
-         'inline-flex items-center justify-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 select-none',
-         small ? 'px-2 py-[3px] text-[11px]' : 'px-3 py-1 text-xs',
-         disabled
-           ? 'opacity-40 cursor-not-allowed bg-neutral-900/40 border-neutral-700 text-neutral-400'
-           : active
-           ? 'cursor-pointer bg-indigo-600 border-indigo-300 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.15)_inset,0_8px_16px_rgba(0,0,0,.35)]'
-           : 'cursor-pointer bg-neutral-900/70 border-neutral-700 hover:bg-neutral-800 text-neutral-200',
-         className
-       )}
-     >
-       {children}
-     </div>
-   );
-}
+export const Chip = React.memo(function Chip({
+  active,
+  onClick,
+  children,
+  small,
+  disabled,
+  title,
+  className,
+  deferHeavy = false,
+}: {
+  active?: boolean;
+  onClick?: () => void;
+  children: React.ReactNode;
+  small?: boolean;
+  disabled?: boolean;
+  title?: string;
+  className?: string;
+  deferHeavy?: boolean;
+}) {
+  const handlePress = React.useCallback(() => {
+    if (disabled || !onClick) return;
+    if (!deferHeavy) {
+      onClick();
+      return;
+    }
+    requestAnimationFrame(() => {
+      React.startTransition(() => {
+        onClick();
+      });
+    });
+  }, [deferHeavy, disabled, onClick]);
+
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={handlePress}
+      title={title}
+      aria-pressed={!!active}
+      className={clsx(
+        'inline-flex items-center justify-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 select-none',
+        small ? 'px-2 py-[3px] text-[11px]' : 'px-3 py-1 text-xs',
+        disabled
+          ? 'opacity-40 cursor-not-allowed bg-neutral-900/40 border-neutral-700 text-neutral-400'
+          : active
+          ? 'cursor-pointer bg-indigo-600 border-indigo-300 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.15)_inset,0_8px_16px_rgba(0,0,0,.35)]'
+          : 'cursor-pointer bg-neutral-900/70 border-neutral-700 hover:bg-neutral-800 text-neutral-200',
+        className
+      )}
+    >
+      {children}
+    </button>
+  );
+});
+Chip.displayName = 'Chip';
 
 export type SliderRowProps = {
   label: string;
