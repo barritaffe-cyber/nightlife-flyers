@@ -80,6 +80,40 @@ type GenPose = "dancing" | "hands-up" | "performance" | "dj";
 type GenShot = "full-body" | "three-quarter" | "waist-up" | "chest-up" | "close-up";
 type GenLighting = "strobe" | "softbox" | "backlit" | "flash";
 
+const DEFAULT_HEAD2_FX: TextFx = {
+  uppercase: false,
+  bold: true,
+  italic: false,
+  underline: false,
+  tracking: 0.01,
+  gradient: false,
+  gradFrom: '#ffffff',
+  gradTo: '#ffd166',
+  color: '#ffffff',
+  strokeWidth: 0,
+  strokeColor: '#000000',
+  shadow: 0.5,
+  glow: 0.15,
+  shadowEnabled: true,
+};
+
+const DEFAULT_TEXT_FX: TextFx = {
+  uppercase: true,
+  bold: true,
+  italic: false,
+  underline: false,
+  tracking: 0.02,
+  gradient: false,
+  gradFrom: '#ffffff',
+  gradTo: '#ffd166',
+  color: '#ffffff',
+  strokeWidth: 0,
+  strokeColor: '#000000',
+  shadow: 0.6,
+  glow: 0.2,
+  shadowEnabled: true,
+};
+
 // ——— Template variant resolver (square/story with fallbacks) ———
 function getVariant(tpl: TemplateSpec, fmt: Format) {
   const withFormats = tpl as TemplateWithFormats;
@@ -8578,22 +8612,7 @@ const commitAssetTags = React.useCallback(() => {
   const [head2Align, setHead2Align] = useState<Align>('right');
   const [head2LineHeight, setHead2LineHeight] = useState<number>(0.95);
   const [head2ColWidth, setHead2ColWidth] = useState<number>(56);
-  const [head2Fx, setHead2Fx] = useState<TextFx>({
-    uppercase: false,
-    bold: true,
-    italic: false,
-    underline: false,
-    tracking: 0.01,
-    gradient: false,
-    gradFrom: '#ffffff',
-    gradTo:   '#ffd166',
-    color:    '#ffffff',
-    strokeWidth: 0,
-    strokeColor: '#000000',
-    shadow: 0.5,
-    glow: 0.15,
-    shadowEnabled: true,
-  });
+  const [head2Fx, setHead2Fx] = useState<TextFx>({ ...DEFAULT_HEAD2_FX });
   
   
 
@@ -8697,27 +8716,7 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
   const [textColWidth, setTextColWidth] = useState(56);
   const [tallHeadline] = useState(true);
   const [textSide, setTextSide] = useState<TextSide>('left');
-  const [textFx, setTextFx] = useState<TextFx>({
-  uppercase: true,
-  bold: true,
-  italic: false,
-  underline: false,
-
-  tracking: 0.02,
-
-  // defaults you wanted
-  gradient: false,            // OFF on load
-  gradFrom: '#ffffff',
-  gradTo:   '#ffd166',
-  color:    '#ffffff',        // fill used when gradient is OFF
-
-  strokeWidth: 0,             // 0 on load
-  strokeColor: '#000000',
-
-  shadow: 0.6,
-  glow: 0.2,
-  shadowEnabled: true, // <— ADD THIS
-});
+  const [textFx, setTextFx] = useState<TextFx>({ ...DEFAULT_TEXT_FX });
 
 
   /* subtag */
@@ -14932,6 +14931,8 @@ const applyTemplate = React.useCallback<
     setHead2SizePx(merged.head2Size ?? 40);
     setHead2Family(merged.head2Family ?? 'Bebas Neue');
     setHead2Align((merged.head2Align as any) ?? 'center');
+    setHead2ColWidth((merged as any).head2ColWidth ?? 56);
+    setHead2Alpha(merged.head2Alpha ?? 1);
     
     setHeadManualPx(merged.headlineSize ?? 80);
     setHeadMaxPx(merged.headMaxPx ?? 120); 
@@ -14942,10 +14943,19 @@ const applyTemplate = React.useCallback<
     setDetails2Size(merged.details2Size ?? 12);
     setDetails2Family(merged.details2Family ?? 'Inter');
     setDetails2LineHeight(merged.details2LineHeight ?? 1.2);
+    setDetails2Uppercase(merged.details2Uppercase ?? false);
+    setDetails2Bold(merged.details2Bold ?? false);
+    setDetails2Italic(merged.details2Italic ?? false);
+    setDetails2Underline(merged.details2Underline ?? false);
 
     setDetailsAlign((merged.detailsAlign as any) ?? 'center');
     setBodySize(merged.detailsSize ?? 16);
     setBodyColor(merged.bodyColor ?? '#ffffff');
+    setBodyUppercase(merged.detailsUppercase ?? true);
+    setBodyBold(merged.detailsBold ?? true);
+    setBodyItalic(merged.detailsItalic ?? false);
+    setBodyUnderline(merged.detailsUnderline ?? false);
+    setBodyTracking(merged.detailsTracking ?? 0.04);
     
     setDetailsLineHeight(merged.detailsLineHeight ?? 1.2); 
 
@@ -14960,6 +14970,10 @@ const applyTemplate = React.useCallback<
     setSubtagBgColor(merged.subtagBgColor ?? '#000000');
     setSubtagTextColor(merged.subtagTextColor ?? '#ffffff');
     setSubtagAlpha(merged.subtagAlpha ?? 1);
+    setSubtagUppercase(merged.subtagUppercase ?? true);
+    setSubtagBold((merged as any).subtagBold ?? true);
+    setSubtagItalic(merged.subtagItalic ?? false);
+    setSubtagUnderline((merged as any).subtagUnderline ?? false);
 
     setHeadline2Enabled(fmt, merged.head2Enabled ?? false);
     setHead2LineHeight(merged.head2LineHeight ?? 0.95);
@@ -14971,11 +14985,6 @@ const applyTemplate = React.useCallback<
     const h2ShadowVal = merged.head2Fx?.shadow ?? merged.head2ShadowStrength ?? 1;
     setHead2ShadowStrength(h2ShadowVal);
 
-    // ✅ ADDED: Apply head2TrackEm to head2Fx state
-    if (merged.head2TrackEm !== undefined) {
-      setHead2Fx((prev) => ({ ...prev, tracking: merged.head2TrackEm! }));
-    }
-    
     // --- FLAGS ---
 
     // VIGNETTE SETTINGS
@@ -15011,9 +15020,11 @@ const applyTemplate = React.useCallback<
 
     // Rest of the flags
     setPortraitLocked(merged.portraitLocked ?? false);
+    setHeadBehindPortrait(merged.headBehindPortrait ?? false);
     setSubtagEnabled(fmt, merged.subtagEnabled ?? true);
     setHeadline2Enabled(fmt, merged.head2Enabled ?? false);
     setDetails2Enabled(fmt, merged.details2Enabled ?? false);
+    setLogoRotate(merged.logoRotate ?? 0);
 
     // background rotation fallback to prevent bleed across formats
     setBgRotate((merged as any).bgRotate ?? 0);
@@ -15132,32 +15143,33 @@ const applyTemplate = React.useCallback<
     }
 
    // --- COLORS/FX ---
-// 1. HEADLINE 1 (Main)
-    // Combine the nested 'textFx' object with any flat legacy keys
-    const incomingFx: any = merged.textFx || {}; // 👈 Added ': any' to fix the error
-    
-    setTextFx((prev) => ({
-      ...prev,
-      ...incomingFx, // Apply nested FX first
-      
-      // 👉 MANUALLY MAP THE FLAT KEYS:
-      // Priority: 1. textFx.italic -> 2. headlineItalic -> 3. Keep current
-      italic: incomingFx.italic ?? merged.headlineItalic ?? prev.italic,
-      
-      // Map other styles for safety
-      bold: incomingFx.bold ?? merged.headlineBold ?? prev.bold,
+    // 1. HEADLINE 1 (Main)
+    const incomingFx: any = merged.textFx || {};
+    setTextFx({
+      ...DEFAULT_TEXT_FX,
+      ...incomingFx,
+      italic: incomingFx.italic ?? merged.headlineItalic ?? DEFAULT_TEXT_FX.italic,
+      bold: incomingFx.bold ?? merged.headlineBold ?? DEFAULT_TEXT_FX.bold,
       uppercase:
         incomingFx.uppercase ??
         merged.headlineUppercase ??
         merged.headUppercase ??
-        prev.uppercase,
-      
-      // Fallback for color: textFx.color -> headColor -> white
-      color: incomingFx.color ?? merged.headColor ?? '#ffffff',
-      
-      // If no textFx was provided at all, safely turn off gradient so flat colors work
-      gradient: incomingFx.gradient ?? (merged.textFx ? prev.gradient : false),
-    }));
+        DEFAULT_TEXT_FX.uppercase,
+      color: incomingFx.color ?? merged.headColor ?? DEFAULT_TEXT_FX.color,
+      gradient: incomingFx.gradient ?? false,
+    });
+
+    // 1b. HEADLINE 2 FX (separate state from headline 1)
+    const incomingHead2Fx: any = merged.head2Fx || {};
+    setHead2Fx({
+      ...DEFAULT_HEAD2_FX,
+      ...incomingHead2Fx,
+      tracking:
+        merged.head2TrackEm ??
+        incomingHead2Fx.tracking ??
+        DEFAULT_HEAD2_FX.tracking,
+      gradient: incomingHead2Fx.gradient ?? false,
+    });
 
     // 2. HEADLINE 2 (Sub)
     setHead2Color(merged.head2Color ?? '#ffffff');
