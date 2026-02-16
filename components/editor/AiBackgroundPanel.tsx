@@ -31,11 +31,21 @@ type GenPose = 'dancing' | 'hands-up' | 'performance' | 'dj';
 type GenShot = 'full-body' | 'three-quarter' | 'waist-up' | 'chest-up' | 'close-up';
 type GenLighting = 'strobe' | 'softbox' | 'backlit' | 'flash';
 type GenProvider = 'auto' | 'nano' | 'openai' | 'venice';
- type GenSize = '1080' | '2160' | '3840';
+type GenSize = '1080' | '2160' | '3840';
 type GenerateBackgroundOpts = {
   prompt?: string;
   allowPeopleOverride?: boolean;
 };
+type ColorPaletteMood =
+  | 'neon-cyan-magenta'
+  | 'deep-red-black'
+  | 'gold-black-luxury'
+  | 'violet-blue-smoke'
+  | 'sunset-orange-purple'
+  | 'emerald-teal-night'
+  | 'mono-silver-black'
+  | 'warm-champagne-amber';
+type BriefGender = 'male' | 'female' | '';
 
 type Preset = {
   key: string;
@@ -153,16 +163,12 @@ function AiBackgroundPanel({
   const [helpOpen, setHelpOpen] = React.useState(false);
   const [briefEvent, setBriefEvent] = React.useState<string>('');
   const [briefMood, setBriefMood] = React.useState<string>('');
-  const [briefColors, setBriefColors] = React.useState<string>('');
+  const [briefColors, setBriefColors] = React.useState<ColorPaletteMood | ''>('');
   const [briefSubject, setBriefSubject] = React.useState<string>('');
+  const [briefSubjectGender, setBriefSubjectGender] = React.useState<BriefGender>('');
   const [briefMustInclude, setBriefMustInclude] = React.useState<string>('');
   const [briefError, setBriefError] = React.useState<string>('');
   const [showAdvanced, setShowAdvanced] = React.useState(false);
-  const briefReady =
-    briefEvent.trim().length > 0 &&
-    briefMood.trim().length > 0 &&
-    briefColors.trim().length > 0 &&
-    briefSubject.trim().length > 0;
 
   const subjectNeedsPeople = React.useMemo(
     () =>
@@ -172,12 +178,44 @@ function AiBackgroundPanel({
     [briefSubject]
   );
 
+  const briefReady =
+    briefEvent.trim().length > 0 &&
+    briefMood.trim().length > 0 &&
+    briefColors.trim().length > 0 &&
+    briefSubject.trim().length > 0 &&
+    (!subjectNeedsPeople || briefSubjectGender !== '');
+
+  React.useEffect(() => {
+    // Keep advanced subject controls in sync with the brief selection immediately.
+    setAllowPeople(subjectNeedsPeople);
+  }, [setAllowPeople, subjectNeedsPeople]);
+
+  React.useEffect(() => {
+    if (!subjectNeedsPeople) {
+      setBriefSubjectGender('');
+      setGenGender?.('any');
+      return;
+    }
+    if (briefSubjectGender === 'male') setGenGender?.('man');
+    if (briefSubjectGender === 'female') setGenGender?.('woman');
+  }, [briefSubjectGender, setGenGender, subjectNeedsPeople]);
+
   const briefPrompt = React.useMemo(() => {
     if (!briefReady) return '';
+    const paletteByMood: Record<ColorPaletteMood, string> = {
+      'neon-cyan-magenta': 'neon cyan and magenta with deep black contrast',
+      'deep-red-black': 'deep red, crimson accents, and rich black shadows',
+      'gold-black-luxury': 'gold highlights, warm black base, and luxe contrast',
+      'violet-blue-smoke': 'violet and electric blue with smoky shadows',
+      'sunset-orange-purple': 'sunset orange, hot pink, and purple nightlife gradients',
+      'emerald-teal-night': 'emerald and teal glow with dark night tones',
+      'mono-silver-black': 'monochrome silver, graphite, and black',
+      'warm-champagne-amber': 'champagne gold, amber warmth, and soft dark browns',
+    };
     const chunks = [
       `${briefEvent} background`,
       `${briefMood} tone`,
-      `color palette: ${briefColors}`,
+      `color palette: ${paletteByMood[briefColors as ColorPaletteMood] ?? briefColors}`,
       `subject: ${
         briefSubject === 'none'
           ? 'no visible people, clean environmental scene'
@@ -187,6 +225,9 @@ function AiBackgroundPanel({
               ? 'dance crowd with high energy'
               : 'single performer with stage presence'
       }`,
+      subjectNeedsPeople
+        ? `subject gender: ${briefSubjectGender === 'male' ? 'male' : 'female'}`
+        : '',
       'leave clean negative space for headline text',
       genPrompt.trim() ? `extra direction: ${genPrompt.trim()}` : '',
       briefMustInclude.trim()
@@ -196,11 +237,25 @@ function AiBackgroundPanel({
       .filter(Boolean)
       .join(', ');
     return chunks;
-  }, [briefColors, briefEvent, briefMood, briefMustInclude, briefReady, briefSubject, genPrompt]);
+  }, [
+    briefColors,
+    briefEvent,
+    briefMood,
+    briefMustInclude,
+    briefReady,
+    briefSubject,
+    briefSubjectGender,
+    genPrompt,
+    subjectNeedsPeople,
+  ]);
 
   const handleGenerate = React.useCallback(() => {
     if (!briefReady) {
-      setBriefError('Complete Event, Mood, Colors, and Subject before generating.');
+      setBriefError(
+        subjectNeedsPeople
+          ? 'Complete Event, Mood, Color Palette, Subject, and Subject Gender before generating.'
+          : 'Complete Event, Mood, Color Palette, and Subject before generating.'
+      );
       return;
     }
     setBriefError('');
@@ -294,13 +349,22 @@ function AiBackgroundPanel({
                </select>
              </label>
              <label className="text-[11px] text-neutral-300 sm:col-span-2">
-               Colors
-               <input
+               Color Palette Mood
+               <select
                  value={briefColors}
-                 onChange={(e) => setBriefColors(e.target.value)}
-                 placeholder="e.g. neon cyan + magenta, deep black shadows"
+                 onChange={(e) => setBriefColors(e.target.value as ColorPaletteMood)}
                  className="mt-1 w-full rounded bg-[#17171b] text-white border border-neutral-700 px-2 py-1.5 text-[12px]"
-               />
+               >
+                 <option value="">Select palette mood</option>
+                 <option value="neon-cyan-magenta">Neon Cyan + Magenta</option>
+                 <option value="deep-red-black">Deep Red + Black</option>
+                 <option value="gold-black-luxury">Gold + Black Luxury</option>
+                 <option value="violet-blue-smoke">Violet Blue Smoke</option>
+                 <option value="sunset-orange-purple">Sunset Orange + Purple</option>
+                 <option value="emerald-teal-night">Emerald Teal Night</option>
+                 <option value="mono-silver-black">Mono Silver + Black</option>
+                 <option value="warm-champagne-amber">Warm Champagne Amber</option>
+               </select>
              </label>
              <label className="text-[11px] text-neutral-300">
                Subject
@@ -317,6 +381,21 @@ function AiBackgroundPanel({
                </select>
              </label>
              <label className="text-[11px] text-neutral-300">
+               Subject Gender
+               <select
+                 value={briefSubjectGender}
+                 onChange={(e) => setBriefSubjectGender(e.target.value as BriefGender)}
+                 className="mt-1 w-full rounded bg-[#17171b] text-white border border-neutral-700 px-2 py-1.5 text-[12px]"
+                 disabled={!subjectNeedsPeople}
+               >
+                 <option value="">
+                   {subjectNeedsPeople ? 'Select male or female' : 'Not needed for no-people scenes'}
+                 </option>
+                 <option value="male">Male</option>
+                 <option value="female">Female</option>
+               </select>
+             </label>
+             <label className="text-[11px] text-neutral-300 sm:col-span-2">
                Must Include (optional)
                <input
                  value={briefMustInclude}
@@ -696,37 +775,37 @@ function AiBackgroundPanel({
           <div className="w-full max-w-2xl rounded-2xl border border-cyan-400/30 bg-[#0a0d12] shadow-[0_30px_80px_rgba(0,0,0,.6)] overflow-hidden">
             <div className="px-5 py-4 border-b border-white/10 bg-gradient-to-r from-cyan-500/20 to-fuchsia-500/10">
               <div className="text-sm uppercase tracking-[0.2em] text-cyan-300">AI Background Guide</div>
-              <div className="mt-1 text-lg font-semibold text-white">Generate cleaner backgrounds in 4 steps.</div>
+              <div className="mt-1 text-lg font-semibold text-white">Current flow: brief-first, then generate.</div>
             </div>
 
             <div className="p-5 space-y-4 text-sm text-neutral-200 max-h-[70vh] overflow-y-auto">
               <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-                <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">Step 1: Fill Idea Brief</div>
+                <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">Step 1: Pick A Style Direction</div>
                 <div className="text-neutral-300">
-                  Set Event, Mood, Colors, and Subject. These are required so generations stay aligned with your idea.
+                  Start with Urban, Neon, Tropical, or Vintage. This sets the overall visual lane.
                 </div>
               </div>
 
               <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-                <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">Step 2: Add Optional Notes</div>
+                <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">Step 2: Complete The Idea Brief (Required)</div>
                 <div className="text-neutral-300">
-                  Use Extra Direction and Must Include for small constraints only. Keep it short for cleaner output.
+                  Fill Event, Mood, Color Palette Mood, and Subject. If Subject includes people, choose Subject Gender (male/female). Generate stays disabled until these are set.
                 </div>
               </div>
 
               <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-                <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">Step 3: Generate</div>
+                <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">Step 3: Add Optional Direction + Generate</div>
                 <ul className="list-disc pl-5 space-y-1 text-neutral-300">
-                  <li>Use Batch 2 to compare options quickly.</li>
-                  <li>Subject choice automatically toggles People mode.</li>
-                  <li>Pick your favorite candidate and apply it.</li>
+                  <li>Use Extra Direction and Must Include only for small constraints.</li>
+                  <li>Subject choice auto-sets People mode (DJ/Crowd/Performer = on).</li>
+                  <li>Use Batch 1 or 2, then click a candidate thumbnail to apply.</li>
                 </ul>
               </div>
 
               <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
                 <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">Step 4: Use Advanced Only If Needed</div>
                 <div className="text-neutral-300">
-                  Open Advanced Controls for provider, size, diversity, clarity, presets, and deeper subject tuning.
+                  Advanced Controls holds provider, size, diversity, clarity, presets, and deeper subject profile tuning.
                 </div>
               </div>
             </div>

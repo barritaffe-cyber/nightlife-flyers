@@ -1141,7 +1141,7 @@ const NIGHTLIFE_SUBJECT_TOKENS = {
   energy: {
     calm: "cool, confident energy, subtle motion, poised charisma",
     vibe: "bold nightlife energy, playful expression, magnetic presence",
-    wild: "explosive nightlife energy, motion blur, euphoric expression, hands up",
+    wild: "explosive nightlife energy, motion blur, euphoric expression, arms raised silhouettes in crowd",
   },
   colorway: {
     neon: "neon palette, saturated highlights, electric color pops",
@@ -1164,11 +1164,11 @@ const NIGHTLIFE_SUBJECT_TOKENS = {
   },
   pose: {
     dancing:
-      "eyes closed, head tilted back, expressive dancing, mid-motion sway, soft motion blur on hands, blissful energy, natural hair movement, warm amber rim light, cool blue shadows, volumetric smoke, glittering bokeh, candid snapshot, unposed",
+      "eyes closed, head tilted back, expressive dancing, mid-motion sway, blissful energy, natural hair movement, warm amber rim light, cool blue shadows, volumetric smoke, glittering bokeh, candid snapshot, unposed",
     "hands-up":
-      "hands raised high, fingers spread, euphoric cheer, crowd-hype moment, harsh direct flash, strobe beams through haze, sweat glisten on skin, blurred crowd silhouettes, candid snapshot, unposed",
+      "arms raised high, euphoric cheer, crowd-hype moment, harsh direct flash, strobe beams through haze, sweat glisten on skin, blurred crowd silhouettes, candid snapshot, unposed",
     performance:
-      "waist-up performance shot, gripping a microphone, leaning forward with intense expressive energy, veins visible on hands, powerful posture, backlit spotlight halo through haze, cinematic anamorphic flare",
+      "waist-up performance shot, gripping a microphone, leaning forward with intense expressive energy, powerful posture, backlit spotlight halo through haze, cinematic anamorphic flare",
     dj: "dj pose, hand on headphones, other hand on mixer, concentrated vibe, rhythmic head nod, moody booth lighting, candid snapshot",
   },
   shot: {
@@ -10496,12 +10496,15 @@ const generateBackground = async (opts: GenOpts = {}) => {
             'natural facial proportions, symmetrical but imperfect face, realistic eyes with natural sclera',
             'normal pupil size, subtle facial expression, relaxed jaw, soft neutral gaze',
             'natural skin texture, visible pores, no plastic skin, no waxy skin',
+            'correct limb anatomy, anatomically correct hands when visible, five fingers per hand when visible',
             'soft diffused lighting on skin, natural shadows',
             'high detail but not over-sharpened, professional photography quality',
           ].join(', ')
         : '';
       const safeHumanNegatives =
-        'deformed face, distorted facial features, uncanny valley, creepy expression, over-sharpened face, exaggerated eyes, wide grin, asymmetrical eyes, mutated anatomy, doll-like skin';
+        'deformed face, distorted facial features, uncanny valley, creepy expression, over-sharpened face, exaggerated eyes, wide grin, asymmetrical eyes, mutated anatomy, doll-like skin, extra fingers, missing fingers, fused fingers, malformed hands, extra hands, extra arms';
+      const crowdSafetyNegatives =
+        'zombie, undead, horror, scary faces, sunken eyes, hollow eyes, corpse-like skin, grotesque smile, monster, mutant crowd, duplicated faces, extra heads, extra arms, extra hands, extra fingers, fused fingers';
       const nightlifeSubjectPrompt = allowPeople
         ? [
             NIGHTLIFE_SUBJECT_TOKENS.energy[genEnergy],
@@ -10530,16 +10533,23 @@ const generateBackground = async (opts: GenOpts = {}) => {
 
       if (allowPeople) {
          if (inferred?.type === 'crowd') {
-            subjectPrompt = inferred.prompt;
+            subjectPrompt = [
+              inferred.prompt,
+              'adult nightlife crowd only, natural human anatomy, friendly expressions, no horror vibe',
+              'near people can be clear; background people should be softly resolved and not facial close-ups',
+              'hands are secondary details, avoid prominent finger closeups',
+            ]
+              .filter(Boolean)
+              .join(', ');
 
-            cameraSpec = 'shot on 35mm film, direct flash photography, motion blur, fisheye lens distortion, candid snapshot, grainy texture';
+            cameraSpec = '35mm documentary nightlife photo, direct flash with soft falloff, slight handheld energy, subtle motion blur only on movement, no fisheye distortion';
 
             compositionRule = requestedFormat === 'story'
-               ? 'crowd filling the bottom half, massive ceiling height, negative space at top'
-               : 'immersive wide angle view from inside the crowd';
+               ? 'crowd in lower and mid frame, keep top area cleaner for text, natural spacing between people'
+               : 'immersive crowd scene with realistic depth layering, natural spacing between people';
 
-            qualityBooster = 'high contrast, vibrant colors, authentic look, raw vibe, chaotic energy';
-            negativePrompt = '|| static, posing, studio lighting, clean, smooth skin, 3d render, plastic, mannequin, boring, empty';
+            qualityBooster = 'high contrast, vibrant colors, authentic look, raw vibe, chaotic energy, realistic skin tones, believable faces, no waxy skin';
+            negativePrompt = `|| static, posing, studio lighting, clean showroom look, 3d render, plastic skin, mannequin look, boring empty floor, ${safeHumanNegatives}, ${crowdSafetyNegatives}`;
 
          } else if (inferred?.type === 'single') {
             subjectPrompt = inferred.prompt || 'cinematic portrait';
@@ -10560,7 +10570,7 @@ const generateBackground = async (opts: GenOpts = {}) => {
               "waist-up": {
                 camera:
                   "85mm lens, eye-level camera, camera 4-6 feet away, waist-up framing, flash with soft falloff",
-                composition: `waist-up shot, framed from waist to just above head, hands visible near waist or hips, subject anchored on the ${side} side, negative space on the ${textSide}`,
+                composition: `waist-up shot, framed from waist to just above head, subject anchored on the ${side} side, negative space on the ${textSide}`,
                 negatives: "full body, head-to-toe, close-up, tight crop, cropped arms",
               },
               "chest-up": {
@@ -10695,14 +10705,15 @@ const generateBackground = async (opts: GenOpts = {}) => {
       const finalPromptString = finalPromptList.filter(Boolean).join(', ');
 
       // --- F. EXECUTE ---
+      const isCrowdScene = allowPeople && inferred?.type === 'crowd';
       const body = {
         prompt: finalPromptString,
         format: requestedFormat,
         provider,
         sampler: "DPM++ 2M Karras",
         // Lower scale for crowds allows for more natural "messiness"
-        cfgScale: !allowPeople ? 7 : ((allowPeople && inferred?.type === 'crowd') ? 5.5 : 6.5),
-        steps: allowPeople ? 30 : 34,
+        cfgScale: !allowPeople ? 7 : (isCrowdScene ? 6.2 : 6.5),
+        steps: !allowPeople ? 34 : (isCrowdScene ? 34 : 30),
         refiner: true,
         hiresFix: true,
         denoiseStrength: 0.3,
@@ -10804,9 +10815,12 @@ const generateSubjectForBackground = async () => {
       'natural facial proportions, symmetrical but imperfect face, realistic eyes with natural sclera',
       'normal pupil size, subtle facial expression, relaxed jaw, soft neutral gaze',
       'natural skin texture, visible pores, no plastic skin, no waxy skin',
+      'correct limb anatomy, anatomically correct hands when visible, five fingers per hand when visible',
       'soft diffused lighting on skin, natural shadows',
       'high detail but not over-sharpened, professional photography quality',
     ].join(', ');
+    const handAnatomyNegatives =
+      'extra fingers, missing fingers, fused fingers, malformed hands, extra hands, extra arms, duplicated limbs';
 
     const subjectProvider =
       genProvider === "auto" ? "nano" : (genProvider as "nano" | "openai" | "venice");
@@ -10908,18 +10922,18 @@ const generateSubjectForBackground = async () => {
     > = {
       "full-body": {
         camera:
-          "full body, head-to-toe visible, full head included, 10–15% headroom above hair, hands visible, 35mm lens, eye-level, 10–15ft distance, no cropped limbs",
-        negatives: "cropped limbs, cut-off head, forehead cut, cropped hands, tight crop, missing head top, hairline cropped",
+          "full body, head-to-toe visible, full head included, 10–15% headroom above hair, 35mm lens, eye-level, 10–15ft distance, no cropped limbs",
+        negatives: "cropped limbs, cut-off head, forehead cut, tight crop, missing head top, hairline cropped",
       },
       "three-quarter": {
         camera:
-          "three-quarter shot (mid-thigh to top of head), 10–15% headroom, full head included, both hands fully visible, elbows in frame, 50mm lens, eye-level, 6–8ft distance",
-        negatives: "full body, waist-up, chest-up, close-up, tight crop, cropped limbs, cut-off head, forehead cut, cropped hands, missing elbows, knees cropped, hairline cropped",
+          "three-quarter shot (mid-thigh to top of head), 10–15% headroom, full head included, elbows in frame, 50mm lens, eye-level, 6–8ft distance",
+        negatives: "full body, waist-up, chest-up, close-up, tight crop, cropped limbs, cut-off head, forehead cut, missing elbows, knees cropped, hairline cropped",
       },
       "waist-up": {
         camera:
-          "waist-up, 70–85mm lens, eye-level, 4–6ft distance, 10–15% headroom, hands visible near waist or hips, full head included, full arms in frame",
-        negatives: "full body, cropped arms, tight crop, cut-off head, forehead cut, cropped hands, hairline cropped",
+          "waist-up, 70–85mm lens, eye-level, 4–6ft distance, 10–15% headroom, full head included, full arms in frame",
+        negatives: "full body, cropped arms, tight crop, cut-off head, forehead cut, hairline cropped",
       },
       "chest-up": {
         camera:
@@ -10940,7 +10954,7 @@ const generateSubjectForBackground = async () => {
       "corporate headshot, business attire, office setting, stock photo, brochure look, sterile lighting, clean studio backdrop";
 
     const framingSafety =
-      "framing safety: include full head and hairline with extra headroom, keep hands fully in frame, avoid any cropping at edges";
+      "framing safety: include full head and hairline with extra headroom, avoid edge cropping";
 
     const prompt = [
       "single subject on neutral dark backdrop for easy cutout",
@@ -10953,13 +10967,13 @@ const generateSubjectForBackground = async () => {
       !isVeniceSubject ? nightlifeBoost : "",
       shot.camera,
       framingSafety,
-      "extra headroom: leave margin above hair, full hair and forehead visible, include full hands in frame per pose",
+      "extra headroom: leave margin above hair, full hair and forehead visible",
       "shot on Sony A7R IV, 85mm prime lens, f/2, 1/160s, ISO 400, studio strobe key, RAW photo, subtle film grain, unretouched editorial look",
       "no background scene, isolate subject only",
       "high detail, cinematic nightlife styling",
       "sharp focus, crisp facial detail, no motion blur, no gaussian blur, no soft focus",
-      "entire head visible, hairline intact, fingers and hands visible, no crops, framing matches camera spec",
-      `negative prompt: suggestive content, skimpy clothing, exposed undergarments, revealing cuts, sheer fabric, explicit themes, blur, soft focus, airbrushed skin, plastic skin, doll-like, beauty filter, cgi, 3d render, illustration, cartoon, wax figure, low quality, extra people, ${shot.negatives}${!isVeniceSubject ? `, ${corporateNegatives}` : ""}`,
+      "entire head visible, hairline intact, no crops, framing matches camera spec, anatomically correct limbs",
+      `negative prompt: suggestive content, skimpy clothing, exposed undergarments, revealing cuts, sheer fabric, explicit themes, blur, soft focus, airbrushed skin, plastic skin, doll-like, beauty filter, cgi, 3d render, illustration, cartoon, wax figure, low quality, extra people, ${shot.negatives}, ${handAnatomyNegatives}${!isVeniceSubject ? `, ${corporateNegatives}` : ""}`,
       "Do not change ethnicity or skin tone. Do not default to caucasian features if profile is non-white. Keep stated gender.",
     ].join(", ");
 
