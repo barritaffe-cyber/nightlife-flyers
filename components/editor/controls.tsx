@@ -363,6 +363,7 @@ export const Collapsible: React.FC<{
    defaultOpen?: boolean;
    isOpen?: boolean;
    onToggle?: () => void;
+   deferToggle?: boolean;
    right?: React.ReactNode;
    children: React.ReactNode;
    titleClassName?: string;
@@ -373,6 +374,7 @@ export const Collapsible: React.FC<{
    defaultOpen = false,
    isOpen,
    onToggle,
+   deferToggle = true,
    right,
    children,
    titleClassName,
@@ -409,10 +411,22 @@ export const Collapsible: React.FC<{
      } catch {}
    }, [open, key]);
  
-   const handleToggle = () => {
+   const commitToggle = React.useCallback(() => {
      if (onToggle) onToggle();
      else setInternalOpen((o) => !o);
-   };
+   }, [onToggle]);
+
+   const handleToggle = React.useCallback(() => {
+     if (!deferToggle) {
+       commitToggle();
+       return;
+     }
+     requestAnimationFrame(() => {
+       React.startTransition(() => {
+         commitToggle();
+       });
+     });
+   }, [commitToggle, deferToggle]);
  
    return (
     <section className={clsx(panelClass, panelClassName)}>

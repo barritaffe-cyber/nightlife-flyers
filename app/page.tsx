@@ -534,6 +534,63 @@ const FLARE_LIBRARY = [
   { id: "cloud04", src: "/clouds/cloud04.png", name: "Cloud 04", tintMode: "colorize" },
 ] as const;
 
+const TAG_CANONICAL_MAP: Record<string, string> = {
+  "minimal": "Minimal",
+  "clean": "Minimal",
+  "white": "Minimal",
+  "urban": "Urban",
+  "city": "Urban",
+  "college": "Urban",
+  "ladies night": "Urban",
+  "party": "Festival",
+  "festival": "Festival",
+  "mardi gras": "Festival",
+  "edm": "Neon",
+  "neon": "Neon",
+  "hip-hop": "Hip-Hop",
+  "techno": "Techno",
+  "tropical": "Tropical",
+  "beach": "Tropical",
+  "sunset": "Tropical",
+  "latin": "Tropical",
+  "vintage": "Vintage",
+  "luxury": "Luxury",
+  "cocktails": "Lounge",
+  "lounge": "Lounge",
+  "r&b lounge": "Lounge",
+};
+
+const TAG_ORDER = [
+  "Minimal",
+  "Urban",
+  "Neon",
+  "Hip-Hop",
+  "Techno",
+  "Tropical",
+  "Lounge",
+  "Vintage",
+  "Luxury",
+  "Festival",
+] as const;
+const TAG_ORDER_SET = new Set<string>(TAG_ORDER);
+
+const STARTER_TEMPLATE_IDS = new Set<string>([
+  "edm_tunnel",
+  "edm_stage_co2",
+  "hiphop_lowrider",
+  "afrobeat_rooftop",
+]);
+
+function canonicalizeTemplateTags(tags: string[]): string[] {
+  const out = new Set<string>();
+  for (const raw of tags || []) {
+    const key = String(raw || "").trim().toLowerCase();
+    if (!key) continue;
+    out.add(TAG_CANONICAL_MAP[key] || raw);
+  }
+  return Array.from(out);
+}
+
 /* ===== TEMPLATE GALLERY (UPDATED) ===== */
 /* ===== TEMPLATE GALLERY (LOCAL, SELF-CONTAINED) ===== */
 const TemplateGalleryPanel = React.memo(({
@@ -554,19 +611,27 @@ const TemplateGalleryPanel = React.memo(({
   const [tag, setTag] = React.useState<string>('All');
   const [visibleCount, setVisibleCount] = React.useState(20);
 
+  const itemsWithTags = React.useMemo(
+    () => items.map((t) => ({ ...t, normalizedTags: canonicalizeTemplateTags(t.tags) })),
+    [items]
+  );
+
   const allTags = React.useMemo(() => {
     const s = new Set<string>();
-    items.forEach(t => t.tags.forEach(x => s.add(x)));
-    return ['All', ...Array.from(s).sort()];
-  }, [items]);
+    itemsWithTags.forEach((t) => t.normalizedTags.forEach((x) => s.add(x)));
+
+    const ordered = TAG_ORDER.filter((x) => s.has(x));
+    const extra = Array.from(s).filter((x) => !TAG_ORDER_SET.has(x)).sort();
+    return ["All", ...ordered, ...extra];
+  }, [itemsWithTags]);
 
   const filtered = React.useMemo(() => {
-    return items.filter((t) => {
-      const okTag = tag === 'All' || t.tags.includes(tag);
+    return itemsWithTags.filter((t) => {
+      const okTag = tag === "All" || t.normalizedTags.includes(tag);
       const okQ = !deferredQ || t.label.toLowerCase().includes(deferredQ.toLowerCase());
       return okTag && okQ;
     });
-  }, [items, deferredQ, tag]);
+  }, [itemsWithTags, deferredQ, tag]);
 
   React.useEffect(() => {
     setVisibleCount(20);
@@ -617,7 +682,7 @@ const TemplateGalleryPanel = React.memo(({
                 draggable={false}
               />
               <div className="absolute left-2 top-2 flex gap-1 flex-wrap">
-                {t.tags.slice(0, 2).map(x => (
+                {t.normalizedTags.slice(0, 2).map((x) => (
                   <span
                     key={x}
                     className="text-[10px] px-2 py-[2px] rounded-full bg-black/50 border border-white/10"
@@ -6095,6 +6160,10 @@ export default function Page() {
   // 3. THE FIXED HANDLER (Must be inside Page)
   // =========================================================
  const handleCreateCinematic = async () => {
+  if (isStarterPlan) {
+    alert("Starter plan has 0 AI generations. Upgrade to use Cinematic 3D.");
+    return;
+  }
   let ref = cinematicRefUrl;
   if (ref && typeof window !== "undefined" && ref.startsWith("/")) {
     ref = `${window.location.origin}${ref}`;
@@ -6228,6 +6297,10 @@ export default function Page() {
  // 1. Upload Handler (Auto-Cuts Subject)
 // 1. Upload Handler (Auto-Cuts Subject & Converts to Base64)
   const handleBlendUpload = async (type: 'subject' | 'bg', file: File) => {
+    if (isStarterPlan) {
+      alert("Starter plan disables uploads. Upgrade to unlock uploads and Magic Blend.");
+      return;
+    }
     // Helper: Read file to Base64
     const toBase64 = (f: File) => new Promise<string>((resolve) => {
       const r = new FileReader();
@@ -6330,6 +6403,10 @@ export default function Page() {
 
 // 2. The Magic Blend Action
   const handleMagicBlend = async () => {
+    if (isStarterPlan) {
+      alert("Starter plan has 0 AI generations. Upgrade to use Magic Blend.");
+      return;
+    }
     // Basic validation
     if (!blendSubject) {
       alert("Please upload a Subject image.");
@@ -7789,8 +7866,19 @@ useEffect(() => {
 
 // hidden file input to support "Upload background" from the strip
 const uplRef = useRef<HTMLInputElement>(null);
-const triggerUpload = () => bgRightRef.current?.click();
+const triggerUpload = () => {
+  if (isStarterPlan) {
+    alert("Starter plan disables uploads. Upgrade to unlock background uploads.");
+    return;
+  }
+  bgRightRef.current?.click();
+};
 const onOnboardUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  if (isStarterPlan) {
+    alert("Starter plan disables uploads. Upgrade to unlock background uploads.");
+    e.currentTarget.value = '';
+    return;
+  }
   const f = e.target.files?.[0];
   if (!f) return;
   const r = new FileReader();
@@ -7808,6 +7896,11 @@ const openBgPicker = () => bgRightRef.current?.click();
 
 // Handle a file chosen from the right panel
 const onRightBgFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  if (isStarterPlan) {
+    alert("Starter plan disables uploads. Upgrade to unlock background uploads.");
+    e.currentTarget.value = '';
+    return;
+  }
   const f = e.target.files?.[0];
   if (!f) return;
   const r = new FileReader();
@@ -7837,10 +7930,20 @@ const pendingLogoSlot = useRef<number | null>(null);
 // Portrait picker (for BG remover)
 
 function triggerUploadForSlot(i: number) {
+  if (isStarterPlan) {
+    alert("Starter plan disables logo uploads. Upgrade to unlock logos.");
+    return;
+  }
   pendingLogoSlot.current = i;
   logoSlotPickerRef.current?.click();
 }
 function onLogoSlotFile(e: React.ChangeEvent<HTMLInputElement>) {
+  if (isStarterPlan) {
+    alert("Starter plan disables uploads. Upgrade to unlock logo uploads.");
+    e.currentTarget.value = '';
+    pendingLogoSlot.current = null;
+    return;
+  }
   const file = e.target.files?.[0];
 
   // allow re-selecting the same file later
@@ -7894,10 +7997,27 @@ function placeLogoFromSlot(idx: number) {
 }
 
 
-const openPortraitPicker = () => portraitPickerRef.current?.click();
-const openLogoPicker = () => logoPickerRef.current?.click();
+const openPortraitPicker = () => {
+  if (isStarterPlan) {
+    alert("Starter plan disables portrait uploads. Upgrade to unlock portraits.");
+    return;
+  }
+  portraitPickerRef.current?.click();
+};
+const openLogoPicker = () => {
+  if (isStarterPlan) {
+    alert("Starter plan disables logo uploads. Upgrade to unlock logos.");
+    return;
+  }
+  logoPickerRef.current?.click();
+};
 
 const onLogoFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+  if (isStarterPlan) {
+    alert("Starter plan disables uploads. Upgrade to unlock logo uploads.");
+    e.currentTarget.value = '';
+    return;
+  }
   const files = e.target.files;
   if (files && files.length) addLogosFromFiles(files);
   e.currentTarget.value = ''; // allow re-selecting the same file later
@@ -7913,7 +8033,7 @@ useEffect(() => {
   };
   window.addEventListener('keydown', onKey);
   return () => window.removeEventListener('keydown', onKey);
-}, []);
+}, [openLogoPicker]);
 
 // ===== LOGO PICKER (END) =====
 
@@ -8262,11 +8382,21 @@ function persistLogoSlots(next: string[]) {
 }
 
 function triggerLogoUpload(i: number) {
+  if (isStarterPlan) {
+    alert("Starter plan disables logo uploads. Upgrade to unlock logos.");
+    return;
+  }
   pendingLogoSlot.current = i;
   logoSlotPickerRef.current?.click();
 }
 
 async function onLogoFile(e: React.ChangeEvent<HTMLInputElement>) {
+  if (isStarterPlan) {
+    alert("Starter plan disables logo uploads. Upgrade to unlock logos.");
+    e.currentTarget.value = '';
+    pendingLogoSlot.current = null;
+    return;
+  }
   const file = e.target.files?.[0];
   e.currentTarget.value = '';
   const idx = pendingLogoSlot.current;
@@ -8284,6 +8414,10 @@ async function onLogoFile(e: React.ChangeEvent<HTMLInputElement>) {
 
 
 function triggerPortraitSlotUpload(i: number) {
+  if (isStarterPlan) {
+    alert("Starter plan disables portrait uploads. Upgrade to unlock portraits.");
+    return;
+  }
   pendingPortraitSlot.current = i;
   portraitSlotPickerRef.current?.click();
 }
@@ -8291,6 +8425,12 @@ function triggerPortraitSlotUpload(i: number) {
 // ✅ FIX: Use local AI instead of server API
 // ✅ FIX: Keep track of the active slot while processing
 async function onPortraitSlotFile(e: React.ChangeEvent<HTMLInputElement>) {
+  if (isStarterPlan) {
+    alert("Starter plan disables portrait uploads. Upgrade to unlock portraits.");
+    e.currentTarget.value = '';
+    pendingPortraitSlot.current = null;
+    return;
+  }
   const file = e.target.files?.[0];
   e.currentTarget.value = ''; // allow re-selecting same file
   
@@ -9602,6 +9742,51 @@ const mobileFloatSticky = isMobileView && format === "story";
     return `${mb.toFixed(2)} MB`;
   }
 
+  async function addStarterWatermark(
+    sourceDataUrl: string,
+    format: "png" | "jpg"
+  ): Promise<string> {
+    return await new Promise<string>((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const w = img.naturalWidth || 1080;
+        const h = img.naturalHeight || 1080;
+        const c = document.createElement("canvas");
+        c.width = w;
+        c.height = h;
+        const ctx = c.getContext("2d");
+        if (!ctx) {
+          resolve(sourceDataUrl);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, w, h);
+
+        const label = "Nightlife Flyers Starter";
+        const fontSize = Math.max(14, Math.round(Math.min(w, h) * 0.028));
+        const padX = Math.round(fontSize * 0.7);
+        const padY = Math.round(fontSize * 0.45);
+        ctx.font = `700 ${fontSize}px Inter, Arial, sans-serif`;
+        const textW = Math.ceil(ctx.measureText(label).width);
+        const boxW = textW + padX * 2;
+        const boxH = fontSize + padY * 2;
+        const x = Math.max(0, w - boxW - Math.round(fontSize * 0.8));
+        const y = Math.max(0, h - boxH - Math.round(fontSize * 0.8));
+
+        ctx.fillStyle = "rgba(0,0,0,0.56)";
+        ctx.fillRect(x, y, boxW, boxH);
+        ctx.fillStyle = "rgba(255,255,255,0.95)";
+        ctx.textBaseline = "middle";
+        ctx.fillText(label, x + padX, y + boxH / 2);
+
+        resolve(
+          format === "jpg" ? c.toDataURL("image/jpeg", 0.95) : c.toDataURL("image/png")
+        );
+      };
+      img.onerror = () => resolve(sourceDataUrl);
+      img.src = sourceDataUrl;
+    });
+  }
+
   function downloadExport(dataUrl: string, format: 'png' | 'jpg') {
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
     const link = document.createElement('a');
@@ -9643,6 +9828,12 @@ const mobileFloatSticky = isMobileView && format === "story";
 
   const [subscriptionStatus, setSubscriptionStatus] = React.useState<"active" | "inactive">("inactive");
   const isPaid = subscriptionStatus === "active";
+  const isStarterPlan = !isPaid;
+  const starterTemplateGallery = React.useMemo(
+    () => TEMPLATE_GALLERY.filter((t) => STARTER_TEMPLATE_IDS.has(t.id)),
+    []
+  );
+  const visibleTemplateGallery = isStarterPlan ? starterTemplateGallery : TEMPLATE_GALLERY;
   const [accountOpen, setAccountOpen] = React.useState(false);
   const [accountLoading, setAccountLoading] = React.useState(false);
   const [accountError, setAccountError] = React.useState<string | null>(null);
@@ -9653,16 +9844,15 @@ const mobileFloatSticky = isMobileView && format === "story";
     periodEnd: string | null;
   } | null>(null);
 
+  React.useEffect(() => {
+    if (!isStarterPlan) return;
+    if (selectedPanel === "logo" || selectedPanel === "portrait" || selectedPanel === "dj_branding") {
+      setSelectedPanel("template");
+    }
+  }, [isStarterPlan, selectedPanel, setSelectedPanel]);
+
   const handleExportStart = React.useCallback(async () => {
     if (exportStatus === 'rendering') return;
-    if (!isPaid) {
-      try {
-        localStorage.setItem("nf:lastDesign", exportDesignJSON());
-        sessionStorage.setItem("nf:resume", "1");
-      } catch {}
-      window.location.href = "/pricing";
-      return;
-    }
     if (!artRef.current) {
       alert('Artboard not ready');
       return;
@@ -9777,6 +9967,11 @@ const mobileFloatSticky = isMobileView && format === "story";
         throw lastErr || new Error('Export failed');
       }
 
+      if (isStarterPlan) {
+        dataUrl = await addStarterWatermark(dataUrl, exportType);
+        sizeBytes = dataUrlBytes(dataUrl);
+      }
+
       setExportDataUrl(dataUrl);
       setExportMeta({
         width,
@@ -9810,7 +10005,7 @@ const mobileFloatSticky = isMobileView && format === "story";
       setExportProgressActive(false);
       setExportProgress(0);
     }
-  }, [artRef, canvasSize.h, canvasSize.w, exportScale, exportType, exportStatus, isPaid]);
+  }, [artRef, canvasSize.h, canvasSize.w, exportScale, exportType, exportStatus, isStarterPlan]);
 
   const prepareResumeForReturn = React.useCallback(() => {
     try {
@@ -9867,6 +10062,9 @@ const mobileFloatSticky = isMobileView && format === "story";
   }, [exportBlobUrl]);
 
   function storeRendered3DToLogoSlotsAndOpen(url: string) {
+  if (isStarterPlan) {
+    return;
+  }
   // 1) Put into the first empty logo slot (or overwrite slot 0 if all full)
   setLogoSlots((prev) => {
     const next = Array.isArray(prev) ? [...prev] : ["", "", "", ""];
@@ -10238,6 +10436,10 @@ const onBgFile = (e: React.ChangeEvent<HTMLInputElement>) => {
 
 // === FULL GENERATE BACKGROUND FUNCTION (Updated: Party People Subject) ===
 const generateBackground = async (opts: GenOpts = {}) => {
+  if (isStarterPlan) {
+    setGenError("Starter plan has 0 AI generations. Upgrade to generate backgrounds.");
+    return;
+  }
   // 1. Credit Check
   const willConsume = true;
   if (willConsume && credits <= 0) {
@@ -10578,6 +10780,10 @@ const generateBackground = async (opts: GenOpts = {}) => {
 };
 
 const generateSubjectForBackground = async () => {
+  if (isStarterPlan) {
+    setSubjectGenError("Starter plan has 0 AI generations. Upgrade to generate subjects.");
+    return;
+  }
   if (subjectGenLoading) return;
   if (!(bgUploadUrl || bgUrl)) {
     setSubjectGenError("Add a background first.");
@@ -11296,8 +11502,9 @@ const buildEdgeAwareLassoMask = (
       }
 
        /* === AUTOSAVE BEGIN (My Designs) — debounced & diffed === */
-    React.useEffect(() => {
+React.useEffect(() => {
   if (typeof window === 'undefined') return;
+  if (isStarterPlan) return;
   if (!autoSaveOn) return;
   if (isLiveDragging) return;   // 🔥 gate during drag
 
@@ -11322,7 +11529,7 @@ const buildEdgeAwareLassoMask = (
   return () => {
     if (saveDebounce.current) window.clearTimeout(saveDebounce.current);
   };
-}, [isLiveDragging, autoSaveOn, format]);
+}, [isLiveDragging, autoSaveOn, format, isStarterPlan]);
 
     /* === /AUTOSAVE END === */
 
@@ -12002,6 +12209,10 @@ async function alignActiveToCenter() {
 // === onUploadPortraitAndRemoveBg (drop-in once, between addIcon() and the return) ===
 // ✅ FIX: Use local AI instead of server API
 const onUploadPortraitAndRemoveBg = async (files: FileList | null) => {
+  if (isStarterPlan) {
+    alert("Starter plan disables portrait uploads. Upgrade to unlock portraits.");
+    return;
+  }
   const file = files?.[0];
   if (!file) return;
 
@@ -12634,6 +12845,10 @@ const IS_iconSlotPickerRef = useRef<HTMLInputElement>(null);
 const IS_pendingIconSlot = useRef<number | null>(null);
 
 function IS_triggerIconSlotUpload(i: number) {
+  if (isStarterPlan) {
+    alert("Starter plan disables uploads. Upgrade to unlock custom icon uploads.");
+    return;
+  }
   IS_pendingIconSlot.current = i;
   IS_iconSlotPickerRef.current?.click();
 }
@@ -12648,6 +12863,12 @@ function IS_fileToDataURL(file: File): Promise<string> {
 }
 
 async function IS_onIconSlotFile(e: React.ChangeEvent<HTMLInputElement>) {
+  if (isStarterPlan) {
+    alert("Starter plan disables uploads. Upgrade to unlock custom icon uploads.");
+    e.currentTarget.value = '';
+    IS_pendingIconSlot.current = null;
+    return;
+  }
   const file = e.target.files?.[0];
   e.currentTarget.value = '';
   const idx = IS_pendingIconSlot.current;
@@ -12702,6 +12923,10 @@ function IS_clearIconSlot(i: number) {
 
 // Save current design under a name (localStorage)
 function saveDesign(name: string) {
+  if (isStarterPlan) {
+    alert('Project save is not available on Starter.');
+    return;
+  }
   if (!name || !name.trim()) { alert('Please name the design'); return; }
   const data = exportDesignJSON();
   const thumb = captureThumb();
@@ -14223,6 +14448,10 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
 
   // ✅ 1. SAVE FUNCTION
   const handleSaveProject = async () => {
+    if (isStarterPlan) {
+      alert("Starter plan does not include project save/load. Upgrade to unlock project files.");
+      return;
+    }
     try {
       // Capture ALL State
       const rawData = {
@@ -14356,6 +14585,10 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
 
 // ✅ HANDLER: Upload from "Choose a Vibe" section
   const handleUploadDesignFromVibe = async (file: File) => {
+    if (isStarterPlan) {
+      alert("Starter plan does not include project save/load. Upgrade to unlock project files.");
+      return;
+    }
     try {
       const raw = await file.text();
       
@@ -15110,6 +15343,10 @@ const applyTemplate = React.useCallback<
 // Apply button handler (shared with Choose-a-Vibe)
 const applyTemplateFromGallery = React.useCallback(
   (tpl: TemplateSpec, opts?: { targetFormat?: Format }) => {
+    if (isStarterPlan && !STARTER_TEMPLATE_IDS.has(tpl.id)) {
+      alert("Starter includes 4 templates only. Upgrade to unlock the full template library.");
+      return;
+    }
     // 🔒 prevent panel auto-close during apply
     suppressCloseRef.current = true;
 
@@ -15143,7 +15380,7 @@ const applyTemplateFromGallery = React.useCallback(
       suppressCloseRef.current = false;
     }, 0);
   },
-  [applyTemplate, format]
+  [applyTemplate, format, isStarterPlan]
 );
 
 // Dev-only: if template definitions change in code while the app is open,
@@ -15424,10 +15661,10 @@ const handleTemplateSelect = React.useCallback(
     try {
       // ✅ Map each vibe to a real template index
       const vibeToTemplateId: Record<string, string> = {
-        club: "miami2",
-        tropical: "latin_street_tropical",
-        luxury: "atlanta",
-        urban: "hiphop_graffiti",
+        club: isStarterPlan ? "edm_stage_co2" : "miami2",
+        tropical: isStarterPlan ? "afrobeat_rooftop" : "latin_street_tropical",
+        luxury: isStarterPlan ? "edm_tunnel" : "atlanta",
+        urban: isStarterPlan ? "hiphop_lowrider" : "hiphop_graffiti",
       };
 
       const tplId = vibeToTemplateId[key] ?? TEMPLATE_GALLERY[0]?.id;
@@ -15460,7 +15697,7 @@ const handleTemplateSelect = React.useCallback(
 }, 1200);
 
   },
-  [applyTemplateFromGallery, format, scrollToArtboard]
+  [applyTemplateFromGallery, format, isStarterPlan, scrollToArtboard]
 );
 // === /STARTUP SCREEN ===
 
@@ -17745,10 +17982,17 @@ return (
                 <div className="text-[11px] text-neutral-400">
                   Tip: If the background doesn’t render, hit <b>Rerender</b> — data might be slow.
                 </div>
+                {isStarterPlan && (
+                  <div className="text-[11px] text-amber-300">
+                    Starter exports include a watermark.
+                  </div>
+                )}
               </div>
             ) : (
               <div className="text-[12px] text-neutral-300">
-                Your export is ready. Download the clean file below.
+                {isStarterPlan
+                  ? "Your export is ready. Starter plan includes a watermark."
+                  : "Your export is ready. Download the clean file below."}
               </div>
             )}
             <div className="flex flex-wrap items-center gap-2 pt-2">
@@ -17840,7 +18084,7 @@ style={{ top: STICKY_TOP }}
     }
   >
     <TemplateGalleryPanel
-      items={TEMPLATE_GALLERY}
+      items={visibleTemplateGallery}
       format={format}
       isOpen={selectedPanel === "template"}
       onToggle={() => {
@@ -18233,21 +18477,27 @@ style={{ top: STICKY_TOP }}
   <div className="p-3">
     <div className="text-[12px] font-semibold text-neutral-200 text-center">Cinematic Headline</div>
     <button
+      type="button"
+      disabled={isStarterPlan}
       onClick={() => {
         setTextStyle("headline", format, { align: "center" });
         setHeadAlign("center");
         setAlign("center");
         setCinematicModalOpen(true);
       }}
-      className="w-full mt-3 py-2 rounded-lg bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:from-indigo-500 hover:to-fuchsia-500 text-white text-xs font-bold shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95"
+      className="w-full mt-3 py-2 rounded-lg bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:from-indigo-500 hover:to-fuchsia-500 text-white text-xs font-bold shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <span>✨</span> Create Cinematic 3D
     </button>
+    {isStarterPlan && (
+      <div className="mt-2 text-[11px] text-amber-300">Cinematic 3D is available on paid plans.</div>
+    )}
   </div>
 </div>
 {/* UI: CINEMATIC HEADLINE (END) */}
 
 {/* UI: LOGO — MIRROR OF PORTRAIT LOGIC (BEGIN) */}
+{!isStarterPlan && (
 <div
   id="logo-panel"
   ref={logoPanelRef}
@@ -18583,6 +18833,7 @@ style={{ top: STICKY_TOP }}
 
   </Collapsible>
 </div>
+)}
 {/* UI: LOGO — MIRROR OF PORTRAIT LOGIC (END) */}
 
 {/* UI: HEADLINE (BEGIN) */}
@@ -20496,43 +20747,49 @@ style={{ top: STICKY_TOP }}
 >               
   {uiMode === "design" && mobileControlsOpen && mobileControlsTabs}
 
-<DjBrandingPanel
-  selectedPanel={selectedPanel}
-  setSelectedPanel={setSelectedPanel}
-  kit={djBrandKit}
-  onKitChange={persistDjBrandKit}
-  onSaveCurrentBrand={saveCurrentAsDjBrand}
-  onApplyMyBrand={() => applyDjBrandKit(djBrandKit)}
-  onApplyHandle={() => applyDjHandle(djBrandKit)}
-  onCaptureCurrentLogo={captureCurrentLogoToKit}
-  onCaptureCurrentFace={captureCurrentFaceToKit}
-  mainFaceOnCanvas={!!mainFaceOnCanvas}
-  mainFaceScale={Number(mainFaceOnCanvas?.scale ?? 0.85)}
-  mainFaceOpacity={Number(mainFaceOnCanvas?.opacity ?? 1)}
-  onMainFaceScaleChange={setMainFaceScale}
-  onMainFaceOpacityChange={setMainFaceOpacity}
-  onUseBrandLogo={(idx) => {
-    const src = djBrandKit.logos?.[idx];
-    if (!src) return;
-    setLogoUrl(src);
-    setLogoScale(1);
-    setMoveMode(true);
-    setDragging('logo');
-  }}
-  onUseBrandFace={() => {
-    if (!djBrandKit.primaryPortrait) return;
-    if (!isPngBrandFace(djBrandKit.primaryPortrait)) {
-      alert('Main Face must be a PNG file. Upload a PNG in DJ Branding > Main Face.');
-      return;
-    }
-    placeDjBrandFace(djBrandKit.primaryPortrait);
-  }}
-  onSnapLogoSafeZone={snapLogoToSafeZone}
-  currentLogoUrl={logoUrl}
-  currentPortraitUrl={portraitUrl}
-  headlineFonts={HEADLINE_FONTS_LOCAL}
-  bodyFonts={BODY_FONTS_LOCAL}
-/>
+{isStarterPlan ? (
+  <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-[12px] text-amber-100">
+    DJ/Artist Branding is available on paid plans.
+  </div>
+) : (
+  <DjBrandingPanel
+    selectedPanel={selectedPanel}
+    setSelectedPanel={setSelectedPanel}
+    kit={djBrandKit}
+    onKitChange={persistDjBrandKit}
+    onSaveCurrentBrand={saveCurrentAsDjBrand}
+    onApplyMyBrand={() => applyDjBrandKit(djBrandKit)}
+    onApplyHandle={() => applyDjHandle(djBrandKit)}
+    onCaptureCurrentLogo={captureCurrentLogoToKit}
+    onCaptureCurrentFace={captureCurrentFaceToKit}
+    mainFaceOnCanvas={!!mainFaceOnCanvas}
+    mainFaceScale={Number(mainFaceOnCanvas?.scale ?? 0.85)}
+    mainFaceOpacity={Number(mainFaceOnCanvas?.opacity ?? 1)}
+    onMainFaceScaleChange={setMainFaceScale}
+    onMainFaceOpacityChange={setMainFaceOpacity}
+    onUseBrandLogo={(idx) => {
+      const src = djBrandKit.logos?.[idx];
+      if (!src) return;
+      setLogoUrl(src);
+      setLogoScale(1);
+      setMoveMode(true);
+      setDragging('logo');
+    }}
+    onUseBrandFace={() => {
+      if (!djBrandKit.primaryPortrait) return;
+      if (!isPngBrandFace(djBrandKit.primaryPortrait)) {
+        alert('Main Face must be a PNG file. Upload a PNG in DJ Branding > Main Face.');
+        return;
+      }
+      placeDjBrandFace(djBrandKit.primaryPortrait);
+    }}
+    onSnapLogoSafeZone={snapLogoToSafeZone}
+    currentLogoUrl={logoUrl}
+    currentPortraitUrl={portraitUrl}
+    headlineFonts={HEADLINE_FONTS_LOCAL}
+    bodyFonts={BODY_FONTS_LOCAL}
+  />
+)}
 
 {/* UI: AI BACKGROUND (BEGIN) */}
 <div id="ai-background-panel" data-tour="background">
@@ -20695,6 +20952,7 @@ style={{ top: STICKY_TOP }}
 
 
   {/* UI: PORTRAITS — COMBINED SLOTS (BEGIN) */}
+  {!isStarterPlan && (
   <div
     className="relative rounded-xl transition"
 >
@@ -21176,6 +21434,7 @@ style={{ top: STICKY_TOP }}
     </div>
   </Collapsible>
   </div>
+  )}
   {/* UI: PORTRAITS — COMBINED SLOTS (END) */}
 
 {/* UI: PROJECT PORTABLE SAVE (BEGIN) */}
@@ -21200,39 +21459,55 @@ style={{ top: STICKY_TOP }}
             <button
               type="button"
               onClick={handleSaveProject}
-              className="w-full text-[12px] px-3 py-2 rounded bg-neutral-900/70 border border-neutral-700 hover:bg-neutral-800"
+              disabled={isStarterPlan}
+              className="w-full text-[12px] px-3 py-2 rounded bg-neutral-900/70 border border-neutral-700 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
               title="Save your current session as a portable file"
             >
               Save Design
             </button>
 
             {/* Load from a .json file */}
-            <label className="block w-full text-[12px] px-3 py-2 rounded bg-neutral-900/70 border border-neutral-700 hover:bg-neutral-800 cursor-pointer text-center">
-              Load Design
-              <input
-                type="file"
-                accept="application/json"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0]; if (!f) return;
-                  const r = new FileReader();
-                  r.onload = () => {
-                    try {
-                      importDesignJSON(String(r.result));
-                      alert('Loaded ✓');
-                    } catch {
-                      alert('Invalid or unsupported design file');
-                    }
-                  };
-                  r.readAsText(f);
-                  e.currentTarget.value = '';
-                }}
-              />
-            </label>
+            {isStarterPlan ? (
+              <button
+                type="button"
+                disabled
+                className="block w-full text-[12px] px-3 py-2 rounded bg-neutral-900/70 border border-neutral-700 text-center opacity-50 cursor-not-allowed"
+              >
+                Load Design
+              </button>
+            ) : (
+              <label className="block w-full text-[12px] px-3 py-2 rounded bg-neutral-900/70 border border-neutral-700 hover:bg-neutral-800 cursor-pointer text-center">
+                Load Design
+                <input
+                  type="file"
+                  accept="application/json"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0]; if (!f) return;
+                    const r = new FileReader();
+                    r.onload = () => {
+                      try {
+                        importDesignJSON(String(r.result));
+                        alert('Loaded ✓');
+                      } catch {
+                        alert('Invalid or unsupported design file');
+                      }
+                    };
+                    r.readAsText(f);
+                    e.currentTarget.value = '';
+                  }}
+                />
+              </label>
+            )}
 
             <div className="text-[11px] text-neutral-400">
               Saves as a single <code>.json</code> you can reopen later on any device.
             </div>
+            {isStarterPlan && (
+              <div className="text-[11px] text-amber-300">
+                Starter plan disables project save/load.
+              </div>
+            )}
             <div className="text-[11px] text-neutral-400">
               If save/load feels slow or storage is full, use <b>Clear Storage</b> to clean cached assets.
             </div>
