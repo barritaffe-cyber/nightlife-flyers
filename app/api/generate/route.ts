@@ -64,10 +64,7 @@ export async function GET(req: Request) {
   if (url.searchParams.get("diag") === "1") {
     const hasKey = !!(process.env.OPENAI_API_KEY || "").trim();
     const mock = process.env.USE_MOCK_IMAGES === "1" || !hasKey;
-    const preview = hasKey
-      ? `${process.env.OPENAI_API_KEY!.slice(0, 6)}...${process.env.OPENAI_API_KEY!.slice(-6)}`
-      : null;
-    return NextResponse.json({ ok: true, hasKey, mock, keyPreview: preview });
+    return NextResponse.json({ ok: true, hasKey, mock });
   }
   return NextResponse.json({ ok: true });
 }

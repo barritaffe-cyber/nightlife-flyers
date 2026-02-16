@@ -414,7 +414,7 @@ function BackgroundPanels({
                 </label>
               </div>
                 <div className="flex items-center gap-2 text-[11px]">
-                  <Chip small onClick={onGenerateSubject} disabled={isGeneratingSubject}>
+                  <Chip small deferHeavy onClick={onGenerateSubject} disabled={isGeneratingSubject}>
                     {isGeneratingSubject ? "Generating…" : "Generate subject"}
                   </Chip>
                   {hasSubject && <span className="text-neutral-500">Subject already on canvas</span>}

@@ -55,6 +55,22 @@ function MagicBlendPanel({
   isBlending,
 }: Props) {
   const [optionsOpen, setOptionsOpen] = React.useState(false);
+  const [helpOpen, setHelpOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!helpOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setHelpOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [helpOpen]);
+
   return (
     <div className="mt-3" id="magic-blend-panel" data-tour="magic-blend">
       <div
@@ -71,6 +87,17 @@ function MagicBlendPanel({
               : undefined
           }
           titleClassName={selectedPanel === 'magic_blend' ? 'text-amber-400' : ''}
+          right={
+            <button
+              type="button"
+              onClick={() => setHelpOpen(true)}
+              aria-label="Magic Blend help"
+              title="How Magic Blend works"
+              className="h-6 w-6 rounded-full border border-cyan-400/70 text-cyan-300 text-[11px] font-bold hover:bg-cyan-400/10"
+            >
+              ?
+            </button>
+          }
         >
           <div className="text-[11px] text-neutral-400 mb-4 leading-relaxed">
             Select a cinematic <b>Style</b>, upload your assets, and let AI fuse them into a unified photo.
@@ -408,6 +435,44 @@ function MagicBlendPanel({
                 disabled={isBlending || isCuttingOut || !blendSubject}
               >
                 Blend Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {helpOpen && (
+        <div className="fixed inset-0 z-[5100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-xl rounded-2xl border border-cyan-400/30 bg-[#0a0d12] shadow-[0_30px_80px_rgba(0,0,0,.6)] overflow-hidden">
+            <div className="px-5 py-4 border-b border-white/10 bg-gradient-to-r from-cyan-500/20 to-fuchsia-500/10">
+              <div className="text-sm uppercase tracking-[0.2em] text-cyan-300">Magic Blend Guide</div>
+              <div className="mt-1 text-lg font-semibold text-white">Blend subject + scene in seconds.</div>
+            </div>
+
+            <div className="p-5 space-y-3 text-sm text-neutral-200">
+              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">1. Pick Style</div>
+                <div className="text-neutral-300">Choose a cinematic style and background priority.</div>
+              </div>
+
+              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">2. Add Assets</div>
+                <div className="text-neutral-300">Upload a portrait and background, or capture your current canvas background.</div>
+              </div>
+
+              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">3. Blend</div>
+                <div className="text-neutral-300">Click Generate Blend, then use Blend Options only if you need finer control.</div>
+              </div>
+            </div>
+
+            <div className="px-5 py-4 border-t border-white/10 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setHelpOpen(false)}
+                className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-sm"
+              >
+                Close
               </button>
             </div>
           </div>

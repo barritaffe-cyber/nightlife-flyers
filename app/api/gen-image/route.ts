@@ -1,9 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
+import dns from "node:dns/promises";
+import net from "node:net";
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 type Format = 'square' | 'story';
+
+const REFERENCE_FETCH_TIMEOUT_MS = Number(process.env.GEN_IMAGE_REF_TIMEOUT_MS || 8000);
+const MAX_REFERENCE_BYTES = Number(process.env.GEN_IMAGE_REF_MAX_BYTES || 10 * 1024 * 1024);
+const MAX_REFERENCE_REDIRECTS = Number(process.env.GEN_IMAGE_REF_MAX_REDIRECTS || 3);
+const ALLOWED_REFERENCE_HOSTS = (process.env.GEN_IMAGE_ALLOWED_HOSTS || "")
+  .split(",")
+  .map((h) => h.trim().toLowerCase())
+  .filter(Boolean);
+
+const BLOCKED_REFERENCE_HOSTS = new Set([
+  "localhost",
+  "0.0.0.0",
+  "127.0.0.1",
+  "::1",
+  "169.254.169.254",
+  "metadata.google.internal",
+]);
 
 function sizeFor(format: Format) {
   // gpt-image-1 supports: 1024x1024, 1024x1536 (portrait), 1536x1024 (landscape), auto
@@ -16,22 +35,219 @@ const dataUrlToBuffer = (dataUrl: string) => {
   return Buffer.from(dataUrl.slice(commaIndex + 1), "base64");
 };
 
+function isHostAllowed(hostname: string): boolean {
+  if (ALLOWED_REFERENCE_HOSTS.length === 0) return true;
+  return ALLOWED_REFERENCE_HOSTS.some((entry) => {
+    if (entry.startsWith("*.")) {
+      const suffix = entry.slice(2);
+      return hostname === suffix || hostname.endsWith(`.${suffix}`);
+    }
+    return hostname === entry;
+  });
+}
+
+function isPrivateOrLocalIp(address: string): boolean {
+  const family = net.isIP(address);
+  if (family === 4) {
+    const parts = address.split(".").map((x) => Number(x));
+    if (parts.length !== 4 || parts.some((n) => Number.isNaN(n) || n < 0 || n > 255)) {
+      return true;
+    }
+    const [a, b] = parts;
+    if (a === 0 || a === 10 || a === 127) return true;
+    if (a === 169 && b === 254) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    return false;
+  }
+  if (family === 6) {
+    const v6 = address.toLowerCase();
+    if (v6 === "::1" || v6 === "::") return true;
+    if (v6.startsWith("fc") || v6.startsWith("fd")) return true; // fc00::/7
+    if (
+      v6.startsWith("fe8") ||
+      v6.startsWith("fe9") ||
+      v6.startsWith("fea") ||
+      v6.startsWith("feb")
+    ) {
+      return true; // fe80::/10
+    }
+    return false;
+  }
+  return false;
+}
+
+async function assertSafeRemoteUrl(target: URL): Promise<void> {
+  if (target.protocol !== "http:" && target.protocol !== "https:") {
+    throw new Error("Only http/https URLs are allowed");
+  }
+  if (target.username || target.password) {
+    throw new Error("URL credentials are not allowed");
+  }
+
+  const host = target.hostname.toLowerCase();
+  if (BLOCKED_REFERENCE_HOSTS.has(host)) {
+    throw new Error("Blocked host");
+  }
+  if (!isHostAllowed(host)) {
+    throw new Error("Host not allowed");
+  }
+  if (isPrivateOrLocalIp(host)) {
+    throw new Error("Private or local IP is not allowed");
+  }
+
+  const resolved = await dns.lookup(host, { all: true, verbatim: true });
+  if (!resolved.length) {
+    throw new Error("Unable to resolve host");
+  }
+  for (const addr of resolved) {
+    if (isPrivateOrLocalIp(addr.address)) {
+      throw new Error("Resolved to private/local IP");
+    }
+  }
+}
+
+function isRedirectStatus(code: number): boolean {
+  return code === 301 || code === 302 || code === 303 || code === 307 || code === 308;
+}
+
+function isSupportedImageContentType(raw: string): boolean {
+  const base = raw.split(";")[0].trim().toLowerCase();
+  return (
+    base.startsWith("image/") ||
+    base === "application/octet-stream" ||
+    base === "binary/octet-stream"
+  );
+}
+
+async function readBodyWithLimit(res: Response, maxBytes: number): Promise<Uint8Array> {
+  const reader = res.body?.getReader();
+  if (!reader) {
+    const buf = new Uint8Array(await res.arrayBuffer());
+    if (buf.byteLength > maxBytes) throw new Error("Response too large");
+    return buf;
+  }
+
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      try {
+        await reader.cancel();
+      } catch {}
+      throw new Error("Response too large");
+    }
+    chunks.push(value);
+  }
+
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const c of chunks) {
+    out.set(c, offset);
+    offset += c.byteLength;
+  }
+  return out;
+}
+
+async function fetchWithValidatedRedirects(
+  input: URL,
+  signal: AbortSignal,
+  opts?: { skipRemoteChecks?: boolean }
+): Promise<Response> {
+  let current = input;
+  for (let i = 0; i <= MAX_REFERENCE_REDIRECTS; i += 1) {
+    const res = await fetch(current.toString(), {
+      cache: "no-store",
+      redirect: "manual",
+      signal,
+      headers: {
+        Accept: "image/*,*/*;q=0.8",
+        "User-Agent": "nightlife-gen-image/1.0",
+      },
+    });
+
+    if (!isRedirectStatus(res.status)) {
+      return res;
+    }
+
+    const location = res.headers.get("location");
+    if (!location) {
+      throw new Error("Redirect target missing");
+    }
+    const next = new URL(location, current);
+    const isSameOrigin = next.origin === input.origin;
+    if (!opts?.skipRemoteChecks || !isSameOrigin) {
+      await assertSafeRemoteUrl(next);
+    }
+    current = next;
+  }
+
+  throw new Error("Too many redirects");
+}
+
+async function fetchImageBuffer(
+  target: URL,
+  opts?: { skipRemoteChecks?: boolean }
+): Promise<Buffer> {
+  if (!opts?.skipRemoteChecks) {
+    await assertSafeRemoteUrl(target);
+  }
+  const abortController = new AbortController();
+  const timeout = setTimeout(() => abortController.abort(), REFERENCE_FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetchWithValidatedRedirects(target, abortController.signal, opts);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch image URL: ${res.status} ${res.statusText}`);
+    }
+
+    const contentTypeRaw = res.headers.get("content-type") || "";
+    if (contentTypeRaw && !isSupportedImageContentType(contentTypeRaw)) {
+      throw new Error(`Unsupported content type: ${contentTypeRaw}`);
+    }
+
+    const bytes = await readBodyWithLimit(res, MAX_REFERENCE_BYTES);
+    return Buffer.from(bytes);
+  } catch (err) {
+    if ((err as Error)?.name === "AbortError") {
+      throw new Error("Reference image fetch timed out");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function toBufferFromAnyImage(input: string, origin: string): Promise<Buffer> {
   if (typeof input !== "string") throw new Error("Invalid image input");
-  if (input.startsWith("data:image/")) return dataUrlToBuffer(input);
-  if (input.startsWith("/")) {
-    const res = await fetch(`${origin}${input}`);
-    if (!res.ok) {
-      throw new Error(`Failed to fetch image URL: ${res.status} ${res.statusText}`);
+  if (input.startsWith("data:image/")) {
+    const buf = dataUrlToBuffer(input);
+    if (buf.byteLength > MAX_REFERENCE_BYTES) {
+      throw new Error("Reference image too large");
     }
-    return Buffer.from(await res.arrayBuffer());
+    return buf;
   }
-  if (input.startsWith("http")) {
-    const res = await fetch(input);
-    if (!res.ok) {
-      throw new Error(`Failed to fetch image URL: ${res.status} ${res.statusText}`);
+  if (input.startsWith("/")) {
+    if (input.startsWith("//")) {
+      throw new Error("Protocol-relative URLs are not allowed");
     }
-    return Buffer.from(await res.arrayBuffer());
+    if (input.startsWith("/api/")) {
+      throw new Error("Relative /api URLs are not allowed as image references");
+    }
+    const localUrl = new URL(input, origin);
+    return fetchImageBuffer(localUrl, { skipRemoteChecks: true });
+  }
+  if (input.startsWith("http://") || input.startsWith("https://")) {
+    let remoteUrl: URL;
+    try {
+      remoteUrl = new URL(input);
+    } catch {
+      throw new Error("Invalid image URL");
+    }
+    return fetchImageBuffer(remoteUrl);
   }
   throw new Error("Invalid image input. Expected data URL or http(s) URL.");
 }
@@ -167,9 +383,7 @@ function sanitizeImaginePrompt(prompt: string, max: number) {
 
 async function genWithImagine(
   prompt: string,
-  format: Format,
-  reference?: string,
-  origin?: string
+  format: Format
 ) {
   const key = process.env.IMAGINE_API_KEY || process.env.VENICE_API_KEY;
   if (!key) {
@@ -294,8 +508,7 @@ export async function POST(req: NextRequest) {
 
     // For now, “nano” == fast OpenAI call. Swap this later for your local / alt service.
     if (provider === 'venice' || provider === 'imagine') {
-      const origin = new URL(req.url).origin;
-      const r = await genWithImagine(prompt, format, reference, origin);
+      const r = await genWithImagine(prompt, format);
       if (!r.ok) {
         return NextResponse.json({ error: r.error, placeholder: r.placeholder }, { status: 200 });
       }

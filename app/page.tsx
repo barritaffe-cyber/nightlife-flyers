@@ -32,6 +32,16 @@ import type { CleanupParams } from "../lib/cleanupCutoutUrl";
 import { removeGreenScreen } from "./chromaKey";
 import { Collapsible, Chip, Stepper, ColorDot, SliderRow } from "../components/editor/controls";
 import { FontPicker } from "../components/editor/FontPicker";
+import DjBrandingPanel from "../components/editor/DjBrandingPanel";
+import {
+  createDefaultDjBrandKit,
+  getSafeZonePosition,
+  normalizeDjHandle,
+  readDjBrandKit,
+  writeDjBrandKit,
+  type DJBrandKit,
+  type SafeZone,
+} from "../lib/djBrandKit";
 
 const AiBackgroundPanel = dynamic(() => import("../components/editor/AiBackgroundPanel"), {
   ssr: false,
@@ -624,8 +634,7 @@ const TemplateGalleryPanel = React.memo(({
                 type="button"
                 className="text-[12px] px-2 py-1 rounded-md border border-indigo-400/40 bg-indigo-600/20 hover:bg-indigo-600/30 focus-ring"
                 onClick={() => {
-                  const fullTpl = TEMPLATE_GALLERY.find(tt => tt.id === t.id);
-                  if (fullTpl) onApply(fullTpl, { targetFormat: format });
+                  onApply(t, { targetFormat: format });
                 }}
               >
                 Apply
@@ -6736,7 +6745,12 @@ const selectedPortrait = React.useMemo(() => {
 const selectedPortraitIsAsset = React.useMemo(() => {
   if (!selectedPortrait) return false;
   const id = String((selectedPortrait as any).id || "");
-  return !!(selectedPortrait as any).isFlare || !!(selectedPortrait as any).isSticker || id.startsWith("logo_");
+  return (
+    !!(selectedPortrait as any).isFlare ||
+    !!(selectedPortrait as any).isSticker ||
+    !!(selectedPortrait as any).isBrandFace ||
+    id.startsWith("logo_")
+  );
 }, [selectedPortrait]);
 
 // ✅ SINGLE source-of-truth slider sync on portrait switch
@@ -8646,19 +8660,6 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
     // "Cinematic Noir",
     // "Cinematic Serif Pro",
   ];
-
-
-
-  // Auto-apply Brand Kit once on mount so every new flyer starts branded
- // Auto-apply Brand Kit only after hydration
-  useEffect(() => {
-  if (!hydrated) return;
-  const kit = readBrandKit();
-  if (kit) applyBrandKit(kit);
-}, [hydrated]);
-
-
-
   /* body styles */
   const [bodySize, setBodySize] = useState<number>(16);
   const [bodyColor, setBodyColor] = useState('#FFFFFF');
@@ -8732,6 +8733,229 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
   const [subtagUnderline, setSubtagUnderline] = useState(false);
   // NEW: subtag size (px)
   const [subtagSize, setSubtagSize] = useState<number>(20);
+
+  const [djBrandKit, setDjBrandKit] = useState<DJBrandKit>(() =>
+    createDefaultDjBrandKit()
+  );
+
+  const persistDjBrandKit = React.useCallback((next: DJBrandKit) => {
+    setDjBrandKit(next);
+    writeDjBrandKit(next);
+  }, []);
+
+  const snapLogoToSafeZone = React.useCallback((zone: SafeZone) => {
+    const pos = getSafeZonePosition(zone);
+    setLogoX(pos.x);
+    setLogoY(pos.y);
+  }, []);
+
+  const applyDjHandle = React.useCallback(
+    (kit: DJBrandKit) => {
+      const handle = normalizeDjHandle(kit.social.handle);
+      if (!handle) return;
+      setSubtagEnabled(format, true);
+      setSubtag(handle);
+      if (kit.social.alwaysShowBottomRight) {
+        setSubtagAlign('right');
+        setSubtagX(90);
+        setSubtagY(95);
+      }
+    },
+    [format, setSubtagEnabled]
+  );
+
+  const isPngBrandFace = React.useCallback((src: string) => {
+    const value = String(src || '').trim().toLowerCase();
+    if (!value) return false;
+    if (value.startsWith('data:image/png;')) return true;
+    return /\.png(?:$|[?#])/.test(value);
+  }, []);
+
+  const placeDjBrandFace = React.useCallback(
+    (src: string) => {
+      const value = String(src || '').trim();
+      if (!value) return;
+      const id = `djface_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      const brandFace = {
+        id,
+        url: value,
+        x: 50,
+        y: 50,
+        scale: 0.85,
+        locked: false,
+        isSticker: false,
+        isFlare: false,
+        isBrandFace: true,
+        cleanup: DEFAULT_CLEANUP,
+        cleanupBaseUrl: value,
+      };
+      const current = portraits?.[format] || [];
+      const withoutBrandFace = current.filter((p: any) => !(p as any).isBrandFace);
+      setPortraits(format, [...withoutBrandFace, brandFace]);
+      setSelectedPortraitId(null);
+      setPortraitUrl(value);
+      setPortraitLocked(false);
+      setDragging(null);
+      if (selectedPanel === 'portrait') setSelectedPanel(null);
+    },
+    [
+      format,
+      portraits,
+      setPortraits,
+      setDragging,
+      setSelectedPanel,
+      setSelectedPortraitId,
+      selectedPanel,
+    ]
+  );
+
+  const mainFaceOnCanvas = React.useMemo(() => {
+    const list = portraits?.[format] || [];
+    return (list.find((p: any) => !!(p as any).isBrandFace) as any) || null;
+  }, [format, portraits]);
+
+  const setMainFaceScale = React.useCallback(
+    (next: number) => {
+      if (!mainFaceOnCanvas?.id) return;
+      updatePortrait(format, mainFaceOnCanvas.id, {
+        scale: Math.max(0.1, Math.min(5, Number(next) || 1)),
+      });
+    },
+    [format, mainFaceOnCanvas, updatePortrait]
+  );
+
+  const setMainFaceOpacity = React.useCallback(
+    (next: number) => {
+      if (!mainFaceOnCanvas?.id) return;
+      updatePortrait(format, mainFaceOnCanvas.id, {
+        opacity: Math.max(0, Math.min(1, Number(next) || 1)),
+      });
+    },
+    [format, mainFaceOnCanvas, updatePortrait]
+  );
+
+  const applyDjBrandKit = React.useCallback(
+    (kit: DJBrandKit) => {
+      if (!kit) return;
+
+      if (kit.preferredFonts.headline) setHeadlineFamily(kit.preferredFonts.headline);
+      if (kit.preferredFonts.body) {
+        setBodyFamily(kit.preferredFonts.body);
+        setDetailsFamily(kit.preferredFonts.body);
+      }
+
+      setTextFx((prev) => {
+        const main = kit.brandPalette.main || prev.color;
+        const glow = kit.brandPalette.glow || prev.gradTo;
+        const safeGlowStrength = Math.min(Math.max(prev.glow || 0.18, 0.12), 0.22);
+        return {
+          ...prev,
+          color: main,
+          gradFrom: main || prev.gradFrom,
+          gradTo: glow,
+          // Apply brand glow color by enabling gradient, but keep effects soft.
+          gradient: true,
+          strokeWidth: 0,
+          glow: safeGlowStrength,
+          shadowEnabled: false,
+        };
+      });
+      setHeadShadow(false);
+      setSubtagEnabled(format, true);
+      setSubtagBgColor(kit.brandPalette.accent || subtagBgColor);
+      setSubtagTextColor('#ffffff');
+
+      const primaryLogo = (kit.logos || []).find((x) => typeof x === 'string' && x);
+      if (primaryLogo) {
+        setLogoUrl(primaryLogo);
+        setLogoScale(1);
+        if (kit.social.alwaysShowBottomRight) {
+          const pos = getSafeZonePosition('bottom-right');
+          setLogoX(pos.x);
+          setLogoY(pos.y);
+        }
+      }
+
+      if (kit.primaryPortrait) {
+        if (isPngBrandFace(kit.primaryPortrait)) {
+          placeDjBrandFace(kit.primaryPortrait);
+        } else {
+          alert('Main Face must be a PNG file. Upload a PNG in DJ Branding > Main Face.');
+        }
+      }
+
+      applyDjHandle(kit);
+    },
+    [
+      applyDjHandle,
+      format,
+      isPngBrandFace,
+      placeDjBrandFace,
+      setHeadShadow,
+      setSubtagEnabled,
+      subtagBgColor,
+    ]
+  );
+
+  const saveCurrentAsDjBrand = React.useCallback(() => {
+    const dedupedLogos = Array.from(
+      new Set(
+        [logoUrl, ...logoSlots, ...(djBrandKit.logos || [])].filter(
+          (x): x is string => typeof x === 'string' && !!x
+        )
+      )
+    ).slice(0, 4);
+    while (dedupedLogos.length < 4) dedupedLogos.push('');
+
+    const next: DJBrandKit = {
+      ...djBrandKit,
+      logos: dedupedLogos,
+      primaryPortrait: portraitUrl || djBrandKit.primaryPortrait || null,
+      preferredFonts: {
+        headline: headlineFamily,
+        body: detailsFamily || bodyFamily,
+      },
+      brandPalette: {
+        main: textFx.color || '#ffffff',
+        accent: subtagBgColor || '#E23B2E',
+        glow: textFx.gradTo || '#00FFF0',
+      },
+    };
+    persistDjBrandKit(next);
+  }, [
+    bodyFamily,
+    detailsFamily,
+    djBrandKit,
+    headlineFamily,
+    logoSlots,
+    logoUrl,
+    persistDjBrandKit,
+    portraitUrl,
+    subtagBgColor,
+    textFx.color,
+    textFx.gradTo,
+  ]);
+
+  const captureCurrentLogoToKit = React.useCallback(() => {
+    if (!logoUrl) return;
+    const nextLogos = [...(djBrandKit.logos || ['', '', '', ''])];
+    while (nextLogos.length < 4) nextLogos.push('');
+    nextLogos[0] = logoUrl;
+    persistDjBrandKit({ ...djBrandKit, logos: nextLogos.slice(0, 4) });
+  }, [djBrandKit, logoUrl, persistDjBrandKit]);
+
+  const captureCurrentFaceToKit = React.useCallback(() => {
+    if (!portraitUrl) return;
+    persistDjBrandKit({ ...djBrandKit, primaryPortrait: portraitUrl });
+  }, [djBrandKit, persistDjBrandKit, portraitUrl]);
+
+  React.useEffect(() => {
+    if (!hydrated) return;
+    const saved = readDjBrandKit();
+    if (saved) {
+      setDjBrandKit(saved);
+    }
+  }, [hydrated]);
 
  // === AUTO-LOAD LOCAL FONTS WHEN SELECTED =============================
 useEffect(() => { ensureFontLoaded(bodyFamily); }, [bodyFamily]);
@@ -9952,7 +10176,7 @@ useEffect(() => {
 
 
   // GOD MODE controls
-const [genCount, setGenCount] = useState<1 | 2 | 4>(1);          // how many images to render
+const [genCount, setGenCount] = useState<1 | 2>(1);          // how many images to render
 const [genSize, setGenSize]   = useState<'1080' | '2160' | '3840'>('2160'); // render resolution hint
 const [genCandidates, setGenCandidates] = useState<string[]>([]); // b64/url of batch results
 
@@ -11222,112 +11446,6 @@ const buildEdgeAwareLassoMask = (
       // ensure no leftover rotation from a preset
       setHeadRotate(0);
     }
-
-
-    // ===== BRAND KIT LITE (BEGIN) =====
-    type BrandKit = {
-      v: 1;
-      fonts: {
-        headlineFamily: string;
-        detailsFamily: string;
-        bodyFamily: string;
-        venueFamily: string;
-        subtagFamily: string;
-      };
-      colors: {
-        headlineFill: string;   // textFx.color (solid fill when gradient OFF)
-        gradFrom: string;       // headline gradient from
-        gradTo: string;         // headline gradient to
-        bodyColor: string;
-        venueColor: string;
-        subtagBgColor: string;
-        subtagTextColor: string;
-      };
-      logoDataUrl?: string | null; // persisted logo (base64 data URL)
-    };
-
-    const BK_KEY = 'nightlife-flyers.brandkit.v1';
-
-    function readBrandKit(): BrandKit | null {
-      try {
-        const raw = localStorage.getItem(BK_KEY);
-        if (!raw) return null;
-        const j = JSON.parse(raw);
-        if (j && j.v === 1) return j as BrandKit;
-        return null;
-      } catch { return null; }
-    }
-
-    function writeBrandKit(kit: BrandKit) {
-      try { localStorage.setItem(BK_KEY, JSON.stringify(kit)); } catch {}
-    }
-
-    function clearBrandKit() {
-      try { localStorage.removeItem(BK_KEY); } catch {}
-    }
-
-    /** Save current fonts/colors/logo as the brand kit */
-    function saveBrandKit() {
-      const kit: BrandKit = {
-        v: 1,
-        fonts: {
-          detailsFamily,
-          headlineFamily,
-          bodyFamily,
-          venueFamily,
-          subtagFamily,
-        },
-        colors: {
-          headlineFill: textFx.color,
-          gradFrom: textFx.gradFrom,
-          gradTo: textFx.gradTo,
-          bodyColor,
-          venueColor,
-          subtagBgColor,
-          subtagTextColor,
-        },
-        logoDataUrl: logoUrl || null,
-      };
-      writeBrandKit(kit);
-    }
-
-    /** Apply fonts/colors/logo from a saved brand kit */
-    function applyBrandKit(kit: BrandKit) {
-      if (!kit) return;
-
-      // Fonts
-if (kit.fonts?.headlineFamily) setHeadlineFamily(kit.fonts.headlineFamily);
-if (kit.fonts?.bodyFamily)     setBodyFamily(kit.fonts.bodyFamily);
-if (kit.fonts?.detailsFamily)  setDetailsFamily(kit.fonts.detailsFamily); // ✅ added
-if (kit.fonts?.venueFamily)    setVenueFamily(kit.fonts.venueFamily);
-if (kit.fonts?.subtagFamily)   setSubtagFamily(kit.fonts.subtagFamily);
-      
-
-      // Colors (headline fill & gradient endpoints)
-      if (kit.colors) {
-        setTextFx(v => ({
-          ...v,
-          color:    kit.colors.headlineFill ?? v.color,
-          gradFrom: kit.colors.gradFrom ?? v.gradFrom,
-          gradTo:   kit.colors.gradTo ?? v.gradTo,
-        }));
-        if (kit.colors.bodyColor)      setBodyColor(kit.colors.bodyColor);
-        if (kit.colors.venueColor)     setVenueColor(kit.colors.venueColor);
-        if (kit.colors.subtagBgColor)  setSubtagBgColor(kit.colors.subtagBgColor);
-        if (kit.colors.subtagTextColor)setSubtagTextColor(kit.colors.subtagTextColor);
-      }
-
-      // Logo
-      if (typeof kit.logoDataUrl === 'string' && kit.logoDataUrl) {
-        setLogoUrl(kit.logoDataUrl);
-        setLogoScale(1);
-        setLogoX(6);
-        setLogoY(100 - 6 - 14);
-      }
-    }
-    // ===== BRAND KIT LITE (END) =====
-
-
       const hasBg = !!(bgUploadUrl || bgUrl);
       const STICKY_TOP = 90; // header height (h-14)
       // ===== NAV-001 hookup (keyboard nudging) =====
@@ -13288,182 +13406,6 @@ async function renderExportDataUrl(
 
 // ===== DESIGN STORAGE (END) =====
 
-// ======================= BRAND KIT (FULL BLOCK) =======================
-// Types (inline + simple)
-type BrandKitV1 = {
-  _kind: 'nightlife-brandkit';
-  version: 1;
-  createdAt: string;
-  fonts: {
-    detailsFamily: string;
-    headlineFamily: string;
-    bodyFamily: string;
-    venueFamily: string;
-    subtagFamily: string;
-  };
-  colors: {
-    headlineFill: string;     // textFx.color
-    headlineGradFrom: string; // textFx.gradFrom
-    headlineGradTo: string;   // textFx.gradTo
-    detailsColor: string;     // bodyColor
-    venueColor: string;       // venueColor
-    subtagBgColor: string;    // subtagBgColor
-    subtagTextColor: string;  // subtagTextColor
-  };
-  // optional single logo embedded as DataURL
-  logoDataUrl?: string;
-};
-
-// ---- Build snapshot from current UI state ----
-function buildBrandKitSnapshot(): BrandKitV1 {
-  return {
-    _kind: 'nightlife-brandkit',
-    version: 1,
-    createdAt: new Date().toISOString(),
-    fonts: {
-      headlineFamily,
-      bodyFamily,
-      detailsFamily,
-      venueFamily,
-      subtagFamily,
-    },
-    colors: {
-      headlineFill: textFx.color,
-      headlineGradFrom: textFx.gradFrom,
-      headlineGradTo: textFx.gradTo,
-      detailsColor: bodyColor,
-      venueColor,
-      subtagBgColor,
-      subtagTextColor,
-    },
-    // if your current logoUrl is a data URL, include it in the kit; otherwise omit
-    logoDataUrl: (typeof logoUrl === 'string' && logoUrl.startsWith('data:image/')) ? logoUrl : undefined,
-  };
-}
-
-// ---- Parse & validate a brand kit file ----
-function parseBrandKit(raw: string): BrandKitV1 {
-  const parsed = JSON.parse(raw);
-  if (!parsed || parsed._kind !== 'nightlife-brandkit') {
-    throw new Error('Not a Nightlife Flyers brand kit file');
-  }
-  if (parsed.version !== 1) {
-    throw new Error(`Unsupported brand kit version: ${parsed.version}`);
-  }
-  // minimal shape checks
-  if (!parsed.fonts || !parsed.colors) {
-    throw new Error('Missing fonts/colors in kit');
-  }
-  return parsed as BrandKitV1;
-}
-
-// ---- Apply the kit to the current design (sets state) ----
-function applyBrandKitFromFile(kit: BrandKitV1) {
-  // Fonts
-  if (kit.fonts) {
-    setHeadlineFamily(kit.fonts.headlineFamily ?? headlineFamily);
-    setBodyFamily(kit.fonts.bodyFamily ?? bodyFamily);
-    setVenueFamily(kit.fonts.venueFamily ?? venueFamily);
-    setSubtagFamily(kit.fonts.subtagFamily ?? subtagFamily);
-  }
-
-  // Colors
-  if (kit.colors) {
-    setTextFx((prev: any) => ({
-      ...prev,
-      color: kit.colors.headlineFill ?? prev.color,
-      gradFrom: kit.colors.headlineGradFrom ?? prev.gradFrom,
-      gradTo: kit.colors.headlineGradTo ?? prev.gradTo,
-    }));
-    setBodyColor(kit.colors.detailsColor ?? bodyColor);
-    setVenueColor(kit.colors.venueColor ?? venueColor);
-    setSubtagBgColor(kit.colors.subtagBgColor ?? subtagBgColor);
-    setSubtagTextColor(kit.colors.subtagTextColor ?? subtagTextColor);
-  }
-
-  // Optional embedded logo
-  // Optional embedded logo (TS-safe)
-if (typeof kit.logoDataUrl === 'string' && kit.logoDataUrl.startsWith('data:image/')) {
-  const logo: string = kit.logoDataUrl;
-
-  setLogoLibrary((prev) => {
-    const safePrev: string[] = Array.isArray(prev)
-      ? prev.filter((x): x is string => typeof x === 'string')
-      : [];
-
-    if (safePrev.includes(logo)) return safePrev;
-
-    const next: string[] = [...safePrev, logo];
-    try { localStorage.setItem('nf:logoLibrary', JSON.stringify(next)); } catch {}
-    return next;
-  });
-
-  try { setLogoUrl(logo); } catch {}
-}
-
-}
-
-// ---- Download current Brand Kit ----
-function downloadBrandKitFile() {
-  const kit = buildBrandKitSnapshot();
-  const blob = new Blob([JSON.stringify(kit, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-  a.href = URL.createObjectURL(blob);
-  a.download = `brandkit_${stamp}.nfbk.json`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1500);
-}
-
-// ---- Upload/Load a Brand Kit from disk ----
-function onUploadBrandKitFile(e: React.ChangeEvent<HTMLInputElement>) {
-  const f = e.target.files?.[0];
-  if (!f) return;
-  const r = new FileReader();
-  r.onload = () => {
-    try {
-      const kit = parseBrandKit(String(r.result));
-      applyBrandKitFromFile(kit);
-      alert('Brand kit loaded ✓');
-    } catch (err: any) {
-      alert(`Invalid brand kit: ${err?.message || err}`);
-    } finally {
-      e.currentTarget.value = '';
-    }
-  };
-  r.readAsText(f);
-}
-// ===================== /BRAND KIT (FULL BLOCK) =====================
-
-function onBrandLogoFile(e: React.ChangeEvent<HTMLInputElement>) {
-  const f = e.target.files?.[0];
-  if (!f) return;
-
-  // Reject very large uploads
-  if (f.size > 15 * 1024 * 1024) {
-    alert('Please upload an image under 15MB.');
-    e.currentTarget.value = '';
-    return;
-  }
-
-  // Disallow SVG (security & consistency)
-  if (f.type === 'image/svg+xml') {
-    alert('SVG not supported. Please upload PNG or JPG.');
-    e.currentTarget.value = '';
-    return;
-  }
-
-  const r = new FileReader();
-  r.onload = () => {
-    const dataUrl = String(r.result || '');
-    setLogoUrl(dataUrl);
-  };
-  r.readAsDataURL(f);
-  e.currentTarget.value = '';
-}
-
-
-
 // ==== PERF: RAF throttle helpers (ADD ABOVE return) =========================
 function useRafThrottle<T extends (...args: any[]) => void>(fn: T) {
   const frame = React.useRef<number | null>(null);
@@ -13512,39 +13454,6 @@ const onBgMoveRaf = useRafThrottle((x: number, y: number) => {
 });
 const onLogoMoveRaf      = useRafThrottle((x: number, y: number) => { setLogoX(x); setLogoY(y); });
 const onPortraitMoveRaf  = useRafThrottle((x: number, y: number) => { setPortraitX(x); setPortraitY(y); });
-
-// Local storage usage helper
-const getLocalStorageUsage = React.useCallback(() => {
-  try {
-    let bytes = 0;
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i) || "";
-      const v = localStorage.getItem(k) || "";
-      bytes += k.length + v.length;
-    }
-    return { bytes, mb: bytes / (1024 * 1024) };
-  } catch {
-    return { bytes: 0, mb: 0 };
-  }
-}, []);
-
-// Estimate browser quota (best-effort)
-const [storageQuotaMB, setStorageQuotaMB] = React.useState<number | null>(null);
-React.useEffect(() => {
-  let cancelled = false;
-  if (typeof navigator !== 'undefined' && navigator.storage?.estimate) {
-    navigator.storage.estimate().then((res: any) => {
-      if (cancelled) return;
-      if (res && typeof res.quota === 'number') {
-        setStorageQuotaMB(res.quota / (1024 * 1024));
-      }
-    }).catch(() => {
-      /* ignore — quota optional */
-    });
-  }
-  return () => { cancelled = true; };
-}, []);
-
 
 // ===== STORAGE SAFETY HELPERS (ADD ABOVE "/* SUBTAG: persist per-format position/rotation whenever it changes */") =====
 function isQuotaError(err: any) {
@@ -13667,10 +13576,11 @@ const portraitCanvas = React.useMemo(() => {
     const store = useFlyerState.getState();
     const liveList = (store as any).portraits?.[format] || [];
     const sel = liveList.find((x: any) => x.id === pid);
+    const isBrandFace = !!(sel as any)?.isBrandFace;
 
     const { isLogo, isFlare, isSticker } = classify(sel);
 
-    const panel = isLogo ? "logo" : isFlare || isSticker ? "icons" : "portrait";
+    const panel = isBrandFace ? "dj_branding" : isLogo ? "logo" : isFlare || isSticker ? "icons" : "portrait";
     const target = isLogo ? "logo" : isFlare || isSticker ? "icon" : "portrait";
 
     const isSame = (store as any).selectedPortraitId === pid;
@@ -14827,6 +14737,11 @@ const applyTemplate = React.useCallback<
     // 1) GET TEMPLATE & SESSION DATA
     const variant: Partial<TemplateBase> =
       tpl.formats?.[fmt] ?? tpl.formats?.square ?? tpl.base ?? {};
+    const variantBgUrl =
+      typeof (variant as any).backgroundUrl === "string"
+        ? String((variant as any).backgroundUrl)
+        : "";
+    const resolvedBgUrl = variantBgUrl || tpl.preview || "";
     const incomingScale =
       typeof variant.bgScale === "number" ? variant.bgScale : 1.0;
     if (tpl.id === "latin_street_tropical") {
@@ -15150,6 +15065,10 @@ const applyTemplate = React.useCallback<
       ...incomingFx,
       italic: incomingFx.italic ?? merged.headlineItalic ?? DEFAULT_TEXT_FX.italic,
       bold: incomingFx.bold ?? merged.headlineBold ?? DEFAULT_TEXT_FX.bold,
+      tracking:
+        incomingFx.tracking ??
+        (typeof merged.headTracking === "number" ? merged.headTracking : undefined) ??
+        DEFAULT_TEXT_FX.tracking,
       uppercase:
         incomingFx.uppercase ??
         merged.headlineUppercase ??
@@ -15177,9 +15096,9 @@ const applyTemplate = React.useCallback<
     if (opts?.initialLoad) {
       store.setSessionValue(fmt, "bgScale", incomingScale);
     }
-    if (tpl.preview && !opts?.initialLoad) {
+    if (resolvedBgUrl && !opts?.initialLoad) {
       setBgUploadUrl(null);
-      setBgUrl(tpl.preview);
+      setBgUrl(resolvedBgUrl);
     }
   },
   [format]
@@ -15209,9 +15128,14 @@ const applyTemplateFromGallery = React.useCallback(
       templateBgScaleRef.current = variant.bgScale;
       setBgScale(variant.bgScale);
     }
-    if (tpl.preview) {
+    const resolvedBgUrl =
+      (typeof (variant as any).backgroundUrl === "string" &&
+        String((variant as any).backgroundUrl)) ||
+      tpl.preview ||
+      "";
+    if (resolvedBgUrl) {
       setBgUploadUrl(null);
-      setBgUrl(tpl.preview);
+      setBgUrl(resolvedBgUrl);
     }
 
     // 🔓 release on next tick after state settles
@@ -15221,6 +15145,35 @@ const applyTemplateFromGallery = React.useCallback(
   },
   [applyTemplate, format]
 );
+
+// Dev-only: if template definitions change in code while the app is open,
+// auto-refresh the currently selected template so coord edits are reflected immediately.
+const devTemplateSignatureRef = React.useRef<Record<string, string>>({});
+React.useEffect(() => {
+  if (process.env.NODE_ENV !== "development") return;
+  if (!templateId) return;
+
+  const tpl = TEMPLATE_GALLERY.find((t) => t.id === templateId);
+  if (!tpl) return;
+
+  const key = `${templateId}:all-formats`;
+  const signature = JSON.stringify({
+    preview: tpl.preview,
+    base: tpl.base ?? {},
+    square: tpl.formats?.square ?? {},
+    story: tpl.formats?.story ?? {},
+  });
+
+  const prev = devTemplateSignatureRef.current[key];
+  if (!prev) {
+    devTemplateSignatureRef.current[key] = signature;
+    return;
+  }
+  if (prev === signature) return;
+
+  devTemplateSignatureRef.current[key] = signature;
+  applyTemplateFromGallery(tpl, { targetFormat: format });
+}, [templateId, format, applyTemplateFromGallery]);
 
 /* ============================================================
    STARTUP TEMPLATE MAP + HANDLER
@@ -15526,10 +15479,26 @@ const [uiMode, setUiMode] = React.useState<"design" | "finish">("design");
 const [floatingEditorVisible, setFloatingEditorVisible] = React.useState(false);
 const [floatingAssetVisible, setFloatingAssetVisible] = React.useState(false);
 const [floatingBgVisible, setFloatingBgVisible] = React.useState(false);
+const [projectHelpOpen, setProjectHelpOpen] = React.useState(false);
 
 const floatingAssetRef = React.useRef<HTMLDivElement | null>(null);
 const floatingTextRef = React.useRef<HTMLDivElement | null>(null);
 const assetFocusLockRef = React.useRef(false);
+
+React.useEffect(() => {
+  if (!projectHelpOpen) return;
+  const prev = document.body.style.overflow;
+  document.body.style.overflow = "hidden";
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === "Escape") setProjectHelpOpen(false);
+  };
+  window.addEventListener("keydown", onKey);
+  return () => {
+    document.body.style.overflow = prev;
+    window.removeEventListener("keydown", onKey);
+  };
+}, [projectHelpOpen]);
+
 const [lastMoveStack, setLastMoveStack] = React.useState<{
   kind:
     | "icon"
@@ -15809,8 +15778,9 @@ const activeAssetControls = React.useMemo(() => {
     const list = portraits?.[format] || [];
     const sel = list.find((p: any) => p.id === selectedPortraitId);
     if (!sel) return null;
+    const isBrandFace = !!(sel as any).isBrandFace;
     const isLogo = String(sel.id || "").startsWith("logo_") || !!(sel as any).isLogo;
-    const isAsset = sel.isFlare || sel.isSticker || isLogo;
+    const isAsset = sel.isFlare || sel.isSticker || isLogo || isBrandFace;
     const hasIconColor = !!(sel as any).isSticker && typeof (sel as any).svgTemplate === "string";
     const assetName = (() => {
       const label = typeof (sel as any).label === "string" ? String((sel as any).label).trim() : "";
@@ -15825,10 +15795,33 @@ const activeAssetControls = React.useMemo(() => {
       if (isLogo) return "3D Text";
       return null;
     })();
-    const assetLabel =
-      assetName || (sel.isFlare ? "Flare" : sel.isSticker ? "Graphic" : "3D Text");
+    const assetLabel = isBrandFace
+      ? "Main Face"
+      : assetName || (sel.isFlare ? "Flare" : sel.isSticker ? "Graphic" : "3D Text");
 
     if (isAsset) {
+      if (isBrandFace) {
+        return {
+          label: "Main Face",
+          idLabel: `${sel.id}`,
+          scale: sel.scale ?? 1,
+          opacity: sel.opacity ?? 1,
+          locked: !!sel.locked,
+          showOpacity: true,
+          onScale: (v: number) =>
+            useFlyerState.getState().updatePortrait(format, sel.id, { scale: v }),
+          onOpacity: (v: number) =>
+            useFlyerState.getState().updatePortrait(format, sel.id, { opacity: v }),
+          onToggleLock: () =>
+            useFlyerState.getState().updatePortrait(format, sel.id, {
+              locked: !sel.locked,
+            }),
+          onDelete: () => {
+            removePortrait(format, sel.id);
+            useFlyerState.getState().setSelectedPortraitId(null);
+          },
+        };
+      }
       return {
         label: assetLabel,
         idLabel: `${sel.id}`,
@@ -15840,8 +15833,8 @@ const activeAssetControls = React.useMemo(() => {
         showColor: hasIconColor,
         colorValue: (sel as any).iconColor || "#ffffff",
         rotation: sel.rotation ?? 0,
-        // Always expose tint so the slider appears even if the asset didn't set a default
-        tint: typeof (sel as any).tint === "number" ? (sel as any).tint : 0,
+        // Main Face should stay clean; keep tint off for this asset type.
+        tint: isBrandFace ? undefined : (typeof (sel as any).tint === "number" ? (sel as any).tint : 0),
         onColor: (value: string) => {
           const template = String((sel as any).svgTemplate || "");
           const nextSvg = template.replace("{{COLOR}}", value);
@@ -15886,7 +15879,7 @@ const activeAssetControls = React.useMemo(() => {
           useFlyerState.getState().updatePortrait(format, sel.id, {
             locked: !sel.locked,
           }),
-        deleteLabel: `Delete ${assetLabel}`,
+        deleteLabel: isBrandFace ? "Remove Main Face" : `Delete ${assetLabel}`,
         onDelete: () => {
           removePortrait(format, sel.id);
           useFlyerState.getState().setSelectedPortraitId(null);
@@ -18238,9 +18231,14 @@ style={{ top: STICKY_TOP }}
 {/* UI: CINEMATIC HEADLINE (BEGIN) */}
 <div className="relative rounded-xl transition" data-tour="cinematic">
   <div className="p-3">
-    <div className="text-[12px] font-semibold text-neutral-200">Cinematic Headline</div>
+    <div className="text-[12px] font-semibold text-neutral-200 text-center">Cinematic Headline</div>
     <button
-      onClick={() => setCinematicModalOpen(true)}
+      onClick={() => {
+        setTextStyle("headline", format, { align: "center" });
+        setHeadAlign("center");
+        setAlign("center");
+        setCinematicModalOpen(true);
+      }}
       className="w-full mt-3 py-2 rounded-lg bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:from-indigo-500 hover:to-fuchsia-500 text-white text-xs font-bold shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95"
     >
       <span>✨</span> Create Cinematic 3D
@@ -20296,22 +20294,25 @@ style={{ top: STICKY_TOP }}
             )}
           </div>
         )}
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => activeAssetControls.onToggleLock?.()}
-            className="text-[11px] rounded-md border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 px-2 py-1.5"
-          >
-            {activeAssetControls.locked ? "Unlock" : "Lock"}
-          </button>
-          <button
-            type="button"
-            onClick={() => activeAssetControls.onDelete?.()}
-            className="text-[11px] rounded-md border border-red-700 bg-red-900/30 text-red-200 hover:bg-red-900/40 px-2 py-1.5"
-          >
-            {activeAssetControls.deleteLabel || "Delete"}
-          </button>
-        </div>
+        {(!("showActions" in activeAssetControls) ||
+          activeAssetControls.showActions !== false) && (
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => activeAssetControls.onToggleLock?.()}
+              className="text-[11px] rounded-md border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 px-2 py-1.5"
+            >
+              {activeAssetControls.locked ? "Unlock" : "Lock"}
+            </button>
+            <button
+              type="button"
+              onClick={() => activeAssetControls.onDelete?.()}
+              className="text-[11px] rounded-md border border-red-700 bg-red-900/30 text-red-200 hover:bg-red-900/40 px-2 py-1.5"
+            >
+              {activeAssetControls.deleteLabel || "Delete"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )}
@@ -20495,134 +20496,43 @@ style={{ top: STICKY_TOP }}
 >               
   {uiMode === "design" && mobileControlsOpen && mobileControlsTabs}
 
-{/* UI: BRAND KIT LITE (BEGIN) */}
-{/* =============================================================================
-   BRAND KIT UI (COMMENTED OUT TEMPORARILY)
-   =============================================================================
-
-<Collapsible 
-            title="Brand Kit" 
-            storageKey="p:brandkit" 
-            defaultOpen={false}>
-            <div className="text-[12px] text-neutral-300 mb-2">
-              Save your fonts, core colors, and logo once. Download as a portable file you can share or re-use later.
-            </div>
-
-            // -- Logo picker (optional; included as DataURL in the kit) --
-            <div className="mt-2">
-              <div className="text-[11px]">
-                Brand Logo
-                <div className="mt-1 flex items-center gap-2">
-                  <label className="text-[11px] px-2 py-1 rounded bg-neutral-900/70 border border-neutral-700 hover:bg-neutral-800 cursor-pointer">
-                    Upload
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                     onChange={onBrandLogoFile}
-                    />
-                  </label>
-                  {logoLibrary.length > 0 && (
-                    <div className="mt-3">
-                      <div className="mb-1 text-[11px] uppercase text-neutral-400">
-                        Logo Library
-                      </div>
-                      <div className="grid grid-cols-5 gap-2">
-                        {logoLibrary.map((url) => (
-                          <div key={url} className="relative">
-                            <button
-                              type="button"
-                              onClick={() => setLogoUrl(url)}
-                              className="relative aspect-square w-full rounded border border-neutral-700 hover:border-fuchsia-400 transition"
-                              title="Use this logo"
-                            >
-                              <img
-                                src={url}
-                                alt=""
-                                className="absolute inset-0 h-full w-full object-contain p-1 bg-neutral-900"
-                                draggable={false}
-                              />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => removeFromLogoLibrary(url)}
-                              className="absolute -right-1 -top-1 h-5 w-5 rounded-full bg-black/70 text-white text-[11px] border border-neutral-700"
-                              title="Remove from library"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                </div>
-              </div>
-            </div>
-
-            // -- Snapshot preview --
-            <div className="text-[11px] text-neutral-400 mt-3">
-              Current fonts captured: Headline (<b>{headlineFamily}</b>), Details (<b>{bodyFamily}</b>), Venue (<b>{venueFamily}</b>), Subtag (<b>{subtagFamily}</b>)
-            </div>
-
-            // -- Color chips (read-only) --
-            <div className="grid grid-cols-2 gap-3 mt-2 text-[11px]">
-              <div className="flex items-center gap-2">
-                <span>Headline Fill</span>
-                <span className="h-4 w-4 rounded-full border border-neutral-700" style={{ background: textFx.color }} />
-              </div>
-              <div className="flex items-center gap-2">
-                <span>Headline Grad</span>
-                <span className="h-4 w-10 rounded-full border border-neutral-700" style={{ background: `linear-gradient(90deg, ${textFx.gradFrom}, ${textFx.gradTo})` }} />
-              </div>
-              <div className="flex items-center gap-2">
-                <span>Details Color</span>
-                <span className="h-4 w-4 rounded-full border border-neutral-700" style={{ background: bodyColor }} />
-              </div>
-              <div className="flex items-center gap-2">
-                <span>Venue Color</span>
-                <span className="h-4 w-4 rounded-full border border-neutral-700" style={{ background: venueColor }} />
-              </div>
-              <div className="flex items-center gap-2">
-                <span>Subtag Pill</span>
-                <span className="h-4 w-4 rounded-full border border-neutral-700" style={{ background: subtagBgColor }} />
-              </div>
-              <div className="flex items-center gap-2">
-                <span>Subtag Text</span>
-                <span className="h-4 w-4 rounded-full border border-neutral-700" style={{ background: subtagTextColor }} />
-              </div>
-            </div>
-
-            // -- Actions: Download / Upload --
-            <div className="mt-3 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={downloadBrandKitFile}
-                className="text-[11px] px-2 py-1 rounded bg-indigo-600 hover:bg-indigo-700"
-                title="Download a portable brand kit file"
-              >
-                Download Brand Kit
-              </button>
-
-              <label className="text-[11px] px-2 py-1 rounded bg-neutral-900/70 border border-neutral-700 hover:bg-neutral-800 cursor-pointer">
-                Upload Brand Kit
-                <input
-                  type="file"
-                  accept=".json,.nfbk.json,application/json"
-                  className="hidden"
-                  onChange={onUploadBrandKitFile}
-                />
-              </label>
-            </div>
-
-            <div className="mt-2 text-[11px] text-neutral-400">
-              Tip: Brand kit is a portable JSON file (<code>.nfbk.json</code>). Share it with collaborators and load it on any device.
-            </div>
-</Collapsible>
-*/}
-{/* UI: BRAND KIT LITE (END) */}
-          
+<DjBrandingPanel
+  selectedPanel={selectedPanel}
+  setSelectedPanel={setSelectedPanel}
+  kit={djBrandKit}
+  onKitChange={persistDjBrandKit}
+  onSaveCurrentBrand={saveCurrentAsDjBrand}
+  onApplyMyBrand={() => applyDjBrandKit(djBrandKit)}
+  onApplyHandle={() => applyDjHandle(djBrandKit)}
+  onCaptureCurrentLogo={captureCurrentLogoToKit}
+  onCaptureCurrentFace={captureCurrentFaceToKit}
+  mainFaceOnCanvas={!!mainFaceOnCanvas}
+  mainFaceScale={Number(mainFaceOnCanvas?.scale ?? 0.85)}
+  mainFaceOpacity={Number(mainFaceOnCanvas?.opacity ?? 1)}
+  onMainFaceScaleChange={setMainFaceScale}
+  onMainFaceOpacityChange={setMainFaceOpacity}
+  onUseBrandLogo={(idx) => {
+    const src = djBrandKit.logos?.[idx];
+    if (!src) return;
+    setLogoUrl(src);
+    setLogoScale(1);
+    setMoveMode(true);
+    setDragging('logo');
+  }}
+  onUseBrandFace={() => {
+    if (!djBrandKit.primaryPortrait) return;
+    if (!isPngBrandFace(djBrandKit.primaryPortrait)) {
+      alert('Main Face must be a PNG file. Upload a PNG in DJ Branding > Main Face.');
+      return;
+    }
+    placeDjBrandFace(djBrandKit.primaryPortrait);
+  }}
+  onSnapLogoSafeZone={snapLogoToSafeZone}
+  currentLogoUrl={logoUrl}
+  currentPortraitUrl={portraitUrl}
+  headlineFonts={HEADLINE_FONTS_LOCAL}
+  bodyFonts={BODY_FONTS_LOCAL}
+/>
 
 {/* UI: AI BACKGROUND (BEGIN) */}
 <div id="ai-background-panel" data-tour="background">
@@ -21178,6 +21088,10 @@ style={{ top: STICKY_TOP }}
         <div style={{ fontSize: 13, opacity: 0.6, fontStyle: "italic" }}>
           Select a placed portrait to adjust edges.
         </div>
+      ) : selectedPortraitIsAsset ? (
+        <div style={{ fontSize: 13, opacity: 0.6, fontStyle: "italic" }}>
+          Cleanup controls are only for regular cutout portraits.
+        </div>
       ) : (
         <div style={{ display: "grid", gap: 12 }}>
           <SliderRow
@@ -21269,6 +21183,17 @@ style={{ top: STICKY_TOP }}
           title="Project"
           storageKey="p:designs"
           defaultOpen={false}
+          right={
+            <button
+              type="button"
+              onClick={() => setProjectHelpOpen(true)}
+              aria-label="Project help"
+              title="How Project save/load works"
+              className="h-6 w-6 rounded-full border border-cyan-400/70 text-cyan-300 text-[11px] font-bold hover:bg-cyan-400/10"
+            >
+              ?
+            </button>
+          }
         >
           <div className="space-y-2">
             {/* Save to a portable .json file */}
@@ -21308,31 +21233,9 @@ style={{ top: STICKY_TOP }}
             <div className="text-[11px] text-neutral-400">
               Saves as a single <code>.json</code> you can reopen later on any device.
             </div>
-            {(() => {
-              const usage = getLocalStorageUsage();
-              const quotaMb = storageQuotaMB ?? 5; // best-effort default if browser won't report
-              const free = storageQuotaMB != null
-                ? Math.max(0, quotaMb - usage.mb)
-                : null;
-              return (
-                <>
-                  <div className="flex items-center justify-between text-[11px] text-neutral-400">
-                    <span>Local storage used</span>
-                    <span className="text-white font-semibold">
-                      {usage.mb.toFixed(2)} MB
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] text-neutral-400">
-                    <span>Remaining (est.)</span>
-                    <span className="text-white font-semibold">
-                      {free != null
-                        ? `${free.toFixed(2)} MB of ${quotaMb.toFixed(1)} MB`
-                        : 'Calculating…'}
-                    </span>
-                  </div>
-                </>
-              );
-            })()}
+            <div className="text-[11px] text-neutral-400">
+              If save/load feels slow or storage is full, use <b>Clear Storage</b> to clean cached assets.
+            </div>
             <button
               type="button"
               onClick={clearHeavyStorage}
@@ -21344,6 +21247,58 @@ style={{ top: STICKY_TOP }}
           </div>
 </Collapsible>
 {/* UI: PROJECT PORTABLE SAVE (END) */}
+
+{projectHelpOpen && (
+  <div className="fixed inset-0 z-[5100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="w-full max-w-xl rounded-2xl border border-cyan-400/30 bg-[#0a0d12] shadow-[0_30px_80px_rgba(0,0,0,.6)] overflow-hidden">
+      <div className="px-5 py-4 border-b border-white/10 bg-gradient-to-r from-cyan-500/20 to-fuchsia-500/10">
+        <div className="text-sm uppercase tracking-[0.2em] text-cyan-300">Project Guide</div>
+        <div className="mt-1 text-lg font-semibold text-white">Save your design file so you can open it on any device.</div>
+      </div>
+
+      <div className="p-5 space-y-3 text-sm text-neutral-200">
+        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+          <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">1. Save Design</div>
+          <div className="text-neutral-300">
+            Click <b>Save Design</b> to download a portable <code>.json</code> project file.
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+          <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">2. Keep The File</div>
+          <div className="text-neutral-300">
+            Store that file in iCloud Drive, Google Drive, Dropbox, or email it to yourself.
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+          <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">3. Open Anywhere</div>
+          <div className="text-neutral-300">
+            On any device, open this app and use <b>Load Design</b> to continue exactly where you left off.
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+          <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">4. Clear Storage (Optional)</div>
+          <div className="text-neutral-300">
+            <b>Clear Storage</b> removes heavy local cache (background candidates, portraits, logos) to free browser space.
+            It does <b>not</b> delete your exported <code>.json</code> files.
+          </div>
+        </div>
+      </div>
+
+      <div className="px-5 py-4 border-t border-white/10 flex justify-end">
+        <button
+          type="button"
+          onClick={() => setProjectHelpOpen(false)}
+          className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-sm"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
 
 </aside>

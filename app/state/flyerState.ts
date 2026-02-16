@@ -153,6 +153,7 @@ type Portrait = {
   labelColor?: string;
   isSticker?: boolean;
   isFlare?: boolean;
+  isBrandFace?: boolean;
   tint?: number;          // hue-rotate degrees for tinting overlays/flares
   tintMode?: "hue" | "colorize";
   svgTemplate?: string;

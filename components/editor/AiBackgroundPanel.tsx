@@ -53,8 +53,8 @@ type Props = {
    setGenPrompt: (v: string) => void;
    genProvider: GenProvider;
    setGenProvider: (v: GenProvider) => void;
-  genCount: 1 | 2 | 4;
-  setGenCount: React.Dispatch<React.SetStateAction<1 | 2 | 4>>;
+  genCount: 1 | 2;
+  setGenCount: React.Dispatch<React.SetStateAction<1 | 2>>;
    genSize: GenSize;
    setGenSize: (v: GenSize) => void;
    allowPeople: boolean;
@@ -146,18 +146,46 @@ function AiBackgroundPanel({
   const onToggle = isControlled
     ? () => setSelectedPanel?.(selectedPanel === 'ai_background' ? null : 'ai_background')
     : undefined;
+  const [helpOpen, setHelpOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!helpOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setHelpOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [helpOpen]);
+
   return (
-    <Collapsible
-      title="AI Background"
-      storageKey="p_ai_bg"
-      defaultOpen={true}
-      isOpen={isOpen}
-      onToggle={onToggle}
-      panelClassName={
-        isOpen ? "ring-1 ring-inset ring-[#00FFF0]/70" : undefined
-      }
-    >
-       <div className="space-y-3">
+    <>
+      <Collapsible
+        title="AI Background"
+        storageKey="p_ai_bg"
+        defaultOpen={true}
+        isOpen={isOpen}
+        onToggle={onToggle}
+        panelClassName={
+          isOpen ? "ring-1 ring-inset ring-[#00FFF0]/70" : undefined
+        }
+        right={
+          <button
+            type="button"
+            onClick={() => setHelpOpen(true)}
+            aria-label="AI Background help"
+            title="How AI Background works"
+            className="h-6 w-6 rounded-full border border-cyan-400/70 text-cyan-300 text-[11px] font-bold hover:bg-cyan-400/10"
+          >
+            ?
+          </button>
+        }
+      >
+        <div className="space-y-3">
          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
            {(['urban', 'neon', 'tropical', 'vintage'] as GenStyle[]).map((s) => (
              <Chip key={s} active={s === genStyle} onClick={() => setGenStyle(s)}>
@@ -252,9 +280,6 @@ function AiBackgroundPanel({
              </Chip>
              <Chip small active={genCount === 2} onClick={() => setGenCount(2)}>
                2
-             </Chip>
-             <Chip small active={genCount === 4} onClick={() => setGenCount(4)}>
-               4
              </Chip>
            </div>
            <div className="flex items-center gap-2 text-[11px]">
@@ -544,8 +569,62 @@ function AiBackgroundPanel({
          )}
 
          {genError && <div className="text-xs text-red-400 break-words">{genError}</div>}
-       </div>
-     </Collapsible>
+        </div>
+      </Collapsible>
+
+      {helpOpen && (
+        <div className="fixed inset-0 z-[5100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-2xl rounded-2xl border border-cyan-400/30 bg-[#0a0d12] shadow-[0_30px_80px_rgba(0,0,0,.6)] overflow-hidden">
+            <div className="px-5 py-4 border-b border-white/10 bg-gradient-to-r from-cyan-500/20 to-fuchsia-500/10">
+              <div className="text-sm uppercase tracking-[0.2em] text-cyan-300">AI Background Guide</div>
+              <div className="mt-1 text-lg font-semibold text-white">Generate cleaner backgrounds in 4 steps.</div>
+            </div>
+
+            <div className="p-5 space-y-4 text-sm text-neutral-200 max-h-[70vh] overflow-y-auto">
+              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">Step 1: Pick A Direction</div>
+                <div className="text-neutral-300">
+                  Choose a style (Urban, Neon, Tropical, Vintage), then load a preset if you want a fast starting point.
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">Step 2: Write Prompt Details</div>
+                <div className="text-neutral-300">
+                  Add mood, lighting, and scene details. Keep prompts specific and short to avoid noisy outputs.
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">Step 3: Tune Controls</div>
+                <ul className="list-disc pl-5 space-y-1 text-neutral-300">
+                  <li>Use Batch 2 to compare options quickly.</li>
+                  <li>Use Diversity for variety, Clarity for cleaner detail.</li>
+                  <li>Enable People only when you want subjects in scene.</li>
+                </ul>
+              </div>
+
+              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">Step 4: Select Candidate</div>
+                <div className="text-neutral-300">
+                  Click a generated thumbnail to apply it. If result is off, adjust prompt or controls and generate again.
+                </div>
+              </div>
+            </div>
+
+            <div className="px-5 py-4 border-t border-white/10 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setHelpOpen(false)}
+                className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-sm"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
    );
  }
 
