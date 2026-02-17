@@ -28,7 +28,7 @@ const FAL_SAFETY_TOLERANCE = Math.max(
 // -----------------------------
 const BASE_PROMPT = `Cinematic photo composite. Integrate the subject into the background environment so it looks shot in-camera.
 
-Core matching requirements (must match Image 2):
+Core matching requirements (must match the Background Reference):
 - light direction
 - color temperature
 - contrast level
@@ -36,32 +36,35 @@ Core matching requirements (must match Image 2):
 
 Blend requirements (critical):
 - match the background lighting direction, color temperature, and contrast
-- relight the entire subject using Image 2 as the lighting source (face, hair, skin, clothing, hands, legs, shoes)
+- relight the entire subject using the Background Reference lighting source (face, hair, skin, clothing, hands, legs, shoes)
 - keep lighting physically consistent across the whole body (same key/fill/rim logic, falloff, and shadow softness)
 - add realistic contact shadows at feet/base and soft ambient occlusion around edges
 - add believable cast shadows from the subject onto nearby ground/surfaces when those shadows should exist
 - add subtle edge color bleed and light wrap from the environment
 - match lens and depth-of-field; soften cutout edges slightly
-- preserve subject identity, face, hairstyle, clothing, and pose from Image 1
+- preserve subject identity, face, hairstyle, clothing, and pose from the Subject Identity and Placement references
 - do not change facial features or body proportions; keep the same facial likeness
+- preserve exact face geometry (jawline, cheekbone width, nose shape, eye spacing, lip shape, ear placement)
+- preserve exact body geometry (shoulder width, torso length, waist-hip ratio, limb lengths, hand size)
+- no body reshaping, no slimming/bulking, no limb stretching, no head-size changes
 
 Grounding:
 - align subject scale and perspective to the background
 - keep the subject on a believable ground plane (no floating)
 
 Framing lock (critical):
-- treat Image 1 as a hard placement map for the subject
-- keep subject position, scale, and orientation matched to Image 1
+- treat the Placement Reference as a hard placement map for the subject
+- keep subject position, scale, and orientation matched to the Placement Reference
 - do not recenter, reframe, zoom out, or shift the subject to another area
 - do not alter pose, limb placement, or body angle
-- if any instruction conflicts, preserve Image 1 framing first
+- if any instruction conflicts, preserve the Placement Reference framing first
 
 Background integrity:
-- preserve the background scene from Image 2 (no new objects, no major layout changes)
+- preserve the background scene from the Background Reference (no new objects, no major layout changes)
 - keep background people/subjects, but push them back in depth and contrast
 
 Lighting interaction:
-- only use light sources that already exist in Image 2
+- only use light sources that already exist in the Background Reference
 - if there are no beams, do not add beams
 - atmosphere allowed when requested by the style; avoid heavy fog
 - subject should block light beams and receive color spill from the scene
@@ -69,13 +72,13 @@ Lighting interaction:
 - match scene-specific highlight/shadow placement on every region of the subject, not just face/upper body
 - no studio lighting, no beauty lighting, no flat fill
 - if the scene is dark and moody, keep the subject darker and cinematic (no bright/exposed subject)
-- edge light and rim light are allowed only where matching practical light sources exist in Image 2
+- edge light and rim light are allowed only where matching practical light sources exist in the Background Reference
 
 Occlusion integrity (critical):
 - subject body and clothing must remain fully opaque (no translucency through torso, arms, legs, or face)
 - no table/floor/wall texture bleeding through the subject
 - no double-exposure or ghosted overlay on the subject
-- if foreground objects in Image 2 occlude the subject, occlusion edges must be clean and physically correct
+- if foreground objects in the Background Reference occlude the subject, occlusion edges must be clean and physically correct
 - do not let floor/desk/booth lines pass through visible subject regions
 
 Look:
@@ -85,6 +88,7 @@ Look:
 - no halos, no glow outlines, no sticker/cutout look
 - no text, no logos, no watermarks, no extra people
 - no face distortion, identity change, or altered facial features
+- no anatomy drift, no altered body ratios, no stylized proportions
 - no overexposed skin, artificial glow, flat lighting, or studio lighting
 
 Safety:
@@ -97,7 +101,7 @@ type MagicBlendStyle = "club" | "tropical" | "jazz_bar" | "outdoor_summer";
 
 const STYLE_SUFFIX: Record<MagicBlendStyle, string> = {
   club: `Club style bias:
-- preserve the exact venue in Image 2; no environment replacement
+- preserve the exact venue from the Background Reference; no environment replacement
 - favor moody nightlife contrast and practical-light realism
 - emphasize believable neon/practical spill only where those sources are present
 - keep distant background slightly softer than subject for depth
@@ -107,7 +111,7 @@ Avoid:
 - daylight look, flat studio fill, fake CGI glow
 - inventing new lights, structures, or crowd subjects`,
   tropical: `Environment styling:
-- preserve the exact venue in Image 2; no environment replacement
+- preserve the exact venue from the Background Reference; no environment replacement
 - warm evening nightlife tone with realistic practical spill and soft highlights
 - subtle atmosphere only if already supported by the scene
 - keep natural skin tones and physically plausible shadow falloff
@@ -116,7 +120,7 @@ Avoid:
 - nightclub lasers or stage strobes
 - heavy magenta club lighting or EDM concert beams`,
   jazz_bar: `Environment styling (intimate jazz bar):
-- preserve the exact venue in Image 2; no environment replacement
+- preserve the exact venue from the Background Reference; no environment replacement
 - intimate low-key mood with practical amber spill where lamps/bars exist
 - keep realistic shadow gradients and avoid over-bright skin lift
 - maintain premium editorial texture, not glossy studio polish
@@ -126,7 +130,7 @@ Avoid:
 - neon rave colors
 - flat lighting`,
   outdoor_summer: `Environment styling:
-- preserve the exact environment in Image 2; no environment replacement
+- preserve the exact environment from the Background Reference; no environment replacement
 - bright natural outdoor light behavior with realistic sun direction and cast shadows
 - breathable summer atmosphere with controlled saturation and skin realism
 - maintain scene depth and horizon/perspective consistency
@@ -231,9 +235,9 @@ function getCameraFramingLock(
 ) {
   const z = normalizeCameraZoom(rawZoom);
   const base =
-    "Camera framing lock (strict): selected framing is a hard requirement. Keep the subject in the same placement anchor from Image 1. Do not recenter. Do not shift horizon. Do not change perspective.";
+    "Camera framing lock (strict): selected framing is a hard requirement. Keep the subject in the same placement anchor from the Placement Reference (Image 2). Do not recenter. Do not shift horizon. Do not change perspective.";
   const lensCritical =
-    "Lens matching (critical): match scene lens perspective from Image 2. Wide room/deep perspective -> 24-35mm. Natural perspective -> 50mm. Cinematic compression -> 85mm+. Do not default to generic portrait compression.";
+    "Lens matching (critical): match scene lens perspective from the Background Reference (Image 3). Wide room/deep perspective -> 24-35mm. Natural perspective -> 50mm. Cinematic compression -> 85mm+. Do not default to generic portrait compression.";
 
   if (z === "full body") {
     const lowAngleLine = lowAngleHint
@@ -255,7 +259,7 @@ ${lowAngleLine}
 - three-quarter body shot: frame from mid-thigh to top of head
 - natural perspective consistent with background depth and horizon
 - camera at subject chest height, 50mm lens
-- both hands should remain visible when present in Image 1
+- both hands should remain visible when present in the Placement Reference (Image 2)
 - avoid tight crop and avoid full-body zoom-out
 - adjust perspective and scale to match the environment naturally
 - ${lensCritical}`;
@@ -287,8 +291,8 @@ ${lowAngleLine}
       : "square composition priority";
   return `${base}
 - honor ${formatHint}
-- keep subject size and crop matched to Image 1
-- prioritize lens/perspective consistency with Image 2 over generic portrait look
+- keep subject size and crop matched to the Placement Reference (Image 2)
+- prioritize lens/perspective consistency with the Background Reference (Image 3) over generic portrait look
 - adjust perspective and scale to match the environment naturally
 - ${lensCritical}`;
 }
@@ -802,10 +806,10 @@ export async function POST(req: Request) {
         if (!meta.width || !meta.height) return buf;
         const cropRatioByZoom: Record<CameraZoom, number> = {
           "full body": 1,
-          "three-quarter": 0.82,
-          "waist-up": 0.66,
-          "chest-up": 0.52,
-          auto: 0.78,
+          "three-quarter": 0.9,
+          "waist-up": 0.82,
+          "chest-up": 0.72,
+          auto: 0.9,
         };
         const cropRatio = cropRatioByZoom[zoom] ?? cropRatioByZoom.auto;
         const cropH = Math.max(1, Math.round(meta.height * cropRatio));
@@ -876,38 +880,51 @@ export async function POST(req: Request) {
     const { composite: preCompositeBuf, matte: subjectMatteBuf } =
       await buildCompositeBundle(safeSubjBuf);
 
-    // 4) Convert both images to data URLs (order matters)
+    // 4) Convert all references to data URLs (order matters)
     stage = "data-urls";
     const bgOnlyDataUrl = bufferToDataUrlPng(bgCanvas);
     const subjectMatteDataUrl = bufferToDataUrlPng(subjectMatteBuf);
+    const subjectIdentityBuf = await sharp(hardenedSubjBuf)
+      .resize(1024, 1024, {
+        fit: "contain",
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      })
+      .png()
+      .toBuffer();
+    const subjectIdentityDataUrl = bufferToDataUrlPng(subjectIdentityBuf);
 
-    // --- Build prompt (BASE + SUFFIX + background lock) ---
+    // --- Build prompt (reference map + BASE + SUFFIX + background lock) ---
     stage = "build-prompt";
+    const referenceMap = `Reference map (strict):
+- Image 1 = Subject identity reference (face/body geometry lock)
+- Image 2 = Subject placement reference (composite framing/pose/scale)
+- Image 3 = Background reference (environment truth)
+- Image 4 = Subject matte reference (solidity mask)`;
     const backgroundLock =
       safeStyle === "club"
         ? `Background lock (guided):
-- Image 1 is the subject placement and framing reference.
-- Image 2 is the background reference and should remain recognizable.
-- Image 3 is the subject matte reference (white subject shape on black background).
-- Preserve the background’s layout, architecture, and key features from Image 2.
+- Image 2 is the subject placement and framing reference.
+- Image 3 is the background reference and should remain recognizable.
+- Image 4 is the subject matte reference (white subject shape on black background).
+- Preserve the background’s layout, architecture, and key features from Image 3.
 - Do not replace the environment or move the scene.
-- Subject relighting must be derived from Image 2 lighting only (direction, color, intensity, contrast).
-- Subject framing must remain matched to Image 1 (same placement, scale, and pose).
+- Subject relighting must be derived from Image 3 lighting only (direction, color, intensity, contrast).
+- Subject framing must remain matched to Image 2 (same placement, scale, and pose).
 - It is allowed to intensify existing lighting, haze, and neon accents to match subject energy.
-- It is allowed to add atmospheric smoke around the subject for depth, even if subtle in Image 2.
-- Keep the same time of day and lighting direction as Image 2.`
+- It is allowed to add atmospheric smoke around the subject for depth, even if subtle in Image 3.
+- Keep the same time of day and lighting direction as Image 3.`
         : `Background lock (strict):
-- Image 1 is the subject placement and framing reference.
-- Image 2 is the background reference and MUST be preserved exactly.
-- Image 3 is the subject matte reference (white subject shape on black background).
-- Preserve the background’s layout, architecture, structure, and key features from Image 2.
+- Image 2 is the subject placement and framing reference.
+- Image 3 is the background reference and MUST be preserved exactly.
+- Image 4 is the subject matte reference (white subject shape on black background).
+- Preserve the background’s layout, architecture, structure, and key features from Image 3.
 - Do not replace the environment. Do not invent a new background. Do not move the scene.
-- Subject relighting must be derived from Image 2 lighting only (direction, color, intensity, contrast).
-- Subject framing must remain matched to Image 1 (same placement, scale, and pose).
-- Keep the same time of day and lighting direction as Image 2.
+- Subject relighting must be derived from Image 3 lighting only (direction, color, intensity, contrast).
+- Subject framing must remain matched to Image 2 (same placement, scale, and pose).
+- Keep the same time of day and lighting direction as Image 3.
 - Do not change the weather or season.
 - Only add subtle atmosphere and a few small accent lights; no scene overhaul.`;
-    const sceneCueBlock = `Scene-derived lighting lock (strict, from Image 2):
+    const sceneCueBlock = `Scene-derived lighting lock (strict, from Image 3):
 - key direction: ${sceneProfile.keyDirection}
 - vertical brightness bias: ${sceneProfile.verticalBias}
 - color temperature: ${sceneProfile.temperature}
@@ -921,13 +938,18 @@ export async function POST(req: Request) {
 Rules:
 - relight subject using this direction/contrast/temperature/shadow-softness profile
 - keep highlight spill close to ${sceneProfile.highlightHex}; keep occluded regions near ${sceneProfile.shadowHex}
-- no light source invention and no global relight that conflicts with Image 2`;
+- no light source invention and no global relight that conflicts with Image 3`;
     const occlusionLock = `Occlusion lock (strict):
-- Treat Image 3 matte as solidity guidance: white area is subject body volume.
+- Treat Image 4 matte as solidity guidance: white area is subject body volume.
 - Subject body/clothing must stay fully opaque; no translucency and no double-exposure.
 - Do not let floor/table/booth/background textures pass through visible subject regions.
-- If a foreground object from Image 2 occludes the subject, occlusion must be crisp and physically plausible.
+- If a foreground object from Image 3 occludes the subject, occlusion must be crisp and physically plausible.
 - Maintain contact grounding at the feet/base with realistic contact shadow.`;
+    const identityLock = `Identity and proportion lock (strict):
+- use the provided subject-only identity reference to preserve exact face geometry and body ratios
+- preserve skull/face structure exactly; do not alter nose/eyes/lips/jaw shape
+- preserve shoulder width, torso length, limb lengths, and hand size proportions
+- no beauty filter smoothing, no stylization, no body morphing`;
     const lowAngleHint = /low[\s-]?angle|upward perspective|camera from below/i.test(
       String(extraPrompt || "")
     );
@@ -943,11 +965,15 @@ Rules:
         ? `\n\nStyle tone:\n- nightlife editorial, moody, cinematic\n- avoid corporate/stock photo look\n- gritty texture, candid energy\n- no sterile studio feel`
         : "";
 
-    const finalPrompt = `${BASE_PROMPT}
+    const finalPrompt = `${referenceMap}
+
+${BASE_PROMPT}
 
 ${sceneCueBlock}
 
 ${occlusionLock}
+
+${identityLock}
 
 ${cameraFramingBlock}
 
@@ -955,7 +981,7 @@ ${STYLE_SUFFIX[safeStyle]}
 
 ${backgroundLock}${extraBlock}${nanoTone}`;
 
-    // --- Single unified pass with TWO reference images (Imagine Art style) ---
+    // --- Single unified pass with multiple reference images ---
     const sizeStr =
       format === "story" ? "1024x1792" : format === "portrait" ? "1024x1024" : "1024x1024";
 
@@ -963,7 +989,12 @@ ${backgroundLock}${extraBlock}${nanoTone}`;
       stage = "fal:run";
       const safeCompositeDataUrl = bufferToDataUrlPng(preCompositeBuf);
       const outUrl = await runFalEdit({
-        imageDataUrls: [safeCompositeDataUrl, bgOnlyDataUrl, subjectMatteDataUrl],
+        imageDataUrls: [
+          subjectIdentityDataUrl,
+          safeCompositeDataUrl,
+          bgOnlyDataUrl,
+          subjectMatteDataUrl,
+        ],
         prompt: finalPrompt,
         size: sizeStr,
       });
@@ -978,7 +1009,12 @@ ${backgroundLock}${extraBlock}${nanoTone}`;
       try {
         stage = "replicate:run";
         const outUrl = await runFlux({
-          imageDataUrls: [safeCompositeDataUrl, bgOnlyDataUrl, subjectMatteDataUrl],
+          imageDataUrls: [
+            subjectIdentityDataUrl,
+            safeCompositeDataUrl,
+            bgOnlyDataUrl,
+            subjectMatteDataUrl,
+          ],
           prompt: finalPrompt,
           token: AI_API_KEY as string,
           aspect_ratio,
@@ -1038,16 +1074,22 @@ ${backgroundLock}${extraBlock}${nanoTone}`;
         const safeCompositeDataUrl2 = bufferToDataUrlPng(safeCompositeBuf2);
         const safePrompt =
           `Preserve the exact subject identity from Image 1 (face, skin tone, hair, clothing). ` +
+          `Preserve exact face geometry and body proportions from the provided subject reference. ` +
           `Do not change ethnicity, age, or gender. ` +
-          `Preserve the background from Image 2 exactly. ` +
-          `Keep subject framing matched to Image 1 (same placement, scale, and pose). ` +
-          `Relight the subject using only Image 2 scene lighting for seamless integration. ` +
+          `Preserve the background from Image 3 exactly. ` +
+          `Keep subject framing matched to Image 2 (same placement, scale, and pose). ` +
+          `Relight the subject using only Image 3 scene lighting for seamless integration. ` +
           `Subject must remain fully opaque; no table/floor texture bleed-through. ` +
           `Use scene cues: key ${sceneProfile.keyDirection}, temperature ${sceneProfile.temperature}, contrast ${sceneProfile.contrast}. ` +
           `Family-friendly, non-suggestive styling.`;
         stage = "replicate:safe-run";
         const outUrl = await runFlux({
-          imageDataUrls: [safeCompositeDataUrl2, bgOnlyDataUrl, subjectMatteDataUrl],
+          imageDataUrls: [
+            subjectIdentityDataUrl,
+            safeCompositeDataUrl2,
+            bgOnlyDataUrl,
+            subjectMatteDataUrl,
+          ],
           prompt: safePrompt,
           token: AI_API_KEY as string,
           aspect_ratio,
