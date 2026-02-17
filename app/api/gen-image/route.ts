@@ -624,6 +624,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const prompt = String(body?.prompt || '').trim();
+    const referenceHint = String(body?.referenceHint || '').trim();
+    const effectivePrompt = [prompt, referenceHint].filter(Boolean).join(', ');
     const provider = (body?.provider || 'auto') as Provider;
     const format = (body?.format || 'square') as Format;
     const reference = typeof body?.reference === "string" ? body.reference : undefined;
@@ -635,7 +637,7 @@ export async function POST(req: NextRequest) {
       new Set([reference, ...references].filter((v): v is string => Boolean(v)))
     ).slice(0, 3);
 
-    if (!prompt) {
+    if (!effectivePrompt) {
       return NextResponse.json({ error: "Missing 'prompt'" }, { status: 400 });
     }
 
@@ -645,7 +647,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (provider === 'venice' || provider === 'imagine') {
-      const r = await genWithImagine(prompt, format);
+      const r = await genWithImagine(effectivePrompt, format);
       if (!r.ok) {
         return NextResponse.json({ error: r.error, placeholder: r.placeholder }, { status: 200 });
       }
@@ -656,7 +658,7 @@ export async function POST(req: NextRequest) {
 
     if (provider === 'openai') {
       const origin = new URL(req.url).origin;
-      const r = await genWithOpenAI(prompt, format, reference, origin, normalizedReferences);
+      const r = await genWithOpenAI(effectivePrompt, format, reference, origin, normalizedReferences);
       if (!r.ok) {
         // still return a placeholder so your UI can keep going
         return NextResponse.json({ error: r.error, placeholder: r.placeholder }, { status: 200 });
@@ -670,7 +672,7 @@ export async function POST(req: NextRequest) {
     // Default "nano/auto" path now uses FLUX 2 Pro via fal.
     if (provider === 'nano' || provider === 'auto' || provider === 'fal') {
       const origin = new URL(req.url).origin;
-      const rFal = await genWithFal(prompt, format, reference, origin, normalizedReferences);
+      const rFal = await genWithFal(effectivePrompt, format, reference, origin, normalizedReferences);
       if (rFal.ok) {
         const falB64 = (rFal as any).b64 as string | undefined;
         const falUrl = (rFal as any).url as string | undefined;
@@ -679,7 +681,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Graceful fallback to OpenAI if fal fails or is not configured.
-      const rOpenAI = await genWithOpenAI(prompt, format, reference, origin, normalizedReferences);
+      const rOpenAI = await genWithOpenAI(effectivePrompt, format, reference, origin, normalizedReferences);
       if (rOpenAI.ok) {
         if (rOpenAI.b64) return NextResponse.json({ b64: rOpenAI.b64 });
         if (rOpenAI.url) return NextResponse.json({ url: rOpenAI.url });

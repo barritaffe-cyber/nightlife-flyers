@@ -71,6 +71,13 @@ Lighting interaction:
 - if the scene is dark and moody, keep the subject darker and cinematic (no bright/exposed subject)
 - edge light and rim light are allowed only where matching practical light sources exist in Image 2
 
+Occlusion integrity (critical):
+- subject body and clothing must remain fully opaque (no translucency through torso, arms, legs, or face)
+- no table/floor/wall texture bleeding through the subject
+- no double-exposure or ghosted overlay on the subject
+- if foreground objects in Image 2 occlude the subject, occlusion edges must be clean and physically correct
+- do not let floor/desk/booth lines pass through visible subject regions
+
 Look:
 - strong contrast with clean blacks/highlights
 - natural skin tones influenced by scene lighting
@@ -769,6 +776,26 @@ export async function POST(req: Request) {
     const yLift = Math.round(baseSize * (yLiftMap[zoom] ?? yLiftMap.auto));
     const subjTop = Math.max(0, Math.round((sizeH - subjSize) / 2) - yLift);
 
+    async function hardenSubjectAlpha(buf: Buffer) {
+      try {
+        const normalized = await sharp(buf).ensureAlpha().png().toBuffer();
+        const alpha = await sharp(normalized)
+          .extractChannel("alpha")
+          .linear(1.12, -10)
+          .threshold(8)
+          .blur(0.35)
+          .png()
+          .toBuffer();
+        return await sharp(normalized)
+          .removeAlpha()
+          .joinChannel(alpha)
+          .png()
+          .toBuffer();
+      } catch {
+        return buf;
+      }
+    }
+
     async function safeCropSubject(buf: Buffer) {
       try {
         const meta = await sharp(buf).metadata();
@@ -791,7 +818,7 @@ export async function POST(req: Request) {
       }
     }
 
-    async function buildComposite(subjInput: Buffer) {
+    async function buildCompositeBundle(subjInput: Buffer) {
       const subjPng = await sharp(subjInput)
         .resize(subjSize, subjSize, {
           fit: "contain",
@@ -800,21 +827,59 @@ export async function POST(req: Request) {
         .png()
         .toBuffer();
 
-      return await sharp(bgCanvas)
+      const composite = await sharp(bgCanvas)
         .composite([{ input: subjPng, left: subjLeft, top: subjTop }])
         .png()
         .toBuffer();
+
+      // Build a hard matte reference: white subject on black background.
+      const subjAlpha = await sharp(subjPng)
+        .extractChannel("alpha")
+        .threshold(10)
+        .png()
+        .toBuffer();
+      const whiteRgb = await sharp({
+        create: {
+          width: subjSize,
+          height: subjSize,
+          channels: 3,
+          background: { r: 255, g: 255, b: 255 },
+        },
+      })
+        .png()
+        .toBuffer();
+      const whiteSubject = await sharp(whiteRgb)
+        .joinChannel(subjAlpha)
+        .png()
+        .toBuffer();
+      const matte = await sharp({
+        create: {
+          width: sizeW,
+          height: sizeH,
+          channels: 3,
+          background: { r: 0, g: 0, b: 0 },
+        },
+      })
+        .composite([{ input: whiteSubject, left: subjLeft, top: subjTop }])
+        .png()
+        .toBuffer();
+
+      return { composite, matte };
     }
 
     // 3) Composite subject onto the background for placement reference
+    stage = "harden-alpha";
+    const hardenedSubjBuf = await hardenSubjectAlpha(subjBuf);
     stage = "safe-crop";
-    const safeSubjBuf = await safeCropSubject(subjBuf);
+    const safeSubjBuf = await safeCropSubject(hardenedSubjBuf);
     stage = "build-composite";
-    const preCompositeBuf = await buildComposite(safeSubjBuf);
+    const { composite: preCompositeBuf, matte: subjectMatteBuf } =
+      await buildCompositeBundle(safeSubjBuf);
 
     // 4) Convert both images to data URLs (order matters)
     stage = "data-urls";
     const bgOnlyDataUrl = bufferToDataUrlPng(bgCanvas);
+    const subjectMatteDataUrl = bufferToDataUrlPng(subjectMatteBuf);
 
     // --- Build prompt (BASE + SUFFIX + background lock) ---
     stage = "build-prompt";
@@ -823,6 +888,7 @@ export async function POST(req: Request) {
         ? `Background lock (guided):
 - Image 1 is the subject placement and framing reference.
 - Image 2 is the background reference and should remain recognizable.
+- Image 3 is the subject matte reference (white subject shape on black background).
 - Preserve the background’s layout, architecture, and key features from Image 2.
 - Do not replace the environment or move the scene.
 - Subject relighting must be derived from Image 2 lighting only (direction, color, intensity, contrast).
@@ -833,6 +899,7 @@ export async function POST(req: Request) {
         : `Background lock (strict):
 - Image 1 is the subject placement and framing reference.
 - Image 2 is the background reference and MUST be preserved exactly.
+- Image 3 is the subject matte reference (white subject shape on black background).
 - Preserve the background’s layout, architecture, structure, and key features from Image 2.
 - Do not replace the environment. Do not invent a new background. Do not move the scene.
 - Subject relighting must be derived from Image 2 lighting only (direction, color, intensity, contrast).
@@ -855,6 +922,12 @@ Rules:
 - relight subject using this direction/contrast/temperature/shadow-softness profile
 - keep highlight spill close to ${sceneProfile.highlightHex}; keep occluded regions near ${sceneProfile.shadowHex}
 - no light source invention and no global relight that conflicts with Image 2`;
+    const occlusionLock = `Occlusion lock (strict):
+- Treat Image 3 matte as solidity guidance: white area is subject body volume.
+- Subject body/clothing must stay fully opaque; no translucency and no double-exposure.
+- Do not let floor/table/booth/background textures pass through visible subject regions.
+- If a foreground object from Image 2 occludes the subject, occlusion must be crisp and physically plausible.
+- Maintain contact grounding at the feet/base with realistic contact shadow.`;
     const lowAngleHint = /low[\s-]?angle|upward perspective|camera from below/i.test(
       String(extraPrompt || "")
     );
@@ -874,6 +947,8 @@ Rules:
 
 ${sceneCueBlock}
 
+${occlusionLock}
+
 ${cameraFramingBlock}
 
 ${STYLE_SUFFIX[safeStyle]}
@@ -888,7 +963,7 @@ ${backgroundLock}${extraBlock}${nanoTone}`;
       stage = "fal:run";
       const safeCompositeDataUrl = bufferToDataUrlPng(preCompositeBuf);
       const outUrl = await runFalEdit({
-        imageDataUrls: [safeCompositeDataUrl, bgOnlyDataUrl],
+        imageDataUrls: [safeCompositeDataUrl, bgOnlyDataUrl, subjectMatteDataUrl],
         prompt: finalPrompt,
         size: sizeStr,
       });
@@ -897,13 +972,13 @@ ${backgroundLock}${extraBlock}${nanoTone}`;
 
     if (resolvedProvider === "replicate") {
       stage = "replicate:prep";
-      const safeSubjBuf = await safeCropSubject(subjBuf);
-      const safeCompositeBuf = await buildComposite(safeSubjBuf);
+      const safeSubjBuf = await safeCropSubject(hardenedSubjBuf);
+      const { composite: safeCompositeBuf } = await buildCompositeBundle(safeSubjBuf);
       const safeCompositeDataUrl = bufferToDataUrlPng(safeCompositeBuf);
       try {
         stage = "replicate:run";
         const outUrl = await runFlux({
-          imageDataUrls: [safeCompositeDataUrl, bgOnlyDataUrl],
+          imageDataUrls: [safeCompositeDataUrl, bgOnlyDataUrl, subjectMatteDataUrl],
           prompt: finalPrompt,
           token: AI_API_KEY as string,
           aspect_ratio,
@@ -959,7 +1034,7 @@ ${backgroundLock}${extraBlock}${nanoTone}`;
           .blur(0.3)
           .png()
           .toBuffer();
-        const safeCompositeBuf2 = await buildComposite(softenedSubj);
+        const { composite: safeCompositeBuf2 } = await buildCompositeBundle(softenedSubj);
         const safeCompositeDataUrl2 = bufferToDataUrlPng(safeCompositeBuf2);
         const safePrompt =
           `Preserve the exact subject identity from Image 1 (face, skin tone, hair, clothing). ` +
@@ -967,11 +1042,12 @@ ${backgroundLock}${extraBlock}${nanoTone}`;
           `Preserve the background from Image 2 exactly. ` +
           `Keep subject framing matched to Image 1 (same placement, scale, and pose). ` +
           `Relight the subject using only Image 2 scene lighting for seamless integration. ` +
+          `Subject must remain fully opaque; no table/floor texture bleed-through. ` +
           `Use scene cues: key ${sceneProfile.keyDirection}, temperature ${sceneProfile.temperature}, contrast ${sceneProfile.contrast}. ` +
           `Family-friendly, non-suggestive styling.`;
         stage = "replicate:safe-run";
         const outUrl = await runFlux({
-          imageDataUrls: [safeCompositeDataUrl2, bgOnlyDataUrl],
+          imageDataUrls: [safeCompositeDataUrl2, bgOnlyDataUrl, subjectMatteDataUrl],
           prompt: safePrompt,
           token: AI_API_KEY as string,
           aspect_ratio,

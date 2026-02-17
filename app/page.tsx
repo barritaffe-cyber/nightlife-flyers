@@ -18,6 +18,7 @@ import { alignHeadline } from "../lib/alignHeadline";
 import { isActiveUtil } from '../lib/isActiveUtil';
 import { sharedRootRef, setRootRef } from "../lib/rootRefUtil";
 import { getRootRef } from "../lib/rootRefUtil";
+import { deriveMoodStyleSignal } from "../lib/moodStyleSignal";
 import { useFlyerState, type Format } from "../app/state/flyerState";
 import type { Emoji } from "../app/types/emoji";
 import { canvasRefs } from "../lib/canvasRefs";
@@ -1302,28 +1303,28 @@ const NIGHTLIFE_BACKGROUND_ENERGY: Record<GenEnergy, string> = {
 
 const NIGHTLIFE_ATTIRE_BY_GENDER = {
   man: {
-    streetwear: "premium streetwear, statement bomber or leather jacket, layered textures, designer sneakers, bold accessories, runway-ready styling",
-    "club-glam": "club glam menswear, fitted satin shirt, metallic accents, chain jewelry, polished shoes, editorial nightlife styling",
-    luxury: "luxury nightlife suit, tailored blazer, silk shirt, velvet or satin accents, upscale accessories, couture quality, no t-shirt",
-    festival: "festival menswear, bold patterns, layered accessories, expressive styling, statement jewelry, textured fabrics",
-    "all-white": "all-white tailored suit, crisp shirt, monochrome styling, premium textures, clean editorial finish",
-    cyberpunk: "cyberpunk techwear, glossy synthetic fabrics, neon accents, reflective visor shades with neon reflections, LED trims, futuristic accessories",
+    streetwear: "nightclub streetwear, fitted designer tee or open silk shirt under bomber/leather jacket, tailored trousers, premium sneakers or boots, chain accessories, styled nightlife fit",
+    "club-glam": "club-glam menswear, fitted satin or mesh shirt, tailored pants, statement jewelry, polished boots or loafers, upscale nightlife styling",
+    luxury: "luxury nightlife look, tailored blazer with open-collar silk shirt, premium trousers, designer loafers, upscale accessories, couture-quality finishing",
+    festival: "festival nightclub menswear, bold textures, layered accessories, expressive styling, statement jewelry, premium materials",
+    "all-white": "all-white nightlife look, crisp tailored separates, premium monochrome fabrics, polished footwear, clean editorial finish",
+    cyberpunk: "cyberpunk nightlife menswear, structured techwear layers, glossy synthetic fabrics, neon edge accents, futuristic accessories",
   },
   woman: {
-    streetwear: "fashion streetwear, cropped leather jacket, sleek bodysuit, bold textures, statement heels, layered jewelry, flyer-ready nightlife styling",
-    "club-glam": "club glam mini dress or corset, sequins or metallic mesh, satin or latex accents, bold jewelry, strappy heels, flyer-ready nightlife styling, premium polish",
-    luxury: "luxury nightlife dress, silk or satin gown, structured blazer with metallic hardware, statement jewelry, elegant heels, couture quality, flyer-ready editorial look",
-    festival: "festival glam, crochet or fringe top, sequins, layered accessories, expressive styling, sparkling details, flyer-ready energy",
-    "all-white": "all-white luxury look, white satin blazer or silk slip dress, lace accents, minimal jewelry, premium fabric, flyer-ready editorial finish",
-    cyberpunk: "cyberpunk nightlife look, glossy techwear, neon accents, reflective visor shades with neon reflections, LED trims, futuristic accessories",
+    streetwear: "fashion-forward nightclub streetwear, cropped leather jacket or structured blazer, sleek bodysuit or fitted top, statement heels or boots, layered jewelry, premium styling",
+    "club-glam": "club-glam womenswear, mini dress or corset top with tailored bottoms, sequins/metallic mesh/satin accents, bold jewelry, strappy heels, upscale nightlife polish",
+    luxury: "luxury nightlife womenswear, silk or satin dress with structured tailoring, premium metallic hardware, statement jewelry, elegant heels, couture editorial finish",
+    festival: "festival nightclub glam, expressive textures, sequins or fringe accents, layered accessories, sparkling nightlife energy, premium fit",
+    "all-white": "all-white nightlife luxury look, satin/blazer tailoring, clean monochrome textures, refined jewelry, editorial finish",
+    cyberpunk: "cyberpunk nightlife womenswear, glossy techwear layers, neon accents, futuristic accessories, high-fashion club styling",
   },
   any: {
-    streetwear: "premium streetwear, statement jacket, layered textures, bold accents, runway-ready styling",
-    "club-glam": "club glam attire, metallic fabrics, shimmer accents, bold accessories, editorial nightlife styling",
-    luxury: "luxury nightlife outfit, tailored silhouette, premium materials, couture quality, no t-shirt",
-    festival: "festival styling, layered accessories, expressive styling, sparkle accents, textured fabrics",
-    "all-white": "all-white attire, clean monochrome styling, premium fabric, editorial finish",
-    cyberpunk: "cyberpunk nightlife look, glossy techwear, neon accents, reflective visor shades with neon reflections, LED trims, futuristic accessories",
+    streetwear: "nightclub streetwear, tailored layered fit, premium textures, designer accents, fashion-forward club styling",
+    "club-glam": "club-glam nightlife attire, metallic/satin/mesh accents, tailored silhouette, statement accessories, premium nightlife polish",
+    luxury: "luxury nightlife outfit, tailored silhouette, premium materials, couture-level finishing, upscale club styling",
+    festival: "festival nightlife styling, expressive textures, layered accessories, sparkle accents, premium fit",
+    "all-white": "all-white nightlife attire, clean monochrome styling, premium fabrics, polished editorial finish",
+    cyberpunk: "cyberpunk nightlife attire, structured techwear, glossy materials, neon accents, futuristic fashion styling",
   },
 } as const;
 
@@ -1332,6 +1333,21 @@ const getAttirePrompt = (gender: GenGender, attire: GenAttire) => {
   if (gender === "woman") return NIGHTLIFE_ATTIRE_BY_GENDER.woman[attire];
   // gender-neutral / nonbinary fallbacks use inclusive phrasing
   return NIGHTLIFE_ATTIRE_BY_GENDER.any[attire];
+};
+
+const NIGHTLIFE_ATTIRE_NEGATIVES: Record<GenAttire, string> = {
+  streetwear:
+    "office wear, business suit and tie, gym clothes, sweatpants, plain basic t-shirt and jeans, sloppy casual fit",
+  "club-glam":
+    "office wear, business formal, conservative daytime clothing, baggy hoodie, tracksuit, plain t-shirt and jeans, underdressed casual outfit",
+  luxury:
+    "office boardroom look, business suit and tie, cheap casual basics, gym wear, sloppy fit, plain hoodie",
+  festival:
+    "office wear, bland casual basics, plain t-shirt and jeans, gym wear, costume-party outfit, cartoon cosplay",
+  "all-white":
+    "off-white dingy basics, gym wear, office uniform, plain undershirt look, sloppy casual fit",
+  cyberpunk:
+    "office wear, normal casual basics, plain t-shirt and jeans, bland styling without techwear details",
 };
 
 const SUBJECT_MATCHERS = [
@@ -1412,26 +1428,20 @@ function buildDiversifiedPrompt(
   const pool = [...S.locations, ...S.lighting, ...S.camera, ...S.micro, ...S.colorways];
   const tokens = pickN(pool, Math.min(2 + variety * 2, 10), rng);
 
-  // We want TEXT on the left, subject on the right.
-  // If you ever flip textSide to 'right', this will mirror automatically.
+  // Keep broad framing guidance without reserving blank text zones.
   const subjectSide = (textSide === 'left') ? 'right' : 'left';
-
-  // Stricter composition: right third anchoring + % of clean negative space.
-  const NEG_SPACE_PCT = format === 'story' ? 45 : 40; // a bit more room on vertical
   const comp =
     format === 'story'
       ? [
           'vertical 9:16 poster composition',
-          `subject anchored to the ${subjectSide} third`,
-          `leave at least ${NEG_SPACE_PCT}% clean negative space on the ${textSide} side for bold typography`,
-          `avoid busy detail on the ${textSide} half`,
+          `subject anchored to the ${subjectSide} side with natural spacing`,
+          'use full-frame environmental detail and depth',
           'rule-of-thirds framing, headroom preserved',
         ].join(', ')
       : [
           'square 1:1 poster composition',
-          `subject anchored to the ${subjectSide} third`,
-          `leave at least ${NEG_SPACE_PCT}% clean negative space on the ${textSide} side for bold typography`,
-          `avoid busy detail on the ${textSide} half`,
+          `subject anchored to the ${subjectSide} side with natural spacing`,
+          'use full-frame environmental detail and depth',
           'rule-of-thirds framing, headroom preserved',
         ].join(', ');
 
@@ -1463,14 +1473,12 @@ function buildDiversifiedPrompt(
     'no text, no typography, no logos, no UI',
     'no watermark, no signature, no caption',
     'no extra subjects, no duplicated bodies',
-    `no clutter or high-frequency detail on the ${textSide} side`,
     'no extreme fisheye, no cartoon CGI look',
   ].join('. ');
 
-  // Gentle guidance to make the text side visually calm.
-  const textSideStyling = [
-    `the ${textSide} side should be visually calm with gentle gradients or soft bokeh`,
-    'keep strongest highlights and detail around the subject, not in the negative space',
+  const compositionStyling = [
+    'maintain balanced detail across the full frame',
+    'keep highlights and depth layered naturally across foreground and background',
   ].join('. ');
 
   // Assemble
@@ -1478,7 +1486,7 @@ function buildDiversifiedPrompt(
     tokens.join(', '),
     comp,
     sanitizedBase.trim(),
-    textSideStyling,
+    compositionStyling,
     sharedQuality,
     allowPeople ? peopleOn : peopleOff,
     negatives,
@@ -6508,14 +6516,37 @@ export default function Page() {
 
 
 
+      const blendedUrl: string | null =
+        typeof data?.url === "string"
+          ? data.url
+          : typeof data?.b64 === "string"
+            ? `data:image/png;base64,${data.b64}`
+            : null;
+      if (!blendedUrl) {
+        throw new Error("Blend returned no image.");
+      }
+
       // 3. Apply Result to Canvas
-      setBgUploadUrl(data.url);
+      setBgUploadUrl(blendedUrl);
       setBgUrl(null);
       
       // Reset transforms since the new image is already perfectly cropped
       setBgScale(1); 
       setBgPosX(50); 
       setBgPosY(50);
+      // Persist the blend explicitly for this format so toggles can restore it.
+      lastBlendByFormatRef.current[format] = blendedUrl;
+      useFlyerState.getState().setSession((prev: any) => ({
+        ...prev,
+        [format]: {
+          ...(prev?.[format] || {}),
+          bgUploadUrl: blendedUrl,
+          bgUrl: null,
+        },
+      }));
+      setSessionValue(format, "bgScale", 1);
+      setSessionValue(format, "bgPosX", 50);
+      setSessionValue(format, "bgPosY", 50);
       if (typeof window !== "undefined" && window.innerWidth < 1024) {
         window.setTimeout(scrollToArtboard, 160);
       }
@@ -6613,6 +6644,14 @@ const [fadeState, setFadeState] = useState<"idle" | "fadingOut" | "fadingIn">("i
 const [pendingFormat, setPendingFormat] = useState<Format | null>(null);
 const [fadeOut, setFadeOut] = useState(false);
 const [showStartupTemplates, setShowStartupTemplates] = React.useState(true);
+const lastBlendByFormatRef = React.useRef<Record<Format, string | null>>({
+  square: null,
+  story: null,
+});
+const [blendRecallPrompt, setBlendRecallPrompt] = React.useState<{
+  format: Format;
+  blendUrl: string;
+} | null>(null);
 
 
 
@@ -10378,7 +10417,7 @@ const [allowPeople, setAllowPeople] = useState(false); // default OFF
 // If people are off but the default prompt mentions “portrait”, use a safer default:
 useEffect(() => {
   if (!allowPeople && /portrait|person|model|subject/i.test(genPrompt)) {
-    setGenPrompt('stylish nightlife background with clean negative space for bold typography');
+    setGenPrompt('stylish nightlife background with rich full-frame detail');
   }
 }, [allowPeople]); 
 
@@ -10484,21 +10523,38 @@ const generateBackground = async (opts: GenOpts = {}) => {
       typeof opts.referenceOverride === 'string' && opts.referenceOverride.trim()
         ? opts.referenceOverride.trim()
         : null;
-    const referenceSamples = [moodReferenceSample, faceReferenceSample].filter(
+    const moodReferenceMode = Boolean(moodReferenceSample);
+    const moodStyleSignal = moodReferenceMode
+      ? await deriveMoodStyleSignal(moodReferenceSample as string)
+      : null;
+    const referenceSamples = [faceReferenceSample].filter(
       (v): v is string => Boolean(v)
     );
     const primaryReferenceSample = referenceSamples[0] ?? null;
+    const styleSignalPrompt = moodStyleSignal?.stylePrompt || '';
+    const styleOnlyReferenceHint = moodReferenceMode
+      ? [
+          opts.referenceHint || '',
+          styleSignalPrompt,
+          'use extracted style signal only (lighting, color palette, contrast, texture, energy), not structure',
+          'new composition required: different camera angle, subject placement, and object layout',
+        ]
+          .filter(Boolean)
+          .join('. ')
+      : (opts.referenceHint || undefined);
     
     // 3. The Generator
     const makeOne = async (s: number): Promise<string> => {
       
       // --- A. MOOD & ATMOSPHERE ---
-      const genreMood = {
+      const genreMood = moodReferenceMode
+        ? ''
+        : ({
         neon: 'electric rave energy, futuristic colors, lasers, smoke, confetti, metallic shine',
         urban: 'gritty street club, moody lighting, graffiti textures, hip-hop confidence',
         tropical: 'warm sunset tones, palm silhouettes, rooftop ambience, summer nightlife',
         vintage: 'film grain disco, retro outfits, nostalgic glam lighting',
-      }[styleForThisRun] ?? '';
+      }[styleForThisRun] ?? '');
       const S = STYLE_DB[styleForThisRun];
       const rng = mulberry32(s);
 
@@ -10541,7 +10597,7 @@ const generateBackground = async (opts: GenOpts = {}) => {
         : '';
 
       const promptSource = [
-        PRESETS.find(p => p.key === presetKey)?.prompt ?? '',
+        moodReferenceMode ? '' : (PRESETS.find(p => p.key === presetKey)?.prompt ?? ''),
         (opts.prompt || '').trim(),
         (genPrompt || '').trim(),
       ]
@@ -10565,7 +10621,7 @@ const generateBackground = async (opts: GenOpts = {}) => {
             cameraSpec = '35mm documentary nightlife photo, direct flash with soft falloff, slight handheld energy, subtle motion blur only on movement, no fisheye distortion';
 
             compositionRule = requestedFormat === 'story'
-               ? 'crowd in lower and mid frame, keep top area cleaner for text, natural spacing between people'
+               ? 'crowd in lower and mid frame with natural spacing and layered depth'
                : 'immersive crowd scene with realistic depth layering, natural spacing between people';
 
             qualityBooster = 'high contrast, vibrant colors, authentic look, raw vibe, chaotic energy, realistic skin tones, believable faces, no waxy skin';
@@ -10578,31 +10634,31 @@ const generateBackground = async (opts: GenOpts = {}) => {
               "full-body": {
                 camera:
                   "35mm lens, eye-level camera, camera 10-15 feet away, full body shot, head-to-toe visible, natural proportions, cinematic rim lighting, no toy look",
-                composition: `full body, balanced framing with space above head and below feet, subject anchored on the ${side} side, large negative space on the ${textSide}`,
+                composition: `full body, balanced framing with space above head and below feet, subject anchored on the ${side} side, full-frame environmental detail`,
                 negatives: "cropped limbs, cut-off head, distorted anatomy, close-up, tight crop",
               },
               "three-quarter": {
                 camera:
                   "50mm lens, eye-level camera, camera 6-8 feet away, f/1.8, three-quarter shot framed from mid-thigh up",
-                composition: `three-quarter framing, outfit details clearly visible, subject anchored on the ${side} side, strong negative space on the ${textSide}`,
+                composition: `three-quarter framing, outfit details clearly visible, subject anchored on the ${side} side, strong environmental depth`,
                 negatives: "full body, head-to-toe, close-up, tight crop, cropped limbs",
               },
               "waist-up": {
                 camera:
                   "85mm lens, eye-level camera, camera 4-6 feet away, waist-up framing, flash with soft falloff",
-                composition: `waist-up shot, framed from waist to just above head, subject anchored on the ${side} side, negative space on the ${textSide}`,
+                composition: `waist-up shot, framed from waist to just above head, subject anchored on the ${side} side, balanced full-frame detail`,
                 negatives: "full body, head-to-toe, close-up, tight crop, cropped arms",
               },
               "chest-up": {
                 camera:
                   "105mm macro lens, eye-level camera, camera 3-4 feet away, chest-up framing, softbox top light",
-                composition: `chest-up portrait, framed from upper chest to top of head, subject anchored on the ${side} side, 60% negative space on the ${textSide}`,
+                composition: `chest-up portrait, framed from upper chest to top of head, subject anchored on the ${side} side, keep depth cues visible in background`,
                 negatives: "full body, wide shot, long shot, cropped head, distorted anatomy",
               },
               "close-up": {
                 camera:
                   "105mm lens, eye-level camera, camera 2-3 feet away, close-up framing, face fills frame but not cropped",
-                composition: `close-up portrait, subject anchored on the ${side} side, generous negative space on the ${textSide}`,
+                composition: `close-up portrait, subject anchored on the ${side} side, background still carries realistic venue texture`,
                 negatives: "full body, wide shot, long shot, cropped head, distorted anatomy",
               },
             } as const;
@@ -10610,10 +10666,7 @@ const generateBackground = async (opts: GenOpts = {}) => {
             const shot = shotSpec[genShot];
             cameraSpec = `${shot.camera}, rim light, back light, no cropped limbs, no cut-off head`;
             compositionRule = shot.composition;
-            const attireNegatives =
-              genAttire === "luxury" || genAttire === "club-glam"
-                ? "plain t-shirt, hoodie, casual jeans, gym wear, athletic shorts, cheap fabrics, sloppy fit, boring outfit"
-                : "plain t-shirt, gym wear, cheap fabrics, boring outfit";
+            const attireNegatives = NIGHTLIFE_ATTIRE_NEGATIVES[genAttire];
             const closeUpNegatives =
               genShot === "close-up"
                 ? "exaggerated eyes, distorted face, uncanny valley, over-sharpened skin, wide grin, doll-like skin"
@@ -10623,22 +10676,21 @@ const generateBackground = async (opts: GenOpts = {}) => {
          } else {
             subjectPrompt = '';
             cameraSpec = 'cinematic wide shot, atmospheric lighting';
-            compositionRule = `balanced composition with negative space on the ${textSide} side`;
+            compositionRule = 'balanced composition with full-frame detail and layered depth';
             qualityBooster = 'high quality, cinematic lighting, depth, clean gradients';
             negativePrompt = '';
          }
 
       } else {
          const styleBg = NIGHTLIFE_BACKGROUND_TOKENS[styleForThisRun];
-         const venue = pickN(styleBg.venues, 1, rng)[0] ?? '';
-         const practicals = pickN(styleBg.practicals, 1, rng)[0] ?? '';
-         const traces = pickN(styleBg.traces, 2, rng).join(', ');
-         const bgCamera = pickN(styleBg.camera, 1, rng)[0] ?? '';
-         const bgMicro = pickN(S.micro, 2, rng).join(', ');
-         const negativeSpacePct = requestedFormat === 'story' ? 45 : 40;
-
+         const venue = moodReferenceMode ? '' : (pickN(styleBg.venues, 1, rng)[0] ?? '');
+         const practicals = moodReferenceMode ? '' : (pickN(styleBg.practicals, 1, rng)[0] ?? '');
+         const traces = moodReferenceMode ? '' : pickN(styleBg.traces, 2, rng).join(', ');
+         const bgCamera = moodReferenceMode ? '' : (pickN(styleBg.camera, 1, rng)[0] ?? '');
+         const bgMicro = moodReferenceMode ? '' : pickN(S.micro, 2, rng).join(', ');
          subjectPrompt = [
            'authentic nightlife environment only, no visible people',
+           moodReferenceMode ? 'match overall venue mood and design language from the provided sample image' : '',
            venue,
            practicals,
            traces,
@@ -10659,8 +10711,8 @@ const generateBackground = async (opts: GenOpts = {}) => {
 
          compositionRule =
            requestedFormat === 'story'
-             ? `vertical 9:16 flyer composition, reserve at least ${negativeSpacePct}% clean negative space on the ${textSide} side for typography, strongest highlights and detail on the opposite side, layered depth from foreground to back wall`
-             : `square 1:1 flyer composition, reserve at least ${negativeSpacePct}% clean negative space on the ${textSide} side for typography, strongest highlights and detail on the opposite side, layered depth from foreground to back wall`;
+             ? 'vertical 9:16 flyer composition, full-frame detail from foreground to back wall, balanced highlights across scene'
+             : 'square 1:1 flyer composition, full-frame detail from foreground to back wall, balanced highlights across scene';
 
          qualityBooster = [
            '8k resolution, highly detailed photorealistic nightlife production design',
@@ -10680,7 +10732,7 @@ const generateBackground = async (opts: GenOpts = {}) => {
       }
 
       // --- D. RANDOMIZED DETAILS ---
-      const details = pickN([...S.locations, ...S.lighting, ...S.micro], 4, rng).join(', ');
+      const details = moodReferenceMode ? '' : pickN([...S.locations, ...S.lighting, ...S.micro], 4, rng).join(', ');
       const nightlifeRealismDirective = usePeople
         ? 'authentic nightlife documentary realism, practical club lighting motivated by scene sources'
         : 'true nightlife venue realism, culturally authentic club atmosphere, no stock-photo minimalism';
@@ -10707,13 +10759,17 @@ const generateBackground = async (opts: GenOpts = {}) => {
         : "";
 
       const finalPromptList = [
-        PRESETS.find(p => p.key === presetKey)?.prompt ?? '',
+        moodReferenceMode ? '' : (PRESETS.find(p => p.key === presetKey)?.prompt ?? ''),
         (opts.prompt || genPrompt || '').trim(),
         subjectPrompt,
         nightlifeSubjectPrompt,
+        styleSignalPrompt,
         genreMood,
         safeHumanPrompt,
         'strict output rule: no text, no words, no letters, no numbers, no typography, no logos, no readable signage, no watermarks',
+        moodReferenceMode
+          ? 'hard rule: keep mood and lighting language similar to sample but generate a distinct scene with different structure'
+          : '',
         details,
         cameraSpec,
         compositionRule,
@@ -10743,7 +10799,7 @@ const generateBackground = async (opts: GenOpts = {}) => {
         denoiseStrength: 0.3,
         reference: primaryReferenceSample,
         references: referenceSamples,
-        referenceHint: opts.referenceHint,
+        referenceHint: styleOnlyReferenceHint,
       };
 
       const runOnce = async () => {
@@ -10851,35 +10907,8 @@ const generateSubjectForBackground = async () => {
     const subjectProvider =
       genProvider === "auto" ? "nano" : (genProvider as "nano" | "openai" | "venice");
     const isVeniceSubject = subjectProvider === "venice";
-
-    const safeAttireMap: Record<GenAttire, string> = {
-      "club-glam":
-        "nightlife club-glam look, metallic bodycon mini dress or leather/latex catsuit, plunging cowl-neck mini, high-shine fabric, statement accessories, fashion-forward styling",
-      luxury:
-        "luxury nightlife outfit, designer details, bold styling, premium fabrics, confident vibe",
-      festival:
-        "festival-nightlife styling, vibrant layers, bold textures, fashion-forward look",
-      "all-white":
-        "all-white party attire, nightlife styling, sharp tailoring, luxe accents",
-      streetwear:
-        "nightclub streetwear, layered fit, premium textures, bold styling",
-      cyberpunk:
-        "cyberpunk nightlife look, glossy techwear, neon accents, reflective visor shades with neon reflections, LED trims, futuristic accessories",
-    };
-    const veniceAttireMap: Record<GenAttire, string> = {
-      "club-glam":
-        "club-glam nightlife look, metallic bodycon mini dress or leather/latex catsuit, plunging cowl-neck mini, high-shine fabric, statement accessories, fashion-forward styling",
-      luxury:
-        "luxury nightlife outfit, designer details, bold styling, confident presence",
-      festival:
-        "festival-nightlife outfit, vibrant layers, bold styling, fashion-forward",
-      "all-white":
-        "all-white party attire, nightlife styling, sharp tailoring, luxe accents",
-      streetwear:
-        "nightclub streetwear, layered fit, premium textures, bold styling",
-      cyberpunk:
-        "cyberpunk nightlife look, glossy techwear, neon accents, reflective visor shades with neon reflections, LED trims, futuristic accessories",
-    };
+    const attirePrompt = getAttirePrompt(genGender, genAttire);
+    const attireNegativePrompt = NIGHTLIFE_ATTIRE_NEGATIVES[genAttire];
 
     const safePoseMap: Record<GenPose, string> = {
       dancing: "joyful dance movement, expressive but tasteful",
@@ -10931,7 +10960,7 @@ const generateSubjectForBackground = async () => {
       isVeniceSubject
         ? "adult subject, 21+, nightlife styling, fashion-forward, avoid corporate look unless requested"
         : "adult subject, 21+, tasteful fashion, premium nightlife styling",
-      (isVeniceSubject ? veniceAttireMap : safeAttireMap)[genAttire],
+      attirePrompt,
       NIGHTLIFE_SUBJECT_TOKENS.attireColor[genAttireColor],
       NIGHTLIFE_SUBJECT_TOKENS.colorway[genColorway],
       NIGHTLIFE_SUBJECT_TOKENS.lighting[genLighting],
@@ -10999,7 +11028,7 @@ const generateSubjectForBackground = async () => {
       "high detail, cinematic nightlife styling",
       "sharp focus, crisp facial detail, no motion blur, no gaussian blur, no soft focus",
       "entire head visible, hairline intact, no crops, framing matches camera spec, anatomically correct limbs",
-      `negative prompt: suggestive content, skimpy clothing, exposed undergarments, revealing cuts, sheer fabric, explicit themes, blur, soft focus, airbrushed skin, plastic skin, doll-like, beauty filter, cgi, 3d render, illustration, cartoon, wax figure, low quality, extra people, ${shot.negatives}, ${handAnatomyNegatives}${!isVeniceSubject ? `, ${corporateNegatives}` : ""}`,
+      `negative prompt: suggestive content, skimpy clothing, exposed undergarments, revealing cuts, sheer fabric, explicit themes, blur, soft focus, airbrushed skin, plastic skin, doll-like, beauty filter, cgi, 3d render, illustration, cartoon, wax figure, low quality, extra people, ${shot.negatives}, ${handAnatomyNegatives}, ${attireNegativePrompt}${!isVeniceSubject ? `, ${corporateNegatives}` : ""}`,
       "Do not change ethnicity or skin tone. Do not default to caucasian features if profile is non-white. Keep stated gender.",
     ].join(", ");
 
@@ -15394,10 +15423,26 @@ const applyTemplate = React.useCallback<
     // 2. HEADLINE 2 (Sub)
     setHead2Color(merged.head2Color ?? '#ffffff');
 
+    const mergedBgUploadUrl =
+      typeof (merged as any).bgUploadUrl === "string" && (merged as any).bgUploadUrl
+        ? String((merged as any).bgUploadUrl)
+        : null;
+    const mergedBgUrl =
+      typeof (merged as any).bgUrl === "string" && (merged as any).bgUrl
+        ? String((merged as any).bgUrl)
+        : null;
+
     if (opts?.initialLoad) {
       store.setSessionValue(fmt, "bgScale", incomingScale);
     }
-    if (resolvedBgUrl && !opts?.initialLoad) {
+
+    if (mergedBgUploadUrl) {
+      setBgUploadUrl(mergedBgUploadUrl);
+      setBgUrl(null);
+    } else if (mergedBgUrl) {
+      setBgUploadUrl(null);
+      setBgUrl(mergedBgUrl);
+    } else if (resolvedBgUrl && !opts?.initialLoad) {
       setBgUploadUrl(null);
       setBgUrl(resolvedBgUrl);
     }
@@ -15643,6 +15688,8 @@ const syncCurrentStateToSession = () => {
     // 7. GLOBAL & BACKGROUND
     // ------------------------------------------------
     // Background Image
+    bgUrl,
+    bgUploadUrl,
     bgPosX,
     bgPosY,
     bgScale: currentScale,
@@ -20016,6 +20063,21 @@ style={{ top: STICKY_TOP }}
               applyTemplate(tpl, { targetFormat: next, initialLoad: true });
             }
 
+            const sessionForNext = useFlyerState.getState().session?.[next] as any;
+            const currentBgForNext =
+              (sessionForNext?.bgUploadUrl as string | undefined) ||
+              (sessionForNext?.bgUrl as string | undefined) ||
+              null;
+            const savedBlendForNext = lastBlendByFormatRef.current[next];
+            if (
+              savedBlendForNext &&
+              (!currentBgForNext || currentBgForNext !== savedBlendForNext)
+            ) {
+              setBlendRecallPrompt({ format: next, blendUrl: savedBlendForNext });
+            } else {
+              setBlendRecallPrompt(null);
+            }
+
             // 3) Cleanup
             setPendingFormat(null);
             setFadeOut(false);
@@ -21820,6 +21882,60 @@ style={{ top: STICKY_TOP }}
     </motion.div>
   )}
 </AnimatePresence>
+
+{blendRecallPrompt && (
+  <div className="fixed inset-0 z-[2600] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="w-full max-w-md rounded-2xl border border-cyan-400/30 bg-[#0a0d12] shadow-[0_30px_80px_rgba(0,0,0,.6)] overflow-hidden">
+      <div className="px-5 py-4 border-b border-white/10 bg-gradient-to-r from-cyan-500/20 to-indigo-500/10">
+        <div className="text-sm uppercase tracking-[0.16em] text-cyan-300">Blend Found</div>
+        <div className="mt-1 text-base font-semibold text-white">
+          Use your saved blend for {blendRecallPrompt.format}?
+        </div>
+      </div>
+
+      <div className="p-5 text-sm text-neutral-300">
+        You have a generated blend saved for this format. Keep the current background or apply your blend.
+      </div>
+
+      <div className="px-5 pb-5 flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => setBlendRecallPrompt(null)}
+          className="px-3 py-2 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 text-white text-sm"
+        >
+          Keep Current
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            const fmtTarget = blendRecallPrompt.format;
+            const blendUrl = blendRecallPrompt.blendUrl;
+            setBgUploadUrl(blendUrl);
+            setBgUrl(null);
+            setBgScale(1);
+            setBgPosX(50);
+            setBgPosY(50);
+            useFlyerState.getState().setSession((prev: any) => ({
+              ...prev,
+              [fmtTarget]: {
+                ...(prev?.[fmtTarget] || {}),
+                bgUploadUrl: blendUrl,
+                bgUrl: null,
+              },
+            }));
+            setSessionValue(fmtTarget, "bgScale", 1);
+            setSessionValue(fmtTarget, "bgPosX", 50);
+            setSessionValue(fmtTarget, "bgPosY", 50);
+            setBlendRecallPrompt(null);
+          }}
+          className="px-3 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-sm"
+        >
+          Use Blend
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
 
    </main>
