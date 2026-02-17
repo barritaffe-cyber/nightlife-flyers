@@ -16538,6 +16538,70 @@ React.useEffect(() => {
   }
 }, [activeBgControls]);
 
+// Mobile auto-tab routing:
+// - text selections -> Text tab
+// - design/background/asset selections -> Design tab
+React.useEffect(() => {
+  if (!isMobileView || uiMode !== "design") return;
+
+  const textPanels = new Set([
+    "template",
+    "logo",
+    "headline",
+    "head2",
+    "details",
+    "details2",
+    "venue",
+    "subtag",
+    "cinema",
+    "mastergrade",
+  ]);
+  const designPanels = new Set([
+    "dj_branding",
+    "ai_background",
+    "magic_blend",
+    "background",
+    "bgfx",
+    "icons",
+    "portrait",
+    "project",
+  ]);
+
+  let nextTab: "design" | "assets" | null = null;
+
+  if (
+    activeTextTarget ||
+    moveTarget === "logo" ||
+    (selectedPanel ? textPanels.has(selectedPanel) : false)
+  ) {
+    nextTab = "design"; // Text tab
+  } else if (
+    !!activeBgControls ||
+    hasAssetControls ||
+    moveTarget === "background" ||
+    moveTarget === "icon" ||
+    moveTarget === "shape" ||
+    moveTarget === "portrait" ||
+    (selectedPanel ? designPanels.has(selectedPanel) : false)
+  ) {
+    nextTab = "assets"; // Design tab
+  }
+
+  if (nextTab && mobileControlsTab !== nextTab) {
+    setMobileControlsOpen(true);
+    setMobileControlsTab(nextTab);
+  }
+}, [
+  isMobileView,
+  uiMode,
+  activeTextTarget,
+  moveTarget,
+  selectedPanel,
+  activeBgControls,
+  hasAssetControls,
+  mobileControlsTab,
+]);
+
 // Consolidated scroll/touch hide logic for mobile floats
 React.useEffect(() => {
   if (!isMobileView) return;
