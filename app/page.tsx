@@ -15835,6 +15835,7 @@ const [projectHelpOpen, setProjectHelpOpen] = React.useState(false);
 
 const floatingAssetRef = React.useRef<HTMLDivElement | null>(null);
 const floatingTextRef = React.useRef<HTMLDivElement | null>(null);
+const floatingBgRef = React.useRef<HTMLDivElement | null>(null);
 const assetFocusLockRef = React.useRef(false);
 
 React.useEffect(() => {
@@ -16616,9 +16617,13 @@ React.useEffect(() => {
     const isLockTarget = (node: EventTarget | null | undefined) =>
       node instanceof Element &&
       !!node.closest?.('[data-mobile-float-lock="true"]');
+    const isFloatTarget = (node: EventTarget | null | undefined) =>
+      node instanceof Element && !!node.closest?.('[data-floating-controls]');
     if (
       isLockTarget((ev as any)?.target) ||
+      isFloatTarget((ev as any)?.target) ||
       path?.some?.((n: any) => isLockTarget(n)) ||
+      path?.some?.((n: any) => isFloatTarget(n)) ||
       (floatingTextRef.current &&
         (path?.includes(floatingTextRef.current) ||
           (targetNode && floatingTextRef.current.contains(targetNode)) ||
@@ -16626,7 +16631,11 @@ React.useEffect(() => {
       (floatingAssetRef.current &&
         (path?.includes(floatingAssetRef.current) ||
           (targetNode && floatingAssetRef.current.contains(targetNode)) ||
-          (active && floatingAssetRef.current.contains(active))))
+          (active && floatingAssetRef.current.contains(active)))) ||
+      (floatingBgRef.current &&
+        (path?.includes(floatingBgRef.current) ||
+          (targetNode && floatingBgRef.current.contains(targetNode)) ||
+          (active && floatingBgRef.current.contains(active))))
     ) {
       return;
     }
@@ -16648,14 +16657,18 @@ React.useEffect(() => {
     assetFocusLockRef.current = false;
   };
   window.addEventListener("pointerup", release, { passive: true });
+  window.addEventListener("pointercancel", release, { passive: true });
   window.addEventListener("touchend", release, { passive: true });
+  window.addEventListener("touchcancel", release, { passive: true });
   return () => {
     document.removeEventListener("scroll", onUserScroll as any, { capture: true } as any);
     window.removeEventListener("scroll", onUserScroll as any);
     window.removeEventListener("touchmove", onUserScroll as any);
     window.removeEventListener("wheel", onUserScroll as any);
     window.removeEventListener("pointerup", release);
+    window.removeEventListener("pointercancel", release);
     window.removeEventListener("touchend", release);
+    window.removeEventListener("touchcancel", release);
     if (raf) cancelAnimationFrame(raf);
   };
 }, [isMobileView, mobileControlsOpen, mobileFloatSticky]);
@@ -20784,8 +20797,20 @@ style={{ top: STICKY_TOP }}
       <div
         className="rounded-2xl border border-white/5 bg-neutral-900/85 backdrop-blur-xl px-3 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/5"
         style={{ width: scaledCanvasW, maxWidth: "100%" }}
-        onPointerDownCapture={(e) => e.stopPropagation()}
-        onTouchStartCapture={(e) => e.stopPropagation()}
+        ref={floatingBgRef}
+        data-floating-controls="bg"
+        onPointerDownCapture={(e) => {
+          assetFocusLockRef.current = true;
+          e.stopPropagation();
+        }}
+        onTouchStartCapture={(e) => {
+          assetFocusLockRef.current = true;
+          e.stopPropagation();
+        }}
+        onTouchMoveCapture={(e) => {
+          assetFocusLockRef.current = true;
+          e.stopPropagation();
+        }}
       >
         <div className="flex items-center gap-2 text-[11px] font-semibold text-white">
           <span className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</span>
