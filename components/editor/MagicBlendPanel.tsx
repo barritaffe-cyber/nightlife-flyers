@@ -20,6 +20,8 @@ type Props = {
   setBlendCameraZoom: (v: string) => void;
   blendExpressionPose: string;
   setBlendExpressionPose: (v: string) => void;
+  blendSubjectAction: string;
+  setBlendSubjectAction: (v: string) => void;
   blendBackgroundPriority: BlendPriority;
   setBlendBackgroundPriority: (v: BlendPriority) => void;
   isCuttingOut: boolean;
@@ -44,6 +46,8 @@ function MagicBlendPanel({
   setBlendCameraZoom,
   blendExpressionPose,
   setBlendExpressionPose,
+  blendSubjectAction,
+  setBlendSubjectAction,
   blendBackgroundPriority,
   setBlendBackgroundPriority,
   isCuttingOut,
@@ -414,6 +418,17 @@ function MagicBlendPanel({
                     <option key={opt} value={opt}>{opt}</option>
                   ))}
                 </select>
+              </label>
+
+              <label className="space-y-1 col-span-2">
+                <span className="text-neutral-400">Subject Action</span>
+                <textarea
+                  rows={2}
+                  value={blendSubjectAction}
+                  onChange={(e) => setBlendSubjectAction(e.target.value)}
+                  placeholder="e.g. raising champagne, leaning on DJ booth, pointing at crowd"
+                  className="w-full rounded-md border border-neutral-700 bg-neutral-900/60 px-2 py-1.5 text-white placeholder:text-neutral-500"
+                />
               </label>
             </div>
 

@@ -6,6 +6,7 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 type Format = 'square' | 'story';
+type Provider = 'auto' | 'nano' | 'openai' | 'venice' | 'imagine' | 'fal' | 'mock';
 
 const REFERENCE_FETCH_TIMEOUT_MS = Number(process.env.GEN_IMAGE_REF_TIMEOUT_MS || 8000);
 const MAX_REFERENCE_BYTES = Number(process.env.GEN_IMAGE_REF_MAX_BYTES || 10 * 1024 * 1024);
@@ -28,6 +29,21 @@ function sizeFor(format: Format) {
   // gpt-image-1 supports: 1024x1024, 1024x1536 (portrait), 1536x1024 (landscape), auto
   return format === 'story' ? '1024x1536' : '1024x1024';
 }
+
+function falImageSizeFor(format: Format) {
+  return format === 'story' ? { width: 1024, height: 1536 } : { width: 1024, height: 1024 };
+}
+
+const FAL_API_KEY = process.env.FAL_KEY || process.env.FAL_API_KEY;
+const FAL_FLUX2_ENDPOINT = process.env.FAL_FLUX2_ENDPOINT || "https://fal.run/fal-ai/flux-2-pro";
+const FAL_FLUX2_EDIT_ENDPOINT =
+  process.env.FAL_FLUX2_EDIT_ENDPOINT || "https://fal.run/fal-ai/flux-2-pro/edit";
+const FAL_ENABLE_SAFETY_CHECKER =
+  String(process.env.FAL_ENABLE_SAFETY_CHECKER || "false").toLowerCase() === "true";
+const FAL_SAFETY_TOLERANCE = Math.max(
+  1,
+  Math.min(6, Number.parseInt(String(process.env.FAL_SAFETY_TOLERANCE || "5"), 10) || 5)
+);
 
 const dataUrlToBuffer = (dataUrl: string) => {
   const commaIndex = dataUrl.indexOf(",");
@@ -277,7 +293,8 @@ async function genWithOpenAI(
   prompt: string,
   format: Format,
   reference?: string,
-  origin?: string
+  origin?: string,
+  references?: string[]
 ) {
   const key = process.env.OPENAI_API_KEY;
   if (!key) {
@@ -292,8 +309,14 @@ async function genWithOpenAI(
 
   let res: Response;
   try {
-    if (reference && origin) {
-      const refBuf = await toBufferFromAnyImage(reference, origin);
+    const inputRefs =
+      Array.isArray(references) && references.length > 0
+        ? references
+        : reference
+          ? [reference]
+          : [];
+    if (inputRefs.length > 0 && origin) {
+      const refBuf = await toBufferFromAnyImage(inputRefs[0], origin);
       const form = new FormData();
       const blob = new Blob([new Uint8Array(refBuf)], { type: "image/png" });
       form.append("image", blob, "reference.png");
@@ -354,6 +377,120 @@ async function genWithOpenAI(
   const b64 = out.b64_json as string | undefined;
 
   return { ok: true, url, b64 };
+}
+
+function extractFalImagePayload(j: any): { url?: string; b64?: string } {
+  const first = j?.images?.[0];
+  const raw =
+    first?.url ??
+    first?.image?.url ??
+    first?.image ??
+    j?.image?.url ??
+    j?.image ??
+    j?.output?.[0]?.url ??
+    j?.output?.[0];
+
+  if (typeof raw === "string") {
+    if (raw.startsWith("data:image/")) return { url: raw };
+    if (raw.startsWith("http://") || raw.startsWith("https://")) return { url: raw };
+    return { b64: raw };
+  }
+  return {};
+}
+
+async function genWithFal(
+  prompt: string,
+  format: Format,
+  reference?: string,
+  origin?: string,
+  references?: string[]
+) {
+  if (!FAL_API_KEY) {
+    return {
+      ok: false,
+      error: 'Missing FAL_KEY / FAL_API_KEY',
+      placeholder: placeholderDataURL(format, 'FAL key missing'),
+    };
+  }
+
+  const image_size = falImageSizeFor(format);
+  const payload: Record<string, any> = {
+    prompt,
+    image_size,
+    output_format: "png",
+    enable_safety_checker: FAL_ENABLE_SAFETY_CHECKER,
+    safety_tolerance: FAL_SAFETY_TOLERANCE,
+    sync_mode: true,
+  };
+
+  let endpoint = FAL_FLUX2_ENDPOINT;
+  const inputRefs =
+    Array.isArray(references) && references.length > 0
+      ? references
+      : reference
+        ? [reference]
+        : [];
+  if (inputRefs.length > 0 && origin) {
+    const imageUrls: string[] = [];
+    for (const ref of inputRefs.slice(0, 3)) {
+      const refBuf = await toBufferFromAnyImage(ref, origin);
+      imageUrls.push(`data:image/png;base64,${refBuf.toString("base64")}`);
+    }
+    payload.image_urls = imageUrls;
+    endpoint = FAL_FLUX2_EDIT_ENDPOINT;
+  }
+
+  let res: Response;
+  let rawText = "";
+  try {
+    res = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Key ${FAL_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    rawText = await res.text();
+  } catch (err: any) {
+    const msg = `FAL request failed: ${String(err?.message || err)}`;
+    return {
+      ok: false,
+      error: msg,
+      placeholder: placeholderDataURL(format, "FAL request failed"),
+    };
+  }
+
+  let j: any = {};
+  try {
+    j = rawText ? JSON.parse(rawText) : {};
+  } catch {
+    j = {};
+  }
+
+  if (!res.ok) {
+    const msg =
+      j?.detail?.[0]?.msg ||
+      j?.error?.message ||
+      j?.error ||
+      j?.message ||
+      `FAL HTTP ${res.status}`;
+    return {
+      ok: false,
+      error: msg,
+      placeholder: placeholderDataURL(format, "FAL error"),
+    };
+  }
+
+  const out = extractFalImagePayload(j);
+  if (!out.url && !out.b64) {
+    return {
+      ok: false,
+      error: "No image in FAL response",
+      placeholder: placeholderDataURL(format, "No image"),
+    };
+  }
+  return { ok: true, ...out };
 }
 
 function clampPrompt(prompt: string, max = 1500) {
@@ -487,15 +624,16 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const prompt = String(body?.prompt || '').trim();
-    const provider = (body?.provider || 'auto') as
-      | 'auto'
-      | 'nano'
-      | 'openai'
-      | 'venice'
-      | 'imagine'
-      | 'mock';
+    const provider = (body?.provider || 'auto') as Provider;
     const format = (body?.format || 'square') as Format;
     const reference = typeof body?.reference === "string" ? body.reference : undefined;
+    const references =
+      Array.isArray(body?.references)
+        ? body.references.filter((v: unknown): v is string => typeof v === "string" && v.trim().length > 0)
+        : [];
+    const normalizedReferences = Array.from(
+      new Set([reference, ...references].filter((v): v is string => Boolean(v)))
+    ).slice(0, 3);
 
     if (!prompt) {
       return NextResponse.json({ error: "Missing 'prompt'" }, { status: 400 });
@@ -506,7 +644,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ placeholder: placeholderDataURL(format, 'mock') });
     }
 
-    // For now, “nano” == fast OpenAI call. Swap this later for your local / alt service.
     if (provider === 'venice' || provider === 'imagine') {
       const r = await genWithImagine(prompt, format);
       if (!r.ok) {
@@ -517,9 +654,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ placeholder: placeholderDataURL(format, 'empty result') });
     }
 
-    if (provider === 'nano' || provider === 'auto' || provider === 'openai') {
+    if (provider === 'openai') {
       const origin = new URL(req.url).origin;
-      const r = await genWithOpenAI(prompt, format, reference, origin);
+      const r = await genWithOpenAI(prompt, format, reference, origin, normalizedReferences);
       if (!r.ok) {
         // still return a placeholder so your UI can keep going
         return NextResponse.json({ error: r.error, placeholder: r.placeholder }, { status: 200 });
@@ -528,6 +665,33 @@ export async function POST(req: NextRequest) {
       if (r.url) return NextResponse.json({ url: r.url });
       // safety net
       return NextResponse.json({ placeholder: placeholderDataURL(format, 'empty result') });
+    }
+
+    // Default "nano/auto" path now uses FLUX 2 Pro via fal.
+    if (provider === 'nano' || provider === 'auto' || provider === 'fal') {
+      const origin = new URL(req.url).origin;
+      const rFal = await genWithFal(prompt, format, reference, origin, normalizedReferences);
+      if (rFal.ok) {
+        const falB64 = (rFal as any).b64 as string | undefined;
+        const falUrl = (rFal as any).url as string | undefined;
+        if (falB64) return NextResponse.json({ b64: falB64 });
+        if (falUrl) return NextResponse.json({ url: falUrl });
+      }
+
+      // Graceful fallback to OpenAI if fal fails or is not configured.
+      const rOpenAI = await genWithOpenAI(prompt, format, reference, origin, normalizedReferences);
+      if (rOpenAI.ok) {
+        if (rOpenAI.b64) return NextResponse.json({ b64: rOpenAI.b64 });
+        if (rOpenAI.url) return NextResponse.json({ url: rOpenAI.url });
+      }
+
+      return NextResponse.json(
+        {
+          error: rFal.error || rOpenAI.error || "Generation failed",
+          placeholder: rFal.placeholder || rOpenAI.placeholder || placeholderDataURL(format, "generation error"),
+        },
+        { status: 200 }
+      );
     }
 
     // unknown provider

@@ -35,6 +35,8 @@ type GenSize = '1080' | '2160' | '3840';
 type GenerateBackgroundOpts = {
   prompt?: string;
   allowPeopleOverride?: boolean;
+  referenceOverride?: string;
+  referenceHint?: string;
 };
 type ColorPaletteMood =
   | 'neon-cyan-magenta'
@@ -46,6 +48,50 @@ type ColorPaletteMood =
   | 'mono-silver-black'
   | 'warm-champagne-amber';
 type BriefGender = 'male' | 'female' | '';
+
+const MOOD_SAMPLE_BY_EVENT_MOOD: Record<string, string> = {
+  'edm rave club|clean and premium': '/mood-brief/edm-rave-club.png',
+  'edm rave club|dark and cinematic': '/mood-brief/edm-rave-club.png',
+  'edm rave club|high energy and bold': '/mood-brief/edm-rave-club.png',
+  'edm rave club|warm and upscale': '/mood-brief/edm-rave-club.png',
+
+  'rooftop party|clean and premium': '/mood-brief/rooftop-party:premium.png',
+  'rooftop party|dark and cinematic': '/mood-brief/rooftop-party:cinematic.png',
+  'rooftop party|high energy and bold': '/mood-brief/rooftop-party:energy.png',
+  'rooftop party|warm and upscale': '/mood-brief/rooftop-party:premium.png',
+
+  'hip-hop night|clean and premium': '/mood-brief/hip-hop-clean:premium.png',
+  'hip-hop night|dark and cinematic': '/mood-brief/hip-hop-dark:cinematic.png',
+  'hip-hop night|high energy and bold': '/mood-brief/hip-hop-high:energy.png',
+  'hip-hop night|warm and upscale': '/mood-brief/hip-hop-clean:premium.png',
+
+  'afrobeat lounge|clean and premium': '/mood-brief/rooftop-party:premium.png',
+  'afrobeat lounge|dark and cinematic': '/mood-brief/rooftop-party:cinematic.png',
+  'afrobeat lounge|high energy and bold': '/mood-brief/rooftop-party:energy.png',
+  'afrobeat lounge|warm and upscale': '/mood-brief/rooftop-party:premium.png',
+
+  'luxury vip club|clean and premium': '/mood-brief/luxury-vip.club-clean:premium.png',
+  'luxury vip club|dark and cinematic': '/mood-brief/luxury-vip.club-dark:cinematic.png',
+  'luxury vip club|high energy and bold': '/mood-brief/luxury-vip.club-highEnergy:bold.png',
+  'luxury vip club|warm and upscale': '/mood-brief/luxury-vip.club-warm:upscale.png',
+};
+
+const MOOD_SAMPLE_BY_EVENT: Record<string, string> = {
+  'edm rave club': '/mood-brief/edm-rave-club.png',
+  'rooftop party': '/mood-brief/rooftop-party:premium.png',
+  'hip-hop night': '/mood-brief/hip-hop-clean:premium.png',
+  'afrobeat lounge': '/mood-brief/rooftop-party:energy.png',
+  'luxury vip club': '/mood-brief/luxury-vip.club-clean:premium.png',
+};
+
+function resolveMoodSample(eventName: string, moodName: string): string | undefined {
+  const eventKey = eventName.trim().toLowerCase();
+  const moodKey = moodName.trim().toLowerCase();
+  if (!eventKey) return undefined;
+  const full = MOOD_SAMPLE_BY_EVENT_MOOD[`${eventKey}|${moodKey}`];
+  if (full) return full;
+  return MOOD_SAMPLE_BY_EVENT[eventKey];
+}
 
 type Preset = {
   key: string;
@@ -260,11 +306,24 @@ function AiBackgroundPanel({
     }
     setBriefError('');
     setAllowPeople(subjectNeedsPeople);
+    const moodReference = resolveMoodSample(briefEvent, briefMood);
     generateBackground({
       prompt: briefPrompt,
       allowPeopleOverride: subjectNeedsPeople,
+      referenceOverride: moodReference,
+      referenceHint: moodReference
+        ? 'Use the mood sample for palette, lighting, and atmosphere only. Keep output text-free and original.'
+        : undefined,
     });
-  }, [briefPrompt, briefReady, generateBackground, setAllowPeople, subjectNeedsPeople]);
+  }, [
+    briefEvent,
+    briefMood,
+    briefPrompt,
+    briefReady,
+    generateBackground,
+    setAllowPeople,
+    subjectNeedsPeople,
+  ]);
 
   React.useEffect(() => {
     if (!helpOpen) return;
@@ -464,7 +523,7 @@ function AiBackgroundPanel({
                    Auto
                  </Chip>
                  <Chip small active={genProvider === 'nano'} onClick={() => setGenProvider('nano')}>
-                   Nano
+                   FAL
                  </Chip>
                  <Chip small active={genProvider === 'openai'} onClick={() => setGenProvider('openai')}>
                    OpenAI

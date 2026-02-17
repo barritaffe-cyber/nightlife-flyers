@@ -8,11 +8,20 @@ const FLUX_ENDPOINT =
   "https://api.replicate.com/v1/models/black-forest-labs/flux-2-pro/predictions";
 
 const AI_API_KEY = process.env.REPLICATE_API_TOKEN;
+const FAL_API_KEY = process.env.FAL_KEY || process.env.FAL_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const STABILITY_API_KEY = process.env.STABILITY_API_KEY;
 const STABILITY_API_URL =
   process.env.STABILITY_API_URL ||
   "https://api.stability.ai/v2beta/stable-image/generate/sd3";
+const FAL_FLUX2_EDIT_ENDPOINT =
+  process.env.FAL_FLUX2_EDIT_ENDPOINT || "https://fal.run/fal-ai/flux-2-pro/edit";
+const FAL_ENABLE_SAFETY_CHECKER =
+  String(process.env.FAL_ENABLE_SAFETY_CHECKER || "false").toLowerCase() === "true";
+const FAL_SAFETY_TOLERANCE = Math.max(
+  1,
+  Math.min(6, Number.parseInt(String(process.env.FAL_SAFETY_TOLERANCE || "5"), 10) || 5)
+);
 
 // -----------------------------
 // MASTER INTERNAL PROMPT (BASE)
@@ -588,17 +597,85 @@ async function runStabilityEdit(opts: {
   return `data:image/png;base64,${buf.toString("base64")}`;
 }
 
+async function runFalEdit(opts: {
+  imageDataUrls: string[];
+  prompt: string;
+  size: "1024x1024" | "1024x1792" | "1792x1024";
+}) {
+  if (!FAL_API_KEY) {
+    throw new Error("Missing FAL_KEY / FAL_API_KEY in .env.local");
+  }
+
+  const image_size =
+    opts.size === "1024x1792"
+      ? { width: 1024, height: 1536 }
+      : opts.size === "1792x1024"
+      ? { width: 1536, height: 1024 }
+      : { width: 1024, height: 1024 };
+
+  const payload = {
+    prompt: opts.prompt,
+    image_urls: opts.imageDataUrls,
+    image_size,
+    output_format: "png",
+    enable_safety_checker: FAL_ENABLE_SAFETY_CHECKER,
+    safety_tolerance: FAL_SAFETY_TOLERANCE,
+    sync_mode: true,
+  };
+
+  const res = await fetch(FAL_FLUX2_EDIT_ENDPOINT, {
+    method: "POST",
+    headers: {
+      Authorization: `Key ${FAL_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const raw = await res.text();
+  let j: any = {};
+  try {
+    j = raw ? JSON.parse(raw) : {};
+  } catch {
+    j = {};
+  }
+
+  if (!res.ok) {
+    const msg =
+      j?.detail?.[0]?.msg ||
+      j?.error?.message ||
+      j?.error ||
+      j?.message ||
+      `FAL HTTP ${res.status}`;
+    throw new Error(msg);
+  }
+
+  const out =
+    j?.images?.[0]?.url ||
+    j?.images?.[0]?.image?.url ||
+    j?.images?.[0]?.image ||
+    j?.image?.url ||
+    j?.image;
+  if (!out) throw new Error("No image in FAL response");
+  if (typeof out === "string") {
+    if (out.startsWith("data:image/")) return out;
+    if (out.startsWith("http://") || out.startsWith("https://")) return out;
+    return `data:image/png;base64,${out}`;
+  }
+  throw new Error("Unexpected FAL response format");
+}
+
 // -----------------------------
 // route
 // -----------------------------
 export async function POST(req: Request) {
   let stage = "init";
-  let activeProvider: "stability" | "openai" | "replicate" | "nano" | undefined;
+  let activeProvider: "stability" | "openai" | "replicate" | "nano" | "fal" | undefined;
   try {
     stage = "check-keys";
-    if (!OPENAI_API_KEY && !AI_API_KEY && !STABILITY_API_KEY) {
+    if (!OPENAI_API_KEY && !AI_API_KEY && !STABILITY_API_KEY && !FAL_API_KEY) {
       return NextResponse.json(
-        { error: "Missing STABILITY_API_KEY / OPENAI_API_KEY / REPLICATE_API_TOKEN in .env.local" },
+        { error: "Missing STABILITY_API_KEY / OPENAI_API_KEY / REPLICATE_API_TOKEN / FAL_KEY in .env.local" },
         { status: 500 }
       );
     }
@@ -618,12 +695,12 @@ export async function POST(req: Request) {
       background: string;
       style?: MagicBlendStyle;
       format?: "square" | "story" | "portrait";
-      provider?: "stability" | "openai" | "replicate" | "nano";
+      provider?: "stability" | "openai" | "replicate" | "nano" | "fal";
       extraPrompt?: string;
       cameraZoom?: string;
     };
     const resolvedProvider =
-      provider === "nano" ? "replicate" : provider;
+      provider === "nano" ? "fal" : provider;
     activeProvider = provider;
 
     stage = "validate-inputs";
@@ -807,6 +884,17 @@ ${backgroundLock}${extraBlock}${nanoTone}`;
     const sizeStr =
       format === "story" ? "1024x1792" : format === "portrait" ? "1024x1024" : "1024x1024";
 
+    if (resolvedProvider === "fal") {
+      stage = "fal:run";
+      const safeCompositeDataUrl = bufferToDataUrlPng(preCompositeBuf);
+      const outUrl = await runFalEdit({
+        imageDataUrls: [safeCompositeDataUrl, bgOnlyDataUrl],
+        prompt: finalPrompt,
+        size: sizeStr,
+      });
+      return NextResponse.json({ url: outUrl, style: safeStyle, format });
+    }
+
     if (resolvedProvider === "replicate") {
       stage = "replicate:prep";
       const safeSubjBuf = await safeCropSubject(subjBuf);
@@ -824,7 +912,45 @@ ${backgroundLock}${extraBlock}${nanoTone}`;
         return NextResponse.json({ url: outUrl, style: safeStyle, format });
       } catch (err: any) {
         const msg = String(err?.message || err || "");
-        const isSensitive = msg.toLowerCase().includes("sensitive");
+        const msgLower = msg.toLowerCase();
+        const isSensitive =
+          msgLower.includes("sensitive") ||
+          msgLower.includes("safety") ||
+          msgLower.includes("nsfw");
+        const isQuotaOrCredits =
+          msgLower.includes("not enough tokens") ||
+          msgLower.includes("insufficient") ||
+          msgLower.includes("quota") ||
+          msgLower.includes("credit") ||
+          msgLower.includes("payment required");
+
+        if (isQuotaOrCredits) {
+          // Replicate credit/token exhaustion: gracefully fail over to available providers.
+          try {
+            stage = "replicate:fallback-openai";
+            const outUrl = await runOpenAIEdit({
+              image: preCompositeBuf,
+              prompt: finalPrompt,
+              size: sizeStr,
+            });
+            return NextResponse.json({ url: outUrl, style: safeStyle, format });
+          } catch {
+            try {
+              stage = "replicate:fallback-stability";
+              const outUrl = await runStabilityEdit({
+                image: preCompositeBuf,
+                prompt: finalPrompt,
+                size: sizeStr,
+              });
+              return NextResponse.json({ url: outUrl, style: safeStyle, format });
+            } catch {
+              throw new Error(
+                `Replicate credits exhausted and fallback providers failed. Original: ${msg}`
+              );
+            }
+          }
+        }
+
         if (!isSensitive) throw err;
 
         stage = "replicate:safe-retry";

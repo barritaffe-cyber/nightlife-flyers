@@ -606,10 +606,11 @@ const TemplateGalleryPanel = React.memo(({
   isOpen?: boolean;
   onToggle?: () => void;
 }) => {
+  const INITIAL_VISIBLE_TEMPLATES = 4;
   const [q, setQ] = React.useState('');
   const deferredQ = React.useDeferredValue(q);
   const [tag, setTag] = React.useState<string>('All');
-  const [visibleCount, setVisibleCount] = React.useState(20);
+  const [visibleCount, setVisibleCount] = React.useState(INITIAL_VISIBLE_TEMPLATES);
 
   const itemsWithTags = React.useMemo(
     () => items.map((t) => ({ ...t, normalizedTags: canonicalizeTemplateTags(t.tags) })),
@@ -634,8 +635,8 @@ const TemplateGalleryPanel = React.memo(({
   }, [itemsWithTags, deferredQ, tag]);
 
   React.useEffect(() => {
-    setVisibleCount(20);
-  }, [tag, deferredQ]);
+    setVisibleCount(INITIAL_VISIBLE_TEMPLATES);
+  }, [tag, deferredQ, INITIAL_VISIBLE_TEMPLATES]);
 
   const visible = React.useMemo(
     () => filtered.slice(0, visibleCount),
@@ -712,10 +713,13 @@ const TemplateGalleryPanel = React.memo(({
         <div className="mt-3 grid place-items-center">
           <button
             type="button"
-          className="rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/80 hover:bg-white/10"
-          onClick={() => setVisibleCount((prev) => prev + 16)}
-        >
-            Show more
+            className="rounded-lg border border-amber-300/25 bg-amber-300/10 px-3 py-1 text-xs text-amber-100 hover:bg-amber-300/15"
+            onClick={() => setVisibleCount(filtered.length)}
+          >
+            <span className="inline-flex items-center gap-1 animate-pulse [animation-duration:4.2s] [animation-timing-function:ease-in-out]">
+              View more templates
+              <span aria-hidden="true">↓</span>
+            </span>
           </button>
         </div>
       )}
@@ -6131,6 +6135,7 @@ export default function Page() {
   const [blendLighting, setBlendLighting] = useState<string>("match scene");
   const [blendCameraZoom, setBlendCameraZoom] = useState<string>("auto");
   const [blendExpressionPose, setBlendExpressionPose] = useState<string>("confident");
+  const [blendSubjectAction, setBlendSubjectAction] = useState<string>("");
   const suppressCloseRef = React.useRef(false);
   
   
@@ -6477,6 +6482,10 @@ export default function Page() {
       if (blendExpressionPose && blendExpressionPose.trim()) {
         extraParts.push(`Expression/pose: ${blendExpressionPose}.`);
       }
+      if (blendSubjectAction && blendSubjectAction.trim()) {
+        const action = blendSubjectAction.trim().slice(0, 220);
+        extraParts.push(`Subject action in scene: ${action}.`);
+      }
       const extraPrompt = extraParts.join(" ");
 
       const res = await fetch("/api/magic-blend", {
@@ -6490,7 +6499,7 @@ export default function Page() {
           format: format,
           cameraZoom: blendCameraZoom,
           extraPrompt,
-          provider: "nano",
+          provider: "fal",
         }),
       });
 
@@ -8168,6 +8177,8 @@ type GenOpts = {
   style?: GenStyle;            // optional override for STYLE_DB
   formatOverride?: Format;     // square/story override for composition
   allowPeopleOverride?: boolean;
+  referenceOverride?: string;
+  referenceHint?: string;
   varietyOverride?: number;    // 0..6 (0 = tightest to prompt)
 };
 
@@ -10465,9 +10476,18 @@ const generateBackground = async (opts: GenOpts = {}) => {
 
     const provider = (genProvider === 'auto' ? 'auto' : genProvider);
     const styleForThisRun = opts.style ?? genStyle;
-    const referenceSample = allowPeople
+    const usePeople = opts.allowPeopleOverride ?? allowPeople;
+    const faceReferenceSample = usePeople
       ? getReferenceSample(genGender, genEthnicity)
       : null;
+    const moodReferenceSample =
+      typeof opts.referenceOverride === 'string' && opts.referenceOverride.trim()
+        ? opts.referenceOverride.trim()
+        : null;
+    const referenceSamples = [moodReferenceSample, faceReferenceSample].filter(
+      (v): v is string => Boolean(v)
+    );
+    const primaryReferenceSample = referenceSamples[0] ?? null;
     
     // 3. The Generator
     const makeOne = async (s: number): Promise<string> => {
@@ -10490,7 +10510,7 @@ const generateBackground = async (opts: GenOpts = {}) => {
       let compositionRule = '';
       let negativePrompt = '';
       let qualityBooster = '';
-      const safeHumanPrompt = allowPeople
+      const safeHumanPrompt = usePeople
         ? [
             'photorealistic, real human proportions, natural facial anatomy, realistic skin texture',
             'natural facial proportions, symmetrical but imperfect face, realistic eyes with natural sclera',
@@ -10505,7 +10525,7 @@ const generateBackground = async (opts: GenOpts = {}) => {
         'deformed face, distorted facial features, uncanny valley, creepy expression, over-sharpened face, exaggerated eyes, wide grin, asymmetrical eyes, mutated anatomy, doll-like skin, extra fingers, missing fingers, fused fingers, malformed hands, extra hands, extra arms';
       const crowdSafetyNegatives =
         'zombie, undead, horror, scary faces, sunken eyes, hollow eyes, corpse-like skin, grotesque smile, monster, mutant crowd, duplicated faces, extra heads, extra arms, extra hands, extra fingers, fused fingers';
-      const nightlifeSubjectPrompt = allowPeople
+      const nightlifeSubjectPrompt = usePeople
         ? [
             NIGHTLIFE_SUBJECT_TOKENS.energy[genEnergy],
             getAttirePrompt(genGender, genAttire),
@@ -10529,9 +10549,9 @@ const generateBackground = async (opts: GenOpts = {}) => {
         .join(' ')
         .toLowerCase();
 
-      const inferred = allowPeople ? inferSubjectFromPrompt(promptSource) : null;
+      const inferred = usePeople ? inferSubjectFromPrompt(promptSource) : null;
 
-      if (allowPeople) {
+      if (usePeople) {
          if (inferred?.type === 'crowd') {
             subjectPrompt = [
               inferred.prompt,
@@ -10661,12 +10681,12 @@ const generateBackground = async (opts: GenOpts = {}) => {
 
       // --- D. RANDOMIZED DETAILS ---
       const details = pickN([...S.locations, ...S.lighting, ...S.micro], 4, rng).join(', ');
-      const nightlifeRealismDirective = allowPeople
+      const nightlifeRealismDirective = usePeople
         ? 'authentic nightlife documentary realism, practical club lighting motivated by scene sources'
         : 'true nightlife venue realism, culturally authentic club atmosphere, no stock-photo minimalism';
 
       // --- E. FINAL ASSEMBLY ---
-      const referenceClause = referenceSample
+      const referenceClause = faceReferenceSample
         ? (() => {
             const base =
               "preserve the reference face identity strictly (facial features, face shape, eyes, nose, mouth, skin tone). keep photorealistic skin texture and natural likeness; no stylization. do not copy clothing, body shape, or pose. match lighting, attire, and gesture to nightlife styling";
@@ -10693,11 +10713,15 @@ const generateBackground = async (opts: GenOpts = {}) => {
         nightlifeSubjectPrompt,
         genreMood,
         safeHumanPrompt,
+        'strict output rule: no text, no words, no letters, no numbers, no typography, no logos, no readable signage, no watermarks',
         details,
         cameraSpec,
         compositionRule,
         nightlifeRealismDirective,
         qualityBooster,
+        moodReferenceSample
+          ? 'use the provided mood sample as style guidance for palette, lighting, and atmosphere; keep the composition original and text-free'
+          : '',
         referenceClause,
         negativePrompt
       ];
@@ -10705,19 +10729,21 @@ const generateBackground = async (opts: GenOpts = {}) => {
       const finalPromptString = finalPromptList.filter(Boolean).join(', ');
 
       // --- F. EXECUTE ---
-      const isCrowdScene = allowPeople && inferred?.type === 'crowd';
+      const isCrowdScene = usePeople && inferred?.type === 'crowd';
       const body = {
         prompt: finalPromptString,
         format: requestedFormat,
         provider,
         sampler: "DPM++ 2M Karras",
         // Lower scale for crowds allows for more natural "messiness"
-        cfgScale: !allowPeople ? 7 : (isCrowdScene ? 6.2 : 6.5),
-        steps: !allowPeople ? 34 : (isCrowdScene ? 34 : 30),
+        cfgScale: !usePeople ? 7 : (isCrowdScene ? 6.2 : 6.5),
+        steps: !usePeople ? 34 : (isCrowdScene ? 34 : 30),
         refiner: true,
         hiresFix: true,
         denoiseStrength: 0.3,
-        reference: referenceSample,
+        reference: primaryReferenceSample,
+        references: referenceSamples,
+        referenceHint: opts.referenceHint,
       };
 
       const runOnce = async () => {
@@ -11005,18 +11031,46 @@ const generateSubjectForBackground = async () => {
       throw new Error("No image data returned");
     }
 
+    const isQuotaLikeError = (msg: string) =>
+      /not enough tokens|insufficient|quota|credit|payment required/i.test(msg);
+
     let rawUrl = "";
     let usedNano = false;
-    try {
-      rawUrl = await requestSubject(
-        subjectProvider,
-        subjectProvider !== "venice"
-      );
-      usedNano = subjectProvider !== "venice";
-    } catch (err: any) {
-      // Fallback to Imagine only when OpenAI-backed provider fails
-      if (subjectProvider === "venice") throw err;
-      rawUrl = await requestSubject("venice", false);
+    let lastErr: any = null;
+    const attempts: Array<{
+      provider: "nano" | "openai" | "venice";
+      includeReference: boolean;
+    }> = [
+      {
+        provider: subjectProvider,
+        includeReference: subjectProvider !== "venice",
+      },
+      ...(subjectProvider === "venice"
+        ? [{ provider: "nano" as const, includeReference: true }]
+        : [{ provider: "venice" as const, includeReference: false }]),
+    ];
+
+    for (const attempt of attempts) {
+      try {
+        rawUrl = await requestSubject(attempt.provider, attempt.includeReference);
+        usedNano = attempt.provider !== "venice";
+        lastErr = null;
+        break;
+      } catch (err: any) {
+        lastErr = err;
+        const msg = String(err?.message || err || "");
+        const quotaLike = isQuotaLikeError(msg);
+        // Try next provider on quota/token errors, or any primary-provider failure.
+        // This keeps subject generation resilient when one account is exhausted.
+        if (!quotaLike && attempt.provider !== subjectProvider) {
+          break;
+        }
+      }
+    }
+
+    if (!rawUrl) {
+      const msg = String(lastErr?.message || lastErr || "Subject generation failed");
+      throw new Error(msg);
     }
 
     let dataUrl = rawUrl;
@@ -16447,6 +16501,7 @@ React.useEffect(() => {
     if (assetFocusLockRef.current) return;
     const path = (ev as any)?.composedPath?.();
     const active = document.activeElement;
+    const targetNode = (ev?.target as Node | null) ?? null;
     const isLockTarget = (node: EventTarget | null | undefined) =>
       node instanceof Element &&
       !!node.closest?.('[data-mobile-float-lock="true"]');
@@ -16455,9 +16510,11 @@ React.useEffect(() => {
       path?.some?.((n: any) => isLockTarget(n)) ||
       (floatingTextRef.current &&
         (path?.includes(floatingTextRef.current) ||
+          (targetNode && floatingTextRef.current.contains(targetNode)) ||
           (active && floatingTextRef.current.contains(active)))) ||
       (floatingAssetRef.current &&
         (path?.includes(floatingAssetRef.current) ||
+          (targetNode && floatingAssetRef.current.contains(targetNode)) ||
           (active && floatingAssetRef.current.contains(active))))
     ) {
       return;
@@ -20175,7 +20232,14 @@ style={{ top: STICKY_TOP }}
         ref={floatingTextRef}
         data-floating-controls="text"
         onPointerDownCapture={(e) => e.stopPropagation()}
-        onTouchStartCapture={(e) => e.stopPropagation()}
+        onTouchStartCapture={(e) => {
+          assetFocusLockRef.current = true;
+          e.stopPropagation();
+        }}
+        onTouchMoveCapture={(e) => {
+          assetFocusLockRef.current = true;
+          e.stopPropagation();
+        }}
       >
         <div className="flex items-center gap-2 text-[11px] font-semibold text-white">
           <span className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</span>
@@ -20264,7 +20328,14 @@ style={{ top: STICKY_TOP }}
           assetFocusLockRef.current = true;
           e.stopPropagation();
         }}
-        onTouchStartCapture={(e) => e.stopPropagation()}
+        onTouchStartCapture={(e) => {
+          assetFocusLockRef.current = true;
+          e.stopPropagation();
+        }}
+        onTouchMoveCapture={(e) => {
+          assetFocusLockRef.current = true;
+          e.stopPropagation();
+        }}
       >
         <div className="flex items-center gap-2 text-[11px] font-semibold text-white">
           <span className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</span>
@@ -20878,6 +20949,8 @@ style={{ top: STICKY_TOP }}
   setBlendCameraZoom={setBlendCameraZoom}
   blendExpressionPose={blendExpressionPose}
   setBlendExpressionPose={setBlendExpressionPose}
+  blendSubjectAction={blendSubjectAction}
+  setBlendSubjectAction={setBlendSubjectAction}
   blendBackgroundPriority={blendBackgroundPriority}
   setBlendBackgroundPriority={setBlendBackgroundPriority}
   isCuttingOut={isCuttingOut}

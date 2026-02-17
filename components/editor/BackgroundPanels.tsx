@@ -311,7 +311,7 @@ function BackgroundPanels({
                   Auto
                 </Chip>
                 <Chip small active={genProvider === 'nano'} onClick={() => setGenProvider('nano')}>
-                  Nano
+                  FAL
                 </Chip>
                 <Chip small active={genProvider === 'openai'} onClick={() => setGenProvider('openai')}>
                   OpenAI
