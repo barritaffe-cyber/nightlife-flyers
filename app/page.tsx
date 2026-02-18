@@ -206,6 +206,21 @@ async function waitForFamilies(
   }
 }
 
+/** Export pre-flight: force browser to realize/load requested font families. */
+async function forceFontRender(families: (string | undefined)[]): Promise<void> {
+  const uniq = Array.from(new Set(families.filter(Boolean) as string[]));
+  try {
+    await (document as any).fonts?.ready;
+  } catch {}
+  await Promise.all(
+    uniq.map(async (f) => {
+      try {
+        await (document as any).fonts?.load?.(`16px "${f}"`);
+      } catch {}
+    })
+  );
+}
+
 // ===== CLIENT REMOVE-BG (module scope) =====
 function dataURLToBlob(dataURL: string): Blob {
   function blobToDataURL(b: Blob): Promise<string> {
@@ -10206,8 +10221,8 @@ async function injectGoogleFontsForExport(hostEl: HTMLElement, families: string[
 
   // proactively load faces so snapshot uses them
   try {
-    await Promise.all(uniq.map((f) => document.fonts.load(`700 48px "${f}"`)));
-    await (document as any).fonts.ready;
+    await forceFontRender(uniq);
+    await waitForFamilies(uniq);
   } catch {
     // best-effort
   }
@@ -13537,6 +13552,8 @@ async function renderExportDataUrl(
       headlineFamily,
       head2Family,
       bodyFamily,
+      detailsFamily,
+      details2Family,
       subtagFamily,
       venueFamily,
     ].filter(Boolean);
@@ -13552,6 +13569,8 @@ async function renderExportDataUrl(
       await (document as any).fonts?.ready;
     } catch {}
     try {
+      await forceFontRender(families);
+      await waitForFamilies(families);
       await (document as any).fonts?.ready;
     } catch {}
     onProgress?.(40);
@@ -13631,6 +13650,7 @@ async function renderExportDataUrl(
       let missingInline: string[] = [];
       let missingBgInline: string[] = [];
       try {
+        await forceFontRender(families);
         restoreExportFonts = await injectGoogleFontsForExport(exportRoot, families);
         await waitForImageUrl(bgUploadUrl || bgUrl);
         await waitForImageUrl(logoUrl);
