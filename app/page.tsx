@@ -15832,6 +15832,7 @@ const [floatingEditorVisible, setFloatingEditorVisible] = React.useState(false);
 const [floatingAssetVisible, setFloatingAssetVisible] = React.useState(false);
 const [floatingBgVisible, setFloatingBgVisible] = React.useState(false);
 const [projectHelpOpen, setProjectHelpOpen] = React.useState(false);
+const [workflowHelpOpen, setWorkflowHelpOpen] = React.useState(false);
 
 const floatingAssetRef = React.useRef<HTMLDivElement | null>(null);
 const floatingTextRef = React.useRef<HTMLDivElement | null>(null);
@@ -15839,18 +15840,21 @@ const floatingBgRef = React.useRef<HTMLDivElement | null>(null);
 const assetFocusLockRef = React.useRef(false);
 
 React.useEffect(() => {
-  if (!projectHelpOpen) return;
+  if (!projectHelpOpen && !workflowHelpOpen) return;
   const prev = document.body.style.overflow;
   document.body.style.overflow = "hidden";
   const onKey = (e: KeyboardEvent) => {
-    if (e.key === "Escape") setProjectHelpOpen(false);
+    if (e.key === "Escape") {
+      setProjectHelpOpen(false);
+      setWorkflowHelpOpen(false);
+    }
   };
   window.addEventListener("keydown", onKey);
   return () => {
     document.body.style.overflow = prev;
     window.removeEventListener("keydown", onKey);
   };
-}, [projectHelpOpen]);
+}, [projectHelpOpen, workflowHelpOpen]);
 
 const [lastMoveStack, setLastMoveStack] = React.useState<{
   kind:
@@ -15917,6 +15921,8 @@ const activeTextControls = React.useMemo(() => {
           setTextStyle("headline", format, { sizePx: v });
         },
         onLine: (v: number) => setLineHeight(v),
+        rotation: headRotate,
+        onRotate: (v: number) => setHeadRotate(v),
       };
     case "headline2":
     case "head2":
@@ -15939,6 +15945,8 @@ const activeTextControls = React.useMemo(() => {
         onFont: (v: string) => setHead2Family(v),
         onSize: (v: number) => setHead2SizePx(v),
         onLine: (v: number) => setHead2LineHeight(v),
+        rotation: head2Rotate,
+        onRotate: (v: number) => setHead2Rotate(v),
       };
     case "details":
       return {
@@ -15960,6 +15968,8 @@ const activeTextControls = React.useMemo(() => {
         onFont: (v: string) => setDetailsFamily(v),
         onSize: (v: number) => setBodySize(v),
         onLine: (v: number) => setDetailsLineHeight(v),
+        rotation: detailsRotate,
+        onRotate: (v: number) => setDetailsRotate(v),
       };
     case "details2":
       return {
@@ -15981,6 +15991,8 @@ const activeTextControls = React.useMemo(() => {
         onFont: (v: string) => setDetails2Family(v),
         onSize: (v: number) => setDetails2Size(v),
         onLine: (v: number) => setDetails2LineHeight(v),
+        rotation: details2Rotate,
+        onRotate: (v: number) => setDetails2Rotate(v),
       };
     case "venue":
       return {
@@ -16002,6 +16014,8 @@ const activeTextControls = React.useMemo(() => {
         onFont: (v: string) => setVenueFamily(v),
         onSize: (v: number) => setVenueSize(v),
         onLine: (v: number) => setVenueLineHeight(v),
+        rotation: venueRotate,
+        onRotate: (v: number) => setVenueRotate(v),
       };
     case "subtag":
       return {
@@ -16023,6 +16037,8 @@ const activeTextControls = React.useMemo(() => {
         onFont: (v: string) => setSubtagFamily(v),
         onSize: (v: number) => setSubtagSize(v),
         onLine: () => {},
+        rotation: subtagRotate,
+        onRotate: (v: number) => setSubtagRotate(v),
       };
     default:
       return null;
@@ -16034,6 +16050,7 @@ const activeTextControls = React.useMemo(() => {
   headSizeAuto,
   headManualPx,
   headMaxPx,
+  headRotate,
   setTextFx,
   setHeadlineFamily,
   setHeadSizeAuto,
@@ -16043,6 +16060,7 @@ const activeTextControls = React.useMemo(() => {
   head2SizePx,
   head2LineHeight,
   head2Color,
+  head2Rotate,
   setHead2Color,
   setHead2Family,
   setHead2SizePx,
@@ -16057,6 +16075,7 @@ const activeTextControls = React.useMemo(() => {
   bodySize,
   detailsLineHeight,
   bodyColor,
+  detailsRotate,
   setBodyColor,
   setDetailsFamily,
   setBodySize,
@@ -16066,6 +16085,7 @@ const activeTextControls = React.useMemo(() => {
   details2Size,
   details2LineHeight,
   details2Color,
+  details2Rotate,
   setDetails2Color,
   setDetails2Family,
   setDetails2Size,
@@ -16074,6 +16094,7 @@ const activeTextControls = React.useMemo(() => {
   venueSize,
   venueLineHeight,
   venueColor,
+  venueRotate,
   setVenueColor,
   setVenueFamily,
   setVenueSize,
@@ -16081,6 +16102,7 @@ const activeTextControls = React.useMemo(() => {
   subtagFamily,
   subtagSize,
   subtagTextColor,
+  subtagRotate,
   setSubtagTextColor,
   setSubtagFamily,
   setSubtagSize,
@@ -17865,14 +17887,14 @@ return (
                 />
               </button>
 
-              {/* ✅ GUIDES TOGGLE */}
+              {/* Suggested workflow */}
               <Chip 
                 small 
-                active={showGuides} 
-                onClick={() => setShowGuides(!showGuides)}
-                title="Toggle safe zones and alignment grid"
+                active={workflowHelpOpen}
+                onClick={() => setWorkflowHelpOpen(true)}
+                title="Open suggested workflow"
               >
-                Guides
+                Workflow
               </Chip>
               {uiMode === "finish" ? (
                 <Chip small onClick={() => setUiMode("design")}>Back to Design</Chip>
@@ -20451,6 +20473,24 @@ style={{ top: STICKY_TOP }}
               />
             </div>
           </div>
+          <div>
+            <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
+              <span>Rotation</span>
+              <div className="w-12 text-right text-[10px] text-white font-semibold">
+                {Math.round(Number(activeTextControls.rotation || 0))}°
+              </div>
+            </div>
+            <input
+              type="range"
+              min={-180}
+              max={180}
+              step={1}
+              value={Number(activeTextControls.rotation || 0)}
+              onChange={(e) => activeTextControls.onRotate?.(Number(e.target.value))}
+              className="w-full accent-cyan-400"
+              style={{ touchAction: "pan-x" }}
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -21760,6 +21800,73 @@ style={{ top: STICKY_TOP }}
           </div>
 </Collapsible>
 {/* UI: PROJECT PORTABLE SAVE (END) */}
+
+{workflowHelpOpen && (
+  <div className="fixed inset-0 z-[5100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="w-full max-w-3xl rounded-2xl border border-cyan-400/30 bg-[#0a0d12] shadow-[0_30px_80px_rgba(0,0,0,.6)] overflow-hidden">
+      <div className="px-5 py-4 border-b border-white/10 bg-gradient-to-r from-cyan-500/20 to-fuchsia-500/10">
+        <div className="text-sm uppercase tracking-[0.2em] text-cyan-300">Suggested Workflow</div>
+        <div className="mt-1 text-lg font-semibold text-white">Create a flyer in 10 minutes or less.</div>
+      </div>
+
+      <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-neutral-200 max-h-[70vh] overflow-y-auto">
+        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+          <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">Flow 1: Cinematic 3D Quick Build</div>
+          <ol className="list-decimal pl-5 space-y-1 text-neutral-300">
+            <li>Open Template.</li>
+            <li>Open Cinematic 3D and generate.</li>
+            <li>Change headline/details text.</li>
+            <li>Export.</li>
+          </ol>
+        </div>
+
+        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+          <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">Flow 2: AI + Blend Hero Poster</div>
+          <ol className="list-decimal pl-5 space-y-1 text-neutral-300">
+            <li>Open Template.</li>
+            <li>Generate a new background.</li>
+            <li>Add subject.</li>
+            <li>Magic Blend subject with background.</li>
+            <li>Add text and graphics.</li>
+            <li>Export.</li>
+          </ol>
+        </div>
+
+        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+          <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">Flow 3: Fast Template Remix</div>
+          <ol className="list-decimal pl-5 space-y-1 text-neutral-300">
+            <li>Open Template.</li>
+            <li>Swap colors and fonts.</li>
+            <li>Update text/date/venue.</li>
+            <li>Add flare or icon accents.</li>
+            <li>Export.</li>
+          </ol>
+        </div>
+
+        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+          <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">Flow 4: Weekly Brand Drop</div>
+          <ol className="list-decimal pl-5 space-y-1 text-neutral-300">
+            <li>Open Template.</li>
+            <li>Apply My Brand in DJ Branding.</li>
+            <li>Generate or upload background.</li>
+            <li>Refresh copy for this event.</li>
+            <li>Save Design and Export.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div className="px-5 py-4 border-t border-white/10 flex justify-end">
+        <button
+          type="button"
+          onClick={() => setWorkflowHelpOpen(false)}
+          className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-sm"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
 {projectHelpOpen && (
   <div className="fixed inset-0 z-[5100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
