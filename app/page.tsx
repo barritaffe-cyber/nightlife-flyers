@@ -16836,6 +16836,14 @@ React.useEffect(() => {
   let raf = 0;
   const onUserScroll = (ev?: Event) => {
     if (useFlyerState.getState().isLiveDragging) return;
+    // Custom canvas drags (text/emoji/portrait/flare/background) don't all flip
+    // store.isLiveDragging, so guard on active drag data attributes too.
+    const hasCanvasDrag =
+      typeof document !== "undefined" &&
+      !!document.querySelector(
+        '[data-hdrag="1"], [data-edrag="1"], [data-pdrag="1"], [data-bgdrag="1"]'
+      );
+    if (hasCanvasDrag) return;
     if (assetFocusLockRef.current) return;
     const path = (ev as any)?.composedPath?.();
     const active = document.activeElement;
