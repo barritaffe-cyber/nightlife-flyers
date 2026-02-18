@@ -14256,7 +14256,6 @@ const portraitCanvas = React.useMemo(() => {
         inset: 0,
         pointerEvents: "none",
         overflow: "hidden",
-        zIndex: 0,
       }}
     >
       {backLayer.map((p: any, i: number) => renderItem(p, i, 10))}
@@ -14287,7 +14286,6 @@ const flareCanvas = React.useMemo(() => {
         inset: 0,
         pointerEvents: "none",
         overflow: "hidden",
-        zIndex: 30,
       }}
     >
       {flares.map((p: any) => {
@@ -16265,6 +16263,47 @@ const nudgeAssetLayerOffset = (
   const delta = direction === "up" ? ASSET_LAYER_STEP : -ASSET_LAYER_STEP;
   return Math.max(ASSET_LAYER_MIN, Math.min(ASSET_LAYER_MAX, (current ?? 0) + delta));
 };
+const nudgeEmojiLayer = React.useCallback(
+  (id: string, direction: "up" | "down") => {
+    const st = useFlyerState.getState();
+    const bucket = Array.isArray(st.emojis?.[format]) ? st.emojis[format] : [];
+    const cur = bucket.find((e: any) => e?.id === id);
+    if (!cur) return;
+    st.updateEmoji(format, id, {
+      layerOffset: nudgeAssetLayerOffset((cur as any).layerOffset, direction),
+    });
+    st.setSelectedEmojiId(id);
+    st.setSelectedPanel("icons");
+    st.setMoveTarget("icon");
+  },
+  [format]
+);
+const nudgePortraitLayer = React.useCallback(
+  (id: string, direction: "up" | "down") => {
+    const st = useFlyerState.getState();
+    const bucket = Array.isArray(st.portraits?.[format]) ? st.portraits[format] : [];
+    const cur = bucket.find((p: any) => p?.id === id);
+    if (!cur) return;
+    st.updatePortrait(format, id, {
+      layerOffset: nudgeAssetLayerOffset((cur as any).layerOffset, direction),
+    });
+
+    const isLogo = String(cur.id || "").startsWith("logo_") || !!(cur as any).isLogo;
+    const isLibraryAsset = !!(cur as any).isFlare || !!(cur as any).isSticker;
+    st.setSelectedPortraitId(id);
+    if (isLibraryAsset) {
+      st.setSelectedPanel("icons");
+      st.setMoveTarget("icon");
+    } else if (isLogo) {
+      st.setSelectedPanel("logo");
+      st.setMoveTarget("logo");
+    } else {
+      st.setSelectedPanel("portrait");
+      st.setMoveTarget("portrait");
+    }
+  },
+  [format]
+);
 
 const activeAssetControls = React.useMemo(() => {
   if (selectedEmojiId) {
@@ -16297,20 +16336,8 @@ const activeAssetControls = React.useMemo(() => {
         useFlyerState.getState().updateEmoji(format, sel.id, {
           locked: !sel.locked,
         }),
-      onLayerUp: () => {
-        useFlyerState
-          .getState()
-          .updateEmoji(format, sel.id, {
-            layerOffset: nudgeAssetLayerOffset((sel as any).layerOffset, "up"),
-          });
-      },
-      onLayerDown: () => {
-        useFlyerState
-          .getState()
-          .updateEmoji(format, sel.id, {
-            layerOffset: nudgeAssetLayerOffset((sel as any).layerOffset, "down"),
-          });
-      },
+      onLayerUp: () => nudgeEmojiLayer(sel.id, "up"),
+      onLayerDown: () => nudgeEmojiLayer(sel.id, "down"),
       onDelete: () => {
         useFlyerState.getState().removeEmoji(format, sel.id);
         setSelectedEmojiId(null);
@@ -16360,20 +16387,8 @@ const activeAssetControls = React.useMemo(() => {
             useFlyerState.getState().updatePortrait(format, sel.id, {
               locked: !sel.locked,
             }),
-          onLayerUp: () => {
-            useFlyerState
-              .getState()
-              .updatePortrait(format, sel.id, {
-                layerOffset: nudgeAssetLayerOffset((sel as any).layerOffset, "up"),
-              });
-          },
-          onLayerDown: () => {
-            useFlyerState
-              .getState()
-              .updatePortrait(format, sel.id, {
-                layerOffset: nudgeAssetLayerOffset((sel as any).layerOffset, "down"),
-              });
-          },
+          onLayerUp: () => nudgePortraitLayer(sel.id, "up"),
+          onLayerDown: () => nudgePortraitLayer(sel.id, "down"),
           onDelete: () => {
             removePortrait(format, sel.id);
             useFlyerState.getState().setSelectedPortraitId(null);
@@ -16437,20 +16452,8 @@ const activeAssetControls = React.useMemo(() => {
           useFlyerState.getState().updatePortrait(format, sel.id, {
             locked: !sel.locked,
           }),
-        onLayerUp: () => {
-          useFlyerState
-            .getState()
-            .updatePortrait(format, sel.id, {
-              layerOffset: nudgeAssetLayerOffset((sel as any).layerOffset, "up"),
-            });
-        },
-        onLayerDown: () => {
-          useFlyerState
-            .getState()
-            .updatePortrait(format, sel.id, {
-              layerOffset: nudgeAssetLayerOffset((sel as any).layerOffset, "down"),
-            });
-        },
+        onLayerUp: () => nudgePortraitLayer(sel.id, "up"),
+        onLayerDown: () => nudgePortraitLayer(sel.id, "down"),
         deleteLabel: isBrandFace ? "Remove Main Face" : `Delete ${assetLabel}`,
         onDelete: () => {
           removePortrait(format, sel.id);
@@ -16482,20 +16485,8 @@ const activeAssetControls = React.useMemo(() => {
         useFlyerState.getState().updatePortrait(format, sel.id, {
           locked: !sel.locked,
         }),
-      onLayerUp: () => {
-        useFlyerState
-          .getState()
-          .updatePortrait(format, sel.id, {
-            layerOffset: nudgeAssetLayerOffset((sel as any).layerOffset, "up"),
-          });
-      },
-      onLayerDown: () => {
-        useFlyerState
-          .getState()
-          .updatePortrait(format, sel.id, {
-            layerOffset: nudgeAssetLayerOffset((sel as any).layerOffset, "down"),
-          });
-      },
+      onLayerUp: () => nudgePortraitLayer(sel.id, "up"),
+      onLayerDown: () => nudgePortraitLayer(sel.id, "down"),
       onDelete: () => {
         removePortrait(format, sel.id);
         useFlyerState.getState().setSelectedPortraitId(null);
@@ -16513,6 +16504,8 @@ const activeAssetControls = React.useMemo(() => {
   cleanupParams,
   removePortrait,
   setCleanupAndRun,
+  nudgeEmojiLayer,
+  nudgePortraitLayer,
 ]);
 
 const hasAssetControls = !!activeAssetControls;
@@ -17674,7 +17667,6 @@ const emojiCanvas = React.useMemo(() => {
         inset: 0,
         pointerEvents: "none",
         overflow: "hidden",
-        zIndex: 25,
       }}
     >
       {list.map((em) => {
