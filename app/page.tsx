@@ -13737,7 +13737,6 @@ async function renderExportDataUrl(
 
     const dataUrl = await withExternalStylesDisabled(async () => {
       let restoreExportFonts: null | (() => void) = null;
-      let exportFontCss = "";
       let restoreInlineImages: null | (() => void) = null;
       let restoreInlineBg: null | (() => void) = null;
       let missingInline: string[] = [];
@@ -13746,7 +13745,6 @@ async function renderExportDataUrl(
         await forceFontRender(families);
         const injectedFonts = await injectGoogleFontsForExport(exportRoot, families);
         restoreExportFonts = injectedFonts.restore;
-        exportFontCss = injectedFonts.fontEmbedCss;
         await waitForImageUrl(bgUploadUrl || bgUrl);
         await waitForImageUrl(logoUrl);
         if (shouldInlineProxy) {
@@ -13775,9 +13773,6 @@ async function renderExportDataUrl(
             return await htmlToImage.toJpeg(exportRoot, {
               cacheBust: true,
               imagePlaceholder: EXPORT_TRANSPARENT_PIXEL,
-              skipFonts: false,
-              fontEmbedCss: exportFontCss || undefined,
-              preferredFontFormat: "woff2",
               backgroundColor: '#000',
               pixelRatio: scale,
               style: forcedStyle,
@@ -13810,9 +13805,6 @@ async function renderExportDataUrl(
           return await htmlToImage.toPng(exportRoot, {
             cacheBust: true,
             imagePlaceholder: EXPORT_TRANSPARENT_PIXEL,
-            skipFonts: false,
-            fontEmbedCss: exportFontCss || undefined,
-            preferredFontFormat: "woff2",
             backgroundColor: '#000',
             pixelRatio: scale,
             style: forcedStyle,
