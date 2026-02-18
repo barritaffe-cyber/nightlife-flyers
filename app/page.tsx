@@ -1672,6 +1672,9 @@ type Icon = {
   box?: number;
 };
 
+type TextLayerKey = "headline" | "headline2" | "details" | "details2" | "venue" | "subtag";
+type TextLayerOffsetState = Record<TextLayerKey, number>;
+
 
 
 /* ===== BLOCK: ARTBOARD (BEGIN) ===== */
@@ -1680,7 +1683,8 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
  
   palette: Palette; format: Format;
   portraitUrl: string | null; bgUrl: string | null; bgUploadUrl: string | null; logoUrl: string | null; opticalMargin: boolean; leadTrackDelta: number;
-  lastTrackDelta: number; kerningFix: boolean; headBehindPortrait: boolean; allowPeople: boolean; 
+  lastTrackDelta: number; kerningFix: boolean; headBehindPortrait: boolean; allowPeople: boolean;
+  headlineLayerZ: number; head2LayerZ: number; detailsLayerZ: number; details2LayerZ: number; venueLayerZ: number; subtagLayerZ: number;
   hue: number; haze: number; grade: number; leak: number; vignette: number; bgPosX: number; bgPosY: number; detailsFamily: string; 
   headline: string; headlineFamily: string; textFx: TextFx; align: Align; lineHeight: number; textColWidth: number; tallHeadline: boolean; headX: number; headY: number; headlineHidden: boolean;
   details: string; bodyFamily: string; bodyColor: string; bodySize: number; bodyUppercase: boolean; bodyBold: boolean; bodyItalic: boolean; bodyUnderline: boolean; bodyTracking: number; detailsX: number; detailsY: number;
@@ -1811,6 +1815,9 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
 
   mobileDragEnabled?: boolean;
   onMobileDragEnd?: () => void;
+  portraitCanvas?: React.ReactNode;
+  emojiCanvas?: React.ReactNode;
+  flareCanvas?: React.ReactNode;
 
   
 
@@ -1823,6 +1830,7 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
     headRotate, head2Rotate, detailsRotate, details2Rotate, venueRotate, subtagRotate, logoRotate, headAlign,
     palette, format, portraitUrl, bgUrl, bgUploadUrl, logoUrl, hue, haze, grade, leak, vignette, bgPosX, bgPosY,
     portraitScale, subtagUppercase, opticalMargin, leadTrackDelta, lastTrackDelta, kerningFix, headBehindPortrait,
+    headlineLayerZ, head2LayerZ, detailsLayerZ, details2LayerZ, venueLayerZ, subtagLayerZ,
     headline, headlineFamily, textFx, align, lineHeight, textColWidth, tallHeadline, headX, headY, headlineHidden,
     details, bodyFamily, bodyColor, bodySize, bodyUppercase, bodyBold, bodyItalic, bodyUnderline, bodyTracking, detailsX, detailsY,
     venue, venueFamily, venueColor, venueSize, venueX, venueY, venueLineHeight, detailsFamily, 
@@ -1867,6 +1875,9 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
     isMobileView,
     mobileDragEnabled = false,
     onMobileDragEnd,
+    portraitCanvas,
+    emojiCanvas,
+    flareCanvas,
 
     /** ✅ alias shapes prop to a local name that won’t collide with any state */
     shapes: shapesProp = [],
@@ -3115,11 +3126,9 @@ return (
    ======================================================= */}
    
 {/* ====================== PORTRAIT LAYER (FIXED) ====================== */}
-
-
-
-
-
+{portraitCanvas}
+{emojiCanvas}
+{flareCanvas}
 {/* ====================== PORTRAIT LAYER (END) =========================== */}
 
 
@@ -3722,7 +3731,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     left: `${headX}%`,
     top: `${headY}%`,
     overflow: 'visible',
-    zIndex: isActive("headline") ? 999 : (headBehindPortrait ? 8 : 20),
+    zIndex: dragging === "headline" ? 999 : headlineLayerZ,
     textAlign: headAlign,
     borderRadius: 8,
     opacity: headlineHidden ? 0 : 1,
@@ -3900,7 +3909,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     left: `${head2X}%`,
     top: `${head2Y}%`,
     overflow: 'visible',
-    zIndex: moveTarget === 'headline2' ? 999 : 30,
+    zIndex: dragging === "headline2" ? 999 : head2LayerZ,
     fontFamily: head2Family,
     cursor: 'grab',
     textAlign: head2Align,
@@ -4055,7 +4064,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     left: `${detailsX}%`,
     top: `${detailsY}%`,
     overflow: "visible",
-    zIndex: moveTarget === "details" ? 999 : 30,
+    zIndex: dragging === "details" ? 999 : detailsLayerZ,
     fontFamily: detailsFamily,
     cursor: "grab",
     textAlign: detailsAlign,
@@ -4205,7 +4214,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     left: `${details2X ?? 0}%`,
     top: `${details2Y ?? 0}%`,
     overflow: 'visible',
-    zIndex: moveTarget === 'details2' ? 999 : 30,
+    zIndex: dragging === "details2" ? 999 : details2LayerZ,
     cursor: 'grab',
     textAlign: details2Align ?? 'center',
     borderRadius: 8,
@@ -4352,7 +4361,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     left: `${venueX}%`,
     top: `${venueY}%`,
     overflow: 'visible',
-    zIndex: moveTarget === 'venue' ? 999 : 30,
+    zIndex: dragging === "venue" ? 999 : venueLayerZ,
     fontFamily: venueFamily,
     cursor: 'grab',
     textAlign: venueAlign,
@@ -4501,7 +4510,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     left: `${subtagX}%`,
     top: `${subtagY}%`,
     overflow: 'visible',
-    zIndex: moveTarget === 'subtag' ? 999 : 30,
+    zIndex: dragging === "subtag" ? 999 : subtagLayerZ,
     cursor: 'grab',
     textAlign: 'center',
     borderRadius: 8,
@@ -8880,6 +8889,14 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
   const [opticalMargin, setOpticalMargin]   = useState(true);
   const [kerningFix, setKerningFix]         = useState(true);
   const [headBehindPortrait, setHeadBehindPortrait] = useState(false);
+  const [textLayerOffset, setTextLayerOffset] = useState<TextLayerOffsetState>({
+    headline: 0,
+    headline2: 0,
+    details: 0,
+    details2: 0,
+    venue: 0,
+    subtag: 0,
+  });
 
  
   /* NEW: headline size mode */
@@ -11387,6 +11404,7 @@ const buildEdgeAwareLassoMask = (
       bgPosX, bgPosY,
       // rotations
       headRotate, head2Rotate, detailsRotate, details2Rotate, venueRotate, subtagRotate, logoRotate,
+      textLayerOffset,
 
       // headline
       headline,
@@ -11547,6 +11565,17 @@ const buildEdgeAwareLassoMask = (
       if (typeof s.venueRotate === 'number') setVenueRotate(s.venueRotate);
       if (typeof s.subtagRotate === 'number') setSubtagRotate(s.subtagRotate);
       if (typeof s.logoRotate === 'number') setLogoRotate(s.logoRotate);
+      if (s.textLayerOffset && typeof s.textLayerOffset === 'object') {
+        setTextLayerOffset((prev) => ({
+          ...prev,
+          ...(typeof s.textLayerOffset.headline === 'number' ? { headline: s.textLayerOffset.headline } : {}),
+          ...(typeof s.textLayerOffset.headline2 === 'number' ? { headline2: s.textLayerOffset.headline2 } : {}),
+          ...(typeof s.textLayerOffset.details === 'number' ? { details: s.textLayerOffset.details } : {}),
+          ...(typeof s.textLayerOffset.details2 === 'number' ? { details2: s.textLayerOffset.details2 } : {}),
+          ...(typeof s.textLayerOffset.venue === 'number' ? { venue: s.textLayerOffset.venue } : {}),
+          ...(typeof s.textLayerOffset.subtag === 'number' ? { subtag: s.textLayerOffset.subtag } : {}),
+        }));
+      }
       // logo slots (up to 4) — persists the library
       if (Array.isArray(s.logoSlots)) {
       // Use your helper so it updates state AND localStorage
@@ -14828,6 +14857,17 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       applyIfDefined(data.subtagX, setSubtagX);
       applyIfDefined(data.subtagY, setSubtagY);
       applyIfDefined(data.subtagRotate, setSubtagRotate);
+      if (data.textLayerOffset && typeof data.textLayerOffset === "object") {
+        setTextLayerOffset((prev) => ({
+          ...prev,
+          ...(typeof data.textLayerOffset.headline === "number" ? { headline: data.textLayerOffset.headline } : {}),
+          ...(typeof data.textLayerOffset.headline2 === "number" ? { headline2: data.textLayerOffset.headline2 } : {}),
+          ...(typeof data.textLayerOffset.details === "number" ? { details: data.textLayerOffset.details } : {}),
+          ...(typeof data.textLayerOffset.details2 === "number" ? { details2: data.textLayerOffset.details2 } : {}),
+          ...(typeof data.textLayerOffset.venue === "number" ? { venue: data.textLayerOffset.venue } : {}),
+          ...(typeof data.textLayerOffset.subtag === "number" ? { subtag: data.textLayerOffset.subtag } : {}),
+        }));
+      }
 
       // ✅ restore logo
       applyIfDefined(data.logoUrl, setLogoUrl);
@@ -15266,6 +15306,29 @@ const applyTemplate = React.useCallback<
     // Rest of the flags
     setPortraitLocked(merged.portraitLocked ?? false);
     setHeadBehindPortrait(merged.headBehindPortrait ?? false);
+    if ((merged as any).textLayerOffset && typeof (merged as any).textLayerOffset === "object") {
+      setTextLayerOffset((prev) => ({
+        ...prev,
+        ...(typeof (merged as any).textLayerOffset.headline === "number"
+          ? { headline: (merged as any).textLayerOffset.headline }
+          : {}),
+        ...(typeof (merged as any).textLayerOffset.headline2 === "number"
+          ? { headline2: (merged as any).textLayerOffset.headline2 }
+          : {}),
+        ...(typeof (merged as any).textLayerOffset.details === "number"
+          ? { details: (merged as any).textLayerOffset.details }
+          : {}),
+        ...(typeof (merged as any).textLayerOffset.details2 === "number"
+          ? { details2: (merged as any).textLayerOffset.details2 }
+          : {}),
+        ...(typeof (merged as any).textLayerOffset.venue === "number"
+          ? { venue: (merged as any).textLayerOffset.venue }
+          : {}),
+        ...(typeof (merged as any).textLayerOffset.subtag === "number"
+          ? { subtag: (merged as any).textLayerOffset.subtag }
+          : {}),
+      }));
+    }
     setSubtagEnabled(fmt, merged.subtagEnabled ?? true);
     setHeadline2Enabled(fmt, merged.head2Enabled ?? false);
     setDetails2Enabled(fmt, merged.details2Enabled ?? false);
@@ -15892,6 +15955,61 @@ const activeTextTarget = React.useMemo(() => {
     | "headline2"
     | null;
 }, [selectedPanel, moveTarget]);
+const activeTextLayerKey = React.useMemo(() => {
+  if (!activeTextTarget) return null;
+  if (activeTextTarget === "head2" || activeTextTarget === "headline2") return "headline2";
+  return activeTextTarget as TextLayerKey;
+}, [activeTextTarget]);
+const TEXT_LAYER_STEP = 8;
+const TEXT_LAYER_MIN = -48;
+const TEXT_LAYER_MAX = 180;
+const ICON_LAYER_Z = 36;
+const TEXT_PRIORITY_Z = 120;
+const textBaseZ = React.useMemo(
+  () => ({
+    headline: headBehindPortrait ? 8 : 20,
+    headline2: 30,
+    details: 30,
+    details2: 30,
+    venue: 30,
+    subtag: 30,
+  }),
+  [headBehindPortrait]
+);
+const nudgeTextLayer = React.useCallback((key: TextLayerKey, dir: "up" | "down") => {
+  const st = useFlyerState.getState();
+  const panelKey = key === "headline2" ? "head2" : key;
+  const moveKey = key === "headline2" ? "headline2" : key;
+  // Ensure text becomes the active move target so selected graphics/icons
+  // no longer hold temporary top z while nudging text layers.
+  st.setSelectedPanel(panelKey as any);
+  st.setMoveTarget(moveKey as any);
+
+  setTextLayerOffset((prev) => {
+    const delta = dir === "up" ? TEXT_LAYER_STEP : -TEXT_LAYER_STEP;
+    const current = prev[key] ?? 0;
+    let next = current + delta;
+    // One-tap lift above graphics/icon layer so users don't need repeated taps.
+    if (dir === "up" && textBaseZ[key] + next <= TEXT_PRIORITY_Z) {
+      next = TEXT_PRIORITY_Z - textBaseZ[key] + TEXT_LAYER_STEP;
+    } else if (dir === "up" && textBaseZ[key] + next <= ICON_LAYER_Z) {
+      next = ICON_LAYER_Z - textBaseZ[key] + TEXT_LAYER_STEP;
+    }
+    next = Math.max(TEXT_LAYER_MIN, Math.min(TEXT_LAYER_MAX, next));
+    return { ...prev, [key]: next };
+  });
+}, [textBaseZ]);
+const textLayerZ = React.useMemo(
+  () => ({
+    headline: textBaseZ.headline + (textLayerOffset.headline ?? 0),
+    headline2: textBaseZ.headline2 + (textLayerOffset.headline2 ?? 0),
+    details: textBaseZ.details + (textLayerOffset.details ?? 0),
+    details2: textBaseZ.details2 + (textLayerOffset.details2 ?? 0),
+    venue: textBaseZ.venue + (textLayerOffset.venue ?? 0),
+    subtag: textBaseZ.subtag + (textLayerOffset.subtag ?? 0),
+  }),
+  [textBaseZ, textLayerOffset]
+);
 const activeTextControls = React.useMemo(() => {
   switch (activeTextTarget) {
     case "headline":
@@ -15923,6 +16041,9 @@ const activeTextControls = React.useMemo(() => {
         onLine: (v: number) => setLineHeight(v),
         rotation: headRotate,
         onRotate: (v: number) => setHeadRotate(v),
+        layerOffset: textLayerOffset.headline,
+        onLayerUp: () => nudgeTextLayer("headline", "up"),
+        onLayerDown: () => nudgeTextLayer("headline", "down"),
       };
     case "headline2":
     case "head2":
@@ -15947,6 +16068,9 @@ const activeTextControls = React.useMemo(() => {
         onLine: (v: number) => setHead2LineHeight(v),
         rotation: head2Rotate,
         onRotate: (v: number) => setHead2Rotate(v),
+        layerOffset: textLayerOffset.headline2,
+        onLayerUp: () => nudgeTextLayer("headline2", "up"),
+        onLayerDown: () => nudgeTextLayer("headline2", "down"),
       };
     case "details":
       return {
@@ -15970,6 +16094,9 @@ const activeTextControls = React.useMemo(() => {
         onLine: (v: number) => setDetailsLineHeight(v),
         rotation: detailsRotate,
         onRotate: (v: number) => setDetailsRotate(v),
+        layerOffset: textLayerOffset.details,
+        onLayerUp: () => nudgeTextLayer("details", "up"),
+        onLayerDown: () => nudgeTextLayer("details", "down"),
       };
     case "details2":
       return {
@@ -15993,6 +16120,9 @@ const activeTextControls = React.useMemo(() => {
         onLine: (v: number) => setDetails2LineHeight(v),
         rotation: details2Rotate,
         onRotate: (v: number) => setDetails2Rotate(v),
+        layerOffset: textLayerOffset.details2,
+        onLayerUp: () => nudgeTextLayer("details2", "up"),
+        onLayerDown: () => nudgeTextLayer("details2", "down"),
       };
     case "venue":
       return {
@@ -16016,6 +16146,9 @@ const activeTextControls = React.useMemo(() => {
         onLine: (v: number) => setVenueLineHeight(v),
         rotation: venueRotate,
         onRotate: (v: number) => setVenueRotate(v),
+        layerOffset: textLayerOffset.venue,
+        onLayerUp: () => nudgeTextLayer("venue", "up"),
+        onLayerDown: () => nudgeTextLayer("venue", "down"),
       };
     case "subtag":
       return {
@@ -16039,6 +16172,9 @@ const activeTextControls = React.useMemo(() => {
         onLine: () => {},
         rotation: subtagRotate,
         onRotate: (v: number) => setSubtagRotate(v),
+        layerOffset: textLayerOffset.subtag,
+        onLayerUp: () => nudgeTextLayer("subtag", "up"),
+        onLayerDown: () => nudgeTextLayer("subtag", "down"),
       };
     default:
       return null;
@@ -16103,6 +16239,8 @@ const activeTextControls = React.useMemo(() => {
   subtagSize,
   subtagTextColor,
   subtagRotate,
+  textLayerOffset,
+  nudgeTextLayer,
   setSubtagTextColor,
   setSubtagFamily,
   setSubtagSize,
@@ -16110,6 +16248,29 @@ const activeTextControls = React.useMemo(() => {
   textFx?.color,
   setTextStyle,
 ]);
+
+function reorderLayerById<T extends { id: string }>(
+  list: T[],
+  id: string,
+  direction: "up" | "down"
+) {
+  const idx = list.findIndex((item) => item.id === id);
+  if (idx < 0) return list;
+  if (direction === "up") {
+    if (idx >= list.length - 1) return list;
+    const next = [...list];
+    const tmp = next[idx];
+    next[idx] = next[idx + 1];
+    next[idx + 1] = tmp;
+    return next;
+  }
+  if (idx <= 0) return list;
+  const next = [...list];
+  const tmp = next[idx];
+  next[idx] = next[idx - 1];
+  next[idx - 1] = tmp;
+  return next;
+}
 
 const activeAssetControls = React.useMemo(() => {
   if (selectedEmojiId) {
@@ -16142,6 +16303,16 @@ const activeAssetControls = React.useMemo(() => {
         useFlyerState.getState().updateEmoji(format, sel.id, {
           locked: !sel.locked,
         }),
+      onLayerUp: () => {
+        const store = useFlyerState.getState();
+        const bucket = Array.isArray(store.emojis?.[format]) ? store.emojis[format] : [];
+        store.setEmojis(format, reorderLayerById(bucket, sel.id, "up"));
+      },
+      onLayerDown: () => {
+        const store = useFlyerState.getState();
+        const bucket = Array.isArray(store.emojis?.[format]) ? store.emojis[format] : [];
+        store.setEmojis(format, reorderLayerById(bucket, sel.id, "down"));
+      },
       onDelete: () => {
         useFlyerState.getState().removeEmoji(format, sel.id);
         setSelectedEmojiId(null);
@@ -16191,6 +16362,16 @@ const activeAssetControls = React.useMemo(() => {
             useFlyerState.getState().updatePortrait(format, sel.id, {
               locked: !sel.locked,
             }),
+          onLayerUp: () => {
+            const store = useFlyerState.getState();
+            const bucket = Array.isArray(store.portraits?.[format]) ? store.portraits[format] : [];
+            store.setPortraits(format, reorderLayerById(bucket, sel.id, "up"));
+          },
+          onLayerDown: () => {
+            const store = useFlyerState.getState();
+            const bucket = Array.isArray(store.portraits?.[format]) ? store.portraits[format] : [];
+            store.setPortraits(format, reorderLayerById(bucket, sel.id, "down"));
+          },
           onDelete: () => {
             removePortrait(format, sel.id);
             useFlyerState.getState().setSelectedPortraitId(null);
@@ -16254,6 +16435,16 @@ const activeAssetControls = React.useMemo(() => {
           useFlyerState.getState().updatePortrait(format, sel.id, {
             locked: !sel.locked,
           }),
+        onLayerUp: () => {
+          const store = useFlyerState.getState();
+          const bucket = Array.isArray(store.portraits?.[format]) ? store.portraits[format] : [];
+          store.setPortraits(format, reorderLayerById(bucket, sel.id, "up"));
+        },
+        onLayerDown: () => {
+          const store = useFlyerState.getState();
+          const bucket = Array.isArray(store.portraits?.[format]) ? store.portraits[format] : [];
+          store.setPortraits(format, reorderLayerById(bucket, sel.id, "down"));
+        },
         deleteLabel: isBrandFace ? "Remove Main Face" : `Delete ${assetLabel}`,
         onDelete: () => {
           removePortrait(format, sel.id);
@@ -16285,6 +16476,16 @@ const activeAssetControls = React.useMemo(() => {
         useFlyerState.getState().updatePortrait(format, sel.id, {
           locked: !sel.locked,
         }),
+      onLayerUp: () => {
+        const store = useFlyerState.getState();
+        const bucket = Array.isArray(store.portraits?.[format]) ? store.portraits[format] : [];
+        store.setPortraits(format, reorderLayerById(bucket, sel.id, "up"));
+      },
+      onLayerDown: () => {
+        const store = useFlyerState.getState();
+        const bucket = Array.isArray(store.portraits?.[format]) ? store.portraits[format] : [];
+        store.setPortraits(format, reorderLayerById(bucket, sel.id, "down"));
+      },
       onDelete: () => {
         removePortrait(format, sel.id);
         useFlyerState.getState().setSelectedPortraitId(null);
@@ -17896,6 +18097,24 @@ return (
               >
                 Workflow
               </Chip>
+              {activeTextLayerKey && (
+                <>
+                  <Chip
+                    small
+                    onClick={() => nudgeTextLayer(activeTextLayerKey, "down")}
+                    title="Send selected text backward"
+                  >
+                    Text Down
+                  </Chip>
+                  <Chip
+                    small
+                    onClick={() => nudgeTextLayer(activeTextLayerKey, "up")}
+                    title="Bring selected text forward"
+                  >
+                    Text Up
+                  </Chip>
+                </>
+              )}
               {uiMode === "finish" ? (
                 <Chip small onClick={() => setUiMode("design")}>Back to Design</Chip>
               ) : (
@@ -20363,6 +20582,12 @@ style={{ top: STICKY_TOP }}
             lastTrackDelta={lastTrackDelta}
             kerningFix={kerningFix}
             headBehindPortrait={headBehindPortrait}
+            headlineLayerZ={textLayerZ.headline}
+            head2LayerZ={textLayerZ.headline2}
+            detailsLayerZ={textLayerZ.details}
+            details2LayerZ={textLayerZ.details2}
+            venueLayerZ={textLayerZ.venue}
+            subtagLayerZ={textLayerZ.subtag}
             selShapeId={selShapeId}
             onSelectShape={onSelectShape}
             onDeleteShape={deleteShape}
@@ -20371,12 +20596,11 @@ style={{ top: STICKY_TOP }}
             isMobileView={isMobileView}
             mobileDragEnabled={mobileDragEnabled}
             onMobileDragEnd={handleMobileDragEnd}
+            portraitCanvas={portraitCanvas}
+            emojiCanvas={emojiCanvas}
+            flareCanvas={flareCanvas}
           />
           </div>
-          {/* 🔥 FIXED: Elements moved INSIDE motion.div so they fade out */}
-          {portraitCanvas}
-          {emojiCanvas}
-          {flareCanvas}
           
         </motion.div>      
       </AnimatePresence> 
@@ -20490,6 +20714,22 @@ style={{ top: STICKY_TOP }}
               className="w-full accent-cyan-400"
               style={{ touchAction: "pan-x" }}
             />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => activeTextControls.onLayerDown?.()}
+              className="text-[11px] rounded-md border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 px-2 py-1.5 text-white"
+            >
+              Layer Down
+            </button>
+            <button
+              type="button"
+              onClick={() => activeTextControls.onLayerUp?.()}
+              className="text-[11px] rounded-md border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 px-2 py-1.5 text-white"
+            >
+              Layer Up
+            </button>
           </div>
         </div>
       </div>
@@ -20809,6 +21049,22 @@ style={{ top: STICKY_TOP }}
             )}
           </div>
         )}
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => activeAssetControls.onLayerUp?.()}
+            className="text-[11px] rounded-md border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 px-2 py-1.5"
+          >
+            Layer Up
+          </button>
+          <button
+            type="button"
+            onClick={() => activeAssetControls.onLayerDown?.()}
+            className="text-[11px] rounded-md border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 px-2 py-1.5"
+          >
+            Layer Down
+          </button>
+        </div>
         {(!("showActions" in activeAssetControls) ||
           activeAssetControls.showActions !== false) && (
           <div className="mt-2 grid grid-cols-2 gap-2">

@@ -80,7 +80,9 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
     const setSelectedPanel = useFlyerState((s) => s.setSelectedPanel);
     const setMoveTarget = useFlyerState((s) => s.setMoveTarget);
     const portraits = useFlyerState((s) => s.portraits);
+    const setPortraits = useFlyerState((s) => s.setPortraits);
     const emojis = useFlyerState((s) => s.emojis);
+    const setEmojis = useFlyerState((s) => s.setEmojis);
     const selectedPortraitId = useFlyerState((s) => s.selectedPortraitId);
     const updatePortrait = useFlyerState((s) => s.updatePortrait);
     const removePortrait = useFlyerState((s) => s.removePortrait);
@@ -89,6 +91,28 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
     const addEmoji = useFlyerState((s) => s.addEmoji);
     const updateEmoji = useFlyerState((s) => s.updateEmoji);
     const removeEmoji = useFlyerState((s) => s.removeEmoji);
+    const reorderById = React.useCallback(<T extends { id: string }>(
+      list: T[],
+      id: string,
+      direction: "up" | "down"
+    ) => {
+      const idx = list.findIndex((item) => item.id === id);
+      if (idx < 0) return list;
+      if (direction === "up") {
+        if (idx >= list.length - 1) return list;
+        const next = [...list];
+        const tmp = next[idx];
+        next[idx] = next[idx + 1];
+        next[idx + 1] = tmp;
+        return next;
+      }
+      if (idx <= 0) return list;
+      const next = [...list];
+      const tmp = next[idx];
+      next[idx] = next[idx - 1];
+      next[idx - 1] = tmp;
+      return next;
+    }, []);
 
     const getAssetName = (asset: any) => {
       if (!asset) return null;
@@ -483,6 +507,31 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                     </div>
                   )}
 
+                  <div className="mb-3 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      className="text-[11px] bg-neutral-800 border border-neutral-600 rounded-md py-2"
+                      onClick={() => {
+                        const store = useFlyerState.getState();
+                        const bucket = Array.isArray(store.emojis?.[format]) ? store.emojis[format] : [];
+                        setEmojis(format, reorderById(bucket as any[], sel.id, "up") as any);
+                      }}
+                    >
+                      Layer Up
+                    </button>
+                    <button
+                      type="button"
+                      className="text-[11px] bg-neutral-800 border border-neutral-600 rounded-md py-2"
+                      onClick={() => {
+                        const store = useFlyerState.getState();
+                        const bucket = Array.isArray(store.emojis?.[format]) ? store.emojis[format] : [];
+                        setEmojis(format, reorderById(bucket as any[], sel.id, "down") as any);
+                      }}
+                    >
+                      Layer Down
+                    </button>
+                  </div>
+
                   <button
                     className="w-full mt-1 text-[12px] bg-red-900/20 hover:bg-red-900/40 border border-red-900/50 hover:border-red-500 text-red-200 rounded-md py-2 transition-all flex items-center justify-center gap-2"
                     onClick={(e) => {
@@ -798,6 +847,31 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                     />
                   </div>
 
+                  <div className="mb-4 grid grid-cols-2 gap-2">
+                    <button
+                      className="text-[11px] bg-neutral-800 border border-neutral-600 rounded-md py-2"
+                      onClick={() =>
+                        setPortraits(
+                          format,
+                          reorderById((portraits[format] || []) as any[], sel.id, "up") as any
+                        )
+                      }
+                    >
+                      Layer Up
+                    </button>
+                    <button
+                      className="text-[11px] bg-neutral-800 border border-neutral-600 rounded-md py-2"
+                      onClick={() =>
+                        setPortraits(
+                          format,
+                          reorderById((portraits[format] || []) as any[], sel.id, "down") as any
+                        )
+                      }
+                    >
+                      Layer Down
+                    </button>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       className="text-[11px] bg-neutral-800 border border-neutral-600 rounded-md py-2"
@@ -1019,6 +1093,31 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                     step={5}
                     onChange={(v) => update({ tint: v })}
                   />
+
+                  <div className="mt-3 mb-1 grid grid-cols-2 gap-2">
+                    <button
+                      className="text-[11px] bg-neutral-800 border border-neutral-600 rounded-md py-2"
+                      onClick={() =>
+                        setPortraits(
+                          format,
+                          reorderById((portraits[format] || []) as any[], sel.id, "up") as any
+                        )
+                      }
+                    >
+                      Layer Up
+                    </button>
+                    <button
+                      className="text-[11px] bg-neutral-800 border border-neutral-600 rounded-md py-2"
+                      onClick={() =>
+                        setPortraits(
+                          format,
+                          reorderById((portraits[format] || []) as any[], sel.id, "down") as any
+                        )
+                      }
+                    >
+                      Layer Down
+                    </button>
+                  </div>
 
                   <button
                     className="mt-4 w-full text-[11px] bg-red-900/30 border border-red-700 rounded-md py-2"
