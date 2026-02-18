@@ -15965,6 +15965,7 @@ const TEXT_LAYER_MIN = -48;
 const TEXT_LAYER_MAX = 180;
 const ICON_LAYER_Z = 36;
 const TEXT_PRIORITY_Z = 120;
+const TEXT_DOWN_TARGET_Z = ICON_LAYER_Z - TEXT_LAYER_STEP;
 const textBaseZ = React.useMemo(
   () => ({
     headline: headBehindPortrait ? 8 : 20,
@@ -15989,11 +15990,15 @@ const nudgeTextLayer = React.useCallback((key: TextLayerKey, dir: "up" | "down")
     const delta = dir === "up" ? TEXT_LAYER_STEP : -TEXT_LAYER_STEP;
     const current = prev[key] ?? 0;
     let next = current + delta;
+    const nextZ = textBaseZ[key] + next;
     // One-tap lift above graphics/icon layer so users don't need repeated taps.
-    if (dir === "up" && textBaseZ[key] + next <= TEXT_PRIORITY_Z) {
+    if (dir === "up" && nextZ <= TEXT_PRIORITY_Z) {
       next = TEXT_PRIORITY_Z - textBaseZ[key] + TEXT_LAYER_STEP;
-    } else if (dir === "up" && textBaseZ[key] + next <= ICON_LAYER_Z) {
+    } else if (dir === "up" && nextZ <= ICON_LAYER_Z) {
       next = ICON_LAYER_Z - textBaseZ[key] + TEXT_LAYER_STEP;
+    } else if (dir === "down" && nextZ >= ICON_LAYER_Z) {
+      // Symmetric with "up": one tap sends text beneath graphics/icon stack.
+      next = TEXT_DOWN_TARGET_Z - textBaseZ[key];
     }
     next = Math.max(TEXT_LAYER_MIN, Math.min(TEXT_LAYER_MAX, next));
     return { ...prev, [key]: next };
@@ -20719,7 +20724,12 @@ style={{ top: STICKY_TOP }}
             <button
               type="button"
               data-mobile-float-lock="true"
-              onPointerDown={(e) => {
+              onTouchStart={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                activeTextControls.onLayerDown?.();
+              }}
+              onMouseDown={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 activeTextControls.onLayerDown?.();
@@ -20731,7 +20741,12 @@ style={{ top: STICKY_TOP }}
             <button
               type="button"
               data-mobile-float-lock="true"
-              onPointerDown={(e) => {
+              onTouchStart={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                activeTextControls.onLayerUp?.();
+              }}
+              onMouseDown={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 activeTextControls.onLayerUp?.();
@@ -21063,7 +21078,12 @@ style={{ top: STICKY_TOP }}
           <button
             type="button"
             data-mobile-float-lock="true"
-            onPointerDown={(e) => {
+            onTouchStart={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              activeAssetControls.onLayerUp?.();
+            }}
+            onMouseDown={(e) => {
               e.preventDefault();
               e.stopPropagation();
               activeAssetControls.onLayerUp?.();
@@ -21075,7 +21095,12 @@ style={{ top: STICKY_TOP }}
           <button
             type="button"
             data-mobile-float-lock="true"
-            onPointerDown={(e) => {
+            onTouchStart={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              activeAssetControls.onLayerDown?.();
+            }}
+            onMouseDown={(e) => {
               e.preventDefault();
               e.stopPropagation();
               activeAssetControls.onLayerDown?.();
