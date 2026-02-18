@@ -20718,14 +20718,24 @@ style={{ top: STICKY_TOP }}
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={() => activeTextControls.onLayerDown?.()}
+              data-mobile-float-lock="true"
+              onPointerDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                activeTextControls.onLayerDown?.();
+              }}
               className="text-[11px] rounded-md border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 px-2 py-1.5 text-white"
             >
               Layer Down
             </button>
             <button
               type="button"
-              onClick={() => activeTextControls.onLayerUp?.()}
+              data-mobile-float-lock="true"
+              onPointerDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                activeTextControls.onLayerUp?.();
+              }}
               className="text-[11px] rounded-md border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 px-2 py-1.5 text-white"
             >
               Layer Up
@@ -21052,14 +21062,24 @@ style={{ top: STICKY_TOP }}
         <div className="mt-2 grid grid-cols-2 gap-2">
           <button
             type="button"
-            onClick={() => activeAssetControls.onLayerUp?.()}
+            data-mobile-float-lock="true"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              activeAssetControls.onLayerUp?.();
+            }}
             className="text-[11px] rounded-md border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 px-2 py-1.5"
           >
             Layer Up
           </button>
           <button
             type="button"
-            onClick={() => activeAssetControls.onLayerDown?.()}
+            data-mobile-float-lock="true"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              activeAssetControls.onLayerDown?.();
+            }}
             className="text-[11px] rounded-md border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 px-2 py-1.5"
           >
             Layer Down
