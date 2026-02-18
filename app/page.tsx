@@ -145,6 +145,7 @@ import {
   VENUE_FONTS_LOCAL,
   SUBTAG_FONTS_LOCAL,
 } from '../lib/fonts';
+import { FONT_FILE_MAP } from '../lib/localFontMap';
 
 // === DRAG PERFORMANCE REFS ===
 
@@ -219,6 +220,80 @@ async function forceFontRender(families: (string | undefined)[]): Promise<void> 
       } catch {}
     })
   );
+}
+
+function normalizeFontFamilyName(raw: string): string {
+  return String(raw || "").trim().replace(/^['"]|['"]$/g, "").toLowerCase();
+}
+
+function guessFontFormat(url: string): string {
+  const clean = url.split("?")[0].toLowerCase();
+  if (clean.endsWith(".woff2")) return "woff2";
+  if (clean.endsWith(".woff")) return "woff";
+  if (clean.endsWith(".otf")) return "opentype";
+  return "truetype";
+}
+
+async function inlineCssUrlsToData(css: string): Promise<string> {
+  if (!css) return css;
+  const urlMatches = Array.from(css.matchAll(/url\((['"]?)(.*?)\1\)/g));
+  if (!urlMatches.length) return css;
+
+  let nextCss = css;
+  const cache = new Map<string, string>();
+
+  for (const match of urlMatches) {
+    const rawUrl = String(match[2] || "").trim();
+    if (!rawUrl || rawUrl.startsWith("data:")) continue;
+
+    const absUrl = rawUrl.startsWith("http")
+      ? rawUrl
+      : new URL(rawUrl, window.location.href).toString();
+    if (!cache.has(absUrl)) {
+      try {
+        const res = await fetch(absUrl, { mode: "cors", credentials: "omit", cache: "no-store" });
+        if (!res.ok) throw new Error(`font fetch failed: ${res.status}`);
+        const dataUrl = await blobToDataURL(await res.blob());
+        cache.set(absUrl, dataUrl);
+      } catch {
+        cache.set(absUrl, rawUrl);
+      }
+    }
+    const embedded = cache.get(absUrl) || rawUrl;
+    nextCss = nextCss.split(rawUrl).join(embedded);
+  }
+
+  return nextCss;
+}
+
+async function buildLocalFontEmbedCss(families: string[]): Promise<string> {
+  const uniq = Array.from(new Set(families.filter(Boolean)));
+  if (!uniq.length) return "";
+
+  const rules: string[] = [];
+  const byNormalized = new Map<string, string>(
+    Object.keys(FONT_FILE_MAP).map((k) => [normalizeFontFamilyName(k), FONT_FILE_MAP[k]])
+  );
+
+  for (const family of uniq) {
+    const normalized = normalizeFontFamilyName(family);
+    const fallbackAlias = normalized === "birch" ? "brich" : normalized === "brich" ? "birch" : normalized;
+    const srcPath = byNormalized.get(normalized) || byNormalized.get(fallbackAlias);
+    if (!srcPath) continue;
+    try {
+      const srcUrl = new URL(srcPath, window.location.origin).toString();
+      const res = await fetch(srcUrl, { credentials: "omit", cache: "no-store" });
+      if (!res.ok) continue;
+      const dataUrl = await blobToDataURL(await res.blob());
+      rules.push(
+        `@font-face{font-family:"${family}";src:url("${dataUrl}") format("${guessFontFormat(srcPath)}");font-style:normal;font-weight:100 900;font-display:swap;}`
+      );
+    } catch {
+      // best effort
+    }
+  }
+
+  return rules.join("\n");
 }
 
 // ===== CLIENT REMOVE-BG (module scope) =====
@@ -10189,14 +10264,26 @@ function clearAllSelections() {
 
 
   // ===== EXPORT HELPERS: FONTS (INLINE GOOGLE FONTS INTO EXPORT NODE) =====
-async function injectGoogleFontsForExport(hostEl: HTMLElement, families: string[]) {
+async function injectGoogleFontsForExport(
+  hostEl: HTMLElement,
+  families: string[]
+): Promise<{ restore: () => void; fontEmbedCss: string }> {
   const uniq = Array.from(new Set(families.filter(Boolean)));
-  if (uniq.length === 0) return () => {};
+  if (uniq.length === 0) {
+    return { restore: () => {}, fontEmbedCss: "" };
+  }
 
   const params = uniq
     .map((f) => 'family=' + encodeURIComponent(f) + ':wght@300;400;500;600;700;800;900')
     .join('&');
   const cssUrl = `https://fonts.googleapis.com/css2?${params}&display=swap`;
+
+  let localCss = "";
+  try {
+    localCss = await buildLocalFontEmbedCss(uniq);
+  } catch {
+    localCss = "";
+  }
 
   let css = '';
   try {
@@ -10209,13 +10296,15 @@ async function injectGoogleFontsForExport(hostEl: HTMLElement, families: string[
       if (s.startsWith('//')) return `url(https:${s})`;
       return `url(https://fonts.gstatic.com/${s.replace(/^\/+/, '')})`;
     });
+    css = await inlineCssUrlsToData(css);
   } catch {
     // ignore; we’ll try to rely on already-loaded fonts
   }
+  const combinedCss = [localCss, css].filter(Boolean).join('\n');
 
   const styleTag = document.createElement('style');
   styleTag.setAttribute('data-export-fonts', 'true');
-  styleTag.textContent = css;
+  styleTag.textContent = combinedCss;
   // inject as FIRST child so it's available inside the cloned subtree
   hostEl.prepend(styleTag);
 
@@ -10227,8 +10316,11 @@ async function injectGoogleFontsForExport(hostEl: HTMLElement, families: string[
     // best-effort
   }
 
-  return () => {
-    try { styleTag.remove(); } catch {}
+  return {
+    restore: () => {
+      try { styleTag.remove(); } catch {}
+    },
+    fontEmbedCss: combinedCss,
   };
 }
 
@@ -13645,13 +13737,16 @@ async function renderExportDataUrl(
 
     const dataUrl = await withExternalStylesDisabled(async () => {
       let restoreExportFonts: null | (() => void) = null;
+      let exportFontCss = "";
       let restoreInlineImages: null | (() => void) = null;
       let restoreInlineBg: null | (() => void) = null;
       let missingInline: string[] = [];
       let missingBgInline: string[] = [];
       try {
         await forceFontRender(families);
-        restoreExportFonts = await injectGoogleFontsForExport(exportRoot, families);
+        const injectedFonts = await injectGoogleFontsForExport(exportRoot, families);
+        restoreExportFonts = injectedFonts.restore;
+        exportFontCss = injectedFonts.fontEmbedCss;
         await waitForImageUrl(bgUploadUrl || bgUrl);
         await waitForImageUrl(logoUrl);
         if (shouldInlineProxy) {
@@ -13680,6 +13775,9 @@ async function renderExportDataUrl(
             return await htmlToImage.toJpeg(exportRoot, {
               cacheBust: true,
               imagePlaceholder: EXPORT_TRANSPARENT_PIXEL,
+              skipFonts: false,
+              fontEmbedCss: exportFontCss || undefined,
+              preferredFontFormat: "woff2",
               backgroundColor: '#000',
               pixelRatio: scale,
               style: forcedStyle,
@@ -13712,6 +13810,9 @@ async function renderExportDataUrl(
           return await htmlToImage.toPng(exportRoot, {
             cacheBust: true,
             imagePlaceholder: EXPORT_TRANSPARENT_PIXEL,
+            skipFonts: false,
+            fontEmbedCss: exportFontCss || undefined,
+            preferredFontFormat: "woff2",
             backgroundColor: '#000',
             pixelRatio: scale,
             style: forcedStyle,
