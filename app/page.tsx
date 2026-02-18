@@ -13625,11 +13625,13 @@ async function renderExportDataUrl(
     };
 
     const dataUrl = await withExternalStylesDisabled(async () => {
+      let restoreExportFonts: null | (() => void) = null;
       let restoreInlineImages: null | (() => void) = null;
       let restoreInlineBg: null | (() => void) = null;
       let missingInline: string[] = [];
       let missingBgInline: string[] = [];
       try {
+        restoreExportFonts = await injectGoogleFontsForExport(exportRoot, families);
         await waitForImageUrl(bgUploadUrl || bgUrl);
         await waitForImageUrl(logoUrl);
         if (shouldInlineProxy) {
@@ -13729,6 +13731,7 @@ async function renderExportDataUrl(
         onProgress?.(96);
         return out;
       } finally {
+        if (restoreExportFonts) restoreExportFonts();
         if (restoreInlineImages) restoreInlineImages();
         if (restoreInlineBg) restoreInlineBg();
       }
