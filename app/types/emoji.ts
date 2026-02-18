@@ -25,4 +25,5 @@ export type Emoji = {
   blendMode?: string;    // css mix-blend-mode
   svgTemplate?: string;  // svg template with {{COLOR}} token (optional)
   iconColor?: string;    // initial svg stroke color (optional)
+  layerOffset?: number;  // per-item z-order nudge
 };

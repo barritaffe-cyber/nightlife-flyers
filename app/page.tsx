@@ -14128,7 +14128,7 @@ const portraitCanvas = React.useMemo(() => {
               : canDrag(p)
               ? "grab"
               : "default",
-            zIndex: baseZ + i,
+            zIndex: baseZ + i + Number((p as any).layerOffset ?? 0),
 
             // ✅ FIX: making the duplicate highlight invisible while moving
             filter:
@@ -14370,6 +14370,7 @@ const flareCanvas = React.useMemo(() => {
               top: `${p.y}%`,
               width: "auto",
               height: "auto",
+              zIndex: 30 + Number((p as any).layerOffset ?? 0),
               transform: "translate3d(var(--pdx, 0px), var(--pdy, 0px), 0px) translate(-50%, -50%)",
               willChange: "transform",
               display: "flex",
@@ -16254,28 +16255,16 @@ const activeTextControls = React.useMemo(() => {
   setTextStyle,
 ]);
 
-function reorderLayerById<T extends { id: string }>(
-  list: T[],
-  id: string,
+const ASSET_LAYER_STEP = 8;
+const ASSET_LAYER_MIN = -120;
+const ASSET_LAYER_MAX = 160;
+const nudgeAssetLayerOffset = (
+  current: number | undefined,
   direction: "up" | "down"
-) {
-  const idx = list.findIndex((item) => item.id === id);
-  if (idx < 0) return list;
-  if (direction === "up") {
-    if (idx >= list.length - 1) return list;
-    const next = [...list];
-    const tmp = next[idx];
-    next[idx] = next[idx + 1];
-    next[idx + 1] = tmp;
-    return next;
-  }
-  if (idx <= 0) return list;
-  const next = [...list];
-  const tmp = next[idx];
-  next[idx] = next[idx - 1];
-  next[idx - 1] = tmp;
-  return next;
-}
+) => {
+  const delta = direction === "up" ? ASSET_LAYER_STEP : -ASSET_LAYER_STEP;
+  return Math.max(ASSET_LAYER_MIN, Math.min(ASSET_LAYER_MAX, (current ?? 0) + delta));
+};
 
 const activeAssetControls = React.useMemo(() => {
   if (selectedEmojiId) {
@@ -16309,14 +16298,18 @@ const activeAssetControls = React.useMemo(() => {
           locked: !sel.locked,
         }),
       onLayerUp: () => {
-        const store = useFlyerState.getState();
-        const bucket = Array.isArray(store.emojis?.[format]) ? store.emojis[format] : [];
-        store.setEmojis(format, reorderLayerById(bucket, sel.id, "up"));
+        useFlyerState
+          .getState()
+          .updateEmoji(format, sel.id, {
+            layerOffset: nudgeAssetLayerOffset((sel as any).layerOffset, "up"),
+          });
       },
       onLayerDown: () => {
-        const store = useFlyerState.getState();
-        const bucket = Array.isArray(store.emojis?.[format]) ? store.emojis[format] : [];
-        store.setEmojis(format, reorderLayerById(bucket, sel.id, "down"));
+        useFlyerState
+          .getState()
+          .updateEmoji(format, sel.id, {
+            layerOffset: nudgeAssetLayerOffset((sel as any).layerOffset, "down"),
+          });
       },
       onDelete: () => {
         useFlyerState.getState().removeEmoji(format, sel.id);
@@ -16368,14 +16361,18 @@ const activeAssetControls = React.useMemo(() => {
               locked: !sel.locked,
             }),
           onLayerUp: () => {
-            const store = useFlyerState.getState();
-            const bucket = Array.isArray(store.portraits?.[format]) ? store.portraits[format] : [];
-            store.setPortraits(format, reorderLayerById(bucket, sel.id, "up"));
+            useFlyerState
+              .getState()
+              .updatePortrait(format, sel.id, {
+                layerOffset: nudgeAssetLayerOffset((sel as any).layerOffset, "up"),
+              });
           },
           onLayerDown: () => {
-            const store = useFlyerState.getState();
-            const bucket = Array.isArray(store.portraits?.[format]) ? store.portraits[format] : [];
-            store.setPortraits(format, reorderLayerById(bucket, sel.id, "down"));
+            useFlyerState
+              .getState()
+              .updatePortrait(format, sel.id, {
+                layerOffset: nudgeAssetLayerOffset((sel as any).layerOffset, "down"),
+              });
           },
           onDelete: () => {
             removePortrait(format, sel.id);
@@ -16441,14 +16438,18 @@ const activeAssetControls = React.useMemo(() => {
             locked: !sel.locked,
           }),
         onLayerUp: () => {
-          const store = useFlyerState.getState();
-          const bucket = Array.isArray(store.portraits?.[format]) ? store.portraits[format] : [];
-          store.setPortraits(format, reorderLayerById(bucket, sel.id, "up"));
+          useFlyerState
+            .getState()
+            .updatePortrait(format, sel.id, {
+              layerOffset: nudgeAssetLayerOffset((sel as any).layerOffset, "up"),
+            });
         },
         onLayerDown: () => {
-          const store = useFlyerState.getState();
-          const bucket = Array.isArray(store.portraits?.[format]) ? store.portraits[format] : [];
-          store.setPortraits(format, reorderLayerById(bucket, sel.id, "down"));
+          useFlyerState
+            .getState()
+            .updatePortrait(format, sel.id, {
+              layerOffset: nudgeAssetLayerOffset((sel as any).layerOffset, "down"),
+            });
         },
         deleteLabel: isBrandFace ? "Remove Main Face" : `Delete ${assetLabel}`,
         onDelete: () => {
@@ -16482,14 +16483,18 @@ const activeAssetControls = React.useMemo(() => {
           locked: !sel.locked,
         }),
       onLayerUp: () => {
-        const store = useFlyerState.getState();
-        const bucket = Array.isArray(store.portraits?.[format]) ? store.portraits[format] : [];
-        store.setPortraits(format, reorderLayerById(bucket, sel.id, "up"));
+        useFlyerState
+          .getState()
+          .updatePortrait(format, sel.id, {
+            layerOffset: nudgeAssetLayerOffset((sel as any).layerOffset, "up"),
+          });
       },
       onLayerDown: () => {
-        const store = useFlyerState.getState();
-        const bucket = Array.isArray(store.portraits?.[format]) ? store.portraits[format] : [];
-        store.setPortraits(format, reorderLayerById(bucket, sel.id, "down"));
+        useFlyerState
+          .getState()
+          .updatePortrait(format, sel.id, {
+            layerOffset: nudgeAssetLayerOffset((sel as any).layerOffset, "down"),
+          });
       },
       onDelete: () => {
         removePortrait(format, sel.id);
@@ -17800,6 +17805,7 @@ const emojiCanvas = React.useMemo(() => {
   style={{
     left: `${em.x}%`,
     top: `${em.y}%`,
+    zIndex: 25 + Number((em as any).layerOffset ?? 0),
     transform: `translate3d(var(--edx, 0px), var(--edy, 0px), 0) translate(-50%, -50%) scale(${em.scale}) rotate(${em.rotation ?? 0}deg)`,
     willChange: "transform",
 

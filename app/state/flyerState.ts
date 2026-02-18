@@ -158,6 +158,7 @@ type Portrait = {
   tintMode?: "hue" | "colorize";
   svgTemplate?: string;
   iconColor?: string;
+  layerOffset?: number;
   cleanup?: CleanupParams;
   cleanupBaseUrl?: string;
   shadowBlur?: number;
