@@ -80,9 +80,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
     const setSelectedPanel = useFlyerState((s) => s.setSelectedPanel);
     const setMoveTarget = useFlyerState((s) => s.setMoveTarget);
     const portraits = useFlyerState((s) => s.portraits);
-    const setPortraits = useFlyerState((s) => s.setPortraits);
     const emojis = useFlyerState((s) => s.emojis);
-    const setEmojis = useFlyerState((s) => s.setEmojis);
     const selectedPortraitId = useFlyerState((s) => s.selectedPortraitId);
     const updatePortrait = useFlyerState((s) => s.updatePortrait);
     const removePortrait = useFlyerState((s) => s.removePortrait);
@@ -91,28 +89,47 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
     const addEmoji = useFlyerState((s) => s.addEmoji);
     const updateEmoji = useFlyerState((s) => s.updateEmoji);
     const removeEmoji = useFlyerState((s) => s.removeEmoji);
-    const reorderById = React.useCallback(<T extends { id: string }>(
-      list: T[],
-      id: string,
-      direction: "up" | "down"
-    ) => {
-      const idx = list.findIndex((item) => item.id === id);
-      if (idx < 0) return list;
-      if (direction === "up") {
-        if (idx >= list.length - 1) return list;
-        const next = [...list];
-        const tmp = next[idx];
-        next[idx] = next[idx + 1];
-        next[idx + 1] = tmp;
-        return next;
-      }
-      if (idx <= 0) return list;
-      const next = [...list];
-      const tmp = next[idx];
-      next[idx] = next[idx - 1];
-      next[idx - 1] = tmp;
-      return next;
-    }, []);
+    const ASSET_LAYER_STEP = 8;
+    const ASSET_LAYER_MIN = -120;
+    const ASSET_LAYER_MAX = 160;
+    const nudgeAssetLayerOffset = React.useCallback(
+      (current: number | undefined, direction: "up" | "down") => {
+        const delta = direction === "up" ? ASSET_LAYER_STEP : -ASSET_LAYER_STEP;
+        return Math.max(ASSET_LAYER_MIN, Math.min(ASSET_LAYER_MAX, (current ?? 0) + delta));
+      },
+      [ASSET_LAYER_STEP, ASSET_LAYER_MIN, ASSET_LAYER_MAX]
+    );
+    const nudgeEmojiLayer = React.useCallback(
+      (id: string, direction: "up" | "down") => {
+        const store = useFlyerState.getState();
+        const bucket = Array.isArray(store.emojis?.[format]) ? store.emojis[format] : [];
+        const cur = bucket.find((e: any) => e?.id === id);
+        if (!cur) return;
+        store.updateEmoji(format, id, {
+          layerOffset: nudgeAssetLayerOffset((cur as any).layerOffset, direction),
+        } as any);
+        setSelectedEmojiId(id);
+        store.setSelectedEmojiId(id);
+        store.setSelectedPanel('icons');
+        store.setMoveTarget('icon');
+      },
+      [format, setSelectedEmojiId, nudgeAssetLayerOffset]
+    );
+    const nudgePortraitLayer = React.useCallback(
+      (id: string, direction: "up" | "down") => {
+        const store = useFlyerState.getState();
+        const bucket = Array.isArray(store.portraits?.[format]) ? store.portraits[format] : [];
+        const cur = bucket.find((p: any) => p?.id === id);
+        if (!cur) return;
+        store.updatePortrait(format, id, {
+          layerOffset: nudgeAssetLayerOffset((cur as any).layerOffset, direction),
+        } as any);
+        store.setSelectedPortraitId(id);
+        store.setSelectedPanel('icons');
+        store.setMoveTarget('icon');
+      },
+      [format, nudgeAssetLayerOffset]
+    );
 
     const getAssetName = (asset: any) => {
       if (!asset) return null;
@@ -511,22 +528,14 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                     <button
                       type="button"
                       className="text-[11px] bg-neutral-800 border border-neutral-600 rounded-md py-2"
-                      onClick={() => {
-                        const store = useFlyerState.getState();
-                        const bucket = Array.isArray(store.emojis?.[format]) ? store.emojis[format] : [];
-                        setEmojis(format, reorderById(bucket as any[], sel.id, "up") as any);
-                      }}
+                      onClick={() => nudgeEmojiLayer(sel.id, "up")}
                     >
                       Layer Up
                     </button>
                     <button
                       type="button"
                       className="text-[11px] bg-neutral-800 border border-neutral-600 rounded-md py-2"
-                      onClick={() => {
-                        const store = useFlyerState.getState();
-                        const bucket = Array.isArray(store.emojis?.[format]) ? store.emojis[format] : [];
-                        setEmojis(format, reorderById(bucket as any[], sel.id, "down") as any);
-                      }}
+                      onClick={() => nudgeEmojiLayer(sel.id, "down")}
                     >
                       Layer Down
                     </button>
@@ -850,23 +859,13 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                   <div className="mb-4 grid grid-cols-2 gap-2">
                     <button
                       className="text-[11px] bg-neutral-800 border border-neutral-600 rounded-md py-2"
-                      onClick={() =>
-                        setPortraits(
-                          format,
-                          reorderById((portraits[format] || []) as any[], sel.id, "up") as any
-                        )
-                      }
+                      onClick={() => nudgePortraitLayer(sel.id, "up")}
                     >
                       Layer Up
                     </button>
                     <button
                       className="text-[11px] bg-neutral-800 border border-neutral-600 rounded-md py-2"
-                      onClick={() =>
-                        setPortraits(
-                          format,
-                          reorderById((portraits[format] || []) as any[], sel.id, "down") as any
-                        )
-                      }
+                      onClick={() => nudgePortraitLayer(sel.id, "down")}
                     >
                       Layer Down
                     </button>
@@ -1097,23 +1096,13 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                   <div className="mt-3 mb-1 grid grid-cols-2 gap-2">
                     <button
                       className="text-[11px] bg-neutral-800 border border-neutral-600 rounded-md py-2"
-                      onClick={() =>
-                        setPortraits(
-                          format,
-                          reorderById((portraits[format] || []) as any[], sel.id, "up") as any
-                        )
-                      }
+                      onClick={() => nudgePortraitLayer(sel.id, "up")}
                     >
                       Layer Up
                     </button>
                     <button
                       className="text-[11px] bg-neutral-800 border border-neutral-600 rounded-md py-2"
-                      onClick={() =>
-                        setPortraits(
-                          format,
-                          reorderById((portraits[format] || []) as any[], sel.id, "down") as any
-                        )
-                      }
+                      onClick={() => nudgePortraitLayer(sel.id, "down")}
                     >
                       Layer Down
                     </button>
