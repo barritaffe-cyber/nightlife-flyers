@@ -3013,6 +3013,7 @@ return (
       <img
         ref={bgImgRef}
         src={bgUploadUrl || bgUrl || ""}
+        crossOrigin="anonymous"
         alt="background"
         draggable={false}
         // ✅ FIX: Also catch standard load events
@@ -3415,6 +3416,7 @@ return (
         ) : ic.imgUrl ? (
           <img
             src={ic.imgUrl}
+            crossOrigin="anonymous"
             alt={ic.name || 'icon'}
             draggable={false}
             style={{
@@ -13270,21 +13272,14 @@ async function inlineImagesForExport(
     srcset: string | null;
     sizes: string | null;
   }> = [];
-  const created = new Set<string>();
   const missing: string[] = [];
 
   for (const img of imgs) {
     const rawSrc = img.currentSrc || img.getAttribute('src') || '';
     if (!rawSrc) continue;
-    if (
-      rawSrc.startsWith('data:') ||
-      rawSrc.startsWith('blob:') ||
-      rawSrc.startsWith('about:')
-    ) {
-      continue;
-    }
+    if (rawSrc.startsWith('about:')) continue;
 
-    const absSrc = rawSrc.startsWith('http')
+    const absSrc = rawSrc.startsWith('http') || rawSrc.startsWith('blob:') || rawSrc.startsWith('data:')
       ? rawSrc
       : new URL(rawSrc, window.location.href).toString();
     const isSameOrigin = (() => {
@@ -13296,37 +13291,51 @@ async function inlineImagesForExport(
     })();
     if (!cache.has(absSrc)) {
       try {
-        // In forced-proxy mode, still allow same-origin direct fetches.
-        if (opts?.forceProxy && !isSameOrigin) {
-          throw new Error('force proxy');
-        }
-        const res = await fetch(absSrc, { mode: 'cors', credentials: 'omit' });
-        if (!res.ok) throw new Error('fetch failed');
-        const blob = await res.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        cache.set(absSrc, blobUrl);
-        created.add(blobUrl);
-      } catch {
-        // Proxy via same-origin to avoid CORS blocks (mobile-safe)
-        try {
-          const proxied = await fetch(`/api/image-proxy?url=${encodeURIComponent(absSrc)}`, {
-            cache: "no-store",
+        if (absSrc.startsWith('data:')) {
+          cache.set(absSrc, absSrc);
+        } else if (absSrc.startsWith('blob:')) {
+          const blobRes = await fetch(absSrc, { cache: 'no-store' });
+          if (!blobRes.ok) throw new Error('blob fetch failed');
+          cache.set(absSrc, await blobToDataURL(await blobRes.blob()));
+        } else {
+          // In forced-proxy mode, still allow same-origin direct fetches.
+          if (opts?.forceProxy && !isSameOrigin) {
+            throw new Error('force proxy');
+          }
+          const res = await fetch(absSrc, {
+            mode: 'cors',
+            credentials: 'omit',
+            cache: 'no-store',
           });
-          if (!proxied.ok) throw new Error('proxy failed');
-          const data = await proxied.json();
-          if (data?.dataUrl) {
-            cache.set(absSrc, data.dataUrl);
-          } else {
+          if (!res.ok) throw new Error('fetch failed');
+          const blob = await res.blob();
+          cache.set(absSrc, await blobToDataURL(blob));
+        }
+      } catch {
+        if (/^https?:/i.test(absSrc)) {
+          // Proxy via same-origin to avoid CORS blocks (mobile-safe)
+          try {
+            const proxied = await fetch(`/api/image-proxy?url=${encodeURIComponent(absSrc)}`, {
+              cache: "no-store",
+            });
+            if (!proxied.ok) throw new Error('proxy failed');
+            const data = await proxied.json();
+            if (data?.dataUrl) {
+              cache.set(absSrc, data.dataUrl);
+            } else {
+              cache.set(absSrc, null);
+            }
+          } catch {
             cache.set(absSrc, null);
           }
-        } catch {
+        } else {
           cache.set(absSrc, null);
         }
       }
     }
 
-    const blobUrl = cache.get(absSrc);
-    if (!blobUrl) {
+    const inlinedSrc = cache.get(absSrc);
+    if (!inlinedSrc) {
       missing.push(absSrc);
       swaps.push({
         el: img,
@@ -13347,7 +13356,7 @@ async function inlineImagesForExport(
       sizes: img.getAttribute('sizes'),
     });
 
-    img.setAttribute('src', blobUrl);
+    img.setAttribute('src', inlinedSrc);
     if (img.getAttribute('srcset')) img.removeAttribute('srcset');
     if (img.getAttribute('sizes')) img.removeAttribute('sizes');
   }
@@ -13368,9 +13377,6 @@ async function inlineImagesForExport(
         try { swap.el.removeAttribute('sizes'); } catch {}
       }
     }
-    for (const url of created) {
-      try { URL.revokeObjectURL(url); } catch {}
-    }
   };
   return { restore, missing };
 }
@@ -13390,34 +13396,44 @@ async function inlineBackgroundImagesForExport(
     const bg = style.backgroundImage;
     if (!bg || bg === "none" || bg.includes("gradient")) continue;
 
-    const urls = extractCssUrls(bg).filter((u) => u && /^https?:/i.test(u));
+    const urls = extractCssUrls(bg).filter(
+      (u) => u && /^(https?:|blob:|data:image\/)/i.test(u)
+    );
     if (!urls.length) continue;
 
     let nextBg = bg;
     for (const url of urls) {
       let dataUrl: string | null = null;
       try {
-        const isSameOrigin = (() => {
-          try {
-            return new URL(url).origin === window.location.origin;
-          } catch {
-            return false;
-          }
-        })();
-
-        // In forced-proxy mode, still allow same-origin direct fetches.
-        if (opts?.forceProxy && isSameOrigin) {
-          const sameOriginRes = await fetch(url, { cache: "no-store", credentials: "omit" });
-          if (!sameOriginRes.ok) throw new Error("fetch failed");
-          const sameOriginBlob = await sameOriginRes.blob();
-          dataUrl = await blobToDataURL(sameOriginBlob);
+        if (/^data:image\//i.test(url)) {
+          dataUrl = url;
+        } else if (url.startsWith("blob:")) {
+          const blobRes = await fetch(url, { cache: "no-store" });
+          if (!blobRes.ok) throw new Error("blob fetch failed");
+          dataUrl = await blobToDataURL(await blobRes.blob());
         } else {
-          const res = await fetch(`/api/image-proxy?url=${encodeURIComponent(url)}`, {
-            cache: "no-store",
-          });
-          if (res.ok) {
-            const data = await res.json();
-            if (data?.dataUrl) dataUrl = data.dataUrl;
+          const isSameOrigin = (() => {
+            try {
+              return new URL(url).origin === window.location.origin;
+            } catch {
+              return false;
+            }
+          })();
+
+          // In forced-proxy mode, still allow same-origin direct fetches.
+          if (opts?.forceProxy && isSameOrigin) {
+            const sameOriginRes = await fetch(url, { cache: "no-store", credentials: "omit" });
+            if (!sameOriginRes.ok) throw new Error("fetch failed");
+            const sameOriginBlob = await sameOriginRes.blob();
+            dataUrl = await blobToDataURL(sameOriginBlob);
+          } else {
+            const res = await fetch(`/api/image-proxy?url=${encodeURIComponent(url)}`, {
+              cache: "no-store",
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data?.dataUrl) dataUrl = data.dataUrl;
+            }
           }
         }
       } catch {}
@@ -13641,6 +13657,7 @@ async function renderExportDataUrl(
           if (format === 'jpg') {
             return await htmlToImage.toJpeg(exportRoot, {
               cacheBust: true,
+              imagePlaceholder: EXPORT_TRANSPARENT_PIXEL,
               backgroundColor: '#000',
               pixelRatio: scale,
               style: forcedStyle,
@@ -13672,6 +13689,7 @@ async function renderExportDataUrl(
 
           return await htmlToImage.toPng(exportRoot, {
             cacheBust: true,
+            imagePlaceholder: EXPORT_TRANSPARENT_PIXEL,
             backgroundColor: '#000',
             pixelRatio: scale,
             style: forcedStyle,
@@ -14161,6 +14179,7 @@ const portraitCanvas = React.useMemo(() => {
           {p.url && (
             <img
               src={p.url}
+              crossOrigin="anonymous"
               alt=""
               draggable={false}
               onDragStart={(e) => {
