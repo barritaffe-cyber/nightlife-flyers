@@ -18100,7 +18100,7 @@ return (
               >
                 Workflow
               </Chip>
-              {activeTextLayerKey && (
+              {!isMobileView && activeTextLayerKey && (
                 <>
                   <Chip
                     small
@@ -20734,7 +20734,7 @@ style={{ top: STICKY_TOP }}
               }}
               className="text-[11px] rounded-md border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 px-2 py-1.5 text-white"
             >
-              Layer Down
+              Text Down
             </button>
             <button
               type="button"
@@ -20751,7 +20751,7 @@ style={{ top: STICKY_TOP }}
               }}
               className="text-[11px] rounded-md border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 px-2 py-1.5 text-white"
             >
-              Layer Up
+              Text Up
             </button>
           </div>
         </div>
