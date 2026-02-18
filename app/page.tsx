@@ -9959,7 +9959,9 @@ const mobileFloatSticky = isMobileView && format === "story";
           (art.closest?.('[data-export-root="true"]') as HTMLElement) ||
           (document.getElementById('export-root') as HTMLElement) ||
           art;
-        const imgs = Array.from(exportRoot.querySelectorAll('img')) as HTMLImageElement[];
+        const imgs = Array.from(exportRoot.querySelectorAll('img')).filter(
+          (img) => !img.closest?.('[data-nonexport="true"]')
+        ) as HTMLImageElement[];
         const anyIncomplete = imgs.some((img) => !img.complete || img.naturalWidth === 0);
         return anyIncomplete;
       };
@@ -13161,6 +13163,8 @@ function extractCssUrls(input: string): string[] {
   }
   return urls;
 }
+const EXPORT_TRANSPARENT_PIXEL =
+  "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
 async function waitForImageUrl(url?: string | null) {
   if (!url) return;
@@ -13230,7 +13234,9 @@ function scrollToEl(el: HTMLElement, align: "center" | "start" = "center") {
 }
 
 async function waitForImages(root: HTMLElement) {
-  const imgs = Array.from(root.querySelectorAll('img')) as HTMLImageElement[];
+  const imgs = Array.from(root.querySelectorAll('img')).filter(
+    (img) => !img.closest?.('[data-nonexport="true"]')
+  ) as HTMLImageElement[];
   await Promise.all(
     imgs.map(async (img) => {
       try {
@@ -13254,7 +13260,9 @@ async function inlineImagesForExport(
   root: HTMLElement,
   opts?: { forceProxy?: boolean }
 ) {
-  const imgs = Array.from(root.querySelectorAll('img')) as HTMLImageElement[];
+  const imgs = Array.from(root.querySelectorAll('img')).filter(
+    (img) => !img.closest?.('[data-nonexport="true"]')
+  ) as HTMLImageElement[];
   const cache = new Map<string, string | null>();
   const swaps: Array<{
     el: HTMLImageElement;
@@ -13320,6 +13328,15 @@ async function inlineImagesForExport(
     const blobUrl = cache.get(absSrc);
     if (!blobUrl) {
       missing.push(absSrc);
+      swaps.push({
+        el: img,
+        src: img.getAttribute('src') || rawSrc,
+        srcset: img.getAttribute('srcset'),
+        sizes: img.getAttribute('sizes'),
+      });
+      img.setAttribute('src', EXPORT_TRANSPARENT_PIXEL);
+      if (img.getAttribute('srcset')) img.removeAttribute('srcset');
+      if (img.getAttribute('sizes')) img.removeAttribute('sizes');
       continue;
     }
 
@@ -13362,7 +13379,9 @@ async function inlineBackgroundImagesForExport(
   root: HTMLElement,
   opts?: { forceProxy?: boolean }
 ) {
-  const nodes = Array.from(root.querySelectorAll('*')) as HTMLElement[];
+  const nodes = Array.from(root.querySelectorAll('*')).filter(
+    (el) => !el.closest?.('[data-nonexport="true"]')
+  ) as HTMLElement[];
   const swaps: Array<{ el: HTMLElement; bg: string }> = [];
   const missing: string[] = [];
 
@@ -13407,6 +13426,7 @@ async function inlineBackgroundImagesForExport(
         nextBg = nextBg.replace(url, dataUrl);
       } else {
         missing.push(url);
+        nextBg = nextBg.replace(url, EXPORT_TRANSPARENT_PIXEL);
       }
     }
 
@@ -13608,8 +13628,8 @@ async function renderExportDataUrl(
             const short = missingAll.slice(0, 3).map((u) => {
               try { return new URL(u).host; } catch { return u; }
             });
-            throw new Error(
-              `Some images could not be loaded. Sources: ${short.join(", ")}`
+            console.warn(
+              `Export fallback used transparent placeholders for missing images: ${short.join(", ")}`
             );
           }
         }
