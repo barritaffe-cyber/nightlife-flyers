@@ -16155,6 +16155,17 @@ function eventWithinAnyFloat(ev?: Event) {
   return false;
 }
 
+function activeElementWithinAnyFloat() {
+  const active = document.activeElement as HTMLElement | null;
+  if (!active) return false;
+  if (active.closest?.('[data-floating-controls]')) return true;
+  return (
+    (floatingTextRef.current && floatingTextRef.current.contains(active)) ||
+    (floatingAssetRef.current && floatingAssetRef.current.contains(active)) ||
+    (floatingBgRef.current && floatingBgRef.current.contains(active))
+  );
+}
+
 function hideAllFloatsAndClearSelection() {
   setFloatingEditorVisible(false);
   setFloatingAssetVisible(false);
@@ -17142,6 +17153,7 @@ React.useEffect(() => {
   const onAppScroll = (ev?: Event) => {
     if (shouldSkipBecauseDragging()) return;
     if (eventWithinAnyFloat(ev)) return;
+    if (activeElementWithinAnyFloat()) return;
     hideFloats();
     floatFocusLockRef.current = false;
   };
