@@ -16136,7 +16136,56 @@ const [workflowHelpOpen, setWorkflowHelpOpen] = React.useState(false);
 const floatingAssetRef = React.useRef<HTMLDivElement | null>(null);
 const floatingTextRef = React.useRef<HTMLDivElement | null>(null);
 const floatingBgRef = React.useRef<HTMLDivElement | null>(null);
-const assetFocusLockRef = React.useRef(false);
+const floatFocusLockRef = React.useRef(false);
+
+function eventWithinAnyFloat(ev?: Event) {
+  const anyEv = ev as any;
+  const t = anyEv?.target as HTMLElement | null;
+  if (t?.closest?.('[data-floating-controls]')) return true;
+  const path = (anyEv?.composedPath?.() || []) as any[];
+  if (path?.length) {
+    for (const node of path) {
+      if (!node) continue;
+      if ((node as any)?.dataset?.floatingControls) return true;
+      if (floatingTextRef.current && node === floatingTextRef.current) return true;
+      if (floatingAssetRef.current && node === floatingAssetRef.current) return true;
+      if (floatingBgRef.current && node === floatingBgRef.current) return true;
+    }
+  }
+  return false;
+}
+
+function hideAllFloatsAndClearSelection() {
+  setFloatingEditorVisible(false);
+  setFloatingAssetVisible(false);
+  setFloatingBgVisible(false);
+  setSelectedEmojiId(null);
+  setSelectedPortraitId(null);
+}
+
+React.useEffect(() => {
+  const onFocusIn = (ev: FocusEvent) => {
+    const t = ev.target as HTMLElement | null;
+    if (!t) return;
+    if (t.closest?.('[data-floating-controls]')) {
+      floatFocusLockRef.current = true;
+    }
+  };
+  const onFocusOut = () => {
+    setTimeout(() => {
+      const active = document.activeElement as HTMLElement | null;
+      if (!active || !active.closest?.('[data-floating-controls]')) {
+        floatFocusLockRef.current = false;
+      }
+    }, 0);
+  };
+  document.addEventListener("focusin", onFocusIn, true);
+  document.addEventListener("focusout", onFocusOut, true);
+  return () => {
+    document.removeEventListener("focusin", onFocusIn, true);
+    document.removeEventListener("focusout", onFocusOut, true);
+  };
+}, []);
 
 React.useEffect(() => {
   if (!projectHelpOpen && !workflowHelpOpen) return;
@@ -16977,7 +17026,7 @@ React.useEffect(() => {
     setFloatingAssetVisible(true);
   }
   if (!hasAssetControls) {
-    assetFocusLockRef.current = false;
+    floatFocusLockRef.current = false;
     setFloatingAssetVisible(false);
   }
 }, [hasAssetControls]);
@@ -16986,7 +17035,7 @@ React.useEffect(() => {
 React.useEffect(() => {
   const mt = moveTarget;
   if (mt !== "icon" && mt !== "portrait" && mt !== "logo") {
-    assetFocusLockRef.current = false;
+    floatFocusLockRef.current = false;
     setSelectedEmojiId(null);
     setSelectedPortraitId(null);
     setFloatingAssetVisible(false);
@@ -17075,11 +17124,7 @@ React.useEffect(() => {
     if (raf) return;
     raf = requestAnimationFrame(() => {
       raf = 0;
-      setFloatingEditorVisible(false);
-      setFloatingAssetVisible(false);
-      setFloatingBgVisible(false);
-      setSelectedEmojiId(null);
-      setSelectedPortraitId(null);
+      hideAllFloatsAndClearSelection();
     });
   };
   const shouldSkipBecauseDragging = () => {
@@ -17092,68 +17137,26 @@ React.useEffect(() => {
         '[data-hdrag="1"], [data-edrag="1"], [data-pdrag="1"], [data-bgdrag="1"]'
       );
     if (hasCanvasDrag) return true;
-    if (assetFocusLockRef.current) return true;
     return false;
-  };
-  const isWithinFloatControls = (node: EventTarget | null | undefined) =>
-    node instanceof Element &&
-    !!node.closest?.('[data-floating-controls], [data-mobile-float-lock="true"]');
-  const hasActiveFloatFocus = () => {
-    const active = document.activeElement as Node | null;
-    if (!active) return false;
-    return (
-      (floatingTextRef.current && floatingTextRef.current.contains(active)) ||
-      (floatingAssetRef.current && floatingAssetRef.current.contains(active)) ||
-      (floatingBgRef.current && floatingBgRef.current.contains(active))
-    );
   };
   const onAppScroll = (ev?: Event) => {
     if (shouldSkipBecauseDragging()) return;
-    // If the scroll happens inside the float itself, don't auto-close.
-    if (isWithinFloatControls((ev as any)?.target)) return;
-    // Keep floats open while user is actively editing inside them
-    // (e.g. keyboard-induced viewport scroll on mobile).
-    if (hasActiveFloatFocus()) return;
+    if (eventWithinAnyFloat(ev)) return;
     hideFloats();
+    floatFocusLockRef.current = false;
   };
   const onUserMove = (ev?: Event) => {
     if (shouldSkipBecauseDragging()) return;
-    const path = (ev as any)?.composedPath?.();
-    const active = document.activeElement;
-    const targetNode = (ev?.target as Node | null) ?? null;
-    const isLockTarget = (node: EventTarget | null | undefined) =>
-      node instanceof Element &&
-      !!node.closest?.('[data-mobile-float-lock="true"]');
-    const isFloatTarget = (node: EventTarget | null | undefined) =>
-      node instanceof Element && !!node.closest?.('[data-floating-controls]');
-    if (
-      isLockTarget((ev as any)?.target) ||
-      isFloatTarget((ev as any)?.target) ||
-      path?.some?.((n: any) => isLockTarget(n)) ||
-      path?.some?.((n: any) => isFloatTarget(n)) ||
-      (floatingTextRef.current &&
-        (path?.includes(floatingTextRef.current) ||
-          (targetNode && floatingTextRef.current.contains(targetNode)) ||
-          (active && floatingTextRef.current.contains(active)))) ||
-      (floatingAssetRef.current &&
-        (path?.includes(floatingAssetRef.current) ||
-          (targetNode && floatingAssetRef.current.contains(targetNode)) ||
-          (active && floatingAssetRef.current.contains(active)))) ||
-      (floatingBgRef.current &&
-        (path?.includes(floatingBgRef.current) ||
-          (targetNode && floatingBgRef.current.contains(targetNode)) ||
-          (active && floatingBgRef.current.contains(active))))
-    ) {
-      return;
-    }
+    if (eventWithinAnyFloat(ev)) return;
     hideFloats();
+    floatFocusLockRef.current = false;
   };
   document.addEventListener("scroll", onAppScroll as any, { passive: true, capture: true });
   window.addEventListener("scroll", onAppScroll as any, { passive: true });
   window.addEventListener("touchmove", onUserMove as any, { passive: true });
   window.addEventListener("wheel", onUserMove as any, { passive: true });
   const release = () => {
-    assetFocusLockRef.current = false;
+    floatFocusLockRef.current = false;
   };
   window.addEventListener("pointerup", release, { passive: true });
   window.addEventListener("pointercancel", release, { passive: true });
@@ -20892,13 +20895,20 @@ style={{ top: STICKY_TOP }}
         style={{ width: scaledCanvasW, maxWidth: "100%" }}
         ref={floatingTextRef}
         data-floating-controls="text"
-        onPointerDownCapture={(e) => e.stopPropagation()}
+        onPointerDownCapture={(e) => {
+          floatFocusLockRef.current = true;
+          e.stopPropagation();
+        }}
         onTouchStartCapture={(e) => {
-          assetFocusLockRef.current = true;
+          floatFocusLockRef.current = true;
           e.stopPropagation();
         }}
         onTouchMoveCapture={(e) => {
-          assetFocusLockRef.current = true;
+          floatFocusLockRef.current = true;
+          e.stopPropagation();
+        }}
+        onWheelCapture={(e) => {
+          floatFocusLockRef.current = true;
           e.stopPropagation();
         }}
       >
@@ -21040,15 +21050,15 @@ style={{ top: STICKY_TOP }}
         ref={floatingAssetRef}
         data-floating-controls="asset"
         onPointerDownCapture={(e) => {
-          assetFocusLockRef.current = true;
+          floatFocusLockRef.current = true;
           e.stopPropagation();
         }}
         onTouchStartCapture={(e) => {
-          assetFocusLockRef.current = true;
+          floatFocusLockRef.current = true;
           e.stopPropagation();
         }}
         onTouchMoveCapture={(e) => {
-          assetFocusLockRef.current = true;
+          floatFocusLockRef.current = true;
           e.stopPropagation();
         }}
       >
@@ -21282,7 +21292,7 @@ style={{ top: STICKY_TOP }}
           <div
             className="mt-2"
             onPointerDownCapture={() => {
-              assetFocusLockRef.current = true;
+              floatFocusLockRef.current = true;
               setFloatingAssetVisible(true);
             }}
           >
@@ -21316,7 +21326,7 @@ style={{ top: STICKY_TOP }}
                   onChange={(e) => activeAssetControls.onLabel?.(e.target.value)}
                   onFocus={() => setFloatingAssetVisible(true)}
                   onBlur={() => {
-                    assetFocusLockRef.current = false;
+                    floatFocusLockRef.current = false;
                   }}
                   placeholder="Label"
                   disabled={activeAssetControls.locked}
@@ -21412,15 +21422,15 @@ style={{ top: STICKY_TOP }}
         ref={floatingBgRef}
         data-floating-controls="bg"
         onPointerDownCapture={(e) => {
-          assetFocusLockRef.current = true;
+          floatFocusLockRef.current = true;
           e.stopPropagation();
         }}
         onTouchStartCapture={(e) => {
-          assetFocusLockRef.current = true;
+          floatFocusLockRef.current = true;
           e.stopPropagation();
         }}
         onTouchMoveCapture={(e) => {
-          assetFocusLockRef.current = true;
+          floatFocusLockRef.current = true;
           e.stopPropagation();
         }}
       >
