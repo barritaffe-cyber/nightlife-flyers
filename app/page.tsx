@@ -13275,6 +13275,82 @@ function extractCssUrls(input: string): string[] {
 const EXPORT_TRANSPARENT_PIXEL =
   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
+function splitCssListPreservingFunctions(input: string): string[] {
+  const out: string[] = [];
+  let buf = "";
+  let depth = 0;
+  for (let i = 0; i < input.length; i++) {
+    const ch = input[i];
+    if (ch === "(") depth++;
+    if (ch === ")") depth = Math.max(0, depth - 1);
+    if (ch === "," && depth === 0) {
+      const part = buf.trim();
+      if (part) out.push(part);
+      buf = "";
+      continue;
+    }
+    buf += ch;
+  }
+  const tail = buf.trim();
+  if (tail) out.push(tail);
+  return out;
+}
+
+function textShadowToDropShadowFilter(textShadow: string): string {
+  if (!textShadow || textShadow === "none") return "";
+  const parts = splitCssListPreservingFunctions(textShadow);
+  const filters: string[] = [];
+  const lengthRe = /(-?\d*\.?\d+px)\s+(-?\d*\.?\d+px)(?:\s+(\d*\.?\d+px))?/;
+
+  for (const part of parts) {
+    const m = part.match(lengthRe);
+    if (!m) continue;
+    const x = m[1];
+    const y = m[2];
+    const blur = m[3] || "0px";
+    const color = part.replace(lengthRe, "").trim() || "rgba(0,0,0,0.55)";
+    filters.push(`drop-shadow(${x} ${y} ${blur} ${color})`);
+  }
+
+  return filters.join(" ");
+}
+
+function applyTextShadowFallbackForExport(root: HTMLElement) {
+  const swaps: Array<{
+    el: HTMLElement;
+    filter: string;
+    textShadow: string;
+  }> = [];
+  const nodes = Array.from(root.querySelectorAll("*")).filter(
+    (el) => !(el as HTMLElement).closest?.('[data-nonexport="true"]')
+  ) as HTMLElement[];
+
+  for (const el of nodes) {
+    const computed = getComputedStyle(el);
+    const ts = computed.textShadow;
+    if (!ts || ts === "none") continue;
+    const ds = textShadowToDropShadowFilter(ts);
+    if (!ds) continue;
+
+    swaps.push({
+      el,
+      filter: el.style.filter,
+      textShadow: el.style.textShadow,
+    });
+
+    const baseFilter = el.style.filter && el.style.filter !== "none" ? `${el.style.filter} ` : "";
+    el.style.textShadow = "none";
+    el.style.filter = `${baseFilter}${ds}`.trim();
+  }
+
+  return () => {
+    for (const s of swaps) {
+      try { s.el.style.filter = s.filter; } catch {}
+      try { s.el.style.textShadow = s.textShadow; } catch {}
+    }
+  };
+}
+
 async function waitForImageUrl(url?: string | null) {
   if (!url) return;
   try {
@@ -13737,6 +13813,7 @@ async function renderExportDataUrl(
 
     const dataUrl = await withExternalStylesDisabled(async () => {
       let restoreExportFonts: null | (() => void) = null;
+      let restoreTextShadowFallback: null | (() => void) = null;
       let restoreInlineImages: null | (() => void) = null;
       let restoreInlineBg: null | (() => void) = null;
       let missingInline: string[] = [];
@@ -13745,6 +13822,9 @@ async function renderExportDataUrl(
         await forceFontRender(families);
         const injectedFonts = await injectGoogleFontsForExport(exportRoot, families);
         restoreExportFonts = injectedFonts.restore;
+        if (isMobileExport) {
+          restoreTextShadowFallback = applyTextShadowFallbackForExport(exportRoot);
+        }
         await waitForImageUrl(bgUploadUrl || bgUrl);
         await waitForImageUrl(logoUrl);
         if (shouldInlineProxy) {
@@ -13845,6 +13925,7 @@ async function renderExportDataUrl(
         return out;
       } finally {
         if (restoreExportFonts) restoreExportFonts();
+        if (restoreTextShadowFallback) restoreTextShadowFallback();
         if (restoreInlineImages) restoreInlineImages();
         if (restoreInlineBg) restoreInlineBg();
       }
