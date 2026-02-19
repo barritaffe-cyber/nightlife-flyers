@@ -10036,7 +10036,7 @@ const mobileFloatSticky = isMobileView && format === "story";
           1,
           Math.min(
             exportScale,
-            Math.floor((4096 / Math.max(canvasSize.w, canvasSize.h)) * 100) / 100
+            Math.floor((MOBILE_EXPORT_MAX_DIM / Math.max(canvasSize.w, canvasSize.h)) * 100) / 100
           )
         )
       : exportScale;
@@ -10061,7 +10061,7 @@ const mobileFloatSticky = isMobileView && format === "story";
       const mustRetry = !!(bgUrl || bgUploadUrl || logoUrl);
       const maxAttempts = mustRetry ? 3 : 1;
       const scaleAttempts = isMobileExport
-        ? [safeScale]
+        ? [exportScale, safeScale]
             .concat(safeScale > 2 ? [2] : [])
             .concat(safeScale > 1 ? [1] : [])
             .filter((v, i, a) => a.indexOf(v) === i)
@@ -13274,6 +13274,7 @@ function extractCssUrls(input: string): string[] {
 }
 const EXPORT_TRANSPARENT_PIXEL =
   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
+const MOBILE_EXPORT_MAX_DIM = 8192;
 
 function splitCssListPreservingFunctions(input: string): string[] {
   const out: string[] = [];
@@ -13747,7 +13748,7 @@ async function renderExportDataUrl(
     let bgSrcForExport: string | null = null;
     try {
       const snapSize = Math.min(
-        4096,
+        MOBILE_EXPORT_MAX_DIM,
         Math.max(canvasSize.w, canvasSize.h) * Math.max(1, scale)
       );
       const bgSnap = await (artRef.current as any)?.exportBackgroundDataUrl?.({ size: snapSize });
@@ -18594,16 +18595,16 @@ return (
 {exportModalOpen && (
   <div className="fixed inset-0 z-[2000] bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
     <div className="relative bg-neutral-950 border border-neutral-700 rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
-      <button
-        type="button"
-        onClick={handleExportClose}
-        className="absolute right-3 top-3 z-10 h-9 w-9 rounded-full bg-black/60 border border-white/15 text-white/80 hover:text-white hover:bg-black/80 grid place-items-center"
-        aria-label="Close export"
-      >
-        ✕
-      </button>
-      <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between sticky top-0 bg-neutral-950/95 backdrop-blur z-10">
+      <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between sticky top-0 bg-neutral-950/95 backdrop-blur z-20">
         <div className="text-sm font-semibold text-white">Export preview</div>
+        <button
+          type="button"
+          onClick={handleExportClose}
+          className="h-9 w-9 rounded-full bg-black/60 border border-white/15 text-white/80 hover:text-white hover:bg-black/80 grid place-items-center"
+          aria-label="Close export"
+        >
+          ✕
+        </button>
       </div>
       <div className="p-4 space-y-4">
         {exportProgressActive && (
