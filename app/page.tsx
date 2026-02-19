@@ -17098,10 +17098,22 @@ React.useEffect(() => {
   const isWithinFloatControls = (node: EventTarget | null | undefined) =>
     node instanceof Element &&
     !!node.closest?.('[data-floating-controls], [data-mobile-float-lock="true"]');
+  const hasActiveFloatFocus = () => {
+    const active = document.activeElement as Node | null;
+    if (!active) return false;
+    return (
+      (floatingTextRef.current && floatingTextRef.current.contains(active)) ||
+      (floatingAssetRef.current && floatingAssetRef.current.contains(active)) ||
+      (floatingBgRef.current && floatingBgRef.current.contains(active))
+    );
+  };
   const onAppScroll = (ev?: Event) => {
     if (shouldSkipBecauseDragging()) return;
     // If the scroll happens inside the float itself, don't auto-close.
     if (isWithinFloatControls((ev as any)?.target)) return;
+    // Keep floats open while user is actively editing inside them
+    // (e.g. keyboard-induced viewport scroll on mobile).
+    if (hasActiveFloatFocus()) return;
     hideFloats();
   };
   const onUserMove = (ev?: Event) => {
