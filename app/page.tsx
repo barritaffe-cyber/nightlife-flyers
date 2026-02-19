@@ -17071,8 +17071,19 @@ React.useEffect(() => {
   if (!isMobileView) return;
   if (!mobileControlsOpen && !mobileFloatSticky) return;
   let raf = 0;
-  const onUserScroll = (ev?: Event) => {
-    if (useFlyerState.getState().isLiveDragging) return;
+  const hideFloats = () => {
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      setFloatingEditorVisible(false);
+      setFloatingAssetVisible(false);
+      setFloatingBgVisible(false);
+      setSelectedEmojiId(null);
+      setSelectedPortraitId(null);
+    });
+  };
+  const shouldSkipBecauseDragging = () => {
+    if (useFlyerState.getState().isLiveDragging) return true;
     // Custom canvas drags (text/emoji/portrait/flare/background) don't all flip
     // store.isLiveDragging, so guard on active drag data attributes too.
     const hasCanvasDrag =
@@ -17080,8 +17091,21 @@ React.useEffect(() => {
       !!document.querySelector(
         '[data-hdrag="1"], [data-edrag="1"], [data-pdrag="1"], [data-bgdrag="1"]'
       );
-    if (hasCanvasDrag) return;
-    if (assetFocusLockRef.current) return;
+    if (hasCanvasDrag) return true;
+    if (assetFocusLockRef.current) return true;
+    return false;
+  };
+  const isWithinFloatControls = (node: EventTarget | null | undefined) =>
+    node instanceof Element &&
+    !!node.closest?.('[data-floating-controls], [data-mobile-float-lock="true"]');
+  const onAppScroll = (ev?: Event) => {
+    if (shouldSkipBecauseDragging()) return;
+    // If the scroll happens inside the float itself, don't auto-close.
+    if (isWithinFloatControls((ev as any)?.target)) return;
+    hideFloats();
+  };
+  const onUserMove = (ev?: Event) => {
+    if (shouldSkipBecauseDragging()) return;
     const path = (ev as any)?.composedPath?.();
     const active = document.activeElement;
     const targetNode = (ev?.target as Node | null) ?? null;
@@ -17110,20 +17134,12 @@ React.useEffect(() => {
     ) {
       return;
     }
-    if (raf) return;
-    raf = requestAnimationFrame(() => {
-      raf = 0;
-      setFloatingEditorVisible(false);
-      setFloatingAssetVisible(false);
-      setFloatingBgVisible(false);
-      setSelectedEmojiId(null);
-      setSelectedPortraitId(null);
-    });
+    hideFloats();
   };
-  document.addEventListener("scroll", onUserScroll as any, { passive: true, capture: true });
-  window.addEventListener("scroll", onUserScroll as any, { passive: true });
-  window.addEventListener("touchmove", onUserScroll as any, { passive: true });
-  window.addEventListener("wheel", onUserScroll as any, { passive: true });
+  document.addEventListener("scroll", onAppScroll as any, { passive: true, capture: true });
+  window.addEventListener("scroll", onAppScroll as any, { passive: true });
+  window.addEventListener("touchmove", onUserMove as any, { passive: true });
+  window.addEventListener("wheel", onUserMove as any, { passive: true });
   const release = () => {
     assetFocusLockRef.current = false;
   };
@@ -17132,10 +17148,10 @@ React.useEffect(() => {
   window.addEventListener("touchend", release, { passive: true });
   window.addEventListener("touchcancel", release, { passive: true });
   return () => {
-    document.removeEventListener("scroll", onUserScroll as any, { capture: true } as any);
-    window.removeEventListener("scroll", onUserScroll as any);
-    window.removeEventListener("touchmove", onUserScroll as any);
-    window.removeEventListener("wheel", onUserScroll as any);
+    document.removeEventListener("scroll", onAppScroll as any, { capture: true } as any);
+    window.removeEventListener("scroll", onAppScroll as any);
+    window.removeEventListener("touchmove", onUserMove as any);
+    window.removeEventListener("wheel", onUserMove as any);
     window.removeEventListener("pointerup", release);
     window.removeEventListener("pointercancel", release);
     window.removeEventListener("touchend", release);
