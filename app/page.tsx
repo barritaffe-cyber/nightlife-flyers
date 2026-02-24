@@ -10170,7 +10170,7 @@ const mobileFloatSticky = isMobileView && format === "story";
 
   const prepareResumeForReturn = React.useCallback(() => {
     try {
-      localStorage.setItem("nf:lastDesign", exportDesignJSON());
+      persistLastDesignSafely(exportDesignJSON());
       sessionStorage.setItem("nf:resume", "1");
     } catch {}
   }, []);
@@ -11751,14 +11751,16 @@ React.useEffect(() => {
   if (saveDebounce.current) window.clearTimeout(saveDebounce.current);
   saveDebounce.current = window.setTimeout(() => {
     try {
-      saveDesign('__autosave__');
-      localStorage.setItem('nf:lastDesign', exportDesignJSON());
-    safeLocalSet('NLF:auto:savedAt', String(Date.now()), [
-      'nf:portraitSlots',
-      'nf:portraitLibrary',
-      'nf:logoSlots',
-      'nf:lastDesign',
-    ]);
+      persistLastDesignSafely(exportDesignJSON());
+      safeLocalSet('NLF:auto:savedAt', String(Date.now()), [
+        'nf:portraitSlots',
+        'nf:portraitLibrary',
+        'nf:logoSlots',
+        'nf:logoLibrary',
+        'nf:iconSlots',
+        'nf:design:__autosave__',
+        'nf:lastDesign',
+      ]);
       lastSnapRef.current = snap;
     } catch {}
   }, 600);
@@ -12860,6 +12862,29 @@ function writeIndex(names: string[]) {
   try { localStorage.setItem('nf:design:index', JSON.stringify(names)); } catch {}
 }
 
+const MAX_PERSISTED_DATA_URL_LEN = 220_000;
+
+function sanitizeDesignForStorage<T>(value: T): T {
+  const walk = (node: any): any => {
+    if (typeof node === "string") {
+      if (/^data:image\//i.test(node) && node.length > MAX_PERSISTED_DATA_URL_LEN) {
+        return "";
+      }
+      return node;
+    }
+    if (Array.isArray(node)) return node.map(walk);
+    if (node && typeof node === "object") {
+      const out: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(node)) {
+        out[k] = walk(v);
+      }
+      return out;
+    }
+    return node;
+  };
+  return walk(value);
+}
+
 
 
 /** Build a portable JSON snapshot of the current UI state (no external getSnapshot needed). */
@@ -12920,7 +12945,8 @@ function exportDesignJSON(): string {
     palette,
   };
 
-  return JSON.stringify({ v: 1, state: designState }, null, 2);
+  const safeState = sanitizeDesignForStorage(designState);
+  return JSON.stringify({ v: 1, state: safeState }, null, 2);
 }
 
 function buildHistorySnapshot(): string {
@@ -14088,6 +14114,26 @@ function safeSetJsonSmall(key: string, obj: any, pruneKeys: string[] = []) {
       return false;
     }
   }
+}
+
+function persistLastDesignSafely(json: string) {
+  const pruneKeys = [
+    "nf:portraitSlots",
+    "nf:portraitLibrary",
+    "nf:logoSlots",
+    "nf:logoLibrary",
+    "nf:iconSlots",
+    "nf:design:__autosave__",
+    "nf:lastDesign",
+  ];
+
+  if (!json || json.length > MAX_LS_WRITE_LEN) {
+    try { localStorage.removeItem("nf:lastDesign"); } catch {}
+    return false;
+  }
+
+  safeLocalSet("nf:lastDesign", json, pruneKeys);
+  return true;
 }
 
 // ===== /STORAGE SAFETY HELPERS =====
