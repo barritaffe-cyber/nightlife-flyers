@@ -6275,7 +6275,7 @@ export default function Page() {
   // =========================================================
  const handleCreateCinematic = async () => {
   if (isStarterPlan) {
-    alert("Starter plan has 0 AI generations. Upgrade to use Cinematic 3D.");
+    alert("Starter plan has 0 AI generations. Upgrade or use a pass to access Cinematic 3D.");
     return;
   }
   let ref = cinematicRefUrl;
@@ -6412,7 +6412,7 @@ export default function Page() {
 // 1. Upload Handler (Auto-Cuts Subject & Converts to Base64)
   const handleBlendUpload = async (type: 'subject' | 'bg', file: File) => {
     if (isStarterPlan) {
-      alert("Starter plan disables uploads. Upgrade to unlock uploads and Magic Blend.");
+      alert("Starter plan disables uploads. Upgrade or use a pass to unlock uploads and Magic Blend.");
       return;
     }
     // Helper: Read file to Base64
@@ -6518,7 +6518,7 @@ export default function Page() {
 // 2. The Magic Blend Action
   const handleMagicBlend = async () => {
     if (isStarterPlan) {
-      alert("Starter plan has 0 AI generations. Upgrade to use Magic Blend.");
+      alert("Starter plan has 0 AI generations. Upgrade or use a pass to use Magic Blend.");
       return;
     }
     // Basic validation
@@ -8017,14 +8017,14 @@ useEffect(() => {
 const uplRef = useRef<HTMLInputElement>(null);
 const triggerUpload = () => {
   if (isStarterPlan) {
-    alert("Starter plan disables uploads. Upgrade to unlock background uploads.");
+    alert("Starter plan disables uploads. Upgrade or use a pass to unlock background uploads.");
     return;
   }
   bgRightRef.current?.click();
 };
 const onOnboardUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
   if (isStarterPlan) {
-    alert("Starter plan disables uploads. Upgrade to unlock background uploads.");
+    alert("Starter plan disables uploads. Upgrade or use a pass to unlock background uploads.");
     e.currentTarget.value = '';
     return;
   }
@@ -8046,7 +8046,7 @@ const openBgPicker = () => bgRightRef.current?.click();
 // Handle a file chosen from the right panel
 const onRightBgFile = (e: React.ChangeEvent<HTMLInputElement>) => {
   if (isStarterPlan) {
-    alert("Starter plan disables uploads. Upgrade to unlock background uploads.");
+    alert("Starter plan disables uploads. Upgrade or use a pass to unlock background uploads.");
     e.currentTarget.value = '';
     return;
   }
@@ -8080,7 +8080,7 @@ const pendingLogoSlot = useRef<number | null>(null);
 
 function triggerUploadForSlot(i: number) {
   if (isStarterPlan) {
-    alert("Starter plan disables logo uploads. Upgrade to unlock logos.");
+    alert("Starter plan disables logo uploads. Upgrade or use a pass to unlock logos.");
     return;
   }
   pendingLogoSlot.current = i;
@@ -8088,7 +8088,7 @@ function triggerUploadForSlot(i: number) {
 }
 function onLogoSlotFile(e: React.ChangeEvent<HTMLInputElement>) {
   if (isStarterPlan) {
-    alert("Starter plan disables uploads. Upgrade to unlock logo uploads.");
+    alert("Starter plan disables uploads. Upgrade or use a pass to unlock logo uploads.");
     e.currentTarget.value = '';
     pendingLogoSlot.current = null;
     return;
@@ -8148,14 +8148,14 @@ function placeLogoFromSlot(idx: number) {
 
 const openPortraitPicker = () => {
   if (isStarterPlan) {
-    alert("Starter plan disables portrait uploads. Upgrade to unlock portraits.");
+    alert("Starter plan disables portrait uploads. Upgrade or use a pass to unlock portraits.");
     return;
   }
   portraitPickerRef.current?.click();
 };
 const openLogoPicker = () => {
   if (isStarterPlan) {
-    alert("Starter plan disables logo uploads. Upgrade to unlock logos.");
+    alert("Starter plan disables logo uploads. Upgrade or use a pass to unlock logos.");
     return;
   }
   logoPickerRef.current?.click();
@@ -8163,7 +8163,7 @@ const openLogoPicker = () => {
 
 const onLogoFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
   if (isStarterPlan) {
-    alert("Starter plan disables uploads. Upgrade to unlock logo uploads.");
+    alert("Starter plan disables uploads. Upgrade or use a pass to unlock logo uploads.");
     e.currentTarget.value = '';
     return;
   }
@@ -8534,7 +8534,7 @@ function persistLogoSlots(next: string[]) {
 
 function triggerLogoUpload(i: number) {
   if (isStarterPlan) {
-    alert("Starter plan disables logo uploads. Upgrade to unlock logos.");
+    alert("Starter plan disables logo uploads. Upgrade or use a pass to unlock logos.");
     return;
   }
   pendingLogoSlot.current = i;
@@ -8543,7 +8543,7 @@ function triggerLogoUpload(i: number) {
 
 async function onLogoFile(e: React.ChangeEvent<HTMLInputElement>) {
   if (isStarterPlan) {
-    alert("Starter plan disables logo uploads. Upgrade to unlock logos.");
+    alert("Starter plan disables logo uploads. Upgrade or use a pass to unlock logos.");
     e.currentTarget.value = '';
     pendingLogoSlot.current = null;
     return;
@@ -8566,7 +8566,7 @@ async function onLogoFile(e: React.ChangeEvent<HTMLInputElement>) {
 
 function triggerPortraitSlotUpload(i: number) {
   if (isStarterPlan) {
-    alert("Starter plan disables portrait uploads. Upgrade to unlock portraits.");
+    alert("Starter plan disables portrait uploads. Upgrade or use a pass to unlock portraits.");
     return;
   }
   pendingPortraitSlot.current = i;
@@ -8577,7 +8577,7 @@ function triggerPortraitSlotUpload(i: number) {
 // ✅ FIX: Keep track of the active slot while processing
 async function onPortraitSlotFile(e: React.ChangeEvent<HTMLInputElement>) {
   if (isStarterPlan) {
-    alert("Starter plan disables portrait uploads. Upgrade to unlock portraits.");
+    alert("Starter plan disables portrait uploads. Upgrade or use a pass to unlock portraits.");
     e.currentTarget.value = '';
     pendingPortraitSlot.current = null;
     return;
@@ -9901,6 +9901,9 @@ const mobileFloatSticky = isMobileView && format === "story";
     return `${mb.toFixed(2)} MB`;
   }
 
+  const starterWatermarkLabel = "Nightlife Flyers Starter";
+  const starterCanvasBadge = "Starter preview - upgrade for clean canvas";
+
   async function addStarterWatermark(
     sourceDataUrl: string,
     format: "png" | "jpg"
@@ -9920,7 +9923,7 @@ const mobileFloatSticky = isMobileView && format === "story";
         }
         ctx.drawImage(img, 0, 0, w, h);
 
-        const label = "Nightlife Flyers Starter";
+        const label = starterWatermarkLabel;
         const fontSize = Math.max(14, Math.round(Math.min(w, h) * 0.028));
         const padX = Math.round(fontSize * 0.7);
         const padY = Math.round(fontSize * 0.45);
@@ -9985,9 +9988,11 @@ const mobileFloatSticky = isMobileView && format === "story";
   // PORTRAIT: direct-drag ref (for smooth RAF dragging)
   const portraitFrameRef = React.useRef<HTMLDivElement | null>(null);
 
-  const [subscriptionStatus, setSubscriptionStatus] = React.useState<"active" | "inactive">("inactive");
+  const [subscriptionStatus, setSubscriptionStatus] = React.useState<"active" | "ondemand" | "inactive">("inactive");
   const isPaid = subscriptionStatus === "active";
-  const isStarterPlan = !isPaid;
+  const hasOnDemandPass = subscriptionStatus === "ondemand";
+  const hasPaidAccess = isPaid || hasOnDemandPass;
+  const isStarterPlan = !hasPaidAccess;
   const starterTemplateGallery = React.useMemo(
     () => TEMPLATE_GALLERY.filter((t) => STARTER_TEMPLATE_IDS.has(t.id)),
     []
@@ -10179,12 +10184,18 @@ const mobileFloatSticky = isMobileView && format === "story";
     setAccountOpen(true);
     setAccountLoading(true);
     setAccountError(null);
+    setAccountData(null);
     try {
       const supabase = supabaseBrowser();
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
       if (!token) {
-        setAccountError("Login required");
+        setAccountData({
+          email: null,
+          status: "guest",
+          rawStatus: "starter",
+          periodEnd: null,
+        });
         setAccountLoading(false);
         return;
       }
@@ -10615,7 +10626,7 @@ const onBgFile = (e: React.ChangeEvent<HTMLInputElement>) => {
 // === FULL GENERATE BACKGROUND FUNCTION (Updated: Party People Subject) ===
 const generateBackground = async (opts: GenOpts = {}) => {
   if (isStarterPlan) {
-    setGenError("Starter plan has 0 AI generations. Upgrade to generate backgrounds.");
+    setGenError("Starter plan has 0 AI generations. Upgrade or use a pass to generate backgrounds.");
     return;
   }
   // 1. Credit Check
@@ -11002,7 +11013,7 @@ const generateBackground = async (opts: GenOpts = {}) => {
 
 const generateSubjectForBackground = async () => {
   if (isStarterPlan) {
-    setSubjectGenError("Starter plan has 0 AI generations. Upgrade to generate subjects.");
+    setSubjectGenError("Starter plan has 0 AI generations. Upgrade or use a pass to generate subjects.");
     return;
   }
   if (subjectGenLoading) return;
@@ -12449,7 +12460,7 @@ async function alignActiveToCenter() {
 // ✅ FIX: Use local AI instead of server API
 const onUploadPortraitAndRemoveBg = async (files: FileList | null) => {
   if (isStarterPlan) {
-    alert("Starter plan disables portrait uploads. Upgrade to unlock portraits.");
+    alert("Starter plan disables portrait uploads. Upgrade or use a pass to unlock portraits.");
     return;
   }
   const file = files?.[0];
@@ -13109,7 +13120,7 @@ const IS_pendingIconSlot = useRef<number | null>(null);
 
 function IS_triggerIconSlotUpload(i: number) {
   if (isStarterPlan) {
-    alert("Starter plan disables uploads. Upgrade to unlock custom icon uploads.");
+    alert("Starter plan disables uploads. Upgrade or use a pass to unlock custom icon uploads.");
     return;
   }
   IS_pendingIconSlot.current = i;
@@ -13127,7 +13138,7 @@ function IS_fileToDataURL(file: File): Promise<string> {
 
 async function IS_onIconSlotFile(e: React.ChangeEvent<HTMLInputElement>) {
   if (isStarterPlan) {
-    alert("Starter plan disables uploads. Upgrade to unlock custom icon uploads.");
+    alert("Starter plan disables uploads. Upgrade or use a pass to unlock custom icon uploads.");
     e.currentTarget.value = '';
     IS_pendingIconSlot.current = null;
     return;
@@ -14857,7 +14868,7 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
   // ✅ 1. SAVE FUNCTION
   const handleSaveProject = async () => {
     if (isStarterPlan) {
-      alert("Starter plan does not include project save/load. Upgrade to unlock project files.");
+      alert("Starter plan does not include project save/load. Upgrade or use a pass to unlock project files.");
       return;
     }
     try {
@@ -14994,7 +15005,7 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
 // ✅ HANDLER: Upload from "Choose a Vibe" section
   const handleUploadDesignFromVibe = async (file: File) => {
     if (isStarterPlan) {
-      alert("Starter plan does not include project save/load. Upgrade to unlock project files.");
+      alert("Starter plan does not include project save/load. Upgrade or use a pass to unlock project files.");
       return;
     }
     try {
@@ -15802,7 +15813,7 @@ const applyTemplate = React.useCallback<
 const applyTemplateFromGallery = React.useCallback(
   (tpl: TemplateSpec, opts?: { targetFormat?: Format }) => {
     if (isStarterPlan && !STARTER_TEMPLATE_IDS.has(tpl.id)) {
-      alert("Starter includes 4 templates only. Upgrade to unlock the full template library.");
+      alert("Starter includes 4 templates only. Upgrade or use a pass to unlock the full template library.");
       return;
     }
     // 🔒 prevent panel auto-close during apply
@@ -16999,7 +17010,7 @@ const undoAssetPosition = React.useCallback(() => {
 const mobileControlsTabs = (
   <div
     data-tour="mobile-tabs"
-    className="lg:hidden flex items-center justify-center gap-2 px-4 py-2 bg-neutral-950/90 border-b border-neutral-800"
+    className="lg:hidden flex items-center justify-start gap-2 px-4 py-2 bg-neutral-950/90 border-b border-neutral-800 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     onPointerDownCapture={(e) => {
       const t = e.target as Element | null;
       if (t?.closest?.('[data-mobile-float-lock="true"]')) {
@@ -17015,7 +17026,7 @@ const mobileControlsTabs = (
       type="button"
       onClick={() => setMobileControlsTab("design")}
       data-tour="mobile-text-tab"
-      className={`px-3 py-1 rounded text-[11px] font-semibold border ${
+      className={`px-3 py-1 rounded text-[11px] font-semibold border shrink-0 whitespace-nowrap ${
         mobileControlsTab === "design"
           ? "border-blue-400 text-blue-300 bg-blue-500/10"
           : "border-neutral-700 text-neutral-300 bg-neutral-900/60"
@@ -17027,7 +17038,7 @@ const mobileControlsTabs = (
       type="button"
       onClick={() => setMobileControlsTab("assets")}
       data-tour="mobile-design-tab"
-      className={`px-3 py-1 rounded text-[11px] font-semibold border ${
+      className={`px-3 py-1 rounded text-[11px] font-semibold border shrink-0 whitespace-nowrap ${
         mobileControlsTab === "assets"
           ? "border-blue-400 text-blue-300 bg-blue-500/10"
           : "border-neutral-700 text-neutral-300 bg-neutral-900/60"
@@ -17040,7 +17051,7 @@ const mobileControlsTabs = (
       onClick={undoAssetPosition}
       data-mobile-float-lock="true"
       disabled={!lastMoveStack.length}
-      className={`px-3 py-1 rounded text-[11px] font-semibold border ${
+      className={`px-3 py-1 rounded text-[11px] font-semibold border shrink-0 whitespace-nowrap ${
         lastMoveStack.length
           ? "border-emerald-400 text-emerald-200 bg-emerald-500/10"
           : "border-neutral-700 text-neutral-500 bg-neutral-900/60 cursor-not-allowed"
@@ -17052,7 +17063,7 @@ const mobileControlsTabs = (
     <button
       type="button"
       onClick={startTour}
-      className="px-3 py-1 rounded text-[11px] font-semibold border border-fuchsia-400/70 text-fuchsia-100 bg-fuchsia-500/20 hover:bg-fuchsia-500/30 shadow-[0_0_14px_rgba(217,70,239,0.65)]"
+      className="px-3 py-1 rounded text-[11px] font-semibold border border-fuchsia-400/70 text-fuchsia-100 bg-fuchsia-500/20 hover:bg-fuchsia-500/30 shadow-[0_0_14px_rgba(217,70,239,0.65)] shrink-0 whitespace-nowrap"
       title="Start Tour"
     >
       Start Tour
@@ -18375,12 +18386,13 @@ return (
             </div>
 
 {/* === FORMAT TOGGLE & VIEW SETTINGS === */}
-          <div className="justify-self-center">
-            <div className="inline-flex items-center gap-2 text-[12px]">
-              <span className="opacity-80 hidden sm:inline">Canvas</span>
+          <div className="justify-self-stretch lg:justify-self-center">
+            <div className="flex w-full items-center gap-2 overflow-x-auto text-[12px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <span className="opacity-80 hidden sm:inline shrink-0">Canvas</span>
 
               <Chip
                 small
+                className="shrink-0 whitespace-nowrap"
                 active={format === "square"}
                 disabled={!(bgUploadUrl || bgUrl)}
                 deferHeavy
@@ -18396,6 +18408,7 @@ return (
 
               <Chip
                 small
+                className="shrink-0 whitespace-nowrap"
                 active={format === "story"}
                 disabled={!(bgUploadUrl || bgUrl)}
                 deferHeavy
@@ -18414,7 +18427,7 @@ return (
                 type="button"
                 onClick={openAccountPanel}
                 onPointerUp={openAccountPanel}
-                className="lg:hidden"
+                className="lg:hidden shrink-0"
                 aria-label="Open account"
               >
                 <img
@@ -18428,6 +18441,7 @@ return (
               {/* Suggested workflow */}
               <Chip 
                 small 
+                className="shrink-0 whitespace-nowrap"
                 active={workflowHelpOpen}
                 onClick={() => setWorkflowHelpOpen(true)}
                 title="Open suggested workflow"
@@ -18438,6 +18452,7 @@ return (
                 <>
                   <Chip
                     small
+                    className="shrink-0 whitespace-nowrap"
                     onClick={() => nudgeTextLayer(activeTextLayerKey, "down")}
                     title="Send selected text backward"
                   >
@@ -18445,6 +18460,7 @@ return (
                   </Chip>
                   <Chip
                     small
+                    className="shrink-0 whitespace-nowrap"
                     onClick={() => nudgeTextLayer(activeTextLayerKey, "up")}
                     title="Bring selected text forward"
                   >
@@ -18453,10 +18469,11 @@ return (
                 </>
               )}
               {uiMode === "finish" ? (
-                <Chip small onClick={() => setUiMode("design")}>Back to Design</Chip>
+                <Chip small className="shrink-0 whitespace-nowrap" onClick={() => setUiMode("design")}>Back to Design</Chip>
               ) : (
                 <Chip
                   small
+                  className="shrink-0 whitespace-nowrap"
                   deferHeavy
                   onClick={() => {
                     setUiMode("finish");
@@ -18660,13 +18677,26 @@ return (
           </>
         )}
       </div>
+      {!accountLoading && !accountError && accountData?.status === "ondemand" && (
+        <div className="mt-3 rounded-xl border border-cyan-400/20 bg-cyan-500/10 p-3 text-[12px] text-cyan-100">
+          On-demand pass is active. You have temporary clean-export access without a recurring subscription.
+        </div>
+      )}
       <div className="mt-4 flex items-center gap-2">
+        {!accountLoading && accountData?.status === "guest" && (
+          <a
+            href="/login"
+            className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
+          >
+            Sign in
+          </a>
+        )}
         <a
           href="/pricing"
           onClick={prepareResumeForReturn}
           className="rounded-lg border border-fuchsia-400/40 bg-fuchsia-500/20 px-3 py-2 text-xs text-white hover:bg-fuchsia-500/30"
         >
-          Manage plan
+          {accountData?.status === "ondemand" ? "Buy another pass" : "Manage plan"}
         </a>
         <button
           type="button"
@@ -18757,14 +18787,14 @@ return (
                 </div>
                 {isStarterPlan && (
                   <div className="text-[11px] text-amber-300">
-                    Starter exports include a watermark.
+                    Starter exports include a watermark. Want clean exports without a subscription? Grab a pass on Pricing.
                   </div>
                 )}
               </div>
             ) : (
               <div className="text-[12px] text-neutral-300">
                 {isStarterPlan
-                  ? "Your export is ready. Starter plan includes a watermark."
+                  ? "Your export is ready. Starter includes a watermark. Prefer one-off clean exports? Use an on-demand pass."
                   : "Your export is ready. Download the clean file below."}
               </div>
             )}
@@ -18809,6 +18839,15 @@ return (
               >
                 Re-render
               </button>
+              {isStarterPlan && (
+                <a
+                  href="/pricing"
+                  onClick={prepareResumeForReturn}
+                  className="rounded-lg border border-fuchsia-400/40 bg-fuchsia-500/20 px-3 py-2 text-xs text-white hover:bg-fuchsia-500/30"
+                >
+                  View passes
+                </a>
+              )}
               <button
                 type="button"
                 className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
@@ -19263,7 +19302,7 @@ style={{ top: STICKY_TOP }}
       <span>✨</span> Create Cinematic 3D
     </button>
     {isStarterPlan && (
-      <div className="mt-2 text-[11px] text-amber-300">Cinematic 3D is available on paid plans.</div>
+      <div className="mt-2 text-[11px] text-amber-300">Cinematic 3D is available on subscriptions and on-demand passes.</div>
     )}
   </div>
 </div>
@@ -20678,6 +20717,40 @@ style={{ top: STICKY_TOP }}
           </div>
         </div>
       )}
+      {isStarterPlan && (
+        <div
+          aria-hidden="true"
+          data-nonexport="true"
+          className="pointer-events-none absolute inset-0 z-[70] overflow-hidden select-none"
+        >
+          <div className="absolute inset-[-18%] flex flex-col justify-around opacity-[0.18]">
+            {Array.from({ length: 5 }, (_, rowIndex) => (
+              <div
+                key={`starter-watermark-row-${rowIndex}`}
+                className="flex gap-10 whitespace-nowrap text-white/80"
+                style={{
+                  transform: `translateX(${rowIndex % 2 === 0 ? "-12%" : "-26%"}) rotate(-24deg)`,
+                  transformOrigin: "center",
+                }}
+              >
+                {Array.from({ length: 4 }, (_, colIndex) => (
+                  <span
+                    key={`starter-watermark-cell-${rowIndex}-${colIndex}`}
+                    className="text-[20px] font-black uppercase tracking-[0.45em] drop-shadow-[0_0_22px_rgba(0,0,0,0.45)]"
+                  >
+                    {starterWatermarkLabel}
+                  </span>
+                ))}
+              </div>
+            ))}
+          </div>
+          <div className="absolute inset-x-0 bottom-4 flex justify-center px-4">
+            <div className="rounded-full border border-white/20 bg-black/55 px-4 py-2 text-center text-[11px] font-semibold uppercase tracking-[0.28em] text-white/90 shadow-[0_12px_40px_rgba(0,0,0,0.38)] backdrop-blur-sm">
+              {starterCanvasBadge}
+            </div>
+          </div>
+        </div>
+      )}
 
       <AnimatePresence mode="wait">
         <motion.div
@@ -21665,7 +21738,7 @@ style={{ top: STICKY_TOP }}
 
 {isStarterPlan ? (
   <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-[12px] text-amber-100">
-    DJ/Artist Branding is available on paid plans.
+    DJ/Artist Branding is available on subscriptions and on-demand passes.
   </div>
 ) : (
   <DjBrandingPanel
