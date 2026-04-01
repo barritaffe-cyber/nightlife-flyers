@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dns from "node:dns/promises";
 import net from "node:net";
+import { supabaseAdmin } from "../../../lib/supabase/admin";
+import { supabaseAuth } from "../../../lib/supabase/auth";
+import { refundReservedUnits, reserveGenerationUnits } from "../../../lib/accessQuota";
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -621,6 +624,10 @@ async function genWithImagine(
 }
 
 export async function POST(req: NextRequest) {
+  let reservation:
+    | Awaited<ReturnType<typeof reserveGenerationUnits>>
+    | null = null;
+  let reservedUserId: string | null = null;
   try {
     const body = await req.json();
     const prompt = String(body?.prompt || '').trim();
@@ -646,13 +653,46 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ placeholder: placeholderDataURL(format, 'mock') });
     }
 
+    const authHeader = req.headers.get("authorization") || "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+    if (!token) {
+      return NextResponse.json({ error: "Login required for AI generation." }, { status: 401 });
+    }
+
+    const authClient = supabaseAuth();
+    const { data: userData, error: userErr } = await authClient.auth.getUser(token);
+    if (userErr || !userData?.user) {
+      return NextResponse.json({ error: "Invalid session." }, { status: 401 });
+    }
+
+    reservedUserId = userData.user.id;
+    const admin = supabaseAdmin();
+    reservation = await reserveGenerationUnits(admin, reservedUserId, 1);
+    if (!reservation.ok) {
+      return NextResponse.json(
+        {
+          error: reservation.message,
+          generation_limit: reservation.snapshot?.generationLimit ?? 0,
+          generation_remaining: reservation.snapshot?.generationRemaining ?? 0,
+        },
+        { status: reservation.code }
+      );
+    }
+    const quotaMeta = {
+      generation_limit: reservation.snapshot.generationLimit,
+      generation_used: reservation.snapshot.generationUsed,
+      generation_remaining: reservation.snapshot.generationRemaining,
+    };
+
     if (provider === 'venice' || provider === 'imagine') {
       const r = await genWithImagine(effectivePrompt, format);
       if (!r.ok) {
+        await refundReservedUnits(admin, reservedUserId, reservation.previousUsed, 1);
         return NextResponse.json({ error: r.error, placeholder: r.placeholder }, { status: 200 });
       }
-      if (r.b64) return NextResponse.json({ b64: r.b64 });
-      if (r.url) return NextResponse.json({ url: r.url });
+      if (r.b64) return NextResponse.json({ b64: r.b64, ...quotaMeta });
+      if (r.url) return NextResponse.json({ url: r.url, ...quotaMeta });
+      await refundReservedUnits(admin, reservedUserId, reservation.previousUsed, 1);
       return NextResponse.json({ placeholder: placeholderDataURL(format, 'empty result') });
     }
 
@@ -661,11 +701,13 @@ export async function POST(req: NextRequest) {
       const r = await genWithOpenAI(effectivePrompt, format, reference, origin, normalizedReferences);
       if (!r.ok) {
         // still return a placeholder so your UI can keep going
+        await refundReservedUnits(admin, reservedUserId, reservation.previousUsed, 1);
         return NextResponse.json({ error: r.error, placeholder: r.placeholder }, { status: 200 });
       }
-      if (r.b64) return NextResponse.json({ b64: r.b64 });
-      if (r.url) return NextResponse.json({ url: r.url });
+      if (r.b64) return NextResponse.json({ b64: r.b64, ...quotaMeta });
+      if (r.url) return NextResponse.json({ url: r.url, ...quotaMeta });
       // safety net
+      await refundReservedUnits(admin, reservedUserId, reservation.previousUsed, 1);
       return NextResponse.json({ placeholder: placeholderDataURL(format, 'empty result') });
     }
 
@@ -676,17 +718,18 @@ export async function POST(req: NextRequest) {
       if (rFal.ok) {
         const falB64 = (rFal as any).b64 as string | undefined;
         const falUrl = (rFal as any).url as string | undefined;
-        if (falB64) return NextResponse.json({ b64: falB64 });
-        if (falUrl) return NextResponse.json({ url: falUrl });
+        if (falB64) return NextResponse.json({ b64: falB64, ...quotaMeta });
+        if (falUrl) return NextResponse.json({ url: falUrl, ...quotaMeta });
       }
 
       // Graceful fallback to OpenAI if fal fails or is not configured.
       const rOpenAI = await genWithOpenAI(effectivePrompt, format, reference, origin, normalizedReferences);
       if (rOpenAI.ok) {
-        if (rOpenAI.b64) return NextResponse.json({ b64: rOpenAI.b64 });
-        if (rOpenAI.url) return NextResponse.json({ url: rOpenAI.url });
+        if (rOpenAI.b64) return NextResponse.json({ b64: rOpenAI.b64, ...quotaMeta });
+        if (rOpenAI.url) return NextResponse.json({ url: rOpenAI.url, ...quotaMeta });
       }
 
+      await refundReservedUnits(admin, reservedUserId, reservation.previousUsed, 1);
       return NextResponse.json(
         {
           error: rFal.error || rOpenAI.error || "Generation failed",
@@ -697,8 +740,15 @@ export async function POST(req: NextRequest) {
     }
 
     // unknown provider
+    await refundReservedUnits(admin, reservedUserId, reservation.previousUsed, 1);
     return NextResponse.json({ error: `Unknown provider: ${provider}` }, { status: 400 });
   } catch (e: any) {
+    if (reservation?.ok && reservedUserId) {
+      try {
+        const admin = supabaseAdmin();
+        await refundReservedUnits(admin, reservedUserId, reservation.previousUsed, 1);
+      } catch {}
+    }
     return NextResponse.json({ error: String(e?.message || e) }, { status: 500 });
   }
 }

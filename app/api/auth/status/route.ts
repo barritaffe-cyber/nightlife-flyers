@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../lib/supabase/admin";
 import { supabaseAuth } from "../../../../lib/supabase/auth";
+import { getAccessSnapshotForUser } from "../../../../lib/accessQuota";
 
 export const runtime = "nodejs";
 
@@ -20,34 +21,23 @@ export async function GET(req: Request) {
     }
 
     const userId = userData.user.id;
-    const { data: profile, error } = await admin
-      .from("profiles")
-      .select("status,current_period_end,email")
-      .eq("id", userId)
-      .maybeSingle();
-
-    if (error || !profile) {
+    const snapshot = await getAccessSnapshotForUser(admin, userId);
+    if (!snapshot) {
       return NextResponse.json(
         { status: "inactive", reason: "no_profile" },
         { status: 403 }
       );
     }
 
-    const now = new Date();
-    const periodEnd = profile.current_period_end
-      ? new Date(profile.current_period_end)
-      : null;
-    const status = String(profile.status || "").trim().toLowerCase();
-    const active =
-      (status === "active" || status === "trial") &&
-      periodEnd != null &&
-      periodEnd.getTime() > now.getTime();
-
     return NextResponse.json({
-      status: active ? "active" : "inactive",
-      raw_status: status,
-      current_period_end: profile.current_period_end,
-      email: profile.email,
+      status: snapshot.status,
+      raw_status: snapshot.rawStatus,
+      current_period_end: snapshot.profile.current_period_end,
+      email: snapshot.profile.email,
+      plan: snapshot.profile.plan,
+      generation_limit: snapshot.generationLimit,
+      generation_used: snapshot.generationUsed,
+      generation_remaining: snapshot.generationRemaining,
     });
   } catch {
     return NextResponse.json({ error: "Status check failed" }, { status: 500 });

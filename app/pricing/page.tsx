@@ -1,5 +1,6 @@
 import Link from "next/link";
 import PricingPlans from '../../components/ui/PricingPlans';
+import PublicSiteFooter from "../../components/ui/PublicSiteFooter";
 
 export default function Page() {
   return (
@@ -18,6 +19,8 @@ export default function Page() {
       <div className="mx-auto max-w-7xl px-4 py-10">
         <PricingPlans />
       </div>
+
+      <PublicSiteFooter />
     </main>
   );
 }

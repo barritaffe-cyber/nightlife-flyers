@@ -3,10 +3,16 @@
  import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
  
- function clsx(...a: (string | false | null | undefined)[]) {
-   return a.filter(Boolean).join(' ');
- }
- 
+function clsx(...a: (string | false | null | undefined)[]) {
+  return a.filter(Boolean).join(' ');
+}
+
+const controlLabelClass = 'text-[11px] uppercase tracking-[0.12em] text-neutral-400';
+const controlFieldClass = 'border border-neutral-700 bg-[#17171b] text-white';
+const controlInputClass = `${controlFieldClass} px-1.5 py-1 text-[11px] text-center`;
+const controlButtonClass = 'border border-neutral-700 bg-neutral-900/70 text-neutral-200 transition-colors';
+const controlRangeClass = 'nf-range min-w-0 flex-1 h-2 appearance-none bg-transparent accent-indigo-500';
+
 const panelClass =
   'panel min-w-0 p-4 rounded-xl border border-white/5 bg-neutral-900/80 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.35)] space-y-3';
  
@@ -32,8 +38,20 @@ export function Stepper({
    digits = 0,
    disabled = false,
    className = '',
- }: StepperProps) {
-   const clamp = (n: number) => Math.min(max, Math.max(min, n));
+}: StepperProps) {
+   const clamp = React.useCallback((n: number) => Math.min(max, Math.max(min, n)), [max, min]);
+  const formattedValue = formatNumericValue(
+    Number.isFinite(value) ? value : 0,
+    Math.max(0, digits)
+  );
+  const [draftValue, setDraftValue] = React.useState(formattedValue);
+  const [isEditing, setIsEditing] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isEditing) {
+      setDraftValue(formattedValue);
+    }
+  }, [formattedValue, isEditing]);
  
    const onRange = (e: React.ChangeEvent<HTMLInputElement>) => {
      const n = clamp(parseFloat(e.target.value));
@@ -41,11 +59,26 @@ export function Stepper({
    };
  
    const onNumber = (e: React.ChangeEvent<HTMLInputElement>) => {
-     const raw = e.target.value.trim();
-     if (raw === '' || raw === '-' || raw === '.' || raw === '-.') return;
-     const n = clamp(parseFloat(raw));
-     if (!Number.isNaN(n)) setValue(n);
+     setDraftValue(e.target.value);
    };
+
+   const commitNumber = React.useCallback(
+     (raw: string) => {
+       const trimmed = raw.trim();
+       if (trimmed === '' || trimmed === '-' || trimmed === '.' || trimmed === '-.') {
+         setDraftValue(formattedValue);
+         return;
+       }
+       const n = clamp(parseFloat(trimmed));
+       if (!Number.isNaN(n)) {
+         setValue(n);
+         setDraftValue(formatNumericValue(n, Math.max(0, digits)));
+         return;
+       }
+       setDraftValue(formattedValue);
+     },
+     [clamp, digits, formattedValue, setValue]
+   );
  
    const onWheel = (e: React.WheelEvent<HTMLInputElement>) => {
      if (disabled) return;
@@ -75,7 +108,7 @@ export function Stepper({
   return (
     <div className={`flex flex-col gap-1 ${className}`}>
        {label && (
-         <label className="text-[11px] text-neutral-300">{label}</label>
+         <label className={controlLabelClass}>{label}</label>
        )}
  
        <div className="flex items-center gap-2 w-full">
@@ -84,10 +117,27 @@ export function Stepper({
            min={min}
            max={max}
            step={step}
-           value={Number.isFinite(value) ? value : 0}
+           value={draftValue}
            onChange={onNumber}
+           onFocus={() => setIsEditing(true)}
+           onBlur={(e) => {
+             setIsEditing(false);
+             commitNumber(e.target.value);
+           }}
+           onKeyDown={(e) => {
+             if (e.key === 'Enter') {
+               e.currentTarget.blur();
+               return;
+             }
+             if (e.key === 'Escape') {
+               setIsEditing(false);
+               setDraftValue(formattedValue);
+               e.currentTarget.blur();
+               return;
+             }
+           }}
            disabled={disabled}
-           className="w-[44px] px-1 py-[2px] text-[11px] rounded bg-[#17171b] text-white border border-neutral-700 text-center"
+           className={`w-[52px] ${controlInputClass}`}
          />
  
         <input
@@ -111,7 +161,7 @@ export function Stepper({
           disabled={disabled}
           aria-label={label}
           style={{ touchAction: 'pan-x' }}
-          className="nf-range flex-1 h-2 appearance-none bg-transparent"
+          className={controlRangeClass}
         />
        </div>
      </div>
@@ -155,12 +205,12 @@ export function FontPicker({
 
   return (
     <div className={`relative ${className ?? ''}`} ref={wrapRef}>
-      {label && <div className="text-[11px] text-neutral-400 mb-1">{label}</div>}
+      {label && <div className={`${controlLabelClass} mb-1`}>{label}</div>}
       <button
         type="button"
         disabled={disabled}
         onClick={() => setOpen((v) => !v)}
-        className="w-full rounded px-2 py-2 bg-[#17171b] text-white border border-neutral-700 text-left flex items-center justify-between gap-2 disabled:opacity-60"
+        className={`w-full px-2 py-2 text-left flex items-center justify-between gap-2 disabled:opacity-60 ${controlFieldClass}`}
       >
         <span className="truncate" style={{ fontFamily: value }}>
           {value}
@@ -171,7 +221,7 @@ export function FontPicker({
       </button>
       {open && (
         <div
-          className="absolute z-[60] mt-1 w-full max-h-[60vh] overflow-auto rounded border border-neutral-700 bg-[#0f0f12] shadow-xl pb-2"
+          className="absolute z-[60] mt-1 w-full max-h-[60vh] overflow-auto border border-neutral-700 bg-[#0f0f12] shadow-xl pb-2"
           style={{ scrollPaddingBottom: 8 }}
         >
           {options.map((f) => (
@@ -238,13 +288,13 @@ export const Chip = React.memo(function Chip({
       title={title}
       aria-pressed={!!active}
       className={clsx(
-        'inline-flex items-center justify-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 select-none',
+        'inline-flex items-center justify-center border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 select-none',
         small ? 'px-2 py-[3px] text-[11px]' : 'px-3 py-1 text-xs',
         disabled
           ? 'opacity-40 cursor-not-allowed bg-neutral-900/40 border-neutral-700 text-neutral-400'
           : active
-          ? 'cursor-pointer bg-indigo-600 border-indigo-300 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.15)_inset,0_8px_16px_rgba(0,0,0,.35)]'
-          : 'cursor-pointer bg-neutral-900/70 border-neutral-700 hover:bg-neutral-800 text-neutral-200',
+          ? 'cursor-pointer bg-indigo-600 border-indigo-300 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.12)_inset]'
+          : controlButtonClass + ' hover:bg-neutral-800',
         className
       )}
     >
@@ -265,6 +315,149 @@ export type SliderRowProps = {
   onChange: (v: number) => void;
 };
 
+function countDecimals(n: number) {
+  if (!Number.isFinite(n)) return 0;
+  const text = String(n);
+  const idx = text.indexOf(".");
+  return idx === -1 ? 0 : text.length - idx - 1;
+}
+
+function formatNumericValue(value: number, digits: number) {
+  if (!Number.isFinite(value)) return "0";
+  if (digits <= 0) return String(Math.round(value));
+  return value.toFixed(digits);
+}
+
+export type InlineSliderInputProps = {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  disabled?: boolean;
+  onChange: (v: number) => void;
+  precision?: number;
+  displayScale?: number;
+  suffix?: string;
+  rangeClassName?: string;
+  inputClassName?: string;
+  onPointerDown?: () => void;
+  onPointerUp?: () => void;
+  onPointerCancel?: () => void;
+};
+
+export function InlineSliderInput({
+  label,
+  value,
+  min,
+  max,
+  step = 1,
+  disabled = false,
+  onChange,
+  precision,
+  displayScale = 1,
+  suffix,
+  rangeClassName,
+  inputClassName,
+  onPointerDown,
+  onPointerUp,
+  onPointerCancel,
+}: InlineSliderInputProps) {
+  const safeValue = Number.isFinite(value) ? value : min;
+  const clamp = React.useCallback(
+    (n: number) => Math.min(max, Math.max(min, n)),
+    [max, min]
+  );
+  const inputDigits = precision ?? countDecimals(step * displayScale);
+  const formattedValue = formatNumericValue(safeValue * displayScale, inputDigits);
+  const [draftValue, setDraftValue] = React.useState(formattedValue);
+  const [isEditing, setIsEditing] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isEditing) {
+      setDraftValue(formattedValue);
+    }
+  }, [formattedValue, isEditing]);
+
+  const commitDraft = React.useCallback(
+    (raw: string) => {
+      const trimmed = raw.trim();
+      if (trimmed === "" || trimmed === "-" || trimmed === "." || trimmed === "-.") {
+        setDraftValue(formattedValue);
+        return;
+      }
+      const parsed = Number(trimmed);
+      if (Number.isNaN(parsed)) {
+        setDraftValue(formattedValue);
+        return;
+      }
+      const next = clamp(parsed / displayScale);
+      onChange(next);
+      setDraftValue(formatNumericValue(next * displayScale, inputDigits));
+    },
+    [clamp, displayScale, formattedValue, inputDigits, onChange]
+  );
+
+  const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setDraftValue(e.target.value);
+  };
+
+  return (
+    <div className="min-w-0">
+      <div className={`flex items-center justify-between mb-1 ${controlLabelClass}`}>
+        <span>{label}</span>
+      </div>
+      <div className="flex min-w-0 items-center gap-2">
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={safeValue}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className={rangeClassName || controlRangeClass}
+          style={{ touchAction: "none" }}
+          onPointerDown={onPointerDown}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerCancel}
+          disabled={disabled}
+        />
+        <div className="flex shrink-0 items-center gap-1">
+          <input
+            type="number"
+            min={min * displayScale}
+            max={max * displayScale}
+            step={step * displayScale}
+            value={draftValue}
+            onChange={handleNumberChange}
+            onFocus={() => setIsEditing(true)}
+            onBlur={(e) => {
+              setIsEditing(false);
+              commitDraft(e.target.value);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.currentTarget.blur();
+              }
+              if (e.key === "Escape") {
+                setIsEditing(false);
+                setDraftValue(formattedValue);
+                e.currentTarget.blur();
+              }
+            }}
+            disabled={disabled}
+            className={
+              inputClassName ||
+              `w-[52px] ${controlInputClass} text-right font-semibold`
+            }
+          />
+          {suffix ? <span className="text-[10px] text-white font-semibold">{suffix}</span> : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SliderRow({
   label,
   value,
@@ -277,29 +470,22 @@ export function SliderRow({
 }: SliderRowProps) {
   const safeValue = Number.isFinite(value) ? (value as number) : min;
 
-  const displayValue =
-    precision != null ? safeValue.toFixed(precision) : String(Math.round(safeValue * 100) / 100);
-
   return (
     <div
       className="select-none py-2"
       onMouseDownCapture={(e) => e.stopPropagation()}
       onPointerDownCapture={(e) => e.stopPropagation()}
     >
-      <div className="mb-1 flex items-center justify-between text-[11px] text-neutral-400 px-0.5">
-        <span>{label}</span>
-        <span className="font-mono text-neutral-300">{displayValue}</span>
-      </div>
-
-      <input
-        type="range"
+      <InlineSliderInput
+        label={label}
+        value={safeValue}
         min={min}
         max={max}
         step={step}
-        value={safeValue}
+        precision={precision}
         disabled={disabled}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className={`w-full h-1 rounded-lg appearance-none cursor-pointer transition-colors ${
+        onChange={onChange}
+        rangeClassName={`flex-1 h-1 rounded-lg appearance-none cursor-pointer transition-colors ${
           disabled
             ? "bg-neutral-800 accent-neutral-600"
             : "bg-neutral-700 accent-indigo-500 hover:accent-indigo-400"
@@ -332,8 +518,8 @@ export const ColorDot: React.FC<ColorDotProps> = ({ value, onChange, title, disa
           width: 16,
           height: 16,
           borderRadius: 999,
-          border: '1px solid rgba(255,255,255,0.35)',
-          boxShadow: '0 1px 2px rgba(0,0,0,0.35)',
+          border: '1px solid rgba(255,255,255,0.3)',
+          boxShadow: '0 0 0 1px rgba(0,0,0,0.3) inset',
           background: value || '#ffffff',
           cursor: disabled ? 'not-allowed' : 'pointer',
           display: 'inline-block',
@@ -436,7 +622,7 @@ export const Collapsible: React.FC<{
             type="button"
             onClick={handleToggle}
             aria-expanded={open}
-            className="w-full h-8 flex items-center gap-2 px-2 py-1 rounded-md hover:bg-neutral-800/40 group focus:outline-none"
+            className="w-full h-8 flex items-center gap-2 px-2 py-1 hover:bg-neutral-800/40 group focus:outline-none"
           >
              <span
                className={clsx(

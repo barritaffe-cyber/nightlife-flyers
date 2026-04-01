@@ -50,12 +50,12 @@ export async function POST(req: Request) {
 
     const imageName =
       imageEntry instanceof File && imageEntry.name ? imageEntry.name : "image.png";
-    const imageType = imageEntry.type || "image/png";
 
     const body = new FormData();
     body.append("image_file", imageEntry, imageName);
     body.append("size", "auto");
-    body.append("format", imageType === "image/jpeg" ? "jpg" : "png");
+    // Always request PNG so the response preserves transparency.
+    body.append("format", "png");
 
     const upstream = await fetch(REMOVE_BG_API_URL, {
       method: "POST",
@@ -73,12 +73,10 @@ export async function POST(req: Request) {
     }
 
     const output = await upstream.arrayBuffer();
-    const contentType = upstream.headers.get("content-type") || "image/png";
-
     return new NextResponse(output, {
       status: 200,
       headers: {
-        "Content-Type": contentType,
+        "Content-Type": "image/png",
         "Cache-Control": "no-store",
       },
     });
@@ -89,4 +87,3 @@ export async function POST(req: Request) {
     );
   }
 }
-

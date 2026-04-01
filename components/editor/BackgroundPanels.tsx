@@ -5,6 +5,14 @@ import * as React from 'react';
 import { Collapsible, Chip, Stepper } from './controls';
 
 type Props = {
+  presetBackgrounds?: ReadonlyArray<{
+    id: string;
+    name: string;
+    src: string;
+  }>;
+  presetBackgroundLabel?: string;
+  onPresetBackgroundSelect?: (src: string) => void;
+  allowUploads?: boolean;
   selectedPanel: string | null;
   setSelectedPanel: (v: string | null) => void;
   triggerUpload: () => void;
@@ -56,6 +64,7 @@ type Props = {
   setSubjectPose?: (v: string) => void;
   genProvider: 'auto' | 'nano' | 'openai' | 'venice';
   setGenProvider: (v: 'auto' | 'nano' | 'openai' | 'venice') => void;
+  showAiTools?: boolean;
   onBackgroundPreviewClick?: (p: {
     nx: number;
     ny: number;
@@ -67,6 +76,10 @@ type Props = {
 };
 
 function BackgroundPanels({
+  presetBackgrounds = [],
+  presetBackgroundLabel = 'Background Picks',
+  onPresetBackgroundSelect,
+  allowUploads = true,
   selectedPanel,
   setSelectedPanel,
   triggerUpload,
@@ -118,6 +131,7 @@ function BackgroundPanels({
   setSubjectPose,
   genProvider,
   setGenProvider,
+  showAiTools = true,
   onBackgroundPreviewClick,
 }: Props) {
   const [previewDims, setPreviewDims] = React.useState<{ w: number; h: number }>({
@@ -125,6 +139,7 @@ function BackgroundPanels({
     h: 0,
   });
   const previewRef = React.useRef<HTMLImageElement | null>(null);
+  const currentBackgroundSrc = bgUploadUrl || bgUrl;
 
   const handlePreviewClick = React.useCallback(
     (e: React.MouseEvent<HTMLImageElement>) => {
@@ -148,7 +163,7 @@ function BackgroundPanels({
   );
 
   return (
-    <>
+    <div className="space-y-3">
       <div
         id="background-panel"
         className="relative rounded-xl transition"
@@ -172,9 +187,11 @@ function BackgroundPanels({
           }
           right={
             <div className="flex items-center gap-2 text-[11px]">
-              <Chip small onClick={triggerUpload}>
-                Upload
-              </Chip>
+              {allowUploads && (
+                <Chip small onClick={triggerUpload}>
+                  Upload
+                </Chip>
+              )}
               {(bgUploadUrl || bgUrl) && (
                 <>
                   <Chip
@@ -256,6 +273,42 @@ function BackgroundPanels({
             }}
           />
 
+          {presetBackgrounds.length > 0 && (
+            <div className="mb-3 border-b border-neutral-800 pb-3">
+              <div className="mb-2 text-[12px] font-bold text-neutral-200">{presetBackgroundLabel}</div>
+              <div className="grid grid-cols-2 gap-2">
+                {presetBackgrounds.map((background) => {
+                  const isActive = currentBackgroundSrc === background.src;
+                  return (
+                    <button
+                      key={background.id}
+                      type="button"
+                      className={
+                        "overflow-hidden rounded-lg border text-left transition " +
+                        (isActive
+                          ? "border-cyan-400/70 bg-cyan-500/10"
+                          : "border-neutral-800 bg-neutral-900/60 hover:border-neutral-600 hover:bg-neutral-900")
+                      }
+                      onClick={() => onPresetBackgroundSelect?.(background.src)}
+                    >
+                      <div className="aspect-square overflow-hidden bg-black">
+                        <img
+                          src={background.src}
+                          alt={background.name}
+                          className="h-full w-full object-cover"
+                          draggable={false}
+                        />
+                      </div>
+                      <div className="px-2 py-2 text-[11px] font-medium text-neutral-200">
+                        {background.name}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {bgUploadUrl || bgUrl ? (
             <div className="space-y-2">
               <div className="aspect-square w-full overflow-hidden rounded-lg border border-neutral-700 bg-neutral-900/60 relative">
@@ -304,137 +357,151 @@ function BackgroundPanels({
                 + scroll to zoom.
               </div>
 
-              {/* Provider quick-pick (mirrors AI Background panel) — placed right above subject creation */}
-              <div className="flex items-center gap-2 text-[11px] mt-3">
-                <span>Provider</span>
-                <Chip small active={genProvider === 'auto'} onClick={() => setGenProvider('auto')}>
-                  Auto
-                </Chip>
-                <Chip small active={genProvider === 'nano'} onClick={() => setGenProvider('nano')}>
-                  FAL
-                </Chip>
-                <Chip small active={genProvider === 'openai'} onClick={() => setGenProvider('openai')}>
-                  OpenAI
-                </Chip>
-                <Chip small active={genProvider === 'venice'} onClick={() => setGenProvider('venice')}>
-                  Imagine
-                </Chip>
-              </div>
-
-              <div className="mt-3 rounded-lg border border-neutral-800 bg-neutral-950/40 p-2">
-                <div className="text-[11px] text-neutral-300 mb-2">
-                  Need a subject for this background? Generate one from your AI presets.
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-[11px] mb-2">
-                  <label className="space-y-1">
-                    <span className="text-neutral-400">Identity</span>
-                    <select
-                      className="w-full rounded-md border border-neutral-700 bg-neutral-900/60 px-2 py-1"
-                      value={subjectGender}
-                      onChange={(e) => setSubjectGender?.(e.target.value)}
-                    >
-                      {[
-                        { v: 'any', label: 'Any' },
-                        { v: 'woman', label: 'Female / femme-presenting' },
-                        { v: 'man', label: 'Male / masc-presenting' },
-                        { v: 'nonbinary', label: 'Non-binary / androgynous' },
-                      ].map((opt) => (
-                        <option key={opt.v} value={opt.v}>{opt.label}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="space-y-1">
-                    <span className="text-neutral-400">Ethnicity</span>
-                    <select
-                      className="w-full rounded-md border border-neutral-700 bg-neutral-900/60 px-2 py-1"
-                      value={subjectEthnicity}
-                      onChange={(e) => setSubjectEthnicity?.(e.target.value)}
-                    >
-                      {[
-                        { v: 'any', label: 'Any' },
-                        { v: 'black', label: 'Black' },
-                        { v: 'white', label: 'Caucasian' },
-                        { v: 'latino', label: 'Latina / Latino' },
-                        { v: 'east-asian', label: 'East Asian' },
-                        { v: 'indian', label: 'Indian' },
-                        { v: 'middle-eastern', label: 'Middle Eastern' },
-                        { v: 'mixed', label: 'Mixed' },
-                      ].map((opt) => (
-                        <option key={opt.v} value={opt.v}>{opt.label}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="space-y-1">
-                    <span className="text-neutral-400">Attire</span>
-                    <select
-                      className="w-full rounded-md border border-neutral-700 bg-neutral-900/60 px-2 py-1"
-                      value={subjectAttire}
-                      onChange={(e) => setSubjectAttire?.(e.target.value)}
-                    >
-                      {['club-glam', 'luxury', 'festival', 'all-white', 'streetwear', 'cyberpunk'].map((opt) => (
-                        <option key={opt} value={opt}>{opt}</option>
-                      ))}
-                    </select>
-                  </label>
-                <label className="space-y-1">
-                  <span className="text-neutral-400">Framing</span>
-                  <select
-                    className="w-full rounded-md border border-neutral-700 bg-neutral-900/60 px-2 py-1"
-                    value={subjectShot}
-                    onChange={(e) => setSubjectShot?.(e.target.value)}
-                  >
-                    {['full-body', 'three-quarter', 'waist-up', 'chest-up', 'close-up'].map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="space-y-1">
-                  <span className="text-neutral-400">Energy</span>
-                  <select
-                    className="w-full rounded-md border border-neutral-700 bg-neutral-900/60 px-2 py-1"
-                    value={subjectEnergy}
-                    onChange={(e) => setSubjectEnergy?.(e.target.value)}
-                  >
-                    {['calm', 'vibe', 'wild'].map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="space-y-1">
-                  <span className="text-neutral-400">Pose</span>
-                  <select
-                    className="w-full rounded-md border border-neutral-700 bg-neutral-900/60 px-2 py-1"
-                    value={subjectPose}
-                    onChange={(e) => setSubjectPose?.(e.target.value)}
-                  >
-                    {['dancing', 'hands-up', 'performance', 'dj'].map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-                <div className="flex items-center gap-2 text-[11px]">
-                  <Chip small deferHeavy onClick={onGenerateSubject} disabled={isGeneratingSubject}>
-                    {isGeneratingSubject ? "Generating…" : "Generate subject"}
-                  </Chip>
-                  {hasSubject && <span className="text-neutral-500">Subject already on canvas</span>}
-                </div>
-                {subjectError && (
-                  <div className="mt-2 text-[11px] text-red-400 break-words">
-                    {subjectError}
+              {showAiTools && (
+                <>
+                  <div className="flex items-center gap-2 text-[11px] mt-3">
+                    <span>Provider</span>
+                    <Chip small active={genProvider === 'auto'} onClick={() => setGenProvider('auto')}>
+                      Auto
+                    </Chip>
+                    <Chip small active={genProvider === 'nano'} onClick={() => setGenProvider('nano')}>
+                      FAL
+                    </Chip>
+                    <Chip small active={genProvider === 'openai'} onClick={() => setGenProvider('openai')}>
+                      OpenAI
+                    </Chip>
+                    <Chip small active={genProvider === 'venice'} onClick={() => setGenProvider('venice')}>
+                      Imagine
+                    </Chip>
                   </div>
-                )}
-              </div>
+
+                  <div className="mt-3 rounded-lg border border-neutral-800 bg-neutral-950/40 p-2">
+                    <div className="text-[11px] text-neutral-300 mb-2">
+                      Need a subject for this background? Generate one from your AI presets.
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-[11px] mb-2">
+                      <label className="space-y-1">
+                        <span className="text-neutral-400">Identity</span>
+                        <select
+                          className="w-full rounded-md border border-neutral-700 bg-neutral-900/60 px-2 py-1"
+                          value={subjectGender}
+                          onChange={(e) => setSubjectGender?.(e.target.value)}
+                        >
+                          {[
+                            { v: 'any', label: 'Any' },
+                            { v: 'woman', label: 'Female / femme-presenting' },
+                            { v: 'man', label: 'Male / masc-presenting' },
+                            { v: 'nonbinary', label: 'Non-binary / androgynous' },
+                          ].map((opt) => (
+                            <option key={opt.v} value={opt.v}>{opt.label}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="space-y-1">
+                        <span className="text-neutral-400">Ethnicity</span>
+                        <select
+                          className="w-full rounded-md border border-neutral-700 bg-neutral-900/60 px-2 py-1"
+                          value={subjectEthnicity}
+                          onChange={(e) => setSubjectEthnicity?.(e.target.value)}
+                        >
+                          {[
+                            { v: 'any', label: 'Any' },
+                            { v: 'black', label: 'Black' },
+                            { v: 'white', label: 'Caucasian' },
+                            { v: 'latino', label: 'Latina / Latino' },
+                            { v: 'east-asian', label: 'East Asian' },
+                            { v: 'indian', label: 'Indian' },
+                            { v: 'middle-eastern', label: 'Middle Eastern' },
+                            { v: 'mixed', label: 'Mixed' },
+                          ].map((opt) => (
+                            <option key={opt.v} value={opt.v}>{opt.label}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="space-y-1">
+                        <span className="text-neutral-400">Attire</span>
+                        <select
+                          className="w-full rounded-md border border-neutral-700 bg-neutral-900/60 px-2 py-1"
+                          value={subjectAttire}
+                          onChange={(e) => setSubjectAttire?.(e.target.value)}
+                        >
+                          {['club-glam', 'luxury', 'festival', 'all-white', 'streetwear', 'cyberpunk'].map((opt) => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      </label>
+                    <label className="space-y-1">
+                      <span className="text-neutral-400">Framing</span>
+                      <select
+                        className="w-full rounded-md border border-neutral-700 bg-neutral-900/60 px-2 py-1"
+                        value={subjectShot}
+                        onChange={(e) => setSubjectShot?.(e.target.value)}
+                      >
+                        {['full-body', 'three-quarter', 'waist-up', 'chest-up', 'close-up'].map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-neutral-400">Energy</span>
+                      <select
+                        className="w-full rounded-md border border-neutral-700 bg-neutral-900/60 px-2 py-1"
+                        value={subjectEnergy}
+                        onChange={(e) => setSubjectEnergy?.(e.target.value)}
+                      >
+                        {['calm', 'vibe', 'wild'].map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-neutral-400">Pose</span>
+                      <select
+                        className="w-full rounded-md border border-neutral-700 bg-neutral-900/60 px-2 py-1"
+                        value={subjectPose}
+                        onChange={(e) => setSubjectPose?.(e.target.value)}
+                      >
+                        {['dancing', 'hands-up', 'performance', 'dj'].map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                    <div className="flex items-center gap-2 text-[11px]">
+                      <Chip small deferHeavy onClick={onGenerateSubject} disabled={isGeneratingSubject}>
+                        {isGeneratingSubject ? "Generating…" : "Generate subject"}
+                      </Chip>
+                      {hasSubject && <span className="text-neutral-500">Subject already on canvas</span>}
+                    </div>
+                    {subjectError && (
+                      <div className="mt-2 text-[11px] text-red-400 break-words">
+                        {subjectError}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
 
             </div>
           ) : (
             <div className="text-[12px] text-neutral-300">
-              No background yet. Click <b>Upload</b> to add an image, or use <b>AI Background</b> below to generate one.
-              <div className="mt-2">
-                <Chip small onClick={triggerUpload}>
-                  Upload background
-                </Chip>
-              </div>
+              {allowUploads ? (
+                <>
+                  No background yet. Upload one
+                  {showAiTools ? <> or use AI Background.</> : <>.</>}
+                </>
+              ) : (
+                <>
+                  Pick one of the DJ backgrounds above to load the canvas.
+                </>
+              )}
+              {allowUploads && (
+                <div className="mt-2">
+                  <Chip small deferHeavy onClick={triggerUpload}>
+                    Upload background
+                  </Chip>
+                </div>
+              )}
             </div>
           )}
 
@@ -481,17 +548,25 @@ function BackgroundPanels({
         >
           <div className="grid grid-cols-3 gap-3">
             <Stepper label="Scale" value={bgScale} setValue={setBgScale} min={0.5} max={5} step={0.1} digits={2} />
-            <Stepper label="Hue" value={hue} setValue={setHue} min={-180} max={180} step={1} />
+            <Stepper label="Blur (px)" value={bgBlur} setValue={setBgBlur} min={0} max={20} step={0.5} digits={1} />
             <Stepper label="Vignette" value={vignetteStrength} setValue={setVignetteStrength} min={0} max={0.9} step={0.02} digits={2} />
           </div>
 
-          <div className="mt-2 grid grid-cols-2 gap-3">
-            <Stepper label="Gaussian Blur (px)" value={bgBlur} setValue={setBgBlur} min={0} max={20} step={0.5} digits={1} />
+          <div className="mt-2 grid grid-cols-3 gap-3">
+            <Stepper
+              label="Hue"
+              value={hue}
+              setValue={setHue}
+              min={-180}
+              max={180}
+              step={1}
+              className="col-span-2"
+            />
             <Stepper label="Rotation (°)" value={bgRotate} setValue={setBgRotate} min={-180} max={180} step={1} />
           </div>
         </Collapsible>
       </div>
-    </>
+    </div>
   );
 }
 

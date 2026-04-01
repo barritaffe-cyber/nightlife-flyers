@@ -1,25 +1,32 @@
  'use client';
 
- import * as React from 'react';
- import { createPortal } from 'react-dom';
+import * as React from 'react';
+import { createPortal } from 'react-dom';
 
- export function FontPicker({
-   value,
-   options,
-   onChange,
-   label,
-   disabled,
-   className,
-   sample = 'Aa Bb 123',
- }: {
-   value: string;
-   options: string[];
-   onChange: (v: string) => void;
-   label?: string;
-   disabled?: boolean;
-   className?: string;
-   sample?: string;
- }) {
+const controlLabelClass = 'text-[11px] uppercase tracking-[0.12em] text-neutral-400';
+const controlFieldClass = 'border border-neutral-700 bg-[#17171b] text-white';
+
+export function FontPicker({
+  value,
+  options,
+  onChange,
+  label,
+  disabled,
+  className,
+  buttonClassName,
+  menuClassName,
+  sample = 'Aa Bb 123',
+}: {
+  value: string;
+  options: string[];
+  onChange: (v: string) => void;
+  label?: string;
+  disabled?: boolean;
+  className?: string;
+  buttonClassName?: string;
+  menuClassName?: string;
+  sample?: string;
+}) {
   const [open, setOpen] = React.useState(false);
   const wrapRef = React.useRef<HTMLDivElement | null>(null);
   const menuRef = React.useRef<HTMLDivElement | null>(null);
@@ -83,13 +90,13 @@
 
   return (
     <div className={`relative ${className ?? ''}`} ref={wrapRef} data-mobile-float-lock="true">
-      {label && <div className="text-[11px] text-neutral-400 mb-1">{label}</div>}
+      {label && <div className={`${controlLabelClass} mb-1`}>{label}</div>}
       <button
         type="button"
         ref={btnRef}
         disabled={disabled}
         onClick={() => setOpen((v) => !v)}
-        className="w-full rounded px-2 py-2 bg-[#17171b] text-white border border-neutral-700 text-left flex items-center justify-between gap-2 disabled:opacity-60"
+        className={`w-full px-2 py-2 text-left flex items-center justify-between gap-2 disabled:opacity-60 ${controlFieldClass} ${buttonClassName ?? ''}`}
       >
         <span className="truncate" style={{ fontFamily: value }}>
           {value}
@@ -103,7 +110,7 @@
           <div
             ref={menuRef}
             data-mobile-float-lock="true"
-            className="fixed z-[9999] overflow-auto rounded border border-neutral-700 bg-[#0f0f12] shadow-xl pb-2"
+            className={`fixed z-[9999] overflow-auto border border-neutral-700 bg-[#0f0f12] shadow-xl pb-2 ${menuClassName ?? ''}`}
             style={{
               top: menuPos.top,
               left: menuPos.left,

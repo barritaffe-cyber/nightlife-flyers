@@ -25,6 +25,26 @@ async function toBlob(imageSrc: string): Promise<Blob> {
   return await res.blob();
 }
 
+async function imageToPngDataUrl(imageSrc: string): Promise<string> {
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image();
+    el.onload = () => resolve(el);
+    el.onerror = () => reject(new Error("Failed to load remove-bg output"));
+    el.src = imageSrc;
+  });
+
+  const canvas = document.createElement("canvas");
+  canvas.width = img.naturalWidth || img.width;
+  canvas.height = img.naturalHeight || img.height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx || !canvas.width || !canvas.height) {
+    throw new Error("Failed to render remove-bg output");
+  }
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(img, 0, 0);
+  return canvas.toDataURL("image/png");
+}
+
 async function removeBackgroundViaApi(imageSrc: string): Promise<string> {
   const blob = await toBlob(imageSrc);
   const fd = new FormData();
@@ -62,21 +82,23 @@ async function removeBackgroundWithLocalModel(imageSrc: string): Promise<string>
   };
 
   const blob: Blob = await removeBackground(imageSrc, config);
-  return URL.createObjectURL(blob);
+  return await blobToDataUrl(blob);
 }
 
 export async function removeBackgroundLocal(imageSrc: string): Promise<string> {
   try {
     // Primary path: remove.bg via server route.
-    return await removeBackgroundViaApi(imageSrc);
+    const output = await removeBackgroundViaApi(imageSrc);
+    return output.startsWith("data:image/png") ? output : await imageToPngDataUrl(output);
   } catch (err: any) {
     console.warn("remove.bg path failed, falling back to local model:", err?.message || err);
   }
 
   try {
-    return await removeBackgroundWithLocalModel(imageSrc);
+    const output = await removeBackgroundWithLocalModel(imageSrc);
+    return output.startsWith("data:image/png") ? output : await imageToPngDataUrl(output);
   } catch (err: any) {
     console.error("Background removal failed:", err?.message || err);
-    return imageSrc;
+    throw new Error("Background removal failed");
   }
 }

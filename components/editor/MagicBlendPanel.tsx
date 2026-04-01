@@ -31,6 +31,14 @@ type Props = {
   pushCanvasBgToBlend: () => void;
   handleMagicBlend: () => void;
   isBlending: boolean;
+  isCapturingBackground: boolean;
+  hasSharedGeneratedBackground: boolean;
+  sharedGeneratedBackgroundSource: string;
+  canRestoreOriginalBackground: boolean;
+  isOriginalBackgroundActive: boolean;
+  isGeneratedBackgroundActive: boolean;
+  onUseOriginalBackground: () => void;
+  onUseGeneratedBackground: () => void;
 };
 
 function MagicBlendPanel({
@@ -57,6 +65,14 @@ function MagicBlendPanel({
   pushCanvasBgToBlend,
   handleMagicBlend,
   isBlending,
+  isCapturingBackground,
+  hasSharedGeneratedBackground,
+  sharedGeneratedBackgroundSource,
+  canRestoreOriginalBackground,
+  isOriginalBackgroundActive,
+  isGeneratedBackgroundActive,
+  onUseOriginalBackground,
+  onUseGeneratedBackground,
 }: Props) {
   const [optionsOpen, setOptionsOpen] = React.useState(false);
   const [helpOpen, setHelpOpen] = React.useState(false);
@@ -97,7 +113,7 @@ function MagicBlendPanel({
               onClick={() => setHelpOpen(true)}
               aria-label="Magic Blend help"
               title="How Magic Blend works"
-              className="h-6 w-6 rounded-full border border-cyan-400/70 text-cyan-300 text-[11px] font-bold hover:bg-cyan-400/10"
+              className="h-6 w-6 border border-cyan-400/70 text-cyan-300 text-[11px] font-bold hover:bg-cyan-400/10"
             >
               ?
             </button>
@@ -109,6 +125,45 @@ function MagicBlendPanel({
           <div className="mb-4 rounded-lg border border-amber-400/30 bg-amber-500/5 px-3 py-2 text-[10px] text-amber-200/90">
             If Magic Blend is blocked for sensitive content, try a different subject/background, crop tighter, or use less revealing imagery.
           </div>
+
+          {hasSharedGeneratedBackground && (
+            <div className="mb-4 space-y-2 rounded-xl border border-cyan-400/20 bg-cyan-500/5 p-3">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-300">
+                Background Versions
+              </div>
+              <div className="text-[11px] leading-relaxed text-neutral-300">
+                Your latest {sharedGeneratedBackgroundSource.toLowerCase()} result stays available on square and story. Toggle this canvas between the original background and the generated version anytime.
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={onUseOriginalBackground}
+                  disabled={!canRestoreOriginalBackground}
+                  className={[
+                    "rounded-md border px-3 py-2 text-[10px] font-bold uppercase tracking-wide transition-all",
+                    isOriginalBackgroundActive
+                      ? "border-cyan-400 bg-cyan-400/15 text-cyan-100"
+                      : "border-neutral-700 bg-neutral-900/50 text-neutral-300 hover:border-neutral-500 hover:text-white",
+                    !canRestoreOriginalBackground ? "cursor-not-allowed opacity-50" : "",
+                  ].join(" ")}
+                >
+                  Original
+                </button>
+                <button
+                  type="button"
+                  onClick={onUseGeneratedBackground}
+                  className={[
+                    "rounded-md border px-3 py-2 text-[10px] font-bold uppercase tracking-wide transition-all",
+                    isGeneratedBackgroundActive
+                      ? "border-cyan-400 bg-cyan-400/15 text-cyan-100"
+                      : "border-neutral-700 bg-neutral-900/50 text-neutral-300 hover:border-neutral-500 hover:text-white",
+                  ].join(" ")}
+                >
+                  Generated
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="mb-4">
             <label className="text-[10px] uppercase font-bold tracking-widest text-neutral-500 mb-2 block">
@@ -267,6 +322,7 @@ function MagicBlendPanel({
             <button
               type="button"
               onClick={pushCanvasBgToBlend}
+              disabled={isCapturingBackground}
               className="w-full h-9 flex items-center justify-center gap-2 rounded-md border border-neutral-700 bg-neutral-800/30 hover:bg-amber-500/10 hover:border-amber-500/30 hover:text-amber-400 text-neutral-400 transition-all text-[10px] font-bold uppercase tracking-wider group"
               title="Capture the current background from your canvas"
             >
@@ -285,7 +341,7 @@ function MagicBlendPanel({
                 <path d="m12 19-7-7 7-7" />
                 <path d="M19 12H5" />
               </svg>
-              <span>Capture Canvas Background</span>
+              <span>{isCapturingBackground ? 'Capturing...' : 'Capture Canvas Background'}</span>
             </button>
           </div>
 

@@ -1,6 +1,7 @@
 'use client';
 
 import React from "react";
+import Link from "next/link";
 import { supabaseBrowser } from "../../lib/supabase/client";
 
 export default function ProfilePage() {
@@ -40,9 +41,23 @@ export default function ProfilePage() {
         <h1 className="text-2xl font-semibold mb-2">Profile</h1>
         <div className="rounded-xl border border-white/10 bg-neutral-900 p-4 space-y-2 text-sm">
           <div>Email: {email ?? "-"}</div>
-          <div>Access: {status ?? "-"}</div>
+          <div>Access: {status === "ondemand" ? "on-demand pass" : status ?? "-"}</div>
           <div>Plan status: {rawStatus ?? "-"}</div>
           <div>Expires: {periodEnd ? new Date(periodEnd).toDateString() : "-"}</div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link
+            href="/billing/portal"
+            className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
+          >
+            Manage billing
+          </Link>
+          <Link
+            href="/pricing"
+            className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
+          >
+            View pricing
+          </Link>
         </div>
       </div>
     </div>

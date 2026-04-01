@@ -87,7 +87,6 @@ export type MoveTarget =
   | "background"
   | "portrait"
   | "logo"
-  | "shape"
   | "icon"
   | null;
 
@@ -135,6 +134,23 @@ export type CleanupParams = {
   edgeClamp: number;
 };
 
+export type PortraitLighting = {
+  enabled?: boolean;
+  autoMatch?: boolean;
+  analyzed?: boolean;
+  lightSide?: "left" | "right";
+  highlightColor?: string;
+  ambient?: number;
+  keyLight?: number;
+  fillLight?: number;
+  rimLight?: number;
+  shadowDepth?: number;
+  warmth?: number;
+  contrast?: number;
+};
+
+export type MainFaceFilterPreset = "none" | "mono" | "contrast" | "halftone" | "poster" | "pop";
+
 // PORTRAIT STRUCTURE
 type Portrait = {
   id: string;
@@ -151,6 +167,7 @@ type Portrait = {
   labelBg?: boolean;
   labelSize?: number;
   labelColor?: string;
+  labelOffsetY?: number;
   isSticker?: boolean;
   isFlare?: boolean;
   isBrandFace?: boolean;
@@ -158,11 +175,18 @@ type Portrait = {
   tintMode?: "hue" | "colorize";
   svgTemplate?: string;
   iconColor?: string;
+  isSeparator?: boolean;
+  separatorKind?: string;
+  separatorWidth?: number;
+  separatorOffset?: number;
   layerOffset?: number;
   cleanup?: CleanupParams;
   cleanupBaseUrl?: string;
   shadowBlur?: number;
   shadowAlpha?: number;
+  lighting?: PortraitLighting;
+  mainFaceFilterPreset?: MainFaceFilterPreset;
+  mainFaceFilterStrength?: number;
 };
 
 //

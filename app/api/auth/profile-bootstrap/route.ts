@@ -23,7 +23,6 @@ export async function POST(req: Request) {
     const { error: upsertErr } = await admin.from("profiles").upsert({
       id: user.id,
       email: user.email,
-      status: "trial",
     });
     if (upsertErr) {
       return NextResponse.json(

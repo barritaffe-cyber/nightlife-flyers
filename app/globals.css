@@ -230,6 +230,22 @@ html, body {
   font-display: swap;
 }
 
+@font-face {
+  font-family: "Asectica Simple Demo";
+  src: url("/fonts/Asectica%20Simple%20Demo.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Paint the town";
+  src: url("/fonts/Paint%20the%20town-1.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* --- STANDARD FIXED: cubic --- */
 @font-face {
   font-family: "cubic";
@@ -434,4 +450,54 @@ html, body {
   height: 4px;
   background: var(--nf-track-active);
   border-radius: 999px;
+}
+
+/* Landing page animations */
+.nf-landing .nf-fade-in-up {
+  animation: nfLandingFadeUp 0.7s ease-out both;
+}
+
+.nf-landing .nf-preview-shell {
+  transform: perspective(1200px) rotateY(-4deg) rotateX(2deg);
+}
+
+.nf-landing .nf-slow-strobe {
+  animation: nfLandingSlowStrobe 7.8s ease-in-out infinite;
+}
+
+.nf-landing .nf-slow-strobe-cyan {
+  animation: nfLandingSlowStrobe 9.2s ease-in-out infinite reverse;
+}
+
+@keyframes nfLandingFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes nfLandingSlowStrobe {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(1);
+  }
+  35% {
+    opacity: 0.46;
+    transform: scale(1.07);
+  }
+  65% {
+    opacity: 0.32;
+    transform: scale(0.98);
+  }
+}
+
+@media (max-width: 1023px) {
+  .nf-landing .nf-preview-shell {
+    transform: none;
+  }
 }

@@ -10,7 +10,7 @@ const AUTH_GATE_ENABLED = process.env.NEXT_PUBLIC_AUTH_GATE_ENABLED === "1";
 export default function AuthGate({
   onStatusChange,
 }: {
-  onStatusChange?: (status: "active" | "inactive") => void;
+  onStatusChange?: (status: "active" | "ondemand" | "inactive") => void;
 }) {
   const [loading, setLoading] = React.useState(true);
   const [blocked, setBlocked] = React.useState<null | {
@@ -32,7 +32,8 @@ export default function AuthGate({
         const { data } = await supabase.auth.getSession();
         const session = data.session;
         if (!session) {
-          if (mounted) setBlocked({ reason: "login" });
+          if (mounted) onStatusChange?.("inactive");
+          if (mounted) setBlocked(null);
           return;
         }
 
@@ -41,6 +42,22 @@ export default function AuthGate({
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
         });
+
+        const statusRes = await fetch("/api/auth/status", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!statusRes.ok) {
+          if (mounted) onStatusChange?.("inactive");
+          if (mounted) setBlocked(null);
+          return;
+        }
+
+        const status = await statusRes.json();
+        if (status.status === "inactive") {
+          if (mounted) onStatusChange?.("inactive");
+          if (mounted) setBlocked(null);
+          return;
+        }
 
         const deviceId = getOrCreateDeviceId();
         const deviceType = getDeviceType();
@@ -55,35 +72,22 @@ export default function AuthGate({
         });
 
         if (deviceRes.status === 409) {
+          if (mounted) onStatusChange?.(status.status === "ondemand" ? "ondemand" : "active");
           if (mounted) setBlocked({ reason: "replace" });
           return;
         }
 
         if (!deviceRes.ok) {
-          if (mounted) setBlocked({ reason: "login" });
-          return;
-        }
-
-        const statusRes = await fetch("/api/auth/status", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!statusRes.ok) {
           if (mounted) onStatusChange?.("inactive");
           if (mounted) setBlocked(null);
           return;
         }
 
-        const status = await statusRes.json();
-        if (status.status !== "active") {
-          if (mounted) onStatusChange?.("inactive");
-          if (mounted) setBlocked(null);
-          return;
-        }
-
-        if (mounted) onStatusChange?.("active");
+        if (mounted) onStatusChange?.(status.status === "ondemand" ? "ondemand" : "active");
         if (mounted) setBlocked(null);
       } catch {
-        if (mounted) setBlocked({ reason: "login" });
+        if (mounted) onStatusChange?.("inactive");
+        if (mounted) setBlocked(null);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -105,7 +109,7 @@ export default function AuthGate({
           <>
             <div className="text-lg font-semibold mb-2">Login required</div>
             <div className="text-sm text-neutral-400 mb-4">
-              Please log in to access your profile and subscription.
+              Please log in to access your profile, pass, or subscription.
             </div>
             <a
               href="/login"

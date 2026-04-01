@@ -5,6 +5,7 @@ import React from "react";
 export default function AdminSubscriptionPage() {
   const [email, setEmail] = React.useState("");
   const [status, setStatus] = React.useState("active");
+  const [plan, setPlan] = React.useState("creator");
   const [periodEnd, setPeriodEnd] = React.useState("");
   const [secret, setSecret] = React.useState("");
   const [msg, setMsg] = React.useState<string | null>(null);
@@ -25,6 +26,7 @@ export default function AdminSubscriptionPage() {
       body: JSON.stringify({
         email,
         status,
+        plan,
         current_period_end: periodEnd,
       }),
     });
@@ -57,8 +59,20 @@ export default function AdminSubscriptionPage() {
           >
             <option value="active">active</option>
             <option value="trial">trial</option>
+            <option value="night_pass">night_pass</option>
+            <option value="weekend_pass">weekend_pass</option>
             <option value="past_due">past_due</option>
             <option value="canceled">canceled</option>
+          </select>
+          <select
+            className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm"
+            value={plan}
+            onChange={(e) => setPlan(e.target.value)}
+          >
+            <option value="creator">creator</option>
+            <option value="studio">studio</option>
+            <option value="monthly">monthly</option>
+            <option value="yearly">yearly</option>
           </select>
           <input
             className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm"

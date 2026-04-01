@@ -16,6 +16,8 @@ export const FONT_FILE_MAP: Record<string, string> = {
   "Dune_Rise": "/fonts/dune-rise.ttf",
   "who asks satan": "/fonts/who-asks-satan.ttf",
   "African": "/fonts/African.ttf",
+  "Asectica Simple Demo": "/fonts/Asectica Simple Demo.ttf",
+  "Paint the town": "/fonts/Paint the town-1.ttf",
   
   // --- LEMON MILK (Kept as-is for consistency) ---
   "LEMONMILK-BoldItalic": "/fonts/LEMONMILK-BoldItalic.ttf",

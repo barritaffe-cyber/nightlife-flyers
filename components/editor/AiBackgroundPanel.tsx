@@ -103,6 +103,13 @@ type Preset = {
 type Props = {
   selectedPanel?: string | null;
   setSelectedPanel?: (panel: string | null) => void;
+  creatorAutoLayoutEnabled: boolean;
+  autoLayoutReferenceUrl: string | null;
+  autoLayoutLoading: boolean;
+  autoLayoutError: string | null;
+  onAutoLayoutReferenceUpload: (file: File) => void;
+  onClearAutoLayoutReference: () => void;
+  onAutoLayoutFromBackground: () => void;
   genStyle: GenStyle;
   setGenStyle: (s: GenStyle) => void;
    presetKey: string;
@@ -141,19 +148,33 @@ type Props = {
   setGenShot: (v: GenShot) => void;
   genLighting: GenLighting;
   setGenLighting: (v: GenLighting) => void;
-  resetCredits: () => void;
+  generationQuotaRemaining: number | null;
+  generationQuotaLimit: number | null;
   generateBackground: (opts?: GenerateBackgroundOpts) => void;
    genLoading: boolean;
    isPlaceholder: boolean;
    genError: string | null;
   genCandidates: string[];
-  setBgUploadUrl: (v: string | null) => void;
-  setBgUrl: (v: string | null) => void;
+  hasSharedGeneratedBackground: boolean;
+  sharedGeneratedBackgroundSource: string;
+  canRestoreOriginalBackground: boolean;
+  isOriginalBackgroundActive: boolean;
+  isGeneratedBackgroundActive: boolean;
+  onUseOriginalBackground: () => void;
+  onUseGeneratedBackground: () => void;
+  onUseGeneratedCandidate: (src: string) => void;
 };
 
 function AiBackgroundPanel({
   selectedPanel,
   setSelectedPanel,
+  creatorAutoLayoutEnabled,
+  autoLayoutReferenceUrl,
+  autoLayoutLoading,
+  autoLayoutError,
+  onAutoLayoutReferenceUpload,
+  onClearAutoLayoutReference,
+  onAutoLayoutFromBackground,
   genStyle,
   setGenStyle,
    presetKey,
@@ -192,14 +213,21 @@ function AiBackgroundPanel({
   setGenShot,
   genLighting,
   setGenLighting,
-  resetCredits,
+  generationQuotaRemaining,
+  generationQuotaLimit,
   generateBackground,
    genLoading,
    isPlaceholder,
    genError,
   genCandidates,
-  setBgUploadUrl,
-  setBgUrl,
+  hasSharedGeneratedBackground,
+  sharedGeneratedBackgroundSource,
+  canRestoreOriginalBackground,
+  isOriginalBackgroundActive,
+  isGeneratedBackgroundActive,
+  onUseOriginalBackground,
+  onUseGeneratedBackground,
+  onUseGeneratedCandidate,
 }: Props) {
   const isControlled = typeof selectedPanel !== 'undefined' && typeof setSelectedPanel === 'function';
   const isOpen = isControlled ? selectedPanel === 'ai_background' : undefined;
@@ -356,7 +384,7 @@ function AiBackgroundPanel({
             onClick={() => setHelpOpen(true)}
             aria-label="AI Background help"
             title="How AI Background works"
-            className="h-6 w-6 rounded-full border border-cyan-400/70 text-cyan-300 text-[11px] font-bold hover:bg-cyan-400/10"
+            className="h-6 w-6 border border-cyan-400/70 text-cyan-300 text-[11px] font-bold hover:bg-cyan-400/10"
           >
             ?
           </button>
@@ -369,6 +397,75 @@ function AiBackgroundPanel({
                {s.toUpperCase()}
              </Chip>
            ))}
+         </div>
+
+         <div className="rounded-xl border border-white/10 bg-[#0f1117] p-3 sm:p-4 space-y-3">
+           <div className="flex items-center justify-between gap-2">
+             <div className="text-[12px] uppercase tracking-[0.12em] text-cyan-300">Creator Auto Layout</div>
+             <div className="text-[10px] text-neutral-400">Background-aware typography</div>
+           </div>
+
+           <div className="text-[11px] text-neutral-300">
+             Upload a background image, analyze it, and apply a template-style layout automatically. If you already typed
+             headline, details, venue, or subtag text, those values are used as copy hints.
+           </div>
+
+           <div className="space-y-2">
+             <label className="block text-[11px] text-neutral-300">
+               Background reference
+               <input
+                 type="file"
+                 accept="image/*"
+                 onChange={(e) => {
+                   const file = e.target.files?.[0];
+                   if (!file) return;
+                   onAutoLayoutReferenceUpload(file);
+                   e.currentTarget.value = "";
+                 }}
+                 className="mt-1 block w-full rounded border border-neutral-700 bg-[#17171b] px-2 py-1.5 text-[12px] text-white file:mr-2 file:rounded file:border-0 file:bg-cyan-700 file:px-2 file:py-1 file:text-white"
+               />
+             </label>
+
+             {autoLayoutReferenceUrl && (
+               <div className="rounded-lg border border-white/10 bg-black/20 p-2">
+                 <div className="mb-2 overflow-hidden rounded border border-white/10 bg-black/30">
+                   <img
+                     src={autoLayoutReferenceUrl}
+                     alt="Auto layout background reference"
+                     className="h-32 w-full object-cover"
+                   />
+                 </div>
+                 <button
+                   type="button"
+                   onClick={onClearAutoLayoutReference}
+                   className="rounded border border-white/10 bg-white/5 px-2 py-1 text-[10px] text-white/80 hover:bg-white/10"
+                 >
+                   Clear reference
+                 </button>
+               </div>
+             )}
+           </div>
+
+           {!creatorAutoLayoutEnabled && (
+             <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-100">
+               Creator Auto Layout is available on Creator and Studio subscriptions.
+             </div>
+           )}
+
+           <button
+             type="button"
+             onClick={onAutoLayoutFromBackground}
+             disabled={!creatorAutoLayoutEnabled || !autoLayoutReferenceUrl || autoLayoutLoading}
+             className="w-full px-3 py-2.5 rounded bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed"
+           >
+             {autoLayoutLoading ? "Analyzing Background..." : "Analyze Uploaded Background"}
+           </button>
+
+           <div className="text-[10px] text-neutral-500">
+             Upload the exact background you want to use. Best results come from images with one strong focal area and some clean negative space.
+           </div>
+
+           {autoLayoutError && <div className="text-[11px] text-amber-300">{autoLayoutError}</div>}
          </div>
 
          <div className="rounded-xl border border-white/10 bg-[#0f1117] p-3 sm:p-4 space-y-3">
@@ -759,14 +856,11 @@ function AiBackgroundPanel({
                  </div>
                </div>
 
-               <button
-                 type="button"
-                 onClick={resetCredits}
-                 className="px-3 py-2 rounded bg-neutral-900/70 border border-neutral-700 hover:bg-neutral-800 text-[12px]"
-                 title="Reset credits (dev)"
-               >
-                 Reset Credits
-               </button>
+               <div className="px-3 py-2 rounded border border-neutral-700 bg-neutral-900/60 text-[11px] text-neutral-300">
+                 {generationQuotaLimit != null
+                   ? `Generations left: ${Math.max(0, generationQuotaRemaining ?? 0)} / ${generationQuotaLimit}`
+                   : "Generations left: --"}
+               </div>
              </div>
            )}
          </div>
@@ -798,6 +892,45 @@ function AiBackgroundPanel({
            </div>
          )}
 
+         {hasSharedGeneratedBackground && (
+           <div className="space-y-2 rounded-xl border border-cyan-400/20 bg-cyan-500/5 p-3">
+             <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-300">
+               Background Versions
+             </div>
+             <div className="text-[11px] leading-relaxed text-neutral-300">
+               Your latest {sharedGeneratedBackgroundSource.toLowerCase()} result can be used on square or story. Toggle between the original background and the generated version on this canvas.
+             </div>
+             <div className="grid grid-cols-2 gap-2">
+               <button
+                 type="button"
+                 onClick={onUseOriginalBackground}
+                 disabled={!canRestoreOriginalBackground}
+                 className={[
+                   "rounded-md border px-3 py-2 text-[10px] font-bold uppercase tracking-wide transition-all",
+                   isOriginalBackgroundActive
+                     ? "border-cyan-400 bg-cyan-400/15 text-cyan-100"
+                     : "border-neutral-700 bg-neutral-900/50 text-neutral-300 hover:border-neutral-500 hover:text-white",
+                   !canRestoreOriginalBackground ? "cursor-not-allowed opacity-50" : "",
+                 ].join(" ")}
+               >
+                 Original
+               </button>
+               <button
+                 type="button"
+                 onClick={onUseGeneratedBackground}
+                 className={[
+                   "rounded-md border px-3 py-2 text-[10px] font-bold uppercase tracking-wide transition-all",
+                   isGeneratedBackgroundActive
+                     ? "border-cyan-400 bg-cyan-400/15 text-cyan-100"
+                     : "border-neutral-700 bg-neutral-900/50 text-neutral-300 hover:border-neutral-500 hover:text-white",
+                 ].join(" ")}
+               >
+                 Generated
+               </button>
+             </div>
+           </div>
+         )}
+
          {genCandidates.length > 0 && (
            <div className="space-y-2">
              <div className="text-[11px] text-neutral-400">Select a background</div>
@@ -805,15 +938,7 @@ function AiBackgroundPanel({
                {genCandidates.map((src, i) => (
                  <button
                    key={i}
-                   onClick={() => {
-                     if (src.startsWith('data:image/')) {
-                       setBgUploadUrl(src);
-                       setBgUrl(null);
-                     } else {
-                       setBgUrl(src);
-                       setBgUploadUrl(null);
-                     }
-                   }}
+                   onClick={() => onUseGeneratedCandidate(src)}
                    className="relative group border border-neutral-700 rounded overflow-hidden hover:border-indigo-500"
                    title="Use this background"
                  >

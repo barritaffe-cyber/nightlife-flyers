@@ -4,7 +4,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 /* ===== BLOCK: IMPORTS (BEGIN) ===== */
-import StartupTemplates from "../components/ui/StartupTemplates";
+import StartupTemplates, { type StartupBuildPayload, type StartupSelectPayload } from "../components/ui/StartupTemplates";
 import * as htmlToImage from 'html-to-image';
 import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -19,7 +19,7 @@ import { isActiveUtil } from '../lib/isActiveUtil';
 import { sharedRootRef, setRootRef } from "../lib/rootRefUtil";
 import { getRootRef } from "../lib/rootRefUtil";
 import { deriveMoodStyleSignal } from "../lib/moodStyleSignal";
-import { useFlyerState, type Format } from "../app/state/flyerState";
+import { useFlyerState, type Format, type PortraitLighting } from "../app/state/flyerState";
 import type { Emoji } from "../app/types/emoji";
 import { canvasRefs } from "../lib/canvasRefs";
 import AuthGate from "../components/auth/AuthGate";
@@ -31,18 +31,23 @@ import { supabaseBrowser } from "../lib/supabase/client";
 import * as Slider from "@radix-ui/react-slider";
 import type { CleanupParams } from "../lib/cleanupCutoutUrl";
 import { removeGreenScreen } from "./chromaKey";
-import { Collapsible, Chip, Stepper, ColorDot, SliderRow } from "../components/editor/controls";
+import { Collapsible, Chip, Stepper, ColorDot, SliderRow, InlineSliderInput } from "../components/editor/controls";
 import { FontPicker } from "../components/editor/FontPicker";
 import DjBrandingPanel from "../components/editor/DjBrandingPanel";
 import {
   createDefaultDjBrandKit,
+  createDefaultDjBrandKitCollection,
   getSafeZonePosition,
   normalizeDjHandle,
-  readDjBrandKit,
-  writeDjBrandKit,
+  readDjBrandKitCollection,
+  writeDjBrandKitCollection,
   type DJBrandKit,
+  type DJBrandKitCollection,
   type SafeZone,
 } from "../lib/djBrandKit";
+import { TEXT_SEPARATOR_GRAPHICS, buildSeparatorSvgDataUrl } from "../lib/textSeparators";
+import { SHAPE_GRAPHICS, buildShapeSvgDataUrl } from "../lib/shapeGraphics";
+import { getPublicLegalName, getPublicSupportEmail } from "../lib/publicIdentity";
 
 const AiBackgroundPanel = dynamic(() => import("../components/editor/AiBackgroundPanel"), {
   ssr: false,
@@ -90,12 +95,217 @@ type GenAttireColor =
 type GenPose = "dancing" | "hands-up" | "performance" | "dj";
 type GenShot = "full-body" | "three-quarter" | "waist-up" | "chest-up" | "close-up";
 type GenLighting = "strobe" | "softbox" | "backlit" | "flash";
+type DjStartupFlowStage = "compose" | "design";
+type BackgroundAssetMode = "upload" | "remote";
+type SharedBackgroundVersion = {
+  src: string;
+  mode: BackgroundAssetMode;
+  scale: number;
+  posX: number;
+  posY: number;
+  rotate: number;
+  fitMode: boolean;
+};
+type SharedGeneratedBackgroundState = {
+  source: "ai_background" | "magic_blend";
+  sourceFormat: Format;
+  original: SharedBackgroundVersion | null;
+  generated: SharedBackgroundVersion;
+  originalPortrait: {
+    kind: "legacy" | "layer";
+    id?: string | null;
+    url: string | null;
+    scale: number;
+    x: number;
+    y: number;
+    locked: boolean;
+    isBrandFace?: boolean;
+  } | null;
+  updatedAt: number;
+};
+
+type LightingRgb = { r: number; g: number; b: number };
+
+const DEFAULT_MAIN_FACE_LIGHTING: Required<PortraitLighting> = {
+  enabled: true,
+  autoMatch: true,
+  analyzed: false,
+  lightSide: "left",
+  highlightColor: "#ffe1c2",
+  ambient: 0.1,
+  keyLight: 0.32,
+  fillLight: 0.12,
+  rimLight: 0.18,
+  shadowDepth: 0.14,
+  warmth: 0.08,
+  contrast: 0.08,
+};
+
+function clampLighting01(value: number) {
+  return Math.max(0, Math.min(1, value));
+}
+
+function clampSignedUnit(value: number) {
+  return Math.max(-1, Math.min(1, value));
+}
+
+function hexToRgb(hex: string | undefined | null): LightingRgb {
+  const safe = String(hex || "").replace("#", "").trim();
+  const normalized =
+    safe.length === 3
+      ? safe
+          .split("")
+          .map((part) => part + part)
+          .join("")
+      : safe.padEnd(6, "0").slice(0, 6);
+  const value = Number.parseInt(normalized || "ffe1c2", 16);
+  return {
+    r: (value >> 16) & 255,
+    g: (value >> 8) & 255,
+    b: value & 255,
+  };
+}
+
+function rgbToHex(color: LightingRgb) {
+  return `#${[color.r, color.g, color.b]
+    .map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0"))
+    .join("")}`;
+}
+
+function mixRgb(a: LightingRgb, b: LightingRgb, amount: number): LightingRgb {
+  const t = clampLighting01(amount);
+  return {
+    r: Math.round(a.r * (1 - t) + b.r * t),
+    g: Math.round(a.g * (1 - t) + b.g * t),
+    b: Math.round(a.b * (1 - t) + b.b * t),
+  };
+}
+
+function luminanceOfRgb(color: LightingRgb) {
+  return 0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b;
+}
+
+function normalizeMainFaceLighting(input?: PortraitLighting | null): Required<PortraitLighting> {
+  const next = {
+    ...DEFAULT_MAIN_FACE_LIGHTING,
+    ...(input || {}),
+  };
+  return {
+    enabled: !!next.enabled,
+    autoMatch: next.autoMatch !== false,
+    analyzed: !!next.analyzed,
+    lightSide: next.lightSide === "right" ? "right" : "left",
+    highlightColor: /^#([0-9a-f]{6})$/i.test(String(next.highlightColor || ""))
+      ? String(next.highlightColor)
+      : DEFAULT_MAIN_FACE_LIGHTING.highlightColor,
+    ambient: clampLighting01(Number(next.ambient ?? DEFAULT_MAIN_FACE_LIGHTING.ambient)),
+    keyLight: clampLighting01(Number(next.keyLight ?? DEFAULT_MAIN_FACE_LIGHTING.keyLight)),
+    fillLight: clampLighting01(Number(next.fillLight ?? DEFAULT_MAIN_FACE_LIGHTING.fillLight)),
+    rimLight: clampLighting01(Number(next.rimLight ?? DEFAULT_MAIN_FACE_LIGHTING.rimLight)),
+    shadowDepth: clampLighting01(Number(next.shadowDepth ?? DEFAULT_MAIN_FACE_LIGHTING.shadowDepth)),
+    warmth: clampSignedUnit(Number(next.warmth ?? DEFAULT_MAIN_FACE_LIGHTING.warmth)),
+    contrast: clampSignedUnit(Number(next.contrast ?? DEFAULT_MAIN_FACE_LIGHTING.contrast)),
+  };
+}
+
+type MainFaceFilterPreset = "none" | "mono" | "contrast" | "halftone" | "poster" | "pop";
+
+function normalizeMainFaceFilterPreset(input: unknown): MainFaceFilterPreset {
+  return input === "mono" || input === "contrast" || input === "halftone" || input === "poster" || input === "pop"
+    ? input
+    : "none";
+}
+
+async function analyzeBackgroundLightingFromPlacement(
+  backgroundSrc: string,
+  placement: CanvasPortraitPlacement
+): Promise<Required<PortraitLighting>> {
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const node = new Image();
+    node.crossOrigin = "anonymous";
+    node.onload = () => resolve(node);
+    node.onerror = () => reject(new Error("Failed to analyze background lighting."));
+    node.src = backgroundSrc;
+  });
+
+  const width = 512;
+  const aspect = (img.naturalHeight || img.height || 1) / Math.max(1, img.naturalWidth || img.width || 1);
+  const height = Math.max(256, Math.round(width * aspect));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) throw new Error("Lighting analysis is unavailable in this browser.");
+  ctx.drawImage(img, 0, 0, width, height);
+  const data = ctx.getImageData(0, 0, width, height).data;
+
+  const boxLeft = Math.max(0, Math.round(((placement.centerX - placement.width / 2) / 100) * width));
+  const boxTop = Math.max(0, Math.round(((placement.centerY - placement.height / 2) / 100) * height));
+  const boxWidth = Math.max(8, Math.round((placement.width / 100) * width));
+  const boxHeight = Math.max(8, Math.round((placement.height / 100) * height));
+  const boxRight = Math.min(width, boxLeft + boxWidth);
+  const boxBottom = Math.min(height, boxTop + boxHeight);
+  const stripWidth = Math.max(12, Math.round(boxWidth * 0.22));
+  const topBand = Math.max(12, Math.round(boxHeight * 0.18));
+
+  const sampleRegion = (x0: number, y0: number, x1: number, y1: number) => {
+    let totalR = 0;
+    let totalG = 0;
+    let totalB = 0;
+    let count = 0;
+    for (let y = Math.max(0, y0); y < Math.min(height, y1); y += 1) {
+      for (let x = Math.max(0, x0); x < Math.min(width, x1); x += 1) {
+        const i = (y * width + x) * 4;
+        totalR += data[i];
+        totalG += data[i + 1];
+        totalB += data[i + 2];
+        count += 1;
+      }
+    }
+    if (!count) return { r: 224, g: 200, b: 180 };
+    return {
+      r: Math.round(totalR / count),
+      g: Math.round(totalG / count),
+      b: Math.round(totalB / count),
+    };
+  };
+
+  const leftColor = sampleRegion(boxLeft - stripWidth, boxTop, boxLeft, boxBottom);
+  const rightColor = sampleRegion(boxRight, boxTop, boxRight + stripWidth, boxBottom);
+  const topColor = sampleRegion(boxLeft, boxTop - topBand, boxRight, boxTop);
+  const leftLum = luminanceOfRgb(leftColor);
+  const rightLum = luminanceOfRgb(rightColor);
+  const topLum = luminanceOfRgb(topColor);
+  const lightSide = leftLum >= rightLum ? "left" : "right";
+  const sideColor = lightSide === "left" ? leftColor : rightColor;
+  const sideContrast = Math.abs(leftLum - rightLum);
+  const liftedSide = mixRgb(sideColor, { r: 255, g: 248, b: 238 }, sideContrast > 20 ? 0.56 : 0.42);
+  const liftedTop = mixRgb(topColor, { r: 255, g: 244, b: 232 }, 0.38);
+  const highlightColor = rgbToHex(mixRgb(liftedSide, liftedTop, 0.42));
+  const sceneLum = Math.max(0, Math.min(255, (leftLum + rightLum + topLum) / 3));
+  const warmth = clampSignedUnit(((sideColor.r - sideColor.b) / 255) * 1.4);
+
+  return normalizeMainFaceLighting({
+    analyzed: true,
+    autoMatch: true,
+    lightSide,
+    highlightColor,
+    ambient: sceneLum < 90 ? 0.16 : sceneLum < 145 ? 0.12 : 0.08,
+    keyLight: sideContrast > 24 ? 0.54 : 0.42,
+    fillLight: sceneLum < 95 ? 0.2 : 0.14,
+    rimLight: sideContrast > 24 ? 0.32 : 0.22,
+    shadowDepth: sceneLum < 95 ? 0.22 : 0.16,
+    warmth,
+    contrast: sideContrast > 24 ? 0.18 : 0.08,
+  });
+}
 
 const DEFAULT_HEAD2_FX: TextFx = {
   uppercase: false,
   bold: true,
   italic: false,
   underline: false,
+  alpha: 1,
   tracking: 0.01,
   gradient: false,
   gradFrom: '#ffffff',
@@ -113,6 +323,7 @@ const DEFAULT_TEXT_FX: TextFx = {
   bold: true,
   italic: false,
   underline: false,
+  alpha: 1,
   tracking: 0.02,
   gradient: false,
   gradFrom: '#ffffff',
@@ -124,6 +335,9 @@ const DEFAULT_TEXT_FX: TextFx = {
   glow: 0.2,
   shadowEnabled: true,
 };
+
+const SUPPORT_EMAIL = getPublicSupportEmail();
+const LEGAL_NAME = getPublicLegalName();
 
 // ——— Template variant resolver (square/story with fallbacks) ———
 function getVariant(tpl: TemplateSpec, fmt: Format) {
@@ -232,6 +446,116 @@ function guessFontFormat(url: string): string {
   if (clean.endsWith(".woff")) return "woff";
   if (clean.endsWith(".otf")) return "opentype";
   return "truetype";
+}
+
+function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+  const hue = ((h % 360) + 360) % 360;
+  const sat = Math.max(0, Math.min(1, s));
+  const light = Math.max(0, Math.min(1, l));
+  const c = (1 - Math.abs(2 * light - 1)) * sat;
+  const x = c * (1 - Math.abs(((hue / 60) % 2) - 1));
+  const m = light - c / 2;
+
+  let r = 0;
+  let g = 0;
+  let b = 0;
+
+  if (hue < 60) [r, g, b] = [c, x, 0];
+  else if (hue < 120) [r, g, b] = [x, c, 0];
+  else if (hue < 180) [r, g, b] = [0, c, x];
+  else if (hue < 240) [r, g, b] = [0, x, c];
+  else if (hue < 300) [r, g, b] = [x, 0, c];
+  else [r, g, b] = [c, 0, x];
+
+  return [
+    Math.round((r + m) * 255),
+    Math.round((g + m) * 255),
+    Math.round((b + m) * 255),
+  ];
+}
+
+const tintedTextureCache = new Map<string, string>();
+
+function TintedTextureImage({
+  src,
+  hue,
+  style,
+}: {
+  src: string;
+  hue: number;
+  style: React.CSSProperties;
+}) {
+  const [displaySrc, setDisplaySrc] = React.useState(src);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    if (!src || !hue) {
+      setDisplaySrc(src);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const cacheKey = `${src}|${Math.round(hue)}`;
+    const cached = tintedTextureCache.get(cacheKey);
+    if (cached) {
+      setDisplaySrc(cached);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        if (!ctx || !canvas.width || !canvas.height) {
+          if (!cancelled) setDisplaySrc(src);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        const [tr, tg, tb] = hslToRgb(hue, 1, 0.5);
+
+        for (let i = 0; i < data.length; i += 4) {
+          const alpha = data[i + 3];
+          if (alpha === 0) continue;
+
+          const luminance =
+            (0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]) / 255;
+          const boosted = Math.max(0, Math.min(1, luminance * 1.15 + 0.05));
+
+          data[i] = Math.round(tr * boosted);
+          data[i + 1] = Math.round(tg * boosted);
+          data[i + 2] = Math.round(tb * boosted);
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+        const tinted = canvas.toDataURL("image/png");
+        tintedTextureCache.set(cacheKey, tinted);
+        if (!cancelled) setDisplaySrc(tinted);
+      } catch {
+        if (!cancelled) setDisplaySrc(src);
+      }
+    };
+    img.onerror = () => {
+      if (!cancelled) setDisplaySrc(src);
+    };
+    img.src = src;
+
+    return () => {
+      cancelled = true;
+    };
+  }, [src, hue]);
+
+  return <img src={displaySrc} alt="" draggable={false} style={style} />;
 }
 
 async function inlineCssUrlsToData(css: string): Promise<string> {
@@ -403,7 +727,7 @@ function buildPremiumTextShadow(strength: number = 1, glow: number = 0) {
 /* ===== BLOCK: MINI-UTILS (END) ===== */
 
 // ===== PATCH NAV-001: keyboard nudge helpers =====
-const VIRTUAL_PAD = 120; // % travel beyond each edge allowed for text/logo/shape
+const VIRTUAL_PAD = 120; // % travel beyond each edge allowed for text/logo/assets
 
 // =========================================================
 // ✅ UTILS (Corrected Range 0.0 - 1.0)
@@ -427,7 +751,7 @@ function makeReadCtx(canvas: HTMLCanvasElement) {
   return ctx;
 }
 
-// allows -pad .. 100+pad (used for text/logo/shape, NOT background)
+// allows -pad .. 100+pad (used for text/logo/assets, NOT background)
 function clampVirtual(n: number, pad = VIRTUAL_PAD) {
   return Math.max(-pad, Math.min(100 + pad, n));
 }
@@ -599,6 +923,28 @@ const NIGHTLIFE_GRAPHICS = [
   },
 ] as const;
 
+const SOCIAL_MEDIA_STICKERS = [
+  { id: "instagram", src: "https://cdn-icons-png.flaticon.com/512/4138/4138124.png", name: "Instagram" },
+  { id: "twitter", src: "https://cdn-icons-png.flaticon.com/512/5969/5969020.png", name: "Twitter / X" },
+  { id: "tiktok", src: "https://cdn-icons-png.flaticon.com/512/3046/3046121.png", name: "TikTok" },
+  { id: "twitch", src: "https://cdn-icons-png.flaticon.com/512/2111/2111668.png", name: "Twitch" },
+  { id: "youtube", src: "https://cdn-icons-png.flaticon.com/512/1384/1384060.png", name: "YouTube" },
+  { id: "whatsapp", src: "https://cdn-icons-png.flaticon.com/512/1384/1384055.png", name: "WhatsApp" },
+] as const;
+
+const DJ_STARTUP_BACKGROUNDS = [
+  { id: "club01", src: "/DJ/club01.jpg", name: "Club 01" },
+  { id: "club02", src: "/DJ/club02.jpg", name: "Club 02" },
+  { id: "club03", src: "/DJ/club03.jpg", name: "Club 03" },
+  { id: "club04", src: "/DJ/club04.jpg", name: "Club 04" },
+  { id: "club05", src: "/DJ/club05.jpg", name: "Club 05" },
+  { id: "club06", src: "/DJ/club06.jpg", name: "Club 06" },
+  { id: "club07", src: "/DJ/club07.jpg", name: "Club 07" },
+  { id: "club08", src: "/DJ/club08.jpg", name: "Club 08" },
+  { id: "club09", src: "/DJ/club09.jpg", name: "Club 09" },
+  { id: "club10", src: "/DJ/club10.jpg", name: "Club 10" },
+] as const;
+
 const GRAPHIC_STICKERS = [
   { id: "mezcal_bottle", src: "https://cdn-icons-png.flaticon.com/512/8091/8091033.png", name: "Mezcal" },
   { id: "drink", src: "https://cdn-icons-png.flaticon.com/512/920/920587.png", name: "Drink" },
@@ -608,6 +954,59 @@ const GRAPHIC_STICKERS = [
   { id: "pin", src: "https://cdn-icons-png.flaticon.com/512/149/149059.png", name: "Pin" },
   { id: "vinyl2", src: "https://cdn-icons-png.flaticon.com/512/1834/1834342.png", name: "Vinyl Record" },
   { id: "margarita", src: "https://cdn-icons-png.flaticon.com/512/362/362504.png", name: "Margarita" },
+] as const;
+
+const STUDIO_NIGHTLIFE_GRAPHICS = [
+  {
+    id: "vip",
+    label: "VIP",
+    paths: [
+      "M20 34L36 20L52 38L64 18L76 38L92 20L108 34L92 52L108 70L92 88L76 70L64 94L52 70L36 88L20 70L36 52Z",
+      "M44 52L56 64L84 36",
+    ],
+  },
+  {
+    id: "rooftop",
+    label: "Rooftop",
+    paths: [
+      "M18 88H110",
+      "M24 88V52L46 68V40L68 56V28L92 44V88",
+      "M32 78H38",
+      "M54 64H60",
+      "M76 52H82",
+    ],
+  },
+  {
+    id: "champagne",
+    label: "Champagne",
+    paths: [
+      "M54 16C54 8 62 8 62 16V36L74 54V70C74 82 68 92 60 100",
+      "M60 100C52 92 46 82 46 70V54L58 36V16",
+      "M46 70H74",
+      "M44 108H76",
+    ],
+  },
+  {
+    id: "laser",
+    label: "Laser",
+    paths: [
+      "M16 86L54 48",
+      "M26 96L64 58",
+      "M76 44L112 8",
+      "M66 54L102 18",
+      "M18 18H42V42",
+    ],
+  },
+] as const;
+
+const STUDIO_GRAPHIC_STICKERS = [
+  { id: "mirror_ball", src: "https://cdn-icons-png.flaticon.com/512/6140/6140960.png", name: "Mirror Ball" },
+  { id: "hookah", src: "https://cdn-icons-png.flaticon.com/512/6565/6565351.png", name: "Hookah" },
+  { id: "bottle_service", src: "https://cdn-icons-png.flaticon.com/512/1529/1529490.png", name: "Bottle Service" },
+  { id: "sound_wave", src: "https://cdn-icons-png.flaticon.com/512/6707/6707083.png", name: "Sound Wave" },
+  { id: "microphone", src: "https://cdn-icons-png.flaticon.com/512/8939/8939243.png", name: "Microphone" },
+  { id: "palm_tree", src: "https://cdn-icons-png.flaticon.com/512/2220/2220105.png", name: "Palm Tree" },
+  { id: "snowflake", src: "https://cdn-icons-png.flaticon.com/512/2942/2942909.png", name: "Snowflake" },
 ] as const;
 
 const FLARE_LIBRARY = [
@@ -624,6 +1023,92 @@ const FLARE_LIBRARY = [
   { id: "cloud03", src: "/clouds/cloud03.png", name: "Cloud 03", tintMode: "colorize" },
   { id: "cloud04", src: "/clouds/cloud04.png", name: "Cloud 04", tintMode: "colorize" },
 ] as const;
+
+const STUDIO_FLARE_LIBRARY = [
+  { id: "flare03", src: "/flares/flare03.png", name: "Amber Burst" },
+  { id: "flareBlue02", src: "/flares/flareBlue02.png", name: "Deep Blue Beam" },
+  { id: "flareBlack", src: "/flares/flareBlack.png", name: "Black Flare" },
+  { id: "white01", src: "/flares/white01.png", name: "White Flare" },
+] as const;
+
+const STUDIO_TEXTURE_LIBRARY = [
+  { id: "paint01", src: "/textures/paint01.png", name: "Paint 01", tintMode: "colorize" },
+  { id: "paint02", src: "/textures/paint02.png", name: "Paint 02", tintMode: "colorize" },
+  { id: "paint03", src: "/textures/paint03.png", name: "Paint 03", tintMode: "colorize" },
+  { id: "paint04", src: "/textures/paint04.png", name: "Paint 04", tintMode: "colorize" },
+] as const;
+
+const formatUiLabelCaps = (value: string | null | undefined) => {
+  const text = typeof value === "string" ? value.trim() : "";
+  return text ? text.toUpperCase() : "";
+};
+
+const normalizeAssetLookupValue = (value: string | null | undefined) => {
+  const text = typeof value === "string" ? value.trim() : "";
+  if (!text) return "";
+  return text.split("?")[0]?.split("#")[0] || "";
+};
+
+const resolveCanvasAssetName = (asset: any) => {
+  if (!asset) return null;
+
+  const explicitLabel = typeof asset.label === "string" ? asset.label.trim() : "";
+  if (explicitLabel) return explicitLabel;
+
+  const baseId = String(asset.id || "").split("_")[1] || "";
+  const assetUrl = normalizeAssetLookupValue(String(asset.url || ""));
+
+  const matchByUrl = <T,>(items: readonly T[], getSrc: (item: T) => string) =>
+    items.find((item) => normalizeAssetLookupValue(getSrc(item)) === assetUrl) || null;
+
+  const textureById = STUDIO_TEXTURE_LIBRARY.find((item) => item.id === baseId);
+  const textureByUrl = matchByUrl(STUDIO_TEXTURE_LIBRARY, (item) => item.src);
+  if ((asset as any).isTexture || textureById || textureByUrl) {
+    return textureById?.name || textureByUrl?.name || "Texture";
+  }
+
+  const separatorById = TEXT_SEPARATOR_GRAPHICS.find((item) => item.id === baseId);
+  if ((asset as any).isSeparator || separatorById) {
+    return separatorById?.label || "Separator";
+  }
+
+  const shapeById = SHAPE_GRAPHICS.find((item) => item.id === baseId);
+  if ((asset as any).isShapeGraphic || shapeById) {
+    return shapeById?.label || "Shape";
+  }
+
+  const stickerById =
+    SOCIAL_MEDIA_STICKERS.find((item) => item.id === baseId) ||
+    GRAPHIC_STICKERS.find((item) => item.id === baseId) ||
+    STUDIO_GRAPHIC_STICKERS.find((item) => item.id === baseId);
+  const stickerByUrl =
+    matchByUrl(SOCIAL_MEDIA_STICKERS, (item) => item.src) ||
+    matchByUrl(GRAPHIC_STICKERS, (item) => item.src) ||
+    matchByUrl(STUDIO_GRAPHIC_STICKERS, (item) => item.src);
+  if (stickerById || stickerByUrl) {
+    return stickerById?.name || stickerByUrl?.name || "Graphic";
+  }
+
+  const nightlifeGraphicById =
+    NIGHTLIFE_GRAPHICS.find((item) => item.id === baseId) ||
+    STUDIO_NIGHTLIFE_GRAPHICS.find((item) => item.id === baseId);
+  if (nightlifeGraphicById) {
+    return nightlifeGraphicById.label;
+  }
+
+  const flareById =
+    FLARE_LIBRARY.find((item) => item.id === baseId) ||
+    STUDIO_FLARE_LIBRARY.find((item) => item.id === baseId);
+  const flareByUrl =
+    matchByUrl(FLARE_LIBRARY, (item) => item.src) ||
+    matchByUrl(STUDIO_FLARE_LIBRARY, (item) => item.src);
+  if (asset.isFlare || flareById || flareByUrl) {
+    return flareById?.name || flareByUrl?.name || "Flare";
+  }
+
+  if (asset.isSticker) return "Graphic";
+  return null;
+};
 
 const TAG_CANONICAL_MAP: Record<string, string> = {
   "minimal": "Minimal",
@@ -670,7 +1155,13 @@ const STARTER_TEMPLATE_IDS = new Set<string>([
   "edm_stage_co2",
   "hiphop_lowrider",
   "afrobeat_rooftop",
+  "ladies_pinkchrome",
+  "rnb_velvet",
+  "atlanta",
+  "bottle_service",
+  "martini",
 ]);
+const STARTER_TEMPLATE_COUNT = STARTER_TEMPLATE_IDS.size;
 
 function canonicalizeTemplateTags(tags: string[]): string[] {
   const out = new Set<string>();
@@ -833,6 +1324,7 @@ type TextFx = {
   bold: boolean;
   italic: boolean;
   underline: boolean;
+  alpha: number;
   tracking: number;
   texture?: string;
 
@@ -1727,14 +2219,11 @@ function renderHeadlineRich(
 
 /* ===== BLOCK: HEADLINE TYPE HELPERS (END) ===== */
 
-type Shape = {
-  id: string;
-  kind: 'rect' | 'circle' | 'line';
-  x: number; y: number;            // percent
-  width?: number; height?: number; // percent (rect/line)
-  r?: number;                      // circle radius (% of short edge)
-  rotation?: number;               // degrees
-  fill: string; stroke: string; strokeWidth: number; opacity: number;
+type CanvasPortraitPlacement = {
+  centerX: number;
+  centerY: number;
+  width: number;
+  height: number;
 };
 
 type Icon = {
@@ -1861,19 +2350,11 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
 
 
   logoX: number; logoY: number; logoScale: number;
-
-  // selection + locking
-  selShapeId: string | null;
-  onSelectShape?: (id: string) => void;
-  onToggleLock?: (t: 'shape' | 'icon', id: string) => void;
-  isLocked?: (t: 'shape' | 'icon', id: string) => boolean;
+  onToggleLock?: (t: 'icon', id: string) => void;
+  isLocked?: (t: 'icon', id: string) => boolean;
 
   // ICON trash 
   onDeleteIcon?: (id: string) => void;
-
-
-  /** ✅ shapes come in via props */
-  shapes?: Shape[];
   icons?: Icon[];
 
   onPortraitMove?: (x: number, y: number) => void;
@@ -1886,16 +2367,12 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
   onSubtagMove?: (x: number, y: number) => void; 
   onBgMove?: (x: number, y: number) => void;
   onBgScale?: (s: number) => void;
-
   onHead2Move?: (x: number, y: number) => void;
-  onShapeMove?: (id: string, x: number, y: number) => void;
   onIconMove?: (id: string, x: number, y: number) => void;
   onIconResize?: (id: string, size: number) => void;
   onRecordMove?: (kind: any, x: number, y: number, id?: string) => void;
   isMobileView?: boolean;
-
   onClearIconSelection?: () => void;
-  onDeleteShape?: (id: string) => void;
   
   selIconId?: string | null;
   onSelectIcon?: (id: string) => void;
@@ -1908,14 +2385,12 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
   portraitCanvas?: React.ReactNode;
   emojiCanvas?: React.ReactNode;
   flareCanvas?: React.ReactNode;
+  showDjTextEditing: boolean;
 
   
 
 }>((p, ref) => {
-
-
   // ✅ CLEAN DESTRUCTURE — do NOT put type annotations here.
-  // If you previously had "shapes?: ..." inside this destructuring, remove it.
   const {
     headRotate, head2Rotate, detailsRotate, details2Rotate, venueRotate, subtagRotate, logoRotate, headAlign,
     palette, format, portraitUrl, bgUrl, bgUploadUrl, logoUrl, hue, haze, grade, leak, vignette, bgPosX, bgPosY,
@@ -1958,7 +2433,7 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
 
     // movers
     onPortraitMove, onPortraitScale, onDeletePortrait, onLogoMove, onHeadMove, onDetailsMove, onVenueMove, onSubtagMove, 
-    onBgMove, onHead2Move, onDetails2Move, onShapeMove, onBgScale, onIconMove, onIconResize, onRecordMove, onDeleteIcon,
+    onBgMove, onHead2Move, onDetails2Move, onBgScale, onIconMove, onIconResize, onRecordMove, onDeleteIcon,
     portraitBoxW, portraitBoxH,
     emojis,
     onEmojiMove,
@@ -1968,16 +2443,14 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
     portraitCanvas,
     emojiCanvas,
     flareCanvas,
+    showDjTextEditing,
 
-    /** ✅ alias shapes prop to a local name that won’t collide with any state */
-    shapes: shapesProp = [],
     icons: iconsProp = [],
 
-    selShapeId, selIconId,
+    selIconId,
     isLocked: isLockedFn,
     onToggleLock,
     onSelectIcon,
-    onSelectShape,
   } = p;
 
 // === LOCK UI (single source) ===
@@ -1988,68 +2461,6 @@ const selBox = (on: boolean) =>
   on
     ? { outline: '2px dashed #A78BFA', outlineOffset: 4, borderRadius: 8 as number }
     : {};
-
-
-// Accept all targets so existing uses compile; only shape/icon actually lock.
-const LockButton = ({
-  t,
-  id,
-  x,
-  y
-}: {
-  t:
-    | 'shape'
-    | 'icon'
-    | 'headline'
-    | 'headline2'
-    | 'details'
-    | 'details2'
-    | 'venue'
-    | 'subtag'
-    | 'portrait'
-    | 'logo'
-    | 'background';
-  id?: string;
-  x: number;
-  y: number;
-}) => {
-  const isLockable = (t === 'shape' || t === 'icon') && !!id;
-  const locked = isLockable ? (p.isLocked?.(t as 'shape' | 'icon', id!) ?? false) : false;
-
-  return (
-    <button
-      type="button"
-      // ⬇️ This line is the fix: prevent parent icon/shape from starting a drag
-      onPointerDown={(e) => { e.stopPropagation(); }}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (isLockable) p.onToggleLock?.(t as 'shape' | 'icon', id!);
-      }}
-      className="absolute z-[1000]"
-      title={isLockable ? (locked ? 'Unlock' : 'Lock') : 'Not lockable'}
-      style={{
-        left: x,
-        top: y,
-        transform: 'translate(-50%,-50%)',
-        width: 22,
-        height: 22,
-        borderRadius: 6,
-        background: '#0f172a',
-        border: '1px solid #334155',
-        color: locked ? '#70FFEA' : '#ffffff',
-        boxShadow: locked ? '0 0 10px #70FFEA' : 'none',
-        lineHeight: 1,
-        cursor: isLockable ? 'pointer' : 'default',
-        opacity: isLockable ? 1 : 0.6,
-        pointerEvents: 'auto',
-      }}
-    >
-      {isLockable ? (locked ? '🔒' : '🔓') : '🔒'}
-    </button>
-  );
-};
-
-
 
   const t = {} as any;
   const head2Text = (p.head2 && p.head2.trim()) ? p.head2 : 'SUB HEADLINE';
@@ -2522,7 +2933,7 @@ function beginDrag(
 
   // Respect locks
   if (
-    (target === "shape" || target === "icon") &&
+    target === "icon" &&
     shapeId &&
     isLockedFn?.(target, shapeId)
   ) {
@@ -2544,8 +2955,8 @@ function beginDrag(
       offY: pointerY - anchorTop,
       wPct: (r.width / rect.width) * 100,
       hPct: (r.height / rect.height) * 100,
-    };
   };
+};
 
   const elForOffset = node ?? (e.currentTarget as Element);
   const { offX, offY, wPct, hPct } = getOff(elForOffset);
@@ -2726,7 +3137,7 @@ const onMoveImmediate = (() => {
     const newYRaw = ((clientY - startY) / rect.height) * 100;
     const ny = posSnap(clampVirtual(Number(newYRaw)));
 
-    if (d.target && d.target !== "shape" && d.target !== "icon" && canvasRefs[d.target]) {
+    if (d.target && d.target !== "icon" && canvasRefs[d.target]) {
        const el = canvasRefs[d.target] as HTMLElement;
        el.style.left = `${nx}%`;
        el.style.top = `${ny}%`;
@@ -2795,7 +3206,6 @@ function endDrag() {
           st.setSessionValue(fmt, "logoX", safeX);
           st.setSessionValue(fmt, "logoY", safeY);
           break;
-
         case "portrait":
           if (d.shapeId) {
             const list = st.portraits[fmt] || [];
@@ -3221,226 +3631,6 @@ return (
 {emojiCanvas}
 {flareCanvas}
 {/* ====================== PORTRAIT LAYER (END) =========================== */}
-
-
-{/* ====================================================================== */}
-{/* =========================== SHAPES LAYER ============================== */}
-{/* ====================================================================== */}
-{Array.isArray(shapesProp) && shapesProp.length > 0 && (
-  <>
-    <svg
-      className="absolute inset-0"
-      style={{
-        zIndex: 18,
-        pointerEvents: 'auto',
-        cursor: moveMode && moveTarget === 'shape' ? 'grab' : 'default',
-        touchAction: 'none',
-      }}
-    >
-      {shapesProp.map((sh) => (
-        <g
-          key={sh.id}
-          onPointerDown={(e) => {
-            if (isLockedFn?.('shape', sh.id)) return;
-            onSelectShape?.(sh.id);
-            onRecordMove?.("shape", sh.x, sh.y, sh.id);
-            beginDrag(
-              e as unknown as React.PointerEvent,
-              'shape',
-              e.currentTarget as unknown as SVGGraphicsElement,
-              sh.id
-            );
-          }}
-          onClick={() => onSelectShape?.(sh.id)}
-          style={{ pointerEvents: 'auto' }}
-        >
-          {/* === SHAPE BASE === */}
-          {sh.kind === 'rect' && (
-            <rect
-              x={`${sh.x}%`}
-              y={`${sh.y}%`}
-              width={`${(sh.width ?? 10)}%`}
-              height={`${(sh.height ?? 6)}%`}
-              transform={sh.rotation ? `rotate(${sh.rotation}, ${sh.x}%, ${sh.y}%)` : undefined}
-              fill={sh.fill}
-              stroke={sh.stroke}
-              strokeWidth={sh.strokeWidth}
-              opacity={sh.opacity}
-              rx="2%"
-              ry="2%"
-            />
-          )}
-
-          {sh.kind === 'circle' && (() => {
-            const px = (sh.r ?? 6) * 5.4;
-            return (
-              <circle
-                cx={`${sh.x}%`}
-                cy={`${sh.y}%`}
-                r={px}
-                fill={sh.fill}
-                stroke={sh.stroke}
-                strokeWidth={sh.strokeWidth}
-                opacity={sh.opacity}
-              />
-            );
-          })()}
-
-          {sh.kind === 'line' && (
-            <line
-              x1={`${sh.x}%`}
-              y1={`${sh.y}%`}
-              x2={`${(sh.x + (sh.width ?? 12))}%`}
-              y2={`${(sh.y + (sh.height ?? 0))}%`}
-              stroke={sh.stroke}
-              strokeWidth={sh.strokeWidth}
-              opacity={sh.opacity}
-            />
-          )}
-
-          {/* === SHAPE OUTLINE (ACTIVE) === */}
-          {isActive('shape') && selShapeId === sh.id && (
-            <>
-              {sh.kind === 'rect' && (
-                <rect
-                  x={`${sh.x}%`}
-                  y={`${sh.y}%`}
-                  width={`${(sh.width ?? 10)}%`}
-                  height={`${(sh.height ?? 6)}%`}
-                  transform={sh.rotation ? `rotate(${sh.rotation}, ${sh.x}%, ${sh.y}%)` : undefined}
-                  fill="none"
-                  stroke={NEON}
-                  strokeWidth={2.5}
-                  strokeDasharray="4 3"
-                  opacity={0.95}
-                />
-              )}
-
-              {sh.kind === 'circle' && (() => {
-                const px = (sh.r ?? 6) * 5.4;
-                return (
-                  <circle
-                    cx={`${sh.x}%`}
-                    cy={`${sh.y}%`}
-                    r={px}
-                    fill="none"
-                    stroke={NEON}
-                    strokeWidth={2.5}
-                    strokeDasharray="4 3"
-                    opacity={0.95}
-                  />
-                );
-              })()}
-
-              {sh.kind === 'line' && (
-                <line
-                  x1={`${sh.x}%`}
-                  y1={`${sh.y}%`}
-                  x2={`${(sh.x + (sh.width ?? 12))}%`}
-                  y2={`${(sh.y + (sh.height ?? 0))}%`}
-                  stroke={NEON}
-                  strokeWidth={3}
-                  strokeDasharray="4 3"
-                  opacity={0.95}
-                />
-              )}
-            </>
-          )}
-        </g>
-      ))}
-    </svg>
-
-    {/* === SHAPE TOOLBAR (LOCK/DELETE) === */}
-    {moveTarget === 'shape' && selShapeId && (() => {
-      const sel = (shapesProp || []).find(s => s.id === selShapeId);
-      if (!sel) return null;
-
-      return (
-        <div
-          className="absolute"
-          style={{
-            left: `${sel.x}%`,
-            top: `${sel.y}%`,
-            transform: 'translate(-50%, -50%)',
-            zIndex: 1100,
-            pointerEvents: 'none'
-          }}
-        >
-          <div
-            className="absolute"
-            style={{
-              top: 0,
-              right: -18,
-              display: 'flex',
-              gap: 6,
-              pointerEvents: 'auto'
-            }}
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Lock */}
-            <button
-              type="button"
-              title={(p.isLocked?.('shape', sel.id) ?? false) ? 'Unlock' : 'Lock'}
-              onClick={() => p.onToggleLock?.('shape', sel.id)}
-              style={{
-                width: 22,
-                height: 22,
-                borderRadius: 6,
-                background: '#0f172a',
-                border: '1px solid #334155',
-                color: (p.isLocked?.('shape', sel.id) ?? false) ? '#70FFEA' : '#ffffff',
-                lineHeight: 1,
-              }}
-            >
-              {(p.isLocked?.('shape', sel.id) ?? false) ? '🔒' : '🔓'}
-            </button>
-
-            {/* Portrait Actions (legacy UI kept) */}
-            <div style={{ display:'flex', gap:6 }}>
-              <button
-                type="button"
-                title={p.portraitLocked ? 'Unlock portrait' : 'Lock portrait'}
-                onClick={p.onTogglePortraitLock}
-                style={{
-                  width: 22,
-                  height: 22,
-                  borderRadius: 6,
-                  background: '#0f172a',
-                  border: '1px solid #334155',
-                  color: '#ffffff',
-                }}
-              >
-                {p.portraitLocked ? '🔒' : '🔓'}
-              </button>
-
-              <button
-                type="button"
-                title="Delete"
-                onClick={() => p.onDeletePortrait?.()}
-                style={{
-                  width: 22,
-                  height: 22,
-                  borderRadius: 6,
-                  background: '#0f172a',
-                  border: '1px solid #334155',
-                  color: '#ffffff',
-                }}
-              >
-                🗑️
-              </button>
-            </div>
-
-          </div>
-        </div>
-      );
-    })()}
-  </>
-)}
-{/* =========================== SHAPES LAYER (END) ======================== */}
-
-
-
 {/* ====================================================================== */}
 {/* ============================= ICONS LAYER ============================= */}
 {/* ====================================================================== */}
@@ -3626,10 +3816,11 @@ return (
   ref={(el) => {
   canvasRefs.measure = el;
 }}
+  aria-hidden="true"
   className="font-black absolute opacity-0 pointer-events-none"
   style={{
-    left: `${headX}%`,
-    top: `${headY}%`,
+    left: `-99999px`,
+    top: `-99999px`,
     width: `${textColWidth}%`,
     fontFamily: headlineFamily,
     fontSize: headDisplayPx,
@@ -3640,7 +3831,11 @@ return (
     fontWeight: textFx.bold ? 900 : 700,
     fontStyle: textFx.italic ? 'italic' : 'normal',
     textDecorationLine: textFx.underline ? 'underline' : 'none',
+    opacity: textFx.alpha,
     display: 'block',
+    visibility: 'hidden',
+    zIndex: -1,
+    overflow: 'hidden',
     transformOrigin: '50% 50%',
     WebkitTextStrokeWidth: textFx.gradient
       ? undefined
@@ -3708,6 +3903,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 </h1>
 
 
+{showDjTextEditing && (
+<>
 
 {/* HEADLINE (BEGIN) - FIXED & THROTTLED */}
 <div
@@ -3852,6 +4049,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
       fontWeight: textFx.bold ? 900 : 700,
       fontStyle: textFx.italic ? 'italic' : 'normal',
       textDecorationLine: textFx.underline ? 'underline' : 'none',
+      opacity: textFx.alpha,
 
       color: textFx.gradient ? 'transparent' : textFx.color,
 
@@ -4656,6 +4854,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 )}
 {/* SUBTAG (END) */}
 
+ </>
+)}
 
             {/* Snap grid (shows only when Guides + Snap are on) */}
       {showGuides && snap && (
@@ -4834,33 +5034,58 @@ async function blobUrlToDataUrl(blobUrl: string): Promise<string> {
 // 2. HELPER: Normalize Save Data (Inlines all images)
 // ------------------------------------------------------------------
 async function normalizeImagesForSave(design: any) {
-  const d = structuredClone(design); // Deep copy
-
-  // 1. Fix Background
-  if (typeof d.bgUrl === "string" && d.bgUrl.startsWith("blob:")) {
-    d.bgUrl = await blobUrlToDataUrl(d.bgUrl);
-  }
-
-  // 2. Fix Portrait Slots (Library)
-  if (Array.isArray(d.portraitSlots)) {
-    for (let i = 0; i < d.portraitSlots.length; i++) {
-      if (d.portraitSlots[i]?.startsWith("blob:")) {
-        d.portraitSlots[i] = await blobUrlToDataUrl(d.portraitSlots[i]);
+  const walk = async (node: any): Promise<any> => {
+    if (typeof node === "string") {
+      if (!node.startsWith("blob:")) return node;
+      try {
+        return await blobUrlToDataUrl(node);
+      } catch {
+        return node;
       }
     }
-  }
 
-  // 3. Fix Portraits on Canvas (iterate all formats)
-  const lists = [d.portraits?.square, d.portraits?.story].filter(Array.isArray);
-  for (const list of lists) {
-    for (const p of list) {
-      if (typeof p.url === "string" && p.url.startsWith("blob:")) {
-        p.url = await blobUrlToDataUrl(p.url);
-      }
+    if (Array.isArray(node)) {
+      return Promise.all(node.map((item) => walk(item)));
     }
-  }
 
-  return d;
+    if (node && typeof node === "object") {
+      const entries = await Promise.all(
+        Object.entries(node).map(async ([key, value]) => [key, await walk(value)] as const)
+      );
+      return Object.fromEntries(entries);
+    }
+
+    return node;
+  };
+
+  return walk(structuredClone(design));
+}
+
+async function compressBackgroundForStorage(value: string): Promise<string> {
+  const maxPersistedDataUrlLen = 220_000;
+  if (typeof window === "undefined") return value;
+  if (!/^data:image\//i.test(value)) return value;
+  if (value.length <= maxPersistedDataUrlLen) return value;
+
+  return await new Promise<string>((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const maxDim = 1600;
+      const maxSide = Math.max(img.width, img.height);
+      const scale = maxSide > maxDim ? maxDim / maxSide : 1;
+      const width = Math.max(1, Math.round(img.width * scale));
+      const height = Math.max(1, Math.round(img.height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return resolve(value);
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL("image/jpeg", 0.82));
+    };
+    img.onerror = () => resolve(value);
+    img.src = value;
+  });
 }
 
 // ------------------------------------------------------------------
@@ -4871,11 +5096,21 @@ function normalizeDesignJson(design: any, currentFormat: string) {
   
   // Flatten text styles if nested differently in older versions
   const headline = design.headline ?? design.text?.headline;
+  const head2 = design.head2 ?? design.text?.head2 ?? design.text?.headline2;
+  const details = design.details ?? design.text?.details;
+  const details2 = design.details2 ?? design.text?.details2;
+  const venue = design.venue ?? design.text?.venue;
+  const subtag = design.subtag ?? design.text?.subtag;
   
   return {
     ...design,
     format: targetFmt,
     headline,
+    head2,
+    details,
+    details2,
+    venue,
+    subtag,
     portraits: design.portraits || design.portraitsByFormat || {},
     emojis: design.emojis || design.emojisByFormat || {},
   };
@@ -6228,6 +6463,7 @@ export default function Page() {
   // 🍌 MAGIC BLEND STATE
   // ==========================================
   const [isBlending, setIsBlending] = useState(false);
+  const [isCapturingBlendBackground, setIsCapturingBlendBackground] = useState(false);
   const [blendSubject, setBlendSubject] = useState<string | null>(null);
   const [blendBackground, setBlendBackground] = useState<string | null>(null);
   const [blendBackgroundPriority, setBlendBackgroundPriority] = useState<
@@ -6362,6 +6598,8 @@ export default function Page() {
   // ===========================================
   const [activeTemplate, setActiveTemplate] = useState<TemplateSpec | null>(null);
   const [format, setFormat] = useState<Format>("square");
+  const [startupStudioMode, setStartupStudioMode] = React.useState<null | "dj">(null);
+  const [djStartupFlowStage, setDjStartupFlowStage] = React.useState<DjStartupFlowStage>("design");
   const vibeUploadInputRef = React.useRef<HTMLInputElement | null>(null);
   
   const [headlineHidden, setHeadlineHidden] = useState(false);
@@ -6434,6 +6672,51 @@ export default function Page() {
       });
     };
 
+    const hasUsableTransparency = async (dataUrl: string): Promise<boolean> => {
+      try {
+        const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const el = new Image();
+          el.onload = () => resolve(el);
+          el.onerror = () => reject(new Error("Failed to load cutout preview"));
+          el.src = dataUrl;
+        });
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx || !canvas.width || !canvas.height) return false;
+        ctx.drawImage(img, 0, 0);
+
+        const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const total = width * height;
+        if (!total) return false;
+
+        const border = Math.max(1, Math.round(Math.min(width, height) * 0.03));
+        let transparentPixels = 0;
+        let edgePixels = 0;
+        let edgeOpaquePixels = 0;
+
+        for (let y = 0; y < height; y += 1) {
+          for (let x = 0; x < width; x += 1) {
+            const i = (y * width + x) * 4;
+            const alpha = data[i + 3];
+            if (alpha < 8) transparentPixels += 1;
+            if (x < border || y < border || x >= width - border || y >= height - border) {
+              edgePixels += 1;
+              if (alpha > 245) edgeOpaquePixels += 1;
+            }
+          }
+        }
+
+        return (
+          transparentPixels / total > 0.03 &&
+          edgeOpaquePixels / Math.max(edgePixels, 1) < 0.94
+        );
+      } catch {
+        return false;
+      }
+    };
+
     const rawUrl = await toBase64(file);
 
     if (type === 'bg') {
@@ -6443,19 +6726,18 @@ export default function Page() {
       // ✂️ SUBJECT: Trigger Loading -> Remove BG -> Convert to Base64
       setIsCuttingOut(true);
       try {
-
-        
-        // 1. Get the cutout (likely a Blob URL)
         const cutoutBlobUrl = await removeBackgroundLocal(rawUrl);
-        
-        // 2. Convert to Base64 immediately so API doesn't crash
         const cutoutBase64 = await blobToBase64(cutoutBlobUrl);
-        
+        const usableCutout = await hasUsableTransparency(cutoutBase64);
+        if (!usableCutout) {
+          throw new Error("Background removal did not produce a transparent cutout.");
+        }
         setBlendSubject(cutoutBase64);
-        
-      } catch (err) {
-
-        setBlendSubject(rawUrl); // Fallback to original if cutout fails
+        setBlendSubjectCutout(cutoutBase64);
+      } catch (err: any) {
+        setBlendSubject(null);
+        setBlendSubjectCutout(null);
+        alert(err?.message || "Background removal failed. Upload a subject with the background removed.");
       } finally {
         setIsCuttingOut(false);
       }
@@ -6515,14 +6797,205 @@ export default function Page() {
     return canvas.toDataURL("image/jpeg", 0.95);
   };
 
+  const createScenePlacementAssets = async (
+    bgSourceUrl: string,
+    guideSubjectSourceUrl: string,
+    placement?: CanvasPortraitPlacement | null,
+    referenceStyle: "silhouette" | "subject" = "silhouette"
+  ) => {
+    const canvas = document.createElement("canvas");
+    const maskCanvas = document.createElement("canvas");
+    const w = 1024;
+    const h = format === "story" ? 1792 : 1024;
+    canvas.width = w;
+    canvas.height = h;
+    maskCanvas.width = w;
+    maskCanvas.height = h;
+    const ctx = canvas.getContext("2d")!;
+    const maskCtx = maskCanvas.getContext("2d")!;
+
+    const loadImage = (src: string) =>
+      new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("Failed to load replacement reference asset"));
+        img.src = src;
+      });
+
+    const [bg, guideSubject] = await Promise.all([
+      loadImage(bgSourceUrl),
+      loadImage(guideSubjectSourceUrl),
+    ]);
+
+    let guideSource: CanvasImageSource = guideSubject;
+    let guideWidth = guideSubject.width;
+    let guideHeight = guideSubject.height;
+    if (referenceStyle !== "subject") {
+      try {
+        const guideCanvas = document.createElement("canvas");
+        guideCanvas.width = guideSubject.width;
+        guideCanvas.height = guideSubject.height;
+        const guideCtx = guideCanvas.getContext("2d", { willReadFrequently: true });
+        if (guideCtx) {
+          guideCtx.drawImage(guideSubject, 0, 0);
+          const raw = guideCtx.getImageData(0, 0, guideCanvas.width, guideCanvas.height);
+          let minX = guideCanvas.width;
+          let minY = guideCanvas.height;
+          let maxX = -1;
+          let maxY = -1;
+          for (let y = 0; y < guideCanvas.height; y++) {
+            for (let x = 0; x < guideCanvas.width; x++) {
+              const alpha = raw.data[(y * guideCanvas.width + x) * 4 + 3];
+              if (alpha > 12) {
+                if (x < minX) minX = x;
+                if (y < minY) minY = y;
+                if (x > maxX) maxX = x;
+                if (y > maxY) maxY = y;
+              }
+            }
+          }
+
+          const cropRatio =
+            blendCameraZoom === "three-quarter"
+              ? 0.72
+              : blendCameraZoom === "waist-up"
+              ? 0.54
+              : blendCameraZoom === "chest-up"
+              ? 0.38
+              : 1;
+          if (maxX >= minX && maxY >= minY && cropRatio < 0.999) {
+            const boundsWidth = maxX - minX + 1;
+            const boundsHeight = maxY - minY + 1;
+            const sidePad = Math.max(1, Math.round(boundsWidth * 0.05));
+            const topPad = Math.max(1, Math.round(boundsHeight * 0.04));
+            const extractLeft = Math.max(0, minX - sidePad);
+            const extractTop = Math.max(0, minY - topPad);
+            const extractWidth = Math.min(
+              guideCanvas.width - extractLeft,
+              boundsWidth + sidePad * 2
+            );
+            const extractHeight = Math.min(
+              guideCanvas.height - extractTop,
+              Math.max(1, Math.round(boundsHeight * cropRatio + topPad))
+            );
+
+            const croppedGuideCanvas = document.createElement("canvas");
+            croppedGuideCanvas.width = extractWidth;
+            croppedGuideCanvas.height = extractHeight;
+            const croppedGuideCtx = croppedGuideCanvas.getContext("2d");
+            if (croppedGuideCtx) {
+              croppedGuideCtx.drawImage(
+                guideSubject,
+                extractLeft,
+                extractTop,
+                extractWidth,
+                extractHeight,
+                0,
+                0,
+                extractWidth,
+                extractHeight
+              );
+              guideSource = croppedGuideCanvas;
+              guideWidth = extractWidth;
+              guideHeight = extractHeight;
+            }
+          }
+        }
+      } catch {}
+    }
+
+    const bgScaleFactor = Math.max(w / bg.width, h / bg.height);
+    const bgW = bg.width * bgScaleFactor;
+    const bgH = bg.height * bgScaleFactor;
+    ctx.drawImage(bg, (w - bgW) / 2, (h - bgH) / 2, bgW, bgH);
+    maskCtx.fillStyle = "#000";
+    maskCtx.fillRect(0, 0, w, h);
+
+    const baseW = typeof pBaseW === "number" ? pBaseW : 100;
+    const baseH = typeof pBaseH === "number" ? pBaseH : 100;
+    const slotW = Math.max(
+      1,
+      placement ? (placement.width * w) / 100 : (baseW * portraitScale * w) / 100
+    );
+    const slotH = Math.max(
+      1,
+      placement ? (placement.height * h) / 100 : (baseH * portraitScale * h) / 100
+    );
+    const slotLeft = placement
+      ? ((placement.centerX - placement.width / 2) / 100) * w
+      : (portraitX / 100) * w;
+    const slotTop = placement
+      ? ((placement.centerY - placement.height / 2) / 100) * h
+      : (portraitY / 100) * h;
+
+    const containScale = Math.min(slotW / guideWidth, slotH / guideHeight);
+    const drawW =
+      referenceStyle === "subject" ? Math.max(1, slotW) : Math.max(1, guideWidth * containScale);
+    const drawH =
+      referenceStyle === "subject" ? Math.max(1, slotH) : Math.max(1, guideHeight * containScale);
+    const drawLeft = referenceStyle === "subject" ? slotLeft : slotLeft + (slotW - drawW) / 2;
+    const drawTop = referenceStyle === "subject" ? slotTop : slotTop + (slotH - drawH) / 2;
+
+    const subjectCanvas = document.createElement("canvas");
+    subjectCanvas.width = w;
+    subjectCanvas.height = h;
+    const subjectCtx = subjectCanvas.getContext("2d")!;
+    subjectCtx.drawImage(guideSource, drawLeft, drawTop, drawW, drawH);
+
+    const silhouetteCanvas = document.createElement("canvas");
+    silhouetteCanvas.width = w;
+    silhouetteCanvas.height = h;
+    const silhouetteCtx = silhouetteCanvas.getContext("2d")!;
+    silhouetteCtx.drawImage(subjectCanvas, 0, 0);
+    silhouetteCtx.globalCompositeOperation = "source-in";
+    silhouetteCtx.fillStyle = "rgba(196, 196, 196, 0.92)";
+    silhouetteCtx.fillRect(0, 0, w, h);
+    silhouetteCtx.globalCompositeOperation = "source-over";
+
+    if (referenceStyle === "subject") {
+      ctx.drawImage(subjectCanvas, 0, 0);
+    } else {
+      ctx.drawImage(silhouetteCanvas, 0, 0);
+    }
+    maskCtx.drawImage(subjectCanvas, 0, 0);
+    maskCtx.globalCompositeOperation = "source-in";
+    maskCtx.fillStyle = "#fff";
+    maskCtx.fillRect(0, 0, w, h);
+    maskCtx.globalCompositeOperation = "source-over";
+
+    return {
+      placementReference: canvas.toDataURL("image/png"),
+      placementMask: maskCanvas.toDataURL("image/png"),
+    };
+  };
+
 // 2. The Magic Blend Action
-  const handleMagicBlend = async () => {
+  const handleMagicBlend = async (overrides?: {
+    subjectUrl?: string | null;
+    subjectCutoutUrl?: string | null;
+    subjectLayer?: any | null;
+    backgroundPriority?: "upload" | "canvas";
+  }) => {
     if (isStarterPlan) {
       alert("Starter plan has 0 AI generations. Upgrade or use a pass to use Magic Blend.");
       return;
     }
+    if (generationQuota?.remaining != null && generationQuota.remaining < 2) {
+      alert("No generations left for Magic Blend.");
+      return;
+    }
+    const subjectLayerForBlend =
+      overrides?.subjectLayer ?? activeBlendPortraitLayer;
+    const subjectToBlend =
+      overrides?.subjectCutoutUrl ||
+      overrides?.subjectUrl ||
+      blendSubjectCutout ||
+      blendSubject;
+    const backgroundPriorityToUse = overrides?.backgroundPriority ?? blendBackgroundPriority;
+
     // Basic validation
-    if (!blendSubject) {
+    if (!subjectToBlend) {
       alert("Please upload a Subject image.");
       return;
     }
@@ -6533,8 +7006,16 @@ export default function Page() {
    // }
 
     setIsBlending(true);
+    const currentCanvasBackgroundVersion = captureCurrentBackgroundVersion();
+    const originalPortraitVersion = subjectLayerForBlend?.url
+      ? capturePortraitLayerVersion(subjectLayerForBlend)
+      : captureCurrentPortraitVersion();
 
     try {
+      const token = await getAccessToken();
+      if (!token) {
+        throw new Error("Sign in to use Magic Blend.");
+      }
 
 
       // ✅ 1. Get Background: Respect priority, fallback if needed
@@ -6556,7 +7037,14 @@ export default function Page() {
       };
 
       let backgroundToSend: string | null = null;
-      if (blendBackgroundPriority === "canvas") {
+      let placementReferenceToSend: string | null = null;
+      let placementMaskToSend: string | null = null;
+      const activeCanvasSubjectUrl =
+        subjectLayerForBlend?.url || portraitUrl || null;
+      const activeCanvasSubjectPlacement = subjectLayerForBlend?.id
+        ? capturePortraitPlacementFromCanvas(subjectLayerForBlend.id)
+        : null;
+      if (backgroundPriorityToUse === "canvas") {
         backgroundToSend = (await fetchCanvasBg()) || blendBackground;
       } else {
         backgroundToSend = blendBackground || (await fetchCanvasBg());
@@ -6565,6 +7053,37 @@ export default function Page() {
       // Hard stop if we still don't have a background
       if (!backgroundToSend) {
         throw new Error("No background found. Please upload a background to the slot or the canvas.");
+      }
+
+      if (activeCanvasSubjectUrl) {
+        try {
+          const placementAssets = await createScenePlacementAssets(
+            backgroundToSend,
+            activeCanvasSubjectUrl,
+            activeCanvasSubjectPlacement
+          );
+          placementReferenceToSend = placementAssets.placementReference;
+          placementMaskToSend = placementAssets.placementMask;
+        } catch {}
+      }
+
+      let originalBackgroundVersion = currentCanvasBackgroundVersion;
+      if (backgroundPriorityToUse === "upload" && blendBackground) {
+        originalBackgroundVersion = createBackgroundVersion(blendBackground, {
+          scale: currentCanvasBackgroundVersion?.scale ?? 1,
+          posX: currentCanvasBackgroundVersion?.posX ?? 50,
+          posY: currentCanvasBackgroundVersion?.posY ?? 50,
+          rotate: currentCanvasBackgroundVersion?.rotate ?? 0,
+          fitMode: currentCanvasBackgroundVersion?.fitMode ?? false,
+        });
+      } else if (!originalBackgroundVersion) {
+        originalBackgroundVersion = createBackgroundVersion(backgroundToSend, {
+          scale: 1,
+          posX: 50,
+          posY: 50,
+          rotate: 0,
+          fitMode: false,
+        });
       }
 
 
@@ -6580,7 +7099,7 @@ export default function Page() {
       if (blendCameraZoom && blendCameraZoom !== "auto") {
         const zoomPrompt =
           blendCameraZoom === "full body"
-            ? "Camera framing: full-body, head-to-toe in frame, feet visible, space above head and below feet, 35mm lens, 10–15ft distance, no cropped limbs."
+            ? "Camera framing preference: full body only if it can stay naturally embedded in the existing scene. Do not create any inset frame, poster panel, comp card, or image-within-image to satisfy full-body framing."
             : blendCameraZoom === "three-quarter"
             ? "Camera framing: three-quarter, mid-thigh up, 50mm lens, 6–8ft distance, no cropped head or hands."
             : blendCameraZoom === "waist-up"
@@ -6599,10 +7118,16 @@ export default function Page() {
 
       const res = await fetch("/api/magic-blend", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
-          subject: blendSubject,
+          subject: subjectToBlend,
           background: backgroundToSend, // ✅ Uses the cropped/zoomed canvas BG if available
+          placementReference: placementReferenceToSend,
+          placementMask: placementMaskToSend,
+          replaceSubject: !!placementReferenceToSend,
           //prompt: blendPrompt,
           style: blendStyle,
           format: format,
@@ -6613,6 +7138,7 @@ export default function Page() {
       });
 
       const data = await res.json();
+      applyGenerationQuota(data);
       if (!res.ok) throw new Error(data.error || "Blend failed");
 
 
@@ -6627,27 +7153,29 @@ export default function Page() {
         throw new Error("Blend returned no image.");
       }
 
-      // 3. Apply Result to Canvas
-      setBgUploadUrl(blendedUrl);
-      setBgUrl(null);
-      
-      // Reset transforms since the new image is already perfectly cropped
-      setBgScale(1); 
-      setBgPosX(50); 
-      setBgPosY(50);
-      // Persist the blend explicitly for this format so toggles can restore it.
-      lastBlendByFormatRef.current[format] = blendedUrl;
-      useFlyerState.getState().setSession((prev: any) => ({
-        ...prev,
-        [format]: {
-          ...(prev?.[format] || {}),
-          bgUploadUrl: blendedUrl,
-          bgUrl: null,
-        },
-      }));
-      setSessionValue(format, "bgScale", 1);
-      setSessionValue(format, "bgPosX", 50);
-      setSessionValue(format, "bgPosY", 50);
+      const blendedVersion = createBackgroundVersion(blendedUrl, {
+        scale: 1,
+        posX: 50,
+        posY: 50,
+        rotate: bgRotate,
+        fitMode: bgFitMode,
+      });
+      applyBackgroundVersionToCanvas(blendedVersion);
+      if (subjectLayerForBlend?.id) {
+        useFlyerState.getState().removePortrait(format, subjectLayerForBlend.id);
+        useFlyerState.getState().setSelectedPortraitId(null);
+      } else {
+        setPortraitUrl(null);
+        useFlyerState.getState().setSelectedPortraitId(null);
+      }
+      setSharedGeneratedBackground({
+        source: "magic_blend",
+        sourceFormat: format,
+        original: originalBackgroundVersion,
+        generated: blendedVersion,
+        originalPortrait: originalPortraitVersion,
+        updatedAt: Date.now(),
+      });
       if (typeof window !== "undefined" && window.innerWidth < 1024) {
         window.setTimeout(scrollToArtboard, 160);
       }
@@ -6667,13 +7195,209 @@ export default function Page() {
     }
   };
 
-// =========================================================
+  const handleDjMainFaceBake = async () => {
+    if (isStarterPlan) {
+      alert("Starter plan has 0 AI generations. Upgrade or use a pass to use Magic Blend.");
+      return;
+    }
+    if (!mainFaceOnCanvas?.url) {
+      alert("Place Main Face on the canvas before baking it into the scene.");
+      return;
+    }
+
+    setIsBlending(true);
+    const currentCanvasBackgroundVersion = captureCurrentBackgroundVersion();
+    const originalPortraitVersion = capturePortraitLayerVersion(mainFaceOnCanvas);
+
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        throw new Error("Sign in to use Magic Blend.");
+      }
+
+      const subjectToBlend = await ensureTransparentMainFace(mainFaceOnCanvas.url, {
+        persistToKit: !!mainFaceOnCanvas?.isBrandFace,
+        portraitId: mainFaceOnCanvas?.id ?? null,
+      });
+
+      const fetchCanvasBg = async () => {
+        if (!artRef.current) return null;
+        try {
+          return (
+            (await artRef.current?.exportBackgroundDataUrl?.({
+              size: 1024,
+            })) || null
+          );
+        } catch {
+          return null;
+        }
+      };
+
+      const backgroundToSend = (await fetchCanvasBg()) || blendBackground;
+      if (!backgroundToSend) {
+        throw new Error("No background found. Please upload a background to the slot or the canvas.");
+      }
+
+      const activeCanvasSubjectPlacement = mainFaceOnCanvas.id
+        ? capturePortraitPlacementFromCanvas(mainFaceOnCanvas.id)
+        : null;
+
+      let placementReferenceToSend: string | null = null;
+      let placementMaskToSend: string | null = null;
+      try {
+        const artEl = artRef.current as HTMLElement | null;
+        if (artEl) {
+          placementReferenceToSend = await withExternalStylesDisabled(async () =>
+            htmlToImage.toPng(artEl, {
+              cacheBust: true,
+              pixelRatio: 2,
+              skipFonts: true,
+              fontEmbedCss: "",
+              filter: (node: HTMLElement) => !node.closest?.("[data-nonexport='true']"),
+            } as any)
+          );
+        }
+      } catch {}
+      try {
+        const placementAssets = await createScenePlacementAssets(
+          backgroundToSend,
+          subjectToBlend,
+          activeCanvasSubjectPlacement,
+          "subject"
+        );
+        placementMaskToSend = placementAssets.placementMask;
+      } catch {}
+
+      let originalBackgroundVersion = currentCanvasBackgroundVersion;
+      if (!originalBackgroundVersion) {
+        originalBackgroundVersion = createBackgroundVersion(backgroundToSend, {
+          scale: 1,
+          posX: 50,
+          posY: 50,
+          rotate: 0,
+          fitMode: false,
+        });
+      }
+
+      const extraParts: string[] = [
+        "Main Face harmonization mode: preserve exact subject identity, face, hair, clothing, pose, crop, scale, and placement. Only harmonize lighting, local shadowing, scene color spill, edge integration, haze interaction, and grounding. Do not move, resize, recrop, restyle, duplicate, or redesign the subject or the background.",
+      ];
+      if (blendAttireColor && blendAttireColor !== "auto") {
+        extraParts.push(`Attire color: ${blendAttireColor}.`);
+      }
+      if (blendLighting && blendLighting !== "match scene") {
+        extraParts.push(`Lighting preference: ${blendLighting}.`);
+      }
+      if (blendCameraZoom && blendCameraZoom !== "auto") {
+        const zoomPrompt =
+          blendCameraZoom === "full body"
+            ? "Camera framing preference: full body only if it can stay naturally embedded in the existing scene. Do not create any inset frame, poster panel, comp card, or image-within-image to satisfy full-body framing."
+            : blendCameraZoom === "three-quarter"
+            ? "Camera framing: three-quarter, mid-thigh up, 50mm lens, 6–8ft distance, no cropped head or hands."
+            : blendCameraZoom === "waist-up"
+            ? "Camera framing: waist-up, 70–85mm lens, 4–6ft distance, hands visible near waist/hips."
+            : "Camera framing: chest-up, 85–105mm lens, 3–4ft distance, face and shoulders fully visible, no tight crop.";
+        extraParts.push(zoomPrompt);
+      }
+      if (blendExpressionPose && blendExpressionPose.trim()) {
+        extraParts.push(`Expression/pose: ${blendExpressionPose}.`);
+      }
+      if (blendSubjectAction && blendSubjectAction.trim()) {
+        extraParts.push(`Subject action in scene: ${blendSubjectAction.trim().slice(0, 220)}.`);
+      }
+
+      const res = await fetch("/api/magic-blend-dj", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          subject: subjectToBlend,
+          background: backgroundToSend,
+          placementReference: placementReferenceToSend,
+          placementMask: placementMaskToSend,
+          replaceSubject: false,
+          mode: "harmonize_main_face",
+          style: blendStyle,
+          format,
+          cameraZoom: blendCameraZoom,
+          extraPrompt: extraParts.join(" "),
+          provider: "fal",
+        }),
+      });
+
+      const data = await res.json();
+      applyGenerationQuota(data);
+      if (!res.ok) throw new Error(data.error || "Blend failed");
+
+      const blendedUrl: string | null =
+        typeof data?.url === "string"
+          ? data.url
+          : typeof data?.b64 === "string"
+            ? `data:image/png;base64,${data.b64}`
+            : null;
+      if (!blendedUrl) {
+        throw new Error("Blend returned no image.");
+      }
+
+      const blendedVersion = createBackgroundVersion(blendedUrl, {
+        scale: 1,
+        posX: 50,
+        posY: 50,
+        rotate: bgRotate,
+        fitMode: bgFitMode,
+      });
+      applyBackgroundVersionToCanvas(blendedVersion);
+      useFlyerState.getState().removePortrait(format, mainFaceOnCanvas.id);
+      useFlyerState.getState().setSelectedPortraitId(null);
+      setSharedGeneratedBackground({
+        source: "magic_blend",
+        sourceFormat: format,
+        original: originalBackgroundVersion,
+        generated: blendedVersion,
+        originalPortrait: originalPortraitVersion,
+        updatedAt: Date.now(),
+      });
+      setDjStartupFlowStage("design");
+      useFlyerState.getState().setSelectedPanel("headline");
+      useFlyerState.getState().setMoveTarget("headline");
+      if (typeof window !== "undefined" && window.innerWidth < 1024) {
+        setMobileControlsOpen(true);
+        setMobileControlsTab("design");
+        window.setTimeout(scrollToArtboard, 160);
+      }
+    } catch (err: any) {
+      const msg = String(err?.message || "");
+      if (/sensitive|flagged/i.test(msg)) {
+        alert(
+          "Magic Blend was blocked for sensitive content. Try a different subject/background or switch to a less revealing image."
+        );
+      } else {
+        alert("Magic Blend failed: " + msg);
+      }
+    } finally {
+      setIsBlending(false);
+    }
+  };
+
+  // =========================================================
   // 🍌 HELPER: Push Main Canvas Background -> Magic Blend Slot
   // =========================================================
   const pushCanvasBgToBlend = async () => {
-    if (!artRef.current) return;
+    if (!artRef.current || isCapturingBlendBackground) return;
     
     try {
+      setIsCapturingBlendBackground(true);
+      await new Promise<void>((resolve) => {
+        if (typeof window === "undefined") {
+          resolve();
+          return;
+        }
+        window.requestAnimationFrame(() => {
+          window.setTimeout(resolve, 0);
+        });
+      });
       // Access the snapshot method we added to Artboard earlier
       const url = await artRef.current.exportBackgroundDataUrl?.({ size: 1024 });
       
@@ -6685,7 +7409,9 @@ export default function Page() {
         alert("No background image found on the main canvas.");
       }
     } catch (e) {
-
+      alert("Failed to capture current canvas background.");
+    } finally {
+      setIsCapturingBlendBackground(false);
     }
   };
 
@@ -6745,14 +7471,8 @@ const [fadeState, setFadeState] = useState<"idle" | "fadingOut" | "fadingIn">("i
 const [pendingFormat, setPendingFormat] = useState<Format | null>(null);
 const [fadeOut, setFadeOut] = useState(false);
 const [showStartupTemplates, setShowStartupTemplates] = React.useState(true);
-const lastBlendByFormatRef = React.useRef<Record<Format, string | null>>({
-  square: null,
-  story: null,
-});
-const [blendRecallPrompt, setBlendRecallPrompt] = React.useState<{
-  format: Format;
-  blendUrl: string;
-} | null>(null);
+const [sharedGeneratedBackground, setSharedGeneratedBackground] =
+  React.useState<SharedGeneratedBackgroundState | null>(null);
 
 
 
@@ -6979,6 +7699,24 @@ const selectedPortraitIsAsset = React.useMemo(() => {
   );
 }, [selectedPortrait]);
 
+const activeBlendPortraitLayer = React.useMemo(() => {
+  const list = (portraits?.[format] || []).filter((p: any) => {
+    const id = String(p?.id || "");
+    return (
+      !!p?.url &&
+      !p?.isFlare &&
+      !p?.isSticker &&
+      !p?.isBrandFace &&
+      !p?.isLogo &&
+      !id.startsWith("logo_")
+    );
+  });
+  if (selectedPortrait && !selectedPortraitIsAsset && selectedPortrait.url) {
+    return selectedPortrait as any;
+  }
+  return list.length ? (list[list.length - 1] as any) : null;
+}, [format, portraits, selectedPortrait, selectedPortraitIsAsset]);
+
 // ✅ SINGLE source-of-truth slider sync on portrait switch
 useEffect(() => {
   if (!selectedPortraitId) return;
@@ -7188,7 +7926,6 @@ useEffect(() => {
 
     // ✅ icon mode should open the Library panel (NOT portrait)
     icon: "icons",
-    shape: "icons",
   };
 
   const next = map[String(moveTarget)];
@@ -7480,36 +8217,6 @@ async function addLogosFromFiles(files: FileList) {
   }, [hydrated]);
 
   // ------------------------------------------------------------
-
-
-  // ===== AI BG "JUST WORKS" — CONSTANTS =====
-   // ===== Credits (persisted safely after hydration) =====
-const CREDITS_KEY = 'nf:bg.credits.v2';
-const INITIAL_CREDITS = 100;
-
-const [credits, setCredits] = React.useState<number>(INITIAL_CREDITS);
-const resetCredits = React.useCallback(() => {
-  setCredits(INITIAL_CREDITS);
-  try { localStorage.setItem(CREDITS_KEY, String(INITIAL_CREDITS)); } catch {}
-}, []);
-
-// read AFTER hydration
-React.useEffect(() => {
-  if (!hydrated) return;
-  try {
-    const raw = localStorage.getItem(CREDITS_KEY);
-    setCredits(raw ? Math.max(0, parseInt(raw, 10) || 0) : INITIAL_CREDITS);
-  } catch {
-    // ignore; keep default
-  }
-}, [hydrated]);
-
-// write AFTER hydration
-React.useEffect(() => {
-  if (!hydrated) return;
-  try { localStorage.setItem(CREDITS_KEY, String(credits)); } catch {}
-}, [credits, hydrated]);
-
 
 
 // ===== ONBOARDING STRIP (first-open only) =====
@@ -8070,6 +8777,14 @@ const onRightBgFile = (e: React.ChangeEvent<HTMLInputElement>) => {
 // Quick actions for right-panel controls
 const clearBackground = () => { setBgUploadUrl(null); setBgUrl(null); };
 const fitBackground   = () => { setBgFitMode(true); setBgScale(1.0); setBgPosX(50); setBgPosY(50); };
+const applyStartupBackground = React.useCallback((src: string) => {
+  setBgUploadUrl(null);
+  setBgUrl(src);
+  setBgFitMode(false);
+  setBgScale(1.0);
+  setBgPosX(50);
+  setBgPosY(50);
+}, []);
 /* ===== RIGHT-PANEL BG UPLOAD HELPERS (END) ===== */
 
 // ===== LOGO PICKER (BEGIN) =====
@@ -9033,14 +9748,37 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
   // NEW: subtag size (px)
   const [subtagSize, setSubtagSize] = useState<number>(20);
 
-  const [djBrandKit, setDjBrandKit] = useState<DJBrandKit>(() =>
-    createDefaultDjBrandKit()
+  const [djBrandCollection, setDjBrandCollection] = useState<DJBrandKitCollection>(() =>
+    createDefaultDjBrandKitCollection()
   );
+  const isStudioPlanRef = React.useRef(false);
+  const djBrandKit = React.useMemo<DJBrandKit>(() => {
+    const active =
+      djBrandCollection.kits.find((kit) => kit.id === djBrandCollection.activeId) ||
+      djBrandCollection.kits[0];
+    return active || createDefaultDjBrandKit();
+  }, [djBrandCollection]);
 
-  const persistDjBrandKit = React.useCallback((next: DJBrandKit) => {
-    setDjBrandKit(next);
-    writeDjBrandKit(next);
+  const persistDjBrandCollection = React.useCallback((next: DJBrandKitCollection) => {
+    setDjBrandCollection(next);
+    writeDjBrandKitCollection(next);
   }, []);
+
+  const persistDjBrandKit = React.useCallback(
+    (next: DJBrandKit) => {
+      const nextLabel = String(next.label || "").trim() || djBrandKit.label || `Brand ${djBrandCollection.kits.length || 1}`;
+      const normalizedKit = { ...next, label: nextLabel };
+      const nextCollection: DJBrandKitCollection = {
+        v: 1,
+        activeId: normalizedKit.id,
+        kits: djBrandCollection.kits.some((kit) => kit.id === normalizedKit.id)
+          ? djBrandCollection.kits.map((kit) => (kit.id === normalizedKit.id ? normalizedKit : kit))
+          : [...djBrandCollection.kits, normalizedKit],
+      };
+      persistDjBrandCollection(nextCollection);
+    },
+    [djBrandCollection, djBrandKit.label, persistDjBrandCollection]
+  );
 
   const snapLogoToSafeZone = React.useCallback((zone: SafeZone) => {
     const pos = getSafeZonePosition(zone);
@@ -9063,30 +9801,40 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
     [format, setSubtagEnabled]
   );
 
-  const isPngBrandFace = React.useCallback((src: string) => {
-    const value = String(src || '').trim().toLowerCase();
-    if (!value) return false;
-    if (value.startsWith('data:image/png;')) return true;
-    return /\.png(?:$|[?#])/.test(value);
-  }, []);
-
   const placeDjBrandFace = React.useCallback(
-    (src: string) => {
+    (
+      src: string,
+      placement?: {
+        x?: number | null;
+        y?: number | null;
+        scale?: number | null;
+        filterPreset?: MainFaceFilterPreset | null;
+        filterStrength?: number | null;
+      }
+    ) => {
       const value = String(src || '').trim();
       if (!value) return;
       const id = `djface_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      const nextX = Math.max(0, Math.min(100, Number(placement?.x ?? 50) || 50));
+      const nextY = Math.max(0, Math.min(100, Number(placement?.y ?? 50) || 50));
+      const nextScale = Math.max(0.1, Math.min(5, Number(placement?.scale ?? 0.85) || 0.85));
+      const nextFilterPreset = normalizeMainFaceFilterPreset(placement?.filterPreset);
+      const nextFilterStrength = clamp01(Number(placement?.filterStrength ?? 0.85));
       const brandFace = {
         id,
         url: value,
-        x: 50,
-        y: 50,
-        scale: 0.85,
+        x: nextX,
+        y: nextY,
+        scale: nextScale,
         locked: false,
         isSticker: false,
         isFlare: false,
         isBrandFace: true,
         cleanup: DEFAULT_CLEANUP,
         cleanupBaseUrl: value,
+        lighting: DEFAULT_MAIN_FACE_LIGHTING,
+        mainFaceFilterPreset: nextFilterPreset,
+        mainFaceFilterStrength: nextFilterStrength,
       };
       const current = portraits?.[format] || [];
       const withoutBrandFace = current.filter((p: any) => !(p as any).isBrandFace);
@@ -9113,6 +9861,52 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
     return (list.find((p: any) => !!(p as any).isBrandFace) as any) || null;
   }, [format, portraits]);
 
+  const mainFaceLighting = React.useMemo(
+    () => normalizeMainFaceLighting(mainFaceOnCanvas?.lighting),
+    [mainFaceOnCanvas]
+  );
+  const mainFaceFilterPreset = React.useMemo(
+    () => normalizeMainFaceFilterPreset(mainFaceOnCanvas?.mainFaceFilterPreset),
+    [mainFaceOnCanvas]
+  );
+  const mainFaceFilterStrength = React.useMemo(
+    () => clamp01(Number(mainFaceOnCanvas?.mainFaceFilterStrength ?? 0.85)),
+    [mainFaceOnCanvas]
+  );
+
+  const updateMainFaceLighting = React.useCallback(
+    (patch: Partial<PortraitLighting>) => {
+      if (!mainFaceOnCanvas?.id) return;
+      updatePortrait(format, mainFaceOnCanvas.id, {
+        lighting: normalizeMainFaceLighting({
+          ...mainFaceLighting,
+          ...patch,
+        }),
+      });
+    },
+    [format, mainFaceLighting, mainFaceOnCanvas, updatePortrait]
+  );
+
+  const updateMainFaceFilter = React.useCallback(
+    (patch: { preset?: MainFaceFilterPreset; strength?: number }) => {
+      if (!mainFaceOnCanvas?.id) return;
+      updatePortrait(format, mainFaceOnCanvas.id, {
+        ...(patch.preset ? { mainFaceFilterPreset: normalizeMainFaceFilterPreset(patch.preset) } : {}),
+        ...(typeof patch.strength === "number"
+          ? { mainFaceFilterStrength: clamp01(Number(patch.strength)) }
+          : {}),
+      });
+    },
+    [format, mainFaceOnCanvas, updatePortrait]
+  );
+
+  const resetMainFaceLighting = React.useCallback(() => {
+    if (!mainFaceOnCanvas?.id) return;
+    updatePortrait(format, mainFaceOnCanvas.id, {
+      lighting: { ...DEFAULT_MAIN_FACE_LIGHTING },
+    });
+  }, [format, mainFaceOnCanvas, updatePortrait]);
+
   const setMainFaceScale = React.useCallback(
     (next: number) => {
       if (!mainFaceOnCanvas?.id) return;
@@ -9133,6 +9927,135 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
     [format, mainFaceOnCanvas, updatePortrait]
   );
 
+  const toggleMainFaceLock = React.useCallback(() => {
+    if (!mainFaceOnCanvas?.id) return;
+    updatePortrait(format, mainFaceOnCanvas.id, {
+      locked: !mainFaceOnCanvas.locked,
+    });
+  }, [format, mainFaceOnCanvas, updatePortrait]);
+
+  const removeMainFaceFromCanvas = React.useCallback(() => {
+    if (!mainFaceOnCanvas?.id) return;
+    useFlyerState.getState().removePortrait(format, mainFaceOnCanvas.id);
+    useFlyerState.getState().setSelectedPortraitId(null);
+    setPortraitUrl(null);
+    setPortraitLocked(false);
+    setDragging(null);
+  }, [format, mainFaceOnCanvas, setDragging]);
+
+  const hasTransparentCutoutDataUrl = React.useCallback(async (dataUrl: string): Promise<boolean> => {
+    try {
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const el = new Image();
+        el.onload = () => resolve(el);
+        el.onerror = () => reject(new Error("Failed to load Main Face preview."));
+        el.src = dataUrl;
+      });
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx || !canvas.width || !canvas.height) return false;
+      ctx.drawImage(img, 0, 0);
+
+      const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const total = width * height;
+      if (!total) return false;
+
+      const border = Math.max(1, Math.round(Math.min(width, height) * 0.03));
+      let transparentPixels = 0;
+      let edgePixels = 0;
+      let edgeOpaquePixels = 0;
+
+      for (let y = 0; y < height; y += 1) {
+        for (let x = 0; x < width; x += 1) {
+          const i = (y * width + x) * 4;
+          const alpha = data[i + 3];
+          if (alpha < 8) transparentPixels += 1;
+          if (x < border || y < border || x >= width - border || y >= height - border) {
+            edgePixels += 1;
+            if (alpha > 245) edgeOpaquePixels += 1;
+          }
+        }
+      }
+
+      return (
+        transparentPixels / total > 0.03 &&
+        edgeOpaquePixels / Math.max(edgePixels, 1) < 0.94
+      );
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const ensureTransparentMainFace = React.useCallback(
+    async (
+      src: string,
+      opts?: { persistToKit?: boolean; portraitId?: string | null }
+    ) => {
+      const value = String(src || "").trim();
+      if (!value) throw new Error("Main Face is empty.");
+
+      const toDataUrl = async (input: string) => {
+        if (input.startsWith("data:image/")) return input;
+        if (input.startsWith("blob:")) {
+          return blobToDataURL(await (await fetch(input)).blob());
+        }
+        return blobToDataURL(await (await fetch(input, { cache: "no-store" })).blob());
+      };
+
+      const originalDataUrl = await toDataUrl(value);
+      if (await hasTransparentCutoutDataUrl(originalDataUrl)) {
+        return originalDataUrl;
+      }
+
+      const removed = await removeBackgroundLocal(originalDataUrl);
+      const cutoutDataUrl = await toDataUrl(String(removed || ""));
+      const usableCutout = await hasTransparentCutoutDataUrl(cutoutDataUrl);
+      if (!usableCutout) {
+        throw new Error(
+          "Main Face still has its background. Upload a cleaner portrait or remove the background first."
+        );
+      }
+
+      if (opts?.persistToKit) {
+        persistDjBrandKit({ ...djBrandKit, primaryPortrait: cutoutDataUrl });
+      }
+      if (opts?.portraitId) {
+        updatePortrait(format, opts.portraitId, {
+          url: cutoutDataUrl,
+          cleanupBaseUrl: cutoutDataUrl,
+        });
+      }
+      setPortraitUrl(cutoutDataUrl);
+      return cutoutDataUrl;
+    },
+    [
+      djBrandKit,
+      format,
+      hasTransparentCutoutDataUrl,
+      persistDjBrandKit,
+      updatePortrait,
+    ]
+  );
+
+  const placeSavedMainFace = React.useCallback(async () => {
+    if (!djBrandKit.primaryPortrait) return;
+    try {
+      const mainFaceUrl = await ensureTransparentMainFace(djBrandKit.primaryPortrait, {
+        persistToKit: true,
+      });
+      placeDjBrandFace(mainFaceUrl, djBrandKit.primaryPortraitPlacement);
+    } catch (err: any) {
+      alert(err?.message || "Main Face could not be prepared.");
+    }
+  }, [
+    djBrandKit.primaryPortrait,
+    djBrandKit.primaryPortraitPlacement,
+    ensureTransparentMainFace,
+    placeDjBrandFace,
+  ]);
+
   const applyDjBrandKit = React.useCallback(
     (kit: DJBrandKit) => {
       if (!kit) return;
@@ -9152,8 +10075,7 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
           color: main,
           gradFrom: main || prev.gradFrom,
           gradTo: glow,
-          // Apply brand glow color by enabling gradient, but keep effects soft.
-          gradient: true,
+          gradient: false,
           strokeWidth: 0,
           glow: safeGlowStrength,
           shadowEnabled: false,
@@ -9173,23 +10095,35 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
           setLogoX(pos.x);
           setLogoY(pos.y);
         }
+      } else {
+        setLogoUrl(null);
       }
 
       if (kit.primaryPortrait) {
-        if (isPngBrandFace(kit.primaryPortrait)) {
-          placeDjBrandFace(kit.primaryPortrait);
-        } else {
-          alert('Main Face must be a PNG file. Upload a PNG in DJ Branding > Main Face.');
-        }
+        void ensureTransparentMainFace(kit.primaryPortrait, { persistToKit: true })
+          .then((mainFaceUrl) => {
+            placeDjBrandFace(mainFaceUrl, kit.primaryPortraitPlacement);
+          })
+          .catch((err: any) => {
+            alert(err?.message || 'Main Face could not be prepared.');
+          });
+      } else if (mainFaceOnCanvas?.id) {
+        useFlyerState.getState().removePortrait(format, mainFaceOnCanvas.id);
+        useFlyerState.getState().setSelectedPortraitId(null);
+        setPortraitUrl(null);
+        setPortraitLocked(false);
+        setDragging(null);
       }
 
       applyDjHandle(kit);
     },
     [
       applyDjHandle,
+      ensureTransparentMainFace,
       format,
-      isPngBrandFace,
+      mainFaceOnCanvas,
       placeDjBrandFace,
+      setDragging,
       setHeadShadow,
       setSubtagEnabled,
       subtagBgColor,
@@ -9197,19 +10131,26 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
   );
 
   const saveCurrentAsDjBrand = React.useCallback(() => {
-    const dedupedLogos = Array.from(
-      new Set(
-        [logoUrl, ...logoSlots, ...(djBrandKit.logos || [])].filter(
-          (x): x is string => typeof x === 'string' && !!x
-        )
-      )
-    ).slice(0, 4);
+    const flyerLogos = [logoUrl, ...logoSlots].filter(
+      (x): x is string => typeof x === 'string' && !!x
+    );
+    const carryForwardLogos = (djBrandKit.logos || []).filter(
+      (x): x is string => typeof x === 'string' && !!x && !flyerLogos.includes(x)
+    );
+    const dedupedLogos = Array.from(new Set([...flyerLogos, ...carryForwardLogos])).slice(0, 4);
     while (dedupedLogos.length < 4) dedupedLogos.push('');
 
     const next: DJBrandKit = {
       ...djBrandKit,
       logos: dedupedLogos,
-      primaryPortrait: portraitUrl || djBrandKit.primaryPortrait || null,
+      primaryPortrait: mainFaceOnCanvas?.url || null,
+      primaryPortraitPlacement: {
+        x: Math.max(0, Math.min(100, Number(mainFaceOnCanvas?.x ?? 50) || 50)),
+        y: Math.max(0, Math.min(100, Number(mainFaceOnCanvas?.y ?? 50) || 50)),
+        scale: Math.max(0.1, Math.min(5, Number(mainFaceOnCanvas?.scale ?? 0.85) || 0.85)),
+        filterPreset: normalizeMainFaceFilterPreset(mainFaceOnCanvas?.mainFaceFilterPreset),
+        filterStrength: clamp01(Number(mainFaceOnCanvas?.mainFaceFilterStrength ?? 0.85)),
+      },
       preferredFonts: {
         headline: headlineFamily,
         body: detailsFamily || bodyFamily,
@@ -9228,8 +10169,8 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
     headlineFamily,
     logoSlots,
     logoUrl,
+    mainFaceOnCanvas,
     persistDjBrandKit,
-    portraitUrl,
     subtagBgColor,
     textFx.color,
     textFx.gradTo,
@@ -9245,16 +10186,102 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
 
   const captureCurrentFaceToKit = React.useCallback(() => {
     if (!portraitUrl) return;
-    persistDjBrandKit({ ...djBrandKit, primaryPortrait: portraitUrl });
-  }, [djBrandKit, persistDjBrandKit, portraitUrl]);
+    persistDjBrandKit({
+      ...djBrandKit,
+      primaryPortrait: portraitUrl,
+      primaryPortraitPlacement: {
+        x: Math.max(0, Math.min(100, Number(mainFaceOnCanvas?.x ?? 50) || 50)),
+        y: Math.max(0, Math.min(100, Number(mainFaceOnCanvas?.y ?? 50) || 50)),
+        scale: Math.max(0.1, Math.min(5, Number(mainFaceOnCanvas?.scale ?? 0.85) || 0.85)),
+        filterPreset: normalizeMainFaceFilterPreset(mainFaceOnCanvas?.mainFaceFilterPreset),
+        filterStrength: clamp01(Number(mainFaceOnCanvas?.mainFaceFilterStrength ?? 0.85)),
+      },
+    });
+  }, [djBrandKit, mainFaceOnCanvas, persistDjBrandKit, portraitUrl]);
 
   React.useEffect(() => {
     if (!hydrated) return;
-    const saved = readDjBrandKit();
+    const saved = readDjBrandKitCollection();
     if (saved) {
-      setDjBrandKit(saved);
+      setDjBrandCollection(saved);
     }
   }, [hydrated]);
+
+  const selectDjBrandProfile = React.useCallback(
+    (brandId: string) => {
+      const hasBrand = djBrandCollection.kits.some((kit) => kit.id === brandId);
+      if (!hasBrand) return;
+      if (!isStudioPlanRef.current && brandId !== djBrandCollection.activeId) return;
+      persistDjBrandCollection({
+        ...djBrandCollection,
+        activeId: brandId,
+      });
+    },
+    [djBrandCollection, persistDjBrandCollection]
+  );
+
+  const createDjBrandProfile = React.useCallback(() => {
+    if (!isStudioPlanRef.current) {
+      alert("Studio plan unlocks multiple saved brand profiles.");
+      return;
+    }
+    const nextKit = createDefaultDjBrandKit(`Brand ${djBrandCollection.kits.length + 1}`);
+    persistDjBrandCollection({
+      v: 1,
+      activeId: nextKit.id,
+      kits: [...djBrandCollection.kits, nextKit],
+    });
+  }, [djBrandCollection.kits, persistDjBrandCollection]);
+
+  const duplicateDjBrandProfile = React.useCallback(() => {
+    if (!isStudioPlanRef.current) {
+      alert("Studio plan unlocks multiple saved brand profiles.");
+      return;
+    }
+    const copy: DJBrandKit = {
+      ...djBrandKit,
+      id: createDefaultDjBrandKit().id,
+      label: `${djBrandKit.label || "Brand"} Copy`,
+      logos: [...(djBrandKit.logos || [])],
+      preferredFonts: { ...djBrandKit.preferredFonts },
+      brandPalette: { ...djBrandKit.brandPalette },
+      social: { ...djBrandKit.social },
+    };
+    persistDjBrandCollection({
+      v: 1,
+      activeId: copy.id,
+      kits: [...djBrandCollection.kits, copy],
+    });
+  }, [djBrandCollection.kits, djBrandKit, persistDjBrandCollection]);
+
+  const deleteDjBrandProfile = React.useCallback(() => {
+    if (!isStudioPlanRef.current) {
+      alert("Studio plan unlocks multiple saved brand profiles.");
+      return;
+    }
+    if (djBrandCollection.kits.length <= 1) return;
+    const remaining = djBrandCollection.kits.filter((kit) => kit.id !== djBrandKit.id);
+    const fallback = remaining[0];
+    if (!fallback) return;
+    persistDjBrandCollection({
+      v: 1,
+      activeId: fallback.id,
+      kits: remaining,
+    });
+  }, [djBrandCollection.kits, djBrandKit.id, persistDjBrandCollection]);
+
+  const renameDjBrandProfile = React.useCallback(
+    (label: string) => {
+      if (!isStudioPlanRef.current) return;
+      const nextLabel = String(label || "").trim() || djBrandKit.label || "Brand";
+      if (nextLabel === djBrandKit.label) return;
+      persistDjBrandKit({
+        ...djBrandKit,
+        label: nextLabel,
+      });
+    },
+    [djBrandKit, persistDjBrandKit]
+  );
 
  // === AUTO-LOAD LOCAL FONTS WHEN SELECTED =============================
 useEffect(() => { ensureFontLoaded(bodyFamily); }, [bodyFamily]);
@@ -9422,6 +10449,214 @@ const [bgBlur, setBgBlur] = useState(0);
   if (!has && format === 'story') setFormat('square');
   }, [bgUploadUrl, bgUrl, format]); 
 
+  const captureCurrentBackgroundVersion = React.useCallback((): SharedBackgroundVersion | null => {
+    const src = bgUploadUrl || bgUrl;
+    if (!src) return null;
+    return {
+      src,
+      mode: bgUploadUrl ? "upload" : "remote",
+      scale: bgScale,
+      posX: bgPosX,
+      posY: bgPosY,
+      rotate: bgRotate,
+      fitMode: bgFitMode,
+    };
+  }, [bgFitMode, bgPosX, bgPosY, bgRotate, bgScale, bgUploadUrl, bgUrl]);
+
+  const capturePortraitPlacementFromCanvas = React.useCallback(
+    (portraitId: string): CanvasPortraitPlacement | null => {
+      if (typeof document === "undefined") return null;
+      const root = document.getElementById("portrait-layer-root");
+      if (!root) return null;
+      const node = root.querySelector(`[data-portrait-id="${portraitId}"]`) as HTMLElement | null;
+      if (!node) return null;
+      const rootRect = root.getBoundingClientRect();
+      const nodeRect = node.getBoundingClientRect();
+      if (!rootRect.width || !rootRect.height || !nodeRect.width || !nodeRect.height) {
+        return null;
+      }
+      return {
+        centerX: ((nodeRect.left + nodeRect.width / 2 - rootRect.left) / rootRect.width) * 100,
+        centerY: ((nodeRect.top + nodeRect.height / 2 - rootRect.top) / rootRect.height) * 100,
+        width: (nodeRect.width / rootRect.width) * 100,
+        height: (nodeRect.height / rootRect.height) * 100,
+      };
+    },
+    []
+  );
+
+  const capturePortraitLayerVersion = React.useCallback((layer: any) => {
+    if (!layer?.url) return null;
+    return {
+      kind: "layer" as const,
+      id: layer.id,
+      url: layer.url,
+      scale: Number(layer.scale ?? 1),
+      x: Number(layer.x ?? 50),
+      y: Number(layer.y ?? 50),
+      locked: !!layer.locked,
+      isBrandFace: !!layer.isBrandFace,
+    };
+  }, []);
+
+  const captureCurrentPortraitVersion = React.useCallback(() => {
+    if (activeBlendPortraitLayer?.url) {
+      return capturePortraitLayerVersion(activeBlendPortraitLayer);
+    }
+    if (!portraitUrl) return null;
+    return {
+      kind: "legacy" as const,
+      id: null,
+      url: portraitUrl,
+      scale: portraitScale,
+      x: portraitX,
+      y: portraitY,
+      locked: portraitLocked,
+    };
+  }, [
+    activeBlendPortraitLayer,
+    capturePortraitLayerVersion,
+    portraitLocked,
+    portraitScale,
+    portraitUrl,
+    portraitX,
+    portraitY,
+  ]);
+
+  const createBackgroundVersion = React.useCallback(
+    (
+      src: string,
+      overrides?: Partial<Omit<SharedBackgroundVersion, "src" | "mode">>
+    ): SharedBackgroundVersion => ({
+      src,
+      mode: src.startsWith("data:image/") ? "upload" : "remote",
+      scale: overrides?.scale ?? 1,
+      posX: overrides?.posX ?? 50,
+      posY: overrides?.posY ?? 50,
+      rotate: overrides?.rotate ?? 0,
+      fitMode: overrides?.fitMode ?? false,
+    }),
+    []
+  );
+
+  const applyBackgroundVersionToCanvas = React.useCallback(
+    (version: SharedBackgroundVersion, targetFormat: Format = format) => {
+      if (version.mode === "upload") {
+        setBgUploadUrl(version.src);
+        setBgUrl(null);
+      } else {
+        setBgUploadUrl(null);
+        setBgUrl(version.src);
+      }
+      setBgScale(version.scale);
+      setBgPosX(version.posX);
+      setBgPosY(version.posY);
+      setBgRotate(version.rotate);
+      setBgFitMode(version.fitMode);
+      setIsPlaceholder(false);
+      useFlyerState.getState().setSession((prev: any) => ({
+        ...prev,
+        [targetFormat]: {
+          ...(prev?.[targetFormat] || {}),
+          bgUploadUrl: version.mode === "upload" ? version.src : null,
+          bgUrl: version.mode === "remote" ? version.src : null,
+          bgScale: version.scale,
+          bgPosX: version.posX,
+          bgPosY: version.posY,
+          bgRotate: version.rotate,
+          bgFitMode: version.fitMode,
+        },
+      }));
+    },
+    [format, setBgRotate]
+  );
+
+  const applyOriginalSharedBackground = React.useCallback(() => {
+    if (!sharedGeneratedBackground?.original) return;
+    applyBackgroundVersionToCanvas(sharedGeneratedBackground.original);
+    if (sharedGeneratedBackground.source === "magic_blend") {
+      const originalPortrait = sharedGeneratedBackground.originalPortrait;
+      if (originalPortrait?.kind === "layer" && originalPortrait.url) {
+        const layerId = originalPortrait.id || `p_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        const existing = (useFlyerState.getState().portraits?.[format] || []).find(
+          (p: any) => p.id === layerId
+        );
+        if (existing) {
+          useFlyerState.getState().updatePortrait(format, layerId, {
+            url: originalPortrait.url,
+            scale: originalPortrait.scale,
+            x: originalPortrait.x,
+            y: originalPortrait.y,
+            locked: originalPortrait.locked,
+            isBrandFace: !!originalPortrait.isBrandFace,
+          });
+        } else {
+          useFlyerState.getState().addPortrait?.(format, {
+            id: layerId,
+            url: originalPortrait.url,
+            x: originalPortrait.x,
+            y: originalPortrait.y,
+            scale: originalPortrait.scale,
+            locked: originalPortrait.locked,
+            isSticker: false,
+            isFlare: false,
+            isBrandFace: !!originalPortrait.isBrandFace,
+          });
+        }
+        useFlyerState.getState().setSelectedPortraitId(layerId);
+        setPortraitUrl(null);
+      } else {
+        setPortraitUrl(originalPortrait?.url ?? null);
+        if (originalPortrait) {
+          setPortraitScale(originalPortrait.scale);
+          setPortraitX(originalPortrait.x);
+          setPortraitY(originalPortrait.y);
+          setPortraitLocked(originalPortrait.locked);
+        }
+      }
+    }
+  }, [applyBackgroundVersionToCanvas, format, sharedGeneratedBackground]);
+
+  const applyGeneratedSharedBackground = React.useCallback(() => {
+    if (!sharedGeneratedBackground?.generated) return;
+    applyBackgroundVersionToCanvas(sharedGeneratedBackground.generated);
+    if (sharedGeneratedBackground.source === "magic_blend") {
+      setPortraitUrl(null);
+      useFlyerState.getState().setSelectedPortraitId(null);
+    }
+  }, [applyBackgroundVersionToCanvas, sharedGeneratedBackground]);
+
+  const applyGeneratedCandidate = React.useCallback(
+    (src: string) => {
+      const nextGenerated = createBackgroundVersion(src, {
+        scale: 1.3,
+        posX: 50,
+        posY: 50,
+        rotate: 0,
+        fitMode: false,
+      });
+      applyBackgroundVersionToCanvas(nextGenerated);
+      setSharedGeneratedBackground((prev) => ({
+        source: "ai_background",
+        sourceFormat: format,
+        original: prev?.original ?? captureCurrentBackgroundVersion(),
+        generated: nextGenerated,
+        originalPortrait:
+          prev?.source === "magic_blend"
+            ? prev.originalPortrait
+            : prev?.originalPortrait ?? captureCurrentPortraitVersion(),
+        updatedAt: Date.now(),
+      }));
+    },
+    [
+      applyBackgroundVersionToCanvas,
+      captureCurrentBackgroundVersion,
+      captureCurrentPortraitVersion,
+      createBackgroundVersion,
+      format,
+    ]
+  );
+
 
   /* master grade (applies to whole poster) */
   const [exp,       setExp]       = useState<number>(1.00); // brightness/exposure (0.7–1.4)
@@ -9442,6 +10677,7 @@ const [bgBlur, setBgBlur] = useState(0);
     const gammaBrightness = 1.0 + (g - 1) * 0.6;
 
     // tint: map [-1..1] to hue-rotate [-12deg .. +12deg]
+    // Keep background hue isolated to the background layer only.
     const hueTint = (Number.isFinite(tint) ? Math.max(-1, Math.min(1, tint)) : 0) * 12;
 
     // warmth: sepia from 0..1
@@ -9452,9 +10688,9 @@ const [bgBlur, setBgBlur] = useState(0);
       `contrast(${(contrast * gammaContrast).toFixed(3)})`,
       `saturate(${(saturation + vibrance * 0.8).toFixed(3)})`,
       `sepia(${sep.toFixed(3)})`,
-      `hue-rotate(${(hue + hueTint).toFixed(3)}deg)`,
+      `hue-rotate(${hueTint.toFixed(3)}deg)`,
     ].join(' ');
-  }, [exp, contrast, saturation, warmth, hue, tint, gamma, vibrance]);
+  }, [exp, contrast, saturation, warmth, tint, gamma, vibrance]);
 
   const masterFilterCss = React.useMemo(() => {
     const base = masterFilter;
@@ -9516,6 +10752,7 @@ const clearSelection = (e?: any) => {
       el?.closest("button") ||
       el?.closest(".fixed") ||
       el?.closest('[data-portrait-area="true"]') ||
+      el?.closest("#flare-layer-root") ||
       el?.closest("#portrait-layer-root") ||
       el?.closest("#emoji-layer-root");
 
@@ -9551,7 +10788,6 @@ const clearSelection = (e?: any) => {
 
   setSelectedEmojiId(null);
   setSelIconId(null);
-  setSelShapeId(null);
 };
 
 
@@ -9578,6 +10814,7 @@ const clearSelection = (e?: any) => {
         el.closest("textarea") ||
         el.closest(".fixed") ||
         el.closest('[data-portrait-area="true"]') ||
+        el.closest("#flare-layer-root") ||
         el.closest('[data-floating-controls="asset"]');
       if (isUiClick) return;
       
@@ -9988,16 +11225,105 @@ const mobileFloatSticky = isMobileView && format === "story";
   // PORTRAIT: direct-drag ref (for smooth RAF dragging)
   const portraitFrameRef = React.useRef<HTMLDivElement | null>(null);
 
+  const autoAnalyzeMainFaceLighting = React.useCallback(async () => {
+    if (!mainFaceOnCanvas?.id) {
+      alert("Place Main Face on the canvas first.");
+      return;
+    }
+
+    const backgroundToAnalyze =
+      (await (async () => {
+        if (!artRef.current) return null;
+        try {
+          return (
+            (await artRef.current?.exportBackgroundDataUrl?.({
+              size: 768,
+            })) || null
+          );
+        } catch {
+          return null;
+        }
+      })()) || blendBackground || bgUploadUrl || bgUrl;
+
+    if (!backgroundToAnalyze) {
+      alert("Add a background first so the lighting studio can analyze it.");
+      return;
+    }
+
+    const placement = capturePortraitPlacementFromCanvas(mainFaceOnCanvas.id);
+    if (!placement) {
+      alert("Main Face placement could not be measured on the canvas.");
+      return;
+    }
+
+    try {
+      const analyzedLighting = await analyzeBackgroundLightingFromPlacement(
+        backgroundToAnalyze,
+        placement
+      );
+      updatePortrait(format, mainFaceOnCanvas.id, {
+        lighting: normalizeMainFaceLighting({
+          ...mainFaceLighting,
+          ...analyzedLighting,
+          enabled: true,
+          autoMatch: true,
+        }),
+      });
+    } catch (err: any) {
+      alert(err?.message || "Background lighting analysis failed.");
+    }
+  }, [
+    bgUploadUrl,
+    bgUrl,
+    blendBackground,
+    capturePortraitPlacementFromCanvas,
+    format,
+    mainFaceLighting,
+    mainFaceOnCanvas,
+    updatePortrait,
+  ]);
+
   const [subscriptionStatus, setSubscriptionStatus] = React.useState<"active" | "ondemand" | "inactive">("inactive");
+  const [accessPlan, setAccessPlan] = React.useState<string | null>(null);
   const isPaid = subscriptionStatus === "active";
   const hasOnDemandPass = subscriptionStatus === "ondemand";
   const hasPaidAccess = isPaid || hasOnDemandPass;
   const isStarterPlan = !hasPaidAccess;
+  const isStudioPlan = isPaid && String(accessPlan || "").trim().toLowerCase() === "studio";
+  const hasCreatorAutoLayoutAccess =
+    isPaid &&
+    ["creator", "studio"].includes(String(accessPlan || "").trim().toLowerCase());
+  React.useEffect(() => {
+    isStudioPlanRef.current = isStudioPlan;
+  }, [isStudioPlan]);
+  const [generationQuota, setGenerationQuota] = React.useState<{
+    limit: number;
+    used: number;
+    remaining: number;
+  } | null>(null);
   const starterTemplateGallery = React.useMemo(
     () => TEMPLATE_GALLERY.filter((t) => STARTER_TEMPLATE_IDS.has(t.id)),
     []
   );
   const visibleTemplateGallery = isStarterPlan ? starterTemplateGallery : TEMPLATE_GALLERY;
+  const isDjStartupMode = startupStudioMode === "dj";
+  const isDjCompositionStage = false;
+  const showDjTextEditing = true;
+  const visibleSocialMediaStickers = SOCIAL_MEDIA_STICKERS;
+  const visibleNightlifeGraphics = isDjStartupMode
+    ? []
+    : isStudioPlan
+    ? [...NIGHTLIFE_GRAPHICS, ...STUDIO_NIGHTLIFE_GRAPHICS]
+    : NIGHTLIFE_GRAPHICS;
+  const visibleGraphicStickers = isDjStartupMode
+    ? []
+    : isStudioPlan
+    ? [...GRAPHIC_STICKERS, ...STUDIO_GRAPHIC_STICKERS]
+    : GRAPHIC_STICKERS;
+  const visibleFlareLibrary = isStudioPlan
+    ? [...FLARE_LIBRARY, ...STUDIO_FLARE_LIBRARY]
+    : FLARE_LIBRARY;
+  const visibleTextureLibrary = isStudioPlan ? STUDIO_TEXTURE_LIBRARY : [];
   const [accountOpen, setAccountOpen] = React.useState(false);
   const [accountLoading, setAccountLoading] = React.useState(false);
   const [accountError, setAccountError] = React.useState<string | null>(null);
@@ -10006,11 +11332,132 @@ const mobileFloatSticky = isMobileView && format === "story";
     status: string;
     rawStatus: string | null;
     periodEnd: string | null;
+    generationLimit: number;
+    generationUsed: number;
+    generationRemaining: number;
   } | null>(null);
+
+  const applyGenerationQuota = React.useCallback((payload: any) => {
+    const rawLimit = payload?.generation_limit ?? payload?.generationLimit;
+    const rawUsed = payload?.generation_used ?? payload?.generationUsed ?? 0;
+    const rawRemaining =
+      payload?.generation_remaining ?? payload?.generationRemaining;
+    const limit = Number(rawLimit);
+    const used = Number(rawUsed);
+    const remaining = Number(
+      rawRemaining ?? (Number.isFinite(limit) ? Math.max(0, limit - (Number.isFinite(used) ? used : 0)) : NaN)
+    );
+    if (!Number.isFinite(limit)) return;
+    setGenerationQuota({
+      limit: Math.max(0, limit),
+      used: Number.isFinite(used) ? Math.max(0, used) : 0,
+      remaining: Number.isFinite(remaining) ? Math.max(0, remaining) : 0,
+    });
+  }, []);
+
+  const applyAccessPayload = React.useCallback(
+    (payload: any) => {
+      const nextStatus: "active" | "ondemand" | "inactive" =
+        payload?.status === "ondemand"
+          ? "ondemand"
+          : payload?.status === "active"
+            ? "active"
+            : "inactive";
+      setSubscriptionStatus(nextStatus);
+      setAccessPlan(typeof payload?.plan === "string" ? payload.plan : null);
+      applyGenerationQuota(payload);
+      return nextStatus;
+    },
+    [applyGenerationQuota]
+  );
+
+  const getAccessToken = React.useCallback(async () => {
+    const supabase = supabaseBrowser();
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token ?? null;
+  }, []);
+
+  const refreshAccessSnapshot = React.useCallback(
+    async (opts?: { includeAccount?: boolean }) => {
+      const token = await getAccessToken();
+      if (!token) {
+        setSubscriptionStatus("inactive");
+        setAccessPlan(null);
+        setGenerationQuota(null);
+        if (opts?.includeAccount) {
+          setAccountData({
+            email: null,
+            status: "guest",
+            rawStatus: "starter",
+            periodEnd: null,
+            generationLimit: 0,
+            generationUsed: 0,
+            generationRemaining: 0,
+          });
+        }
+        return null;
+      }
+
+      try {
+        try {
+          await fetch("/api/auth/profile-bootstrap", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+        } catch (bootstrapError) {
+          console.warn("profile-bootstrap request failed", bootstrapError);
+        }
+
+        const res = await fetch("/api/auth/status", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          throw new Error("Failed to load account status.");
+        }
+
+        const json = await res.json();
+        const nextStatus = applyAccessPayload(json);
+
+        if (opts?.includeAccount) {
+          const supabase = supabaseBrowser();
+          const { data } = await supabase.auth.getSession();
+          setAccountData({
+            email: json.email || data.session?.user?.email || null,
+            status: json.status || nextStatus,
+            rawStatus: json.raw_status || null,
+            periodEnd: json.current_period_end || null,
+            generationLimit: Number(json.generation_limit || 0),
+            generationUsed: Number(json.generation_used || 0),
+            generationRemaining: Number(json.generation_remaining || 0),
+          });
+        }
+
+        return { token, json, status: nextStatus };
+      } catch (error) {
+        console.warn("refreshAccessSnapshot failed", error);
+        return null;
+      }
+    },
+    [applyAccessPayload, getAccessToken]
+  );
+
+  React.useEffect(() => {
+    if (subscriptionStatus === "inactive") {
+      setGenerationQuota(null);
+      return;
+    }
+    void refreshAccessSnapshot().catch(() => undefined);
+  }, [refreshAccessSnapshot, subscriptionStatus]);
 
   React.useEffect(() => {
     if (!isStarterPlan) return;
-    if (selectedPanel === "logo" || selectedPanel === "portrait" || selectedPanel === "dj_branding") {
+    if (
+      selectedPanel === "logo" ||
+      selectedPanel === "portrait" ||
+      selectedPanel === "dj_branding" ||
+      selectedPanel === "ai_background" ||
+      selectedPanel === "magic_blend"
+    ) {
       setSelectedPanel("template");
     }
   }, [isStarterPlan, selectedPanel, setSelectedPanel]);
@@ -10173,12 +11620,69 @@ const mobileFloatSticky = isMobileView && format === "story";
     }
   }, [artRef, canvasSize.h, canvasSize.w, exportScale, exportType, exportStatus, isStarterPlan]);
 
-  const prepareResumeForReturn = React.useCallback(() => {
+  const buildResumeSnapshot = async () => {
+    const historyJson = buildHistorySnapshot();
+    const historyState = (() => {
+      try {
+        const parsed = JSON.parse(historyJson);
+        return parsed?.state ?? parsed;
+      } catch {
+        return {};
+      }
+    })();
+
+    const storeSnapshot = useFlyerState.getState().exportDesign();
+    const combinedState = {
+      ...historyState,
+      ...storeSnapshot,
+    };
+    if (typeof combinedState.bgUploadUrl === "string") {
+      combinedState.bgUploadUrl = await compressBackgroundForStorage(combinedState.bgUploadUrl);
+    }
+    if (typeof combinedState.bgUrl === "string") {
+      combinedState.bgUrl = await compressBackgroundForStorage(combinedState.bgUrl);
+    }
+    const sanitizedState = sanitizeDesignForStorage(combinedState);
+    const normalizedState = await normalizeImagesForSave(sanitizedState);
+    return JSON.stringify({ v: 1, state: normalizedState }, null, 2);
+  };
+
+  const prepareResumeForReturn = async () => {
     try {
-      persistLastDesignSafely(exportDesignJSON());
+      const designJson = await buildResumeSnapshot();
+      try { sessionStorage.setItem(RESUME_DESIGN_KEY, designJson); } catch {}
+      persistLastDesignSafely(designJson);
       sessionStorage.setItem("nf:resume", "1");
+      localStorage.setItem("nf:resume", "1");
+      const meta = JSON.stringify({
+        source: "app-navigation",
+        pathname: window.location.pathname,
+        createdAt: Date.now(),
+      });
+      sessionStorage.setItem(RESUME_META_KEY, meta);
+      localStorage.setItem(RESUME_META_KEY, meta);
     } catch {}
-  }, []);
+  };
+
+  const handleStudioNavigation = async (
+    event: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>,
+    href: string
+  ) => {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    await prepareResumeForReturn();
+    window.location.assign(href);
+  };
 
   const openAccountPanel = React.useCallback(async () => {
     setAccountOpen(true);
@@ -10186,39 +11690,16 @@ const mobileFloatSticky = isMobileView && format === "story";
     setAccountError(null);
     setAccountData(null);
     try {
-      const supabase = supabaseBrowser();
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-      if (!token) {
-        setAccountData({
-          email: null,
-          status: "guest",
-          rawStatus: "starter",
-          periodEnd: null,
-        });
-        setAccountLoading(false);
-        return;
+      const snapshot = await refreshAccessSnapshot({ includeAccount: true });
+      if (!snapshot) {
+        setAccountError("Failed to load account");
       }
-      await fetch("/api/auth/profile-bootstrap", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const res = await fetch("/api/auth/status", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const json = await res.json();
-      setAccountData({
-        email: json.email || data.session?.user?.email || null,
-        status: json.status || "inactive",
-        rawStatus: json.raw_status || null,
-        periodEnd: json.current_period_end || null,
-      });
     } catch {
       setAccountError("Failed to load account");
     } finally {
       setAccountLoading(false);
     }
-  }, []);
+  }, [refreshAccessSnapshot]);
 
   const handleExportClose = React.useCallback(() => {
     setExportModalOpen(false);
@@ -10269,7 +11750,7 @@ function clearAllSelections() {
 
   // ✅ Local React state selections (these are NOT in Zustand FlyerState)
   setSelectedEmojiId(null);
-  
+  setSelIconId(null);
 }
 
 
@@ -10334,14 +11815,6 @@ async function injectGoogleFontsForExport(
     fontEmbedCss: combinedCss,
   };
 }
-
-
-  const [shapes, setShapes] = useState<Shape[]>([]);
-  const deleteShape = (id: string) => {
-  setShapes(list => list.filter(s => s.id !== id));
-  setSelShapeId(prev => (prev === id ? null : prev));
-};
-
 const [selIconId, setSelIconId] = useState<string | null>(null);
 const [iconList, setIconList] = useState<Icon[]>([]);
 
@@ -10353,6 +11826,9 @@ const [iconList, setIconList] = useState<Icon[]>([]);
   const [genProvider, setGenProvider] = useState<'auto' | 'nano' | 'openai' | 'venice'>('auto');
   const [genLoading, setGenLoading] = useState(false);
   const [genError, setGenError] = useState<string>('');
+  const [autoLayoutLoading, setAutoLayoutLoading] = useState(false);
+  const [autoLayoutError, setAutoLayoutError] = useState<string | null>(null);
+  const [autoLayoutReferenceUrl, setAutoLayoutReferenceUrl] = useState<string | null>(null);
   const [isPlaceholder, setIsPlaceholder] = useState<boolean>(false);
   const [variety, setVariety] = useState<number>(3);
   const [lockVar, setLockVar] = useState<boolean>(false);
@@ -10398,8 +11874,7 @@ function removeFromPortraitLibrary(src: string) {
     useFlyerState.getState().setSelectedPanel('icons');
   };
 
-  // ✅ NEW: Handles ADDING items from the Library (Flares/Shapes)
- // ✅ FIX: Smart Handler (Flares -> Portraits, Shapes -> Icons)
+  // Handles adding items from the library.
  const handleAddLibraryItem = (item: any) => {
   let payload = item;
   let isFlare = false;
@@ -10444,7 +11919,6 @@ function removeFromPortraitLibrary(src: string) {
 
 
   } else {
-    // 🔷 CASE B: It's a Shape -> Add to ICONS state
     const newIcon = {
       id: crypto.randomUUID(),
       x: 50,
@@ -10453,13 +11927,11 @@ function removeFromPortraitLibrary(src: string) {
       rotation: 0,
       opacity: 1,
       color: "#ffffff",
-      type: "shape",
       ...payload,
     };
 
     setIconList((prev) => [...prev, newIcon]);
 
-    // ✅ keep user in ICONS mode after adding shapes too
     store.setSelectedPanel("icons");
     store.setMoveTarget("icon");
 
@@ -10510,37 +11982,29 @@ const addIconByKey = React.useCallback((key: string) => {
 // Keep your hotkey working:
 const addHookahIcon = React.useCallback(() => addIconByKey('hookah'), [addIconByKey]);
 
-
-
-
-
-  // ==== LOCK STATE (shapes & icons) ====
-const [lockedIds, setLockedIds] = useState<{ shape: Set<string>; icon: Set<string>; portrait: Set<string> }>({
-  shape: new Set(),
+  // ==== LOCK STATE (icons) ====
+const [lockedIds, setLockedIds] = useState<{ icon: Set<string>; portrait: Set<string> }>({
   icon: new Set(),
   portrait: new Set(),
 });
 
 
-const isLocked = (t: 'shape' | 'icon', id: string) =>
-  id === 'portrait' ? portraitLocked : lockedIds[t].has(id);
-const onToggleLock = (t: 'shape' | 'icon', id: string) => {
+const isLocked = (t: 'icon', id: string) =>
+  id === 'portrait'
+    ? portraitLocked
+    : lockedIds.icon.has(id);
+const onToggleLock = (t: 'icon', id: string) => {
   setLockedIds(prev => {
-  // preserve ALL keys and re-clone the two we might mutate
   const next = {
     ...prev,
-    shape: new Set(prev.shape),
     icon: new Set(prev.icon),
   };
-  const set = t === 'shape' ? next.shape : next.icon;
+  const set = next.icon;
   if (set.has(id)) set.delete(id); else set.add(id);
   return next;
 });
 
 };
-
-  // Keep track of which shape you're editing
-  const [selShapeId, setSelShapeId] = useState<string | null>(null);
   const randomPreset = React.useCallback(() => {
   const p = PRESETS[Math.floor(Math.random() * PRESETS.length)];
 
@@ -10566,6 +12030,23 @@ useEffect(() => {
 const [genCount, setGenCount] = useState<1 | 2>(1);          // how many images to render
 const [genSize, setGenSize]   = useState<'1080' | '2160' | '3840'>('2160'); // render resolution hint
 const [genCandidates, setGenCandidates] = useState<string[]>([]); // b64/url of batch results
+
+const handleAutoLayoutReferenceUpload = React.useCallback((file: File) => {
+  const reader = new FileReader();
+  reader.onload = () => {
+    setAutoLayoutReferenceUrl(String(reader.result || ""));
+    setAutoLayoutError(null);
+  };
+  reader.onerror = () => {
+    setAutoLayoutError("Could not read the uploaded background.");
+  };
+  reader.readAsDataURL(file);
+}, []);
+
+const clearAutoLayoutReference = React.useCallback(() => {
+  setAutoLayoutReferenceUrl(null);
+  setAutoLayoutError(null);
+}, []);
 
 
   useEffect(() => { setSeed(Math.floor(Math.random() * 1e9)); }, []);
@@ -10629,23 +12110,28 @@ const generateBackground = async (opts: GenOpts = {}) => {
     setGenError("Starter plan has 0 AI generations. Upgrade or use a pass to generate backgrounds.");
     return;
   }
-  // 1. Credit Check
-  const willConsume = true;
-  if (willConsume && credits <= 0) {
+  const remaining = generationQuota?.remaining;
+  if (remaining != null && remaining <= 0) {
     if (!(bgUploadUrl || bgUrl)) {
       setBgUploadUrl(FALLBACK_BG); setBgUrl(null);
       setIsPlaceholder(true);
-      setGenError('No credits left — showing fallback.');
+      setGenError('No generations left — showing fallback.');
     } else {
-      setGenError('No credits left.');
+      setGenError('No generations left.');
     }
     return;
   }
 
   try {
+    const token = await getAccessToken();
+    if (!token) {
+      setGenError("Sign in to use AI generation.");
+      return;
+    }
     setGenLoading(true);
     setGenError('');
     setGenCandidates([]);
+    const originalBackgroundVersion = captureCurrentBackgroundVersion();
 
     // 2. Config & Seed
     const requestedFormat = opts.formatOverride ?? format;
@@ -10944,11 +12430,15 @@ const generateBackground = async (opts: GenOpts = {}) => {
       const runOnce = async () => {
         const res = await fetch('/api/gen-image', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
           body: JSON.stringify(body)
         });
 
         const j = await res.json().catch(() => ({} as any));
+        applyGenerationQuota(j);
         if (!res.ok) throw new Error(j?.error || `HTTP ${res.status}`);
         if (j?.error) throw new Error(j.error);
 
@@ -10987,17 +12477,25 @@ const generateBackground = async (opts: GenOpts = {}) => {
     if (genCount > 1) setGenCandidates(imgs);
 
     const first = imgs[0];
-    if (first.startsWith('data:image/')) { setBgUploadUrl(first); setBgUrl(null); }
-    else                                 { setBgUrl(first);      setBgUploadUrl(null); }
-
+    const generatedVersion = createBackgroundVersion(first, {
+      scale: 1.3,
+      posX: 50,
+      posY: 50,
+      rotate: 0,
+      fitMode: false,
+    });
+    applyBackgroundVersionToCanvas(generatedVersion, requestedFormat);
+    setSharedGeneratedBackground({
+      source: "ai_background",
+      sourceFormat: requestedFormat,
+      original: originalBackgroundVersion,
+      generated: generatedVersion,
+      originalPortrait: captureCurrentPortraitVersion(),
+      updatedAt: Date.now(),
+    });
     setFormat(requestedFormat);
-    setBgScale(1.3);
-    setBgPosX(50);
-    setBgPosY(50);
-    setBgFitMode(false);
     setIsPlaceholder(false);
     lastGenRef.current = { opts: opts, seed: baseSeed, fmt: requestedFormat };
-    if (willConsume) setCredits(c => Math.max(0, c - 1));
 
   } catch (e: any) {
     const msg = String(e?.message || e || 'Generation failed');
@@ -11021,12 +12519,17 @@ const generateSubjectForBackground = async () => {
     setSubjectGenError("Add a background first.");
     return;
   }
-  if (credits <= 0) {
-    setSubjectGenError("No credits left.");
+  if (generationQuota?.remaining != null && generationQuota.remaining <= 0) {
+    setSubjectGenError("No generations left.");
     return;
   }
 
   try {
+    const token = await getAccessToken();
+    if (!token) {
+      setSubjectGenError("Sign in to use AI generation.");
+      return;
+    }
     setSubjectGenLoading(true);
     setSubjectGenError(null);
 
@@ -11177,7 +12680,10 @@ const generateSubjectForBackground = async () => {
     ): Promise<string> {
       const res = await fetch("/api/gen-image", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           prompt,
           format: format === "story" ? "story" : "square",
@@ -11190,6 +12696,7 @@ const generateSubjectForBackground = async () => {
         }),
       });
       const j = await res.json().catch(() => ({} as any));
+      applyGenerationQuota(j);
       if (!res.ok || j?.error) {
         throw new Error(j?.error || `HTTP ${res.status}`);
       }
@@ -11329,6 +12836,7 @@ const generateSubjectForBackground = async () => {
     const usableCutout = cutout;
     await setPortraitUrlSafe(usableCutout);
     setBlendSubject(usableCutout);
+    setBlendSubjectCutout(usableCutout);
     // Ensure subject is visible on canvas (centered, sensible scale)
     setPortraitX(50);
     setPortraitY(55);
@@ -11357,7 +12865,6 @@ const generateSubjectForBackground = async () => {
     if (typeof window !== "undefined" && window.innerWidth < 1024) {
       window.setTimeout(scrollToArtboard, 120);
     }
-    setCredits((c) => Math.max(0, c - 1));
   } catch (e: any) {
     setSubjectGenError(String(e?.message || e || "Subject generation failed"));
   } finally {
@@ -12228,7 +13735,7 @@ useEffect(() => {
   setAllowPeople(allow);
 
   // If there’s no background yet, generate immediately with exact prompt
-  if (!(bgUploadUrl || bgUrl)) {
+  if (!isStarterPlan && !(bgUploadUrl || bgUrl)) {
     await generateBackground({
       prompt: tpl.bg?.prompt,               // use the literal prompt
       style: tpl.bg?.style,                 // template style
@@ -12238,73 +13745,8 @@ useEffect(() => {
     });
   }
 };
-// ---- SHAPES STATE & HELPERS ----
-const newId = () => 'sh-' + Math.random().toString(36).slice(2, 9);
-const addRect = () =>
-  setShapes(s => [
-    ...s,
-    {
-      id: newId(),
-      kind: 'rect',
-      x: 10, y: 10,
-      width: 32, height: 8,
-      rotation: 0,
-      fill: 'rgba(255,255,255,0.12)',
-      stroke: '#ffffff',
-      strokeWidth: 1,
-      opacity: 0.9,
-    },
-  ]);
-
-const addCircle = () =>
-  setShapes(s => [
-    ...s,
-    {
-      id: newId(),
-      kind: 'circle',
-      x: 50, y: 24,
-      r: 6,                         // % of short edge (your renderer already handles this)
-      fill: 'rgba(255,255,255,0.10)',
-      stroke: '#ffffff',
-      strokeWidth: 1,
-      opacity: 0.9,
-    },
-  ]);
-
-const addLine = () =>
-  setShapes(s => [
-    ...s,
-    {
-      id: newId(),
-      kind: 'line',
-      x: 6, y: 88,                  // start point (%)
-      width: 48, height: 0,         // Δx, Δy in %
-      fill: 'transparent',          // not used for lines
-      stroke: '#ffffff',
-      strokeWidth: 2,
-      opacity: 0.9,
-    },
-  ]);
-
-        const updateShape = (id: string, patch: Partial<Shape>) =>
-          setShapes(s => s.map(sh => (sh.id === id ? { ...sh, ...patch } : sh)));
-
-        const removeShape = (id: string) =>
-          setShapes(s => s.filter(sh => sh.id !== id));
-
-        const clearShapes = () => setShapes([]);
-
 // (REMOVE) const [icons, setIcons] = useState<Icon[]>([]);
 const onSelectIcon = (id: string) => { setSelIconId(id); setDragging('icon'); };
-const onSelectShape = (id: string) => { setSelShapeId(id); setDragging('shape'); };
-
-// --- COMPAT SHIM: old code may call toggleLock(key) ---
-function toggleLock(key: string | null | undefined) {
-  if (!key) return;
-  // Heuristic: if the id exists in iconList, treat as icon; otherwise assume shape.
-  const isIcon = iconList.some(i => i.id === key);
-  onToggleLock(isIcon ? 'icon' : 'shape', key);
-}
 
 const addEmojiIcon = (emoji = '⭐️') =>
   setIconList(a => [
@@ -12623,7 +14065,6 @@ const bh = (typeof pBaseH === 'number') ? pBaseH : 100;
   setMoveMode(true);
   setDragging('portrait');
   setSelIconId(null);
-  setSelShapeId(null);
 }
 // --- Portrait instance helpers (add once) ---
 function addInstanceNonce(src: string) {
@@ -12665,7 +14106,6 @@ const y = 50;
   setMoveMode(true);
   setDragging('portrait');
   setSelIconId(null);
-  setSelShapeId(null);
 }, [format]);
 
 
@@ -12943,8 +14383,8 @@ function exportDesignJSON(): string {
     logoUrl, logoX, logoY, logoScale, logoRotate,
     logoSlots,
 
-    // icons & shapes
-    iconList, shapes,
+    // icons
+    iconList,
 
     // type tweaks
     opticalMargin, leadTrackDelta, lastTrackDelta, kerningFix, headBehindPortrait,
@@ -13003,8 +14443,8 @@ function buildHistorySnapshot(): string {
     logoUrl, logoX, logoY, logoScale, logoRotate,
     logoSlots,
 
-    // icons & shapes
-    iconList, shapes,
+    // icons
+    iconList,
 
     // store-backed layers
     portraits, emojis,
@@ -13042,7 +14482,7 @@ const historySnapshot = React.useMemo(() => buildHistorySnapshot(), [
   portraitUrl, portraitX, portraitY, portraitScale, portraitLocked, portraitSlots,
   logoUrl, logoX, logoY, logoScale, logoRotate,
   logoSlots,
-  iconList, shapes,
+  iconList,
   portraits, emojis,
   opticalMargin, leadTrackDelta, lastTrackDelta, kerningFix, headBehindPortrait,
   palette, variety, genStyle, genPrompt, genGender, genEthnicity,
@@ -13164,7 +14604,7 @@ function IS_placeIconFromSlot(i: number) {
   const src = IS_iconSlots[i];
   if (!src) return;
 
-  // iconList exists in your state already. This shape is compatible with your renderer:
+  // iconList exists in your state already. This object is compatible with your renderer:
   setIconList((prev: any[]) => [
     ...prev,
     {
@@ -14049,11 +15489,6 @@ function useRafThrottle<T extends (...args: any[]) => void>(fn: T) {
   }, [fn]);
 }
 
-
-const onShapeMoveRaf     = useRafThrottle((id: string, x: number, y: number) => { 
-  if (isLocked('shape', id)) return; 
-  updateShape(id, { x, y }); });
-
 const onIconMoveRaf = useRafThrottle((id: string, x: number, y: number) => {
   if (isLocked('icon', id)) return;
   updateIcon(id, { x, y });
@@ -14147,6 +15582,10 @@ function persistLastDesignSafely(json: string) {
   return true;
 }
 
+const RESUME_META_KEY = "nf:resumeMeta";
+const RESUME_DESIGN_KEY = "nf:resumeDesign";
+const RESUME_MAX_AGE_MS = 1000 * 60 * 90;
+
 // ===== /STORAGE SAFETY HELPERS =====
 
 
@@ -14238,18 +15677,6 @@ const portraitCanvas = React.useMemo(() => {
     if ((store as any).moveTarget !== target) {
       store.setMoveTarget(target);
     }
-
-    // ✅ HARD FIX: something else is flipping panel back to "portrait" AFTER selection.
-    // Re-assert icons mode on next frame (wins last-write).
-    if (isFlare || isSticker) {
-      requestAnimationFrame(() => {
-        const s = useFlyerState.getState();
-        if ((s as any).selectedPortraitId === pid) {
-          s.setSelectedPanel("icons");
-          s.setMoveTarget("icon");
-        }
-      });
-    }
   };
 
   const canDrag = (item: any) => {
@@ -14273,6 +15700,7 @@ const portraitCanvas = React.useMemo(() => {
     const isSelected = selectedPortraitId === p.id;
     const locked = !!p.locked;
     const { isFlare, isSticker } = classify(p);
+    const isImageSticker = isSticker && typeof (p as any).svgTemplate !== "string" && !!p.url;
     const clickThrough = locked;
     const shadowBlur = Number((p as any).shadowBlur ?? 0);
     const shadowAlpha = Number((p as any).shadowAlpha ?? 0.5);
@@ -14282,17 +15710,28 @@ const portraitCanvas = React.useMemo(() => {
         ? `drop-shadow(0 ${shadowOffset}px ${shadowBlur}px rgba(0,0,0,${shadowAlpha}))`
         : "none";
     const tintDeg = Number((p as any).tint ?? 0);
+    const tintMode = (p as any).tintMode ?? (isImageSticker ? "colorize" : "hue");
     const filterParts = [];
     if (shadowFilter !== "none") filterParts.push(shadowFilter);
-    if (tintDeg !== 0) filterParts.push(`hue-rotate(${tintDeg}deg)`);
+    if (tintDeg !== 0) {
+      filterParts.push(
+        tintMode === "colorize"
+          ? `sepia(1) saturate(80) hue-rotate(${tintDeg}deg) brightness(0.95) contrast(1.1)`
+          : `hue-rotate(${tintDeg}deg)`
+      );
+    }
     const combinedFilter = filterParts.length ? filterParts.join(" ") : "none";
     const unlocking = unlockingIds.includes(p.id);
     const labelScale = Number(p.scale ?? 1);
     const labelTop = Math.max(60, Math.min(90, 50 + 35 * labelScale));
     const labelGap = 8;
+    const labelOffsetY = Number((p as any).labelOffsetY ?? 0);
     const labelBg = (p as any).labelBg ?? true;
+    const isShapeGraphic = !!(p as any).isShapeGraphic;
+    const labelRotate = Number((p as any).labelRotate ?? 0);
+    const labelSkew = Number((p as any).labelSkew ?? 0);
     const labelSize = Number.isFinite((p as any).labelSize)
-      ? Math.max(7, Math.min(14, Number((p as any).labelSize)))
+      ? Math.max(7, Math.min(isShapeGraphic ? 32 : 14, Number((p as any).labelSize)))
       : 9;
     const labelColor =
       typeof (p as any).labelColor === "string"
@@ -14303,6 +15742,82 @@ const portraitCanvas = React.useMemo(() => {
     const labelMultiline = labelText.includes("\n");
     const labelPaddingY = labelBg ? Math.max(1, Math.round(labelSize * 0.15)) : 0;
     const labelPaddingX = labelBg ? Math.max(4, Math.round(labelSize * 0.45)) : 0;
+    const isBrandFace = !!(p as any).isBrandFace;
+    const shapeScale = Math.max(0.01, Math.min(6, Number(p.scale ?? 1)));
+    const shapeLength = Math.max(48, Math.min(12000, Number((p as any).shapeLength ?? 160)));
+    const shapeSkew = Math.max(-60, Math.min(60, Number((p as any).shapeSkew ?? 0)));
+    const shapeWidth = Math.max(12, Math.round(shapeLength * shapeScale));
+    const shapeHeight = Math.max(12, Math.round(160 * shapeScale));
+    const portraitLighting = normalizeMainFaceLighting((p as any).lighting);
+    const showSubjectLighting = isBrandFace && portraitLighting.enabled;
+    const mainFaceFilterPreset = isBrandFace
+      ? normalizeMainFaceFilterPreset((p as any).mainFaceFilterPreset)
+      : "none";
+    const mainFaceFilterStrength = clamp01(Number((p as any).mainFaceFilterStrength ?? 0.85));
+    const mergeCssFilters = (...parts: Array<string | null | undefined>) =>
+      parts.filter((part) => !!part && part !== "none").join(" ") || "none";
+    const showPosterOverlay = isBrandFace && mainFaceFilterPreset === "poster";
+    const showPopOverlay = isBrandFace && mainFaceFilterPreset === "pop";
+    const mainFaceToneFilter =
+      !isBrandFace || mainFaceFilterPreset === "none"
+        ? ""
+        : mainFaceFilterPreset === "mono"
+        ? `grayscale(${(0.72 + mainFaceFilterStrength * 0.28).toFixed(3)}) contrast(${(1.08 + mainFaceFilterStrength * 0.52).toFixed(3)}) brightness(${(0.98 + mainFaceFilterStrength * 0.06).toFixed(3)})`
+        : mainFaceFilterPreset === "contrast"
+        ? `contrast(${(1.12 + mainFaceFilterStrength * 0.88).toFixed(3)}) saturate(${(1.04 + mainFaceFilterStrength * 0.28).toFixed(3)}) brightness(${(1 - mainFaceFilterStrength * 0.06).toFixed(3)})`
+        : mainFaceFilterPreset === "halftone"
+        ? `grayscale(1) contrast(${(1.35 + mainFaceFilterStrength * 1.4).toFixed(3)}) brightness(${(0.96 + mainFaceFilterStrength * 0.08).toFixed(3)})`
+        : mainFaceFilterPreset === "poster"
+        ? `grayscale(${(0.42 + mainFaceFilterStrength * 0.46).toFixed(3)}) contrast(${(1.18 + mainFaceFilterStrength * 0.72).toFixed(3)}) brightness(${(1.02 - mainFaceFilterStrength * 0.08).toFixed(3)}) saturate(${(0.9 - mainFaceFilterStrength * 0.38).toFixed(3)})`
+        : `grayscale(${(0.58 + mainFaceFilterStrength * 0.34).toFixed(3)}) contrast(${(1.32 + mainFaceFilterStrength * 0.86).toFixed(3)}) brightness(${(1.01 - mainFaceFilterStrength * 0.05).toFixed(3)}) saturate(${(0.72 - mainFaceFilterStrength * 0.34).toFixed(3)})`;
+    const posterOverlayFilter = `url(#mainface-posterize) contrast(${(1.04 + mainFaceFilterStrength * 0.24).toFixed(3)}) saturate(${(1.08 + mainFaceFilterStrength * 0.22).toFixed(3)})`;
+    const posterOverlayOpacity = 0.72 + mainFaceFilterStrength * 0.28;
+    const popOverlayFilter = `contrast(${(1.9 + mainFaceFilterStrength * 1.4).toFixed(3)}) saturate(${(0.3 + mainFaceFilterStrength * 0.18).toFixed(3)}) brightness(${(1.02 + mainFaceFilterStrength * 0.04).toFixed(3)}) blur(${(0.3 + mainFaceFilterStrength * 0.9).toFixed(2)}px)`;
+    const popShadowFilter = `contrast(${(2.4 + mainFaceFilterStrength * 1.6).toFixed(3)}) brightness(${(0.52 + mainFaceFilterStrength * 0.08).toFixed(3)}) saturate(0.12)`;
+    const popHighlightFilter = `contrast(${(1.7 + mainFaceFilterStrength * 1.1).toFixed(3)}) brightness(${(1.18 + mainFaceFilterStrength * 0.16).toFixed(3)}) saturate(${(0.22 + mainFaceFilterStrength * 0.12).toFixed(3)})`;
+    const popOverlayOpacity = 0.9 + mainFaceFilterStrength * 0.08;
+    const popShadowOpacity = 0.54 + mainFaceFilterStrength * 0.18;
+    const popHighlightOpacity = 0.42 + mainFaceFilterStrength * 0.16;
+    const halftoneDotSize = Math.max(4, Math.round(12 - mainFaceFilterStrength * 5));
+    const halftoneMask =
+      "radial-gradient(circle at center, rgba(0,0,0,0.98) 0 34%, rgba(0,0,0,0) 43%)";
+    const lightColor = hexToRgb(portraitLighting.highlightColor);
+    const subjectTransform = isShapeGraphic
+      ? `skewX(${shapeSkew}deg) rotate(${(p as any).rotation ?? 0}deg)`
+      : `scale(${p.scale ?? 1}) rotate(${(p as any).rotation ?? 0}deg)`;
+    const lightSide = portraitLighting.lightSide === "right" ? "right" : "left";
+    const sideMask =
+      lightSide === "left"
+        ? "linear-gradient(90deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0.92) 26%, rgba(0,0,0,0.35) 62%, rgba(0,0,0,0) 92%)"
+        : "linear-gradient(270deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0.92) 26%, rgba(0,0,0,0.35) 62%, rgba(0,0,0,0) 92%)";
+    const rimMask =
+      lightSide === "left"
+        ? "linear-gradient(90deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0.96) 14%, rgba(0,0,0,0.5) 24%, rgba(0,0,0,0) 38%)"
+        : "linear-gradient(270deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0.96) 14%, rgba(0,0,0,0.5) 24%, rgba(0,0,0,0) 38%)";
+    const shadowMask =
+      lightSide === "left"
+        ? "linear-gradient(270deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0.82) 30%, rgba(0,0,0,0.15) 74%, rgba(0,0,0,0) 100%)"
+        : "linear-gradient(90deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0.82) 30%, rgba(0,0,0,0.15) 74%, rgba(0,0,0,0) 100%)";
+    const warmthTint =
+      portraitLighting.warmth >= 0
+        ? `sepia(${(0.12 + portraitLighting.warmth * 0.38).toFixed(3)}) saturate(${(1.02 + portraitLighting.warmth * 0.4).toFixed(3)})`
+        : `hue-rotate(${Math.round(portraitLighting.warmth * 18)}deg) saturate(${(1 + Math.abs(portraitLighting.warmth) * 0.16).toFixed(3)})`;
+    const baseFilter =
+      [
+        combinedFilter !== "none" ? combinedFilter : null,
+        `brightness(${(1 + portraitLighting.ambient * 0.46).toFixed(3)})`,
+        `contrast(${(1 + portraitLighting.contrast * 0.28).toFixed(3)})`,
+        `saturate(${(1 + portraitLighting.ambient * 0.18 + Math.abs(portraitLighting.warmth) * 0.1).toFixed(3)})`,
+        warmthTint,
+      ]
+        .filter(Boolean)
+        .join(" ") || "none";
+    const fillFilter = `brightness(${(1.12 + portraitLighting.fillLight * 0.95).toFixed(3)}) contrast(${(1.04 + portraitLighting.contrast * 0.16).toFixed(3)}) saturate(${(1.04 + Math.abs(portraitLighting.warmth) * 0.16).toFixed(3)}) ${warmthTint}`;
+    const keyFilter = `brightness(${(1.2 + portraitLighting.keyLight * 1.4).toFixed(3)}) contrast(${(1.06 + portraitLighting.contrast * 0.2).toFixed(3)}) saturate(${(1.08 + Math.abs(portraitLighting.warmth) * 0.22).toFixed(3)}) ${warmthTint}`;
+    const subjectShadowFilter = `brightness(${(1 - portraitLighting.shadowDepth * 0.72).toFixed(3)}) contrast(${(1 + portraitLighting.contrast * 0.14).toFixed(3)})`;
+    const rimGlowOffset = Math.round((lightSide === "left" ? -1 : 1) * (6 + portraitLighting.rimLight * 14));
+    const rimGlowBlur = Math.round(10 + portraitLighting.rimLight * 34);
+    const rimLayerFilter = `brightness(${(1.34 + portraitLighting.rimLight * 1.3).toFixed(3)}) saturate(${(1.1 + Math.abs(portraitLighting.warmth) * 0.22).toFixed(3)}) ${warmthTint} drop-shadow(${rimGlowOffset}px 0 ${rimGlowBlur}px rgba(${lightColor.r}, ${lightColor.g}, ${lightColor.b}, 0.75))`;
 
     const triggerUnlock = () => {
       if (!locked) return;
@@ -14323,6 +15838,7 @@ const portraitCanvas = React.useMemo(() => {
         <div
           className="absolute"
           data-portrait-area="true"
+          data-portrait-id={p.id}
           draggable={false}
           onDragStart={(e) => {
             e.preventDefault();
@@ -14425,35 +15941,253 @@ const portraitCanvas = React.useMemo(() => {
 
             // ✅ FIX: making the duplicate highlight invisible while moving
             filter:
-              isSelected && !isDragging ? "drop-shadow(0 0 4px #3b82f6)" : "none",
+              isSelected && !isDragging && !isBrandFace ? "drop-shadow(0 0 4px #3b82f6)" : "none",
 
             userSelect: "none",
             touchAction: "none",
           }}
         >
           {p.url && (
-            <img
-              src={p.url}
-              crossOrigin="anonymous"
-              alt=""
-              draggable={false}
-              onDragStart={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
+            <div
               style={{
-                transform: `scale(${p.scale ?? 1}) rotate(${(p as any).rotation ?? 0}deg)`,
-                maxWidth: "140vh",
-                maxHeight: "140vh",
-                objectFit: "contain",
+                position: "relative",
+                display: "inline-block",
+                transform: subjectTransform,
+                transformOrigin: "center",
+                width: isShapeGraphic ? `${shapeWidth}px` : "auto",
+                height: isShapeGraphic ? `${shapeHeight}px` : "auto",
+                maxWidth: isShapeGraphic ? "none" : "140vh",
+                maxHeight: isShapeGraphic ? "none" : "140vh",
+                opacity: (p as any).opacity ?? 1,
                 pointerEvents: "none",
                 userSelect: "none",
-                willChange: "transform",
-                mixBlendMode: ((p as any).blendMode ?? "normal") as any,
-                opacity: (p as any).opacity ?? 1,
-                filter: combinedFilter,
               }}
-            />
+            >
+              <img
+                src={p.url}
+                crossOrigin="anonymous"
+                alt=""
+                draggable={false}
+                onDragStart={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                style={{
+                  display: "block",
+                  width: isShapeGraphic ? "100%" : "auto",
+                  height: isShapeGraphic ? "100%" : "auto",
+                  maxWidth: isShapeGraphic ? "none" : "140vh",
+                  maxHeight: isShapeGraphic ? "none" : "140vh",
+                  objectFit: isShapeGraphic ? "fill" : "contain",
+                  pointerEvents: "none",
+                  userSelect: "none",
+                  willChange: "transform, filter, opacity",
+                  mixBlendMode: ((p as any).blendMode ?? "normal") as any,
+                  filter: mergeCssFilters(showSubjectLighting ? baseFilter : combinedFilter, mainFaceToneFilter),
+                }}
+              />
+              {showPosterOverlay && (
+                <img
+                  src={p.url}
+                  crossOrigin="anonymous"
+                  alt=""
+                  draggable={false}
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "block",
+                    width: "100%",
+                    height: "100%",
+                    objectFit: isShapeGraphic ? "fill" : "contain",
+                    pointerEvents: "none",
+                    userSelect: "none",
+                    opacity: posterOverlayOpacity,
+                    mixBlendMode: "normal",
+                    filter: mergeCssFilters(
+                      showSubjectLighting ? baseFilter : combinedFilter,
+                      posterOverlayFilter
+                    ),
+                  }}
+                />
+              )}
+              {showPopOverlay && (
+                <>
+                  <img
+                    src={p.url}
+                    crossOrigin="anonymous"
+                    alt=""
+                    draggable={false}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "block",
+                      width: "100%",
+                      height: "100%",
+                      objectFit: isShapeGraphic ? "fill" : "contain",
+                      pointerEvents: "none",
+                      userSelect: "none",
+                      opacity: popOverlayOpacity,
+                      mixBlendMode: "normal",
+                      filter: mergeCssFilters(
+                        showSubjectLighting ? baseFilter : combinedFilter,
+                        popOverlayFilter
+                      ),
+                    }}
+                  />
+                  <img
+                    src={p.url}
+                    crossOrigin="anonymous"
+                    alt=""
+                    draggable={false}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "block",
+                      width: "100%",
+                      height: "100%",
+                      objectFit: isShapeGraphic ? "fill" : "contain",
+                      pointerEvents: "none",
+                      userSelect: "none",
+                      opacity: popShadowOpacity,
+                      mixBlendMode: "multiply",
+                      filter: mergeCssFilters(popShadowFilter),
+                    }}
+                  />
+                  <img
+                    src={p.url}
+                    crossOrigin="anonymous"
+                    alt=""
+                    draggable={false}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "block",
+                      width: "100%",
+                      height: "100%",
+                      objectFit: isShapeGraphic ? "fill" : "contain",
+                      pointerEvents: "none",
+                      userSelect: "none",
+                      opacity: popHighlightOpacity,
+                      mixBlendMode: "screen",
+                      filter: mergeCssFilters(popHighlightFilter),
+                    }}
+                  />
+                </>
+              )}
+              {isBrandFace && mainFaceFilterPreset === "halftone" && (
+                <>
+                  <img
+                    src={p.url}
+                    crossOrigin="anonymous"
+                    alt=""
+                    draggable={false}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "block",
+                      width: "100%",
+                      height: "100%",
+                      objectFit: isShapeGraphic ? "fill" : "contain",
+                      pointerEvents: "none",
+                      userSelect: "none",
+                      opacity: 0.52 + mainFaceFilterStrength * 0.32,
+                      mixBlendMode: "multiply",
+                      filter: mergeCssFilters(showSubjectLighting ? baseFilter : combinedFilter, mainFaceToneFilter),
+                      maskImage: halftoneMask,
+                      WebkitMaskImage: halftoneMask,
+                      maskSize: `${halftoneDotSize}px ${halftoneDotSize}px`,
+                      WebkitMaskSize: `${halftoneDotSize}px ${halftoneDotSize}px`,
+                    }}
+                  />
+                </>
+              )}
+              {showSubjectLighting && (
+                <>
+                  <img
+                    src={p.url}
+                    crossOrigin="anonymous"
+                    alt=""
+                    draggable={false}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "block",
+                      width: "100%",
+                      height: "100%",
+                      objectFit: isShapeGraphic ? "fill" : "contain",
+                      pointerEvents: "none",
+                      userSelect: "none",
+                      opacity: clampLighting01(portraitLighting.fillLight * 0.95),
+                      mixBlendMode: "screen",
+                      filter: mergeCssFilters(fillFilter, mainFaceToneFilter),
+                    }}
+                  />
+                  <img
+                    src={p.url}
+                    crossOrigin="anonymous"
+                    alt=""
+                    draggable={false}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "block",
+                      width: "100%",
+                      height: "100%",
+                      objectFit: isShapeGraphic ? "fill" : "contain",
+                      pointerEvents: "none",
+                      userSelect: "none",
+                      opacity: clampLighting01(portraitLighting.keyLight),
+                      mixBlendMode: "screen",
+                      filter: mergeCssFilters(keyFilter, mainFaceToneFilter),
+                      maskImage: sideMask,
+                      WebkitMaskImage: sideMask,
+                    }}
+                  />
+                  <img
+                    src={p.url}
+                    crossOrigin="anonymous"
+                    alt=""
+                    draggable={false}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "block",
+                      width: "100%",
+                      height: "100%",
+                      objectFit: isShapeGraphic ? "fill" : "contain",
+                      pointerEvents: "none",
+                      userSelect: "none",
+                      opacity: clampLighting01(portraitLighting.shadowDepth),
+                      mixBlendMode: "multiply",
+                      filter: mergeCssFilters(subjectShadowFilter, mainFaceToneFilter),
+                      maskImage: shadowMask,
+                      WebkitMaskImage: shadowMask,
+                    }}
+                  />
+                  <img
+                    src={p.url}
+                    crossOrigin="anonymous"
+                    alt=""
+                    draggable={false}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "block",
+                      width: "100%",
+                      height: "100%",
+                      objectFit: isShapeGraphic ? "fill" : "contain",
+                      pointerEvents: "none",
+                      userSelect: "none",
+                      opacity: clampLighting01(portraitLighting.rimLight),
+                      mixBlendMode: "screen",
+                      filter: mergeCssFilters(rimLayerFilter, mainFaceToneFilter),
+                      maskImage: rimMask,
+                      WebkitMaskImage: rimMask,
+                    }}
+                  />
+                </>
+              )}
+            </div>
           )}
           {(p as any).showLabel && (p as any).label && (
             <div
@@ -14461,7 +16195,7 @@ const portraitCanvas = React.useMemo(() => {
                 position: "absolute",
                 left: "50%",
                 top: `${labelTop}%`,
-                transform: `translate(-50%, ${labelGap}px)`,
+                transform: `translate(-50%, ${labelGap + labelOffsetY}px) rotate(${labelRotate}deg) skewX(${labelSkew}deg)`,
                 padding: labelBg ? `${labelPaddingY}px ${labelPaddingX}px` : "0",
                 borderRadius: labelBg && labelMultiline ? 10 : 999,
                 fontSize: labelSize,
@@ -14585,122 +16319,229 @@ const flareCanvas = React.useMemo(() => {
       {flares.map((p: any) => {
         const isSelected = selectedPortraitId === p.id;
         const locked = !!p.locked;
+        const tintDeg = Number((p as any).tint ?? 0);
+        const isTextureAsset =
+          !!(p as any).isTexture ||
+          /^flare_paint\d+_/i.test(String((p as any).id || "")) ||
+          /^Paint\s/i.test(String((p as any).label || ""));
+        const isAmberBurstFlare =
+          /^flare_flare03_/i.test(String((p as any).id || "")) ||
+          /\/flares\/flare03\.(jpg|png)/i.test(String((p as any).url || ""));
+        const effectiveBlendMode = isTextureAsset
+          ? ((p as any).blendMode === "screen" || (p as any).blendMode === "overlay" || !(p as any).blendMode
+              ? (tintDeg !== 0 ? "color" : "overlay")
+              : (p as any).blendMode)
+          : (isAmberBurstFlare ? "screen" : ((p as any).blendMode ?? "screen"));
+        const effectiveOpacity = isTextureAsset
+          ? ((p as any).opacity === 0.45 || (p as any).opacity == null
+              ? 0.85
+              : (p as any).opacity)
+          : ((p as any).opacity ?? 1);
+        const tintMode = (p as any).tintMode ?? (isTextureAsset ? "colorize" : "hue");
+        const flareFilter =
+          tintDeg === 0
+            ? "none"
+            : tintMode === "colorize"
+            ? `sepia(1) saturate(80) hue-rotate(${tintDeg}deg) brightness(0.95) contrast(1.1)`
+            : `hue-rotate(${tintDeg}deg)`;
 
         return (
-          <div
-            key={p.id}
-            className="absolute"
-            onPointerDown={(e) => {
-              if (locked) return;
-              e.preventDefault();
-              e.stopPropagation();
-
-              const el = e.currentTarget as HTMLElement;
-              try { el.setPointerCapture(e.pointerId); } catch {}
-
-              el.dataset.pdrag = "1";
-              el.dataset.isMoved = "0";
-              el.dataset.px = String(e.clientX);
-              el.dataset.py = String(e.clientY);
-              el.dataset.sx = String(p.x);
-              el.dataset.sy = String(p.y);
-
-              const root = document.getElementById("flare-layer-root");
-              const b = root?.getBoundingClientRect();
-              el.dataset.cw = String(b?.width ?? 0);
-              el.dataset.ch = String(b?.height ?? 0);
-              el.style.setProperty("--pdx", "0px");
-              el.style.setProperty("--pdy", "0px");
-            }}
-            onPointerMove={(e) => {
-              const el = e.currentTarget as HTMLElement;
-              if (el.dataset.pdrag !== "1") return;
-
-              const px = Number(el.dataset.px || "0");
-              const py = Number(el.dataset.py || "0");
-              const dx = e.clientX - px;
-              const dy = e.clientY - py;
-
-              if (el.dataset.isMoved === "0" && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
-                el.dataset.isMoved = "1";
-              }
-              if (el.dataset.isMoved === "1") {
-                el.style.setProperty("--pdx", `${dx}px`);
-                el.style.setProperty("--pdy", `${dy}px`);
-              }
-            }}
-            onPointerUp={(e) => {
-              const el = e.currentTarget as HTMLElement;
-              if (el.dataset.pdrag !== "1") return;
-              el.dataset.pdrag = "0";
-
-              const isMoved = el.dataset.isMoved === "1";
-              const cw = Number(el.dataset.cw || "0");
-              const ch = Number(el.dataset.ch || "0");
-              const dx = e.clientX - Number(el.dataset.px || "0");
-              const dy = e.clientY - Number(el.dataset.py || "0");
-              const startX = Number(el.dataset.sx || "0");
-              const startY = Number(el.dataset.sy || "0");
-
-              if (isMoved && cw > 5 && ch > 5) {
-                const finalX = startX + (dx / cw) * 100;
-                const finalY = startY + (dy / ch) * 100;
-                useFlyerState.getState().updatePortrait(format, p.id, { x: finalX, y: finalY });
-              }
-
-              el.style.setProperty("--pdx", "0px");
-              el.style.setProperty("--pdy", "0px");
-              try { el.releasePointerCapture(e.pointerId); } catch {}
-
-              const store = useFlyerState.getState();
-              if (!isSelected) store.setSelectedPortraitId(p.id);
-              store.setSelectedPanel("icons");
-              store.setMoveTarget("icon");
-            }}
-            style={{
-              left: `${p.x}%`,
-              top: `${p.y}%`,
-              width: "auto",
-              height: "auto",
-              zIndex: 30 + Number((p as any).layerOffset ?? 0),
-              transform: "translate3d(var(--pdx, 0px), var(--pdy, 0px), 0px) translate(-50%, -50%)",
-              willChange: "transform",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              // Let locked flares go click-through except for their lock button
-              pointerEvents: locked ? "none" : "auto",
-              cursor: !locked && isSelected ? "grab" : "default",
-              // Always disable native scroll/zoom on flares so drag doesn't scroll the page
-              touchAction: locked ? "auto" : "none",
-              filter: isSelected ? "drop-shadow(0 0 10px rgba(255,255,255,0.22))" : "none",
-            }}
-          >
-            <img
-              src={p.url}
-              alt=""
-              draggable={false}
-              style={{
-                transform: `scale(${p.scale ?? 1}) rotate(${(p as any).rotation ?? 0}deg)`,
-                maxWidth: "140vh",
-                maxHeight: "140vh",
-                objectFit: "contain",
-                pointerEvents: "none",
-                userSelect: "none",
-                mixBlendMode: ((p as any).blendMode ?? "screen") as any,
-                opacity: (p as any).opacity ?? 1,
-                filter: (() => {
-                  const tintDeg = Number((p as any).tint ?? 0);
-                  const tintMode = (p as any).tintMode ?? "hue";
-                  if (!tintDeg) return "none";
-                  if (tintMode === "colorize") {
-                    return `sepia(1) saturate(6) hue-rotate(${tintDeg}deg)`;
-                  }
-                  return `hue-rotate(${tintDeg}deg)`;
-                })(),
+          <React.Fragment key={p.id}>
+            <div
+              className="absolute"
+              data-portrait-area="true"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
               }}
-            />
+              onPointerDown={(e) => {
+                if (locked) return;
+                e.preventDefault();
+                e.stopPropagation();
 
+                const store = useFlyerState.getState();
+                if (!isSelected) store.setSelectedPortraitId(p.id);
+                store.setSelectedPanel("icons");
+                store.setMoveTarget("icon");
+
+                const el = e.currentTarget as HTMLElement;
+                try { el.setPointerCapture(e.pointerId); } catch {}
+
+                el.dataset.pdrag = "1";
+                el.dataset.isMoved = "0";
+                el.dataset.px = String(e.clientX);
+                el.dataset.py = String(e.clientY);
+                el.dataset.sx = String(p.x);
+                el.dataset.sy = String(p.y);
+
+                const root = document.getElementById("flare-layer-root");
+                const b = root?.getBoundingClientRect();
+                el.dataset.cw = String(b?.width ?? 0);
+                el.dataset.ch = String(b?.height ?? 0);
+                el.style.setProperty("--pdx", "0px");
+                el.style.setProperty("--pdy", "0px");
+              }}
+              onPointerMove={(e) => {
+                const el = e.currentTarget as HTMLElement;
+                if (el.dataset.pdrag !== "1") return;
+
+                const px = Number(el.dataset.px || "0");
+                const py = Number(el.dataset.py || "0");
+                const dx = e.clientX - px;
+                const dy = e.clientY - py;
+
+                if (el.dataset.isMoved === "0" && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
+                  el.dataset.isMoved = "1";
+                }
+                if (el.dataset.isMoved === "1") {
+                  el.style.setProperty("--pdx", `${dx}px`);
+                  el.style.setProperty("--pdy", `${dy}px`);
+                }
+              }}
+              onPointerUp={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const el = e.currentTarget as HTMLElement;
+                if (el.dataset.pdrag !== "1") return;
+                el.dataset.pdrag = "0";
+
+                const isMoved = el.dataset.isMoved === "1";
+                const cw = Number(el.dataset.cw || "0");
+                const ch = Number(el.dataset.ch || "0");
+                const dx = e.clientX - Number(el.dataset.px || "0");
+                const dy = e.clientY - Number(el.dataset.py || "0");
+                const startX = Number(el.dataset.sx || "0");
+                const startY = Number(el.dataset.sy || "0");
+
+                if (isMoved && cw > 5 && ch > 5) {
+                  const finalX = startX + (dx / cw) * 100;
+                  const finalY = startY + (dy / ch) * 100;
+                  useFlyerState.getState().updatePortrait(format, p.id, { x: finalX, y: finalY });
+                }
+
+                el.style.setProperty("--pdx", "0px");
+                el.style.setProperty("--pdy", "0px");
+                try { el.releasePointerCapture(e.pointerId); } catch {}
+
+                const store = useFlyerState.getState();
+                if (!isSelected) store.setSelectedPortraitId(p.id);
+                store.setSelectedPanel("icons");
+                store.setMoveTarget("icon");
+              }}
+              style={{
+                left: `${p.x}%`,
+                top: `${p.y}%`,
+                width: "auto",
+                height: "auto",
+                zIndex: 30 + Number((p as any).layerOffset ?? 0),
+                transform: "translate3d(var(--pdx, 0px), var(--pdy, 0px), 0px) translate(-50%, -50%)",
+                willChange: "transform",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                pointerEvents: locked ? "none" : "auto",
+                cursor: !locked && isSelected ? "grab" : "default",
+                touchAction: locked ? "auto" : "none",
+                filter: isSelected ? "drop-shadow(0 0 10px rgba(255,255,255,0.22))" : "none",
+              }}
+            >
+              {isTextureAsset ? (
+                <TintedTextureImage
+                  src={p.url}
+                  hue={tintDeg}
+                  style={{
+                    transform: `scale(${p.scale ?? 1}) rotate(${(p as any).rotation ?? 0}deg)`,
+                  maxWidth: "140vh",
+                  maxHeight: "140vh",
+                  objectFit: "contain",
+                  pointerEvents: "none",
+                  userSelect: "none",
+                  mixBlendMode: effectiveBlendMode as any,
+                  opacity: effectiveOpacity,
+                  filter: "none",
+                }}
+              />
+            ) : (
+              <img
+                  src={p.url}
+                  alt=""
+                  draggable={false}
+                  style={{
+                    transform: `scale(${p.scale ?? 1}) rotate(${(p as any).rotation ?? 0}deg)`,
+                  maxWidth: "140vh",
+                  maxHeight: "140vh",
+                  objectFit: "contain",
+                  pointerEvents: "none",
+                  userSelect: "none",
+                  mixBlendMode: effectiveBlendMode as any,
+                  opacity: effectiveOpacity,
+                  filter: flareFilter,
+                }}
+              />
+            )}
+
+              {isSelected && !locked && (
+                <div
+                  className="absolute"
+                  style={{
+                    top: isTextureAsset ? -10 : -8,
+                    right: -8,
+                    zIndex: 1100,
+                    display: "flex",
+                    gap: 6,
+                    pointerEvents: "auto",
+                  }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    title="Lock"
+                    onClick={() => {
+                      const store = useFlyerState.getState();
+                      store.updatePortrait(format, p.id, { locked: true });
+                      store.setSelectedPortraitId(p.id);
+                      store.setSelectedPanel("icons");
+                      store.setMoveTarget("icon");
+                    }}
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: 6,
+                      background: "#0f172a",
+                      border: "1px solid #334155",
+                      color: "#ffffff",
+                      lineHeight: 1,
+                    }}
+                  >
+                    🔒
+                  </button>
+                  <button
+                    type="button"
+                    title="Delete texture"
+                    onClick={() => {
+                      const store = useFlyerState.getState();
+                      store.removePortrait(format, p.id);
+                      store.setSelectedPortraitId(null);
+                      store.setSelectedPanel("icons");
+                      store.setMoveTarget("icon");
+                    }}
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: 6,
+                      background: "#0f172a",
+                      border: "1px solid #334155",
+                      color: "#ffffff",
+                      lineHeight: 1,
+                    }}
+                  >
+                    🗑️
+                  </button>
+                </div>
+              )}
+            </div>
             {locked && (
               <button
                 type="button"
@@ -14716,15 +16557,15 @@ const flareCanvas = React.useMemo(() => {
                 }}
                 style={{
                   position: "absolute",
-                  left: "50%",
-                  top: "50%",
+                  left: `${p.x}%`,
+                  top: `${p.y}%`,
                   transform: "translate(-50%, -50%)",
                   zIndex: 9999,
-                  width: 28,
-                  height: 28,
+                  width: 30,
+                  height: 30,
                   borderRadius: 999,
                   border: "1px solid rgba(255,255,255,0.7)",
-                  background: "rgba(0,0,0,0.7)",
+                  background: "rgba(0,0,0,0.72)",
                   color: "#fff",
                   display: "grid",
                   placeItems: "center",
@@ -14739,7 +16580,7 @@ const flareCanvas = React.useMemo(() => {
                 </svg>
               </button>
             )}
-          </div>
+          </React.Fragment>
         );
       })}
     </div>
@@ -14749,7 +16590,7 @@ const flareCanvas = React.useMemo(() => {
 
 // ===== EXPORT HELPERS (DROP THIS BLOCK RIGHT ABOVE `return (`) =====
 // 1) Helper: temporarily disable cross-origin stylesheets (e.g. Google Fonts)
-const withExternalStylesDisabled = async <T,>(fn: () => Promise<T>): Promise<T> => {
+async function withExternalStylesDisabled<T>(fn: () => Promise<T>): Promise<T> {
   const links = Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]'));
   const toDisable: HTMLLinkElement[] = [];
 
@@ -14781,7 +16622,7 @@ const withExternalStylesDisabled = async <T,>(fn: () => Promise<T>): Promise<T> 
       link.disabled = false;
     }
   }
-};
+}
 
 // 2) Common opts: skipFonts prevents font inlining (avoids cssRules reads)
 //    fontEmbedCss: '' hard-disables font embedding path in older versions.
@@ -14872,10 +16713,11 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       return;
     }
     try {
+      const savedAt = new Date().toISOString();
       // Capture ALL State
       const rawData = {
   version: "2.0",
-  savedAt: new Date().toISOString(),
+  savedAt,
 
   // ✅ core
   format,
@@ -14935,6 +16777,7 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
   head2LineHeight,
   head2Align,
   head2Alpha,
+  head2Color,
 
   detailsLineHeight,
   detailsAlign,
@@ -14957,7 +16800,6 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
   subtagAlpha,
 
   // ✅ arrays
-  shapes: shapes || [],
   icons: iconList || [],
   portraitSlots: portraitSlots || [],
   logoSlots: logoSlots || [],
@@ -14994,6 +16836,7 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+      setProjectFileStatusAndPersist({ kind: "saved", at: savedAt });
       
 
     } catch (e) {
@@ -15013,6 +16856,7 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       
       // Pass the raw text string directly to your main loader
       importDesignJSON(raw);
+      setProjectFileStatusAndPersist({ kind: "loaded", at: new Date().toISOString() });
 
     } catch (err) {
 
@@ -15023,8 +16867,8 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
 // ✅ HANDLER: Export Design to JSON
   const handleExportJSON = () => {
     try {
-      const json = useFlyerState.getState().exportDesign();
-      const blob = new Blob([JSON.stringify(json, null, 2)], { type: "application/json" });
+      const json = exportDesignJSON();
+      const blob = new Blob([json], { type: "application/json" });
       
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -15104,6 +16948,7 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       applyIfDefined(data.headlineFamily, setHeadlineFamily);
       applyIfDefined(data.head2Family, setHead2Family);
       applyIfDefined(data.detailsFamily, setDetailsFamily);
+      applyIfDefined(data.bodyFamily ?? data.detailsFamily, setBodyFamily);
       applyIfDefined(data.details2Family, setDetails2Family);
       applyIfDefined(data.venueFamily, setVenueFamily);
       applyIfDefined(data.subtagFamily, setSubtagFamily);
@@ -15112,11 +16957,18 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       applyIfDefined(data.textFx, (v: any) => setTextFx(v));
       applyIfDefined(data.head2Fx, (v: any) => setHead2Fx({ ...(v || {}), gradient: false }));
 
-      // ✅ restore toggles
-      // ✅ FIX: Pass 'format' as the first argument
-      applyIfDefined(data.subtagEnabled, (v: any) => setSubtagEnabled(format, v));
-      applyIfDefined(data.headline2Enabled, (v: any) => setHeadline2Enabled(format, v));
-      applyIfDefined(data.details2Enabled, (v: any) => setDetails2Enabled(format, v));
+      // ✅ restore legacy boolean toggles only.
+      // Record<Format, boolean> values are already restored by store.importDesign().
+      const restoreLegacyFormatToggle = (
+        value: unknown,
+        setter: (fmt: Format, enabled: boolean) => void
+      ) => {
+        if (typeof value !== "boolean") return;
+        setter(data.format ?? format, value);
+      };
+      restoreLegacyFormatToggle(data.subtagEnabled, setSubtagEnabled);
+      restoreLegacyFormatToggle(data.headline2Enabled, setHeadline2Enabled);
+      restoreLegacyFormatToggle(data.details2Enabled, setDetails2Enabled);
 
       // ✅ restore background
       applyIfDefined(data.bgPosX ?? data.bgX, setBgPosX);
@@ -15182,6 +17034,7 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       applyIfDefined(data.head2LineHeight, setHead2LineHeight);
       applyIfDefined(data.head2Align, setHead2Align);
       applyIfDefined(data.head2Alpha, setHead2Alpha);
+      applyIfDefined(data.head2Color, setHead2Color);
 
       applyIfDefined(data.detailsLineHeight, setDetailsLineHeight);
       applyIfDefined(data.detailsAlign, setDetailsAlign);
@@ -15246,7 +17099,6 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       // Restore Arrays
       if (Array.isArray(data.portraitSlots)) setPortraitSlots(normalizePortraitSlots(data.portraitSlots));
       if (Array.isArray(data.logoSlots)) setLogoSlots(data.logoSlots);
-      if (data.shapes) setShapes(data.shapes);
       if (data.icons) setIconList(data.icons);
 
       // Restore Legacy Portrait Positions (if not covered above)
@@ -15518,6 +17370,7 @@ const applyTemplate = React.useCallback<
     setDetails2Align((merged.details2Align as any) ?? 'center');    
 
     setDetailsFamily(merged.detailsFamily ?? 'Inter');
+    setBodyFamily(merged.bodyFamily ?? merged.detailsFamily ?? 'Inter');
     setDetails2Size(merged.details2Size ?? 12);
     setDetails2Family(merged.details2Family ?? 'Inter');
     setDetails2LineHeight(merged.details2LineHeight ?? 1.2);
@@ -15751,6 +17604,7 @@ const applyTemplate = React.useCallback<
       ...incomingFx,
       italic: incomingFx.italic ?? merged.headlineItalic ?? DEFAULT_TEXT_FX.italic,
       bold: incomingFx.bold ?? merged.headlineBold ?? DEFAULT_TEXT_FX.bold,
+      alpha: incomingFx.alpha ?? DEFAULT_TEXT_FX.alpha,
       tracking:
         incomingFx.tracking ??
         (typeof merged.headTracking === "number" ? merged.headTracking : undefined) ??
@@ -15769,6 +17623,7 @@ const applyTemplate = React.useCallback<
     setHead2Fx({
       ...DEFAULT_HEAD2_FX,
       ...incomingHead2Fx,
+      alpha: incomingHead2Fx.alpha ?? DEFAULT_HEAD2_FX.alpha,
       tracking:
         merged.head2TrackEm ??
         incomingHead2Fx.tracking ??
@@ -15813,7 +17668,7 @@ const applyTemplate = React.useCallback<
 const applyTemplateFromGallery = React.useCallback(
   (tpl: TemplateSpec, opts?: { targetFormat?: Format }) => {
     if (isStarterPlan && !STARTER_TEMPLATE_IDS.has(tpl.id)) {
-      alert("Starter includes 4 templates only. Upgrade or use a pass to unlock the full template library.");
+      alert(`Starter includes ${STARTER_TEMPLATE_COUNT} editable templates. Upgrade or use a pass to unlock the full template library.`);
       return;
     }
     // 🔒 prevent panel auto-close during apply
@@ -15852,6 +17707,250 @@ const applyTemplateFromGallery = React.useCallback(
   [applyTemplate, format, isStarterPlan]
 );
 
+const handleAutoLayoutFromBackground = React.useCallback(async () => {
+  if (!hasCreatorAutoLayoutAccess) {
+    setAutoLayoutError("Creator and Studio subscriptions include Auto Layout.");
+    return;
+  }
+
+  if (!autoLayoutReferenceUrl) {
+    setAutoLayoutError("Upload a background first, then run Auto Layout.");
+    return;
+  }
+
+  try {
+    setAutoLayoutLoading(true);
+    setAutoLayoutError(null);
+
+    const token = await getAccessToken();
+    if (!token) {
+      throw new Error("Log in to use Auto Layout.");
+    }
+
+    const res = await fetch("/api/analyze-template", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        background: autoLayoutReferenceUrl,
+        format,
+        currentText: {
+          headline,
+          head2,
+          details,
+          details2,
+          venue,
+          subtag,
+        },
+      }),
+    });
+
+    const json = await res.json().catch(() => ({} as any));
+    if (!res.ok) {
+      throw new Error(json?.error || "Auto Layout failed.");
+    }
+
+    applyGenerationQuota(json);
+
+    const currentBgSrc = autoLayoutReferenceUrl;
+    const layout = {
+      ...(json?.layout || {}),
+      bgUploadUrl: currentBgSrc,
+      bgUrl: null,
+    };
+
+    setTemplateId(null);
+    setActiveTemplate(null);
+    applyTemplate(
+      {
+        id: "__session__",
+        label: "AI Auto Layout",
+        tags: ["AI"],
+        preview: currentBgSrc,
+        formats: {
+          [format]: layout,
+        },
+      },
+      { targetFormat: format }
+    );
+
+    window.setTimeout(scrollToArtboard, 180);
+  } catch (err: any) {
+    setAutoLayoutError(err?.message || "Auto Layout failed.");
+  } finally {
+    setAutoLayoutLoading(false);
+  }
+}, [
+  applyGenerationQuota,
+  applyTemplate,
+  autoLayoutReferenceUrl,
+  details,
+  details2,
+  format,
+  getAccessToken,
+  hasCreatorAutoLayoutAccess,
+  head2,
+  headline,
+  scrollToArtboard,
+  subtag,
+  venue,
+]);
+
+const requestAutoLayout = React.useCallback(
+  async (params: {
+    background: string;
+    format: Format;
+    token: string;
+    currentText: {
+      headline?: string;
+      head2?: string;
+      details?: string;
+      details2?: string;
+      venue?: string;
+      subtag?: string;
+    };
+    textMode?: "generate" | "provided";
+  }) => {
+    const res = await fetch("/api/analyze-template", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${params.token}`,
+      },
+      body: JSON.stringify({
+        background: params.background,
+        format: params.format,
+        currentText: params.currentText,
+        textMode: params.textMode ?? "generate",
+      }),
+    });
+
+    const json = await res.json().catch(() => ({} as any));
+    if (!res.ok) {
+      throw new Error(json?.error || "Auto Layout failed.");
+    }
+
+    applyGenerationQuota(json);
+    return json?.layout || {};
+  },
+  [applyGenerationQuota]
+);
+
+const readFileAsDataUrl = React.useCallback((file: File) => {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Could not read the uploaded background."));
+    reader.readAsDataURL(file);
+  });
+}, []);
+
+const [startupBuildError, setStartupBuildError] = React.useState<string | null>(null);
+
+const handleStartupBuildForYou = React.useCallback(
+  async ({ backgroundFile, currentText }: StartupBuildPayload) => {
+    if (!hasCreatorAutoLayoutAccess) {
+      setStartupBuildError("Creator and Studio subscriptions include Build For You.");
+      return;
+    }
+
+    if (!storageReadyRef.current) {
+      setStartupBuildError("Studio is still loading. Try again in a moment.");
+      return;
+    }
+
+    const hasAnyText = Object.values(currentText).some(
+      (value) => String(value || "").trim().length > 0
+    );
+    if (!hasAnyText) {
+      setStartupBuildError("Add at least one text field.");
+      return;
+    }
+    if (generationQuota && generationQuota.remaining < 2) {
+      setStartupBuildError("Build For You needs 2 generations remaining.");
+      return;
+    }
+
+    try {
+      setLoadingStartup(true);
+      setStartupBuildError(null);
+
+      const token = await getAccessToken();
+      if (!token) {
+        throw new Error("Log in to use Build For You.");
+      }
+
+      const background = await readFileAsDataUrl(backgroundFile);
+      const [squareRaw, storyRaw] = await Promise.all([
+        requestAutoLayout({
+          background,
+          format: "square",
+          token,
+          textMode: "provided",
+          currentText,
+        }),
+        requestAutoLayout({
+          background,
+          format: "story",
+          token,
+          textMode: "provided",
+          currentText,
+        }),
+      ]);
+
+      const squareLayout = { ...squareRaw, bgUploadUrl: background, bgUrl: null };
+      const storyLayout = { ...storyRaw, bgUploadUrl: background, bgUrl: null };
+      const store = useFlyerState.getState();
+
+      store.setSession({
+        square: squareLayout,
+        story: storyLayout,
+      });
+      store.setSessionDirty({ square: false, story: false });
+
+      setTemplateId(null);
+      setActiveTemplate(null);
+      setFormat("square");
+      applyTemplate(
+        {
+          id: "__session__",
+          label: "Build For You",
+          tags: ["AI"],
+          preview: background,
+          formats: {
+            square: squareLayout,
+            story: storyLayout,
+          },
+        },
+        { targetFormat: "square", initialLoad: true }
+      );
+
+      setShowStartup(false);
+      window.setTimeout(() => {
+        scrollToArtboard();
+        if (useFlyerState.getState().selectedPanel == null) {
+          useFlyerState.getState().setSelectedPanel("template");
+        }
+      }, 180);
+    } catch (err: any) {
+      setStartupBuildError(err?.message || "Build For You failed.");
+    } finally {
+      setLoadingStartup(false);
+    }
+  },
+  [
+    applyTemplate,
+    generationQuota,
+    getAccessToken,
+    hasCreatorAutoLayoutAccess,
+    readFileAsDataUrl,
+    requestAutoLayout,
+    scrollToArtboard,
+  ]
+);
+
 // Dev-only: if template definitions change in code while the app is open,
 // auto-refresh the currently selected template so coord edits are reflected immediately.
 const devTemplateSignatureRef = React.useRef<Record<string, string>>({});
@@ -15885,16 +17984,177 @@ React.useEffect(() => {
    STARTUP TEMPLATE MAP + HANDLER
    ============================================================ */
 
-const findTemplateById = (id: string) =>
-  TEMPLATE_GALLERY.find((t) => t.id === id);
+const findTemplateById = (id: string) => TEMPLATE_GALLERY.find((t) => t.id === id);
 
-const STARTUP_TEMPLATE_MAP: Record<string, TemplateSpec | undefined> = {
-  club: findTemplateById("miami2"),
-  tropical: findTemplateById("latin_street_tropical"),
-  luxury: findTemplateById("atlanta"),
-  urban: findTemplateById("hiphop_graffiti"),
-  loaded: TEMPLATE_GALLERY[4] ?? TEMPLATE_GALLERY[0], // fallback
-};
+type StartupCategoryKey = "dj" | "promoter" | "artist";
+
+function mergeStartupVariant(
+  base: Partial<TemplateBase> | undefined,
+  preview: string,
+  overrides: Partial<TemplateBase>
+): TemplateBase {
+  return {
+    ...(base ?? {}),
+    backgroundUrl:
+      typeof base?.backgroundUrl === "string" && base.backgroundUrl.trim().length > 0
+        ? base.backgroundUrl
+        : preview,
+    ...overrides,
+  };
+}
+
+function buildStartupCategoryTemplate(category: StartupCategoryKey): TemplateSpec {
+  const config = {
+    dj: {
+      label: "DJ Starter",
+      sourceId: "miami2",
+      tags: ["Startup", "DJ"],
+      square: {
+        headline: "DJ NAME",
+        head2Enabled: true,
+        head2line: "SPECIAL GUEST",
+        details: "FRIDAY APR 18\nDOORS 10PM",
+        details2Enabled: false,
+        details2: "",
+        venue: "VENUE NAME",
+        subtag: "TONIGHT",
+        align: "left" as const,
+        headAlign: "left" as const,
+        head2Align: "left" as const,
+        detailsAlign: "left" as const,
+        details2Align: "left" as const,
+        venueAlign: "left" as const,
+        textColWidth: 54,
+        headX: 12,
+        headY: 20,
+        head2X: 12,
+        head2Y: 34,
+        detailsX: 12,
+        detailsY: 75,
+        venueX: 12,
+        venueY: 88,
+        subtagX: 12,
+        subtagY: 10,
+        emojiList: [],
+      },
+      story: {
+        headline: "DJ NAME",
+        head2Enabled: true,
+        head2line: "SPECIAL GUEST",
+        details: "FRIDAY APR 18\nDOORS 10PM",
+        details2Enabled: false,
+        details2: "",
+        venue: "VENUE NAME",
+        subtag: "TONIGHT",
+        align: "left" as const,
+        headAlign: "left" as const,
+        head2Align: "left" as const,
+        detailsAlign: "left" as const,
+        details2Align: "left" as const,
+        venueAlign: "left" as const,
+        textColWidth: 54,
+        headX: 10,
+        headY: 18,
+        head2X: 10,
+        head2Y: 31,
+        detailsX: 10,
+        detailsY: 76,
+        venueX: 10,
+        venueY: 89,
+        subtagX: 10,
+        subtagY: 10,
+        emojiList: [],
+      },
+    },
+    promoter: {
+      label: "Promoter Starter",
+      sourceId: "atlanta",
+      tags: ["Startup", "Promoter"],
+      square: {
+        headline: "EVENT NAME",
+        head2Enabled: true,
+        head2line: "HOSTED BY / FEATURING",
+        details: "FRIDAY APR 18\nDOORS 10PM",
+        venue: "VENUE NAME",
+        subtag: "21+",
+        align: "center" as const,
+        headAlign: "center" as const,
+        head2Align: "center" as const,
+        detailsAlign: "center" as const,
+        details2Align: "center" as const,
+        venueAlign: "center" as const,
+        textColWidth: 70,
+      },
+      story: {
+        headline: "EVENT NAME",
+        head2Enabled: true,
+        head2line: "HOSTED BY / FEATURING",
+        details: "FRIDAY APR 18\nDOORS 10PM",
+        venue: "VENUE NAME",
+        subtag: "21+",
+        align: "center" as const,
+        headAlign: "center" as const,
+        head2Align: "center" as const,
+        detailsAlign: "center" as const,
+        details2Align: "center" as const,
+        venueAlign: "center" as const,
+        textColWidth: 70,
+      },
+    },
+    artist: {
+      label: "Artist Starter",
+      sourceId: "afrobeat_rooftop",
+      tags: ["Startup", "Artist"],
+      square: {
+        headline: "ARTIST NAME",
+        head2Enabled: true,
+        head2line: "LIVE PERFORMANCE",
+        details: "NEW DROP\nTHIS FRIDAY",
+        venue: "CITY / VENUE",
+        subtag: "OUT NOW",
+        align: "center" as const,
+        headAlign: "center" as const,
+        head2Align: "center" as const,
+        detailsAlign: "center" as const,
+        details2Align: "center" as const,
+        venueAlign: "center" as const,
+        textColWidth: 68,
+      },
+      story: {
+        headline: "ARTIST NAME",
+        head2Enabled: true,
+        head2line: "LIVE PERFORMANCE",
+        details: "NEW DROP\nTHIS FRIDAY",
+        venue: "CITY / VENUE",
+        subtag: "OUT NOW",
+        align: "center" as const,
+        headAlign: "center" as const,
+        head2Align: "center" as const,
+        detailsAlign: "center" as const,
+        details2Align: "center" as const,
+        venueAlign: "center" as const,
+        textColWidth: 68,
+      },
+    },
+  } as const;
+
+  const selected = config[category];
+  const source = findTemplateById(selected.sourceId) ?? TEMPLATE_GALLERY[0];
+  const preview = source?.preview || "";
+  const baseSquare = source?.formats?.square ?? source?.base ?? {};
+  const baseStory = source?.formats?.story ?? source?.formats?.square ?? source?.base ?? {};
+
+  return {
+    id: `__startup_${category}__`,
+    label: selected.label,
+    preview,
+    tags: [...selected.tags],
+    formats: {
+      square: mergeStartupVariant(baseSquare, preview, selected.square),
+      story: mergeStartupVariant(baseStory, preview, selected.story),
+    },
+  };
+}
 
 // === SYNC HELPER: Saves all current local state to the global session ===
 const syncCurrentStateToSession = () => {
@@ -16122,15 +18382,60 @@ React.useEffect(() => {
 
 // keep this new state near the other useStates at the top of your component
 const handleTemplateSelect = React.useCallback(
-  (key: string) => {
+  (key: string, payload?: StartupSelectPayload) => {
     setLoadingStartup(true);
+    setStartupBuildError(null);
+    setStartupStudioMode(key === "dj" ? "dj" : null);
+    setDjStartupFlowStage("design");
     if (!storageReadyRef.current) {
       pendingStartupKeyRef.current = key;
       return;
     }
 
     try {
-      // ✅ Map each vibe to a real template index
+      const startupFormat: Format = "square";
+      const store = useFlyerState.getState();
+      store.setSession((prev) => ({ ...prev, square: {}, story: {} }));
+      store.setSessionDirty((prev) => ({ ...prev, square: false, story: false }));
+      setFormat(startupFormat);
+
+      if (key === "dj" || key === "promoter" || key === "artist") {
+        const startupTemplate = buildStartupCategoryTemplate(key);
+        setTemplateId(startupTemplate.id);
+        setActiveTemplate(startupTemplate);
+        applyTemplate(startupTemplate, { targetFormat: startupFormat, initialLoad: true });
+
+        if (key === "dj") {
+          const startupBackground =
+            payload?.startupBackgroundDataUrl ||
+            payload?.startupBackgroundSrc ||
+            DJ_STARTUP_BACKGROUNDS[0].src;
+          applyStartupBackground(startupBackground);
+          setTextSide("left");
+          setHeadAlign("left");
+          setAlign("left");
+          setTextStyle("headline", startupFormat, { align: "left" });
+          setHead2Align("left");
+          setTextStyle("headline2", startupFormat, { align: "left" });
+          setDetailsAlign("left");
+          setDetails2Align("left");
+          setVenueAlign("left");
+          setSubtagAlign("left");
+        }
+
+        if (key === "promoter" || key === "artist") {
+          setHeadAlign("center");
+          setAlign("center");
+          setTextStyle("headline", startupFormat, { align: "center" });
+          setHead2Align("center");
+          setTextStyle("headline2", startupFormat, { align: "center" });
+          setDetailsAlign("center");
+          setDetails2Align("center");
+          setVenueAlign("center");
+          setSubtagAlign("center");
+        }
+      } else {
+        // ✅ Map each vibe to a real template index
       const vibeToTemplateId: Record<string, string> = {
         club: isStarterPlan ? "edm_stage_co2" : "miami2",
         tropical: isStarterPlan ? "afrobeat_rooftop" : "latin_street_tropical",
@@ -16141,16 +18446,8 @@ const handleTemplateSelect = React.useCallback(
       const tplId = vibeToTemplateId[key] ?? TEMPLATE_GALLERY[0]?.id;
       const tpl = TEMPLATE_GALLERY.find((t) => t.id === tplId);
       if (!tpl) throw new Error("Template not found for vibe: " + key);
-
-
-
-      // ✅ Startup load should be authoritative (same as gallery apply)
-      const startupFormat: Format = format;
-      const store = useFlyerState.getState();
-      store.setSession((prev) => ({ ...prev, square: {}, story: {} }));
-      store.setSessionDirty((prev) => ({ ...prev, square: false, story: false }));
-      setFormat(startupFormat);
       applyTemplateFromGallery(tpl, { targetFormat: startupFormat });
+      }
     } catch {
       alert("Could not load template.");
     }
@@ -16161,14 +18458,20 @@ const handleTemplateSelect = React.useCallback(
   setShowStartup(false);
   scrollToArtboard();
 
-  // ✅ Only auto-open Templates if nothing else is open
+  if (key === "dj") {
+    setMobileControlsOpen(true);
+    setMobileControlsTab("assets");
+    useFlyerState.getState().setSelectedPanel(isStarterPlan ? "portrait" : "dj_branding");
+    return;
+  }
+
   if (useFlyerState.getState().selectedPanel == null) {
     useFlyerState.getState().setSelectedPanel("template");
   }
-}, 1200);
+}, 240);
 
   },
-  [applyTemplateFromGallery, format, isStarterPlan, scrollToArtboard]
+  [applyStartupBackground, applyTemplate, applyTemplateFromGallery, isStarterPlan, scrollToArtboard, setTextStyle]
 );
 // === /STARTUP SCREEN ===
 
@@ -16189,6 +18492,51 @@ const [floatingAssetVisible, setFloatingAssetVisible] = React.useState(false);
 const [floatingBgVisible, setFloatingBgVisible] = React.useState(false);
 const [projectHelpOpen, setProjectHelpOpen] = React.useState(false);
 const [workflowHelpOpen, setWorkflowHelpOpen] = React.useState(false);
+const PROJECT_FILE_STATUS_KEY = "nf:projectFileStatus";
+const [projectFileStatus, setProjectFileStatus] = React.useState<null | {
+  kind: "saved" | "loaded";
+  at: string;
+}>(null);
+const didCheckSavedDesignRef = React.useRef(false);
+const SAVE_NOTICE_DISMISSED_KEY = "nf:saveNoticeDismissed";
+const [saveNoticeDismissed, setSaveNoticeDismissed] = React.useState(false);
+const [showSaveNotice, setShowSaveNotice] = React.useState(false);
+
+React.useEffect(() => {
+  try {
+    const raw = localStorage.getItem(PROJECT_FILE_STATUS_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (
+      parsed &&
+      (parsed.kind === "saved" || parsed.kind === "loaded") &&
+      typeof parsed.at === "string"
+    ) {
+      setProjectFileStatus(parsed);
+    }
+  } catch {}
+}, []);
+
+const setProjectFileStatusAndPersist = React.useCallback(
+  (next: { kind: "saved" | "loaded"; at: string }) => {
+    setProjectFileStatus(next);
+    try {
+      localStorage.setItem(PROJECT_FILE_STATUS_KEY, JSON.stringify(next));
+    } catch {}
+  },
+  []
+);
+const projectFileStatusLabel = React.useMemo(() => {
+  if (!projectFileStatus?.at) return null;
+  const parsed = new Date(projectFileStatus.at);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(parsed);
+}, [projectFileStatus]);
 
 const floatingAssetRef = React.useRef<HTMLDivElement | null>(null);
 const floatingTextRef = React.useRef<HTMLDivElement | null>(null);
@@ -16277,7 +18625,6 @@ const [lastMoveStack, setLastMoveStack] = React.useState<{
     | "icon"
     | "emoji"
     | "portrait"
-    | "shape"
     | "headline"
     | "headline2"
     | "details"
@@ -16329,6 +18676,132 @@ const textBaseZ = React.useMemo(
     subtag: 30,
   }),
   [headBehindPortrait]
+);
+
+const creatorHasScene = !!(bgUploadUrl || bgUrl || blendBackground);
+const creatorHasCopy = [
+  String(headline || "").trim().toUpperCase() !== "" &&
+    String(headline || "").trim().toUpperCase() !== "HEADLINE",
+  String(head2 || "").trim() !== "",
+  String(details || "").trim().toUpperCase() !== "" &&
+    String(details || "").trim().toUpperCase() !== "EVENT DETAILS",
+  String(details2 || "").trim() !== "",
+  String(venue || "").trim().toUpperCase() !== "" &&
+    String(venue || "").trim().toUpperCase() !== "VENUE",
+  String(subtag || "").trim() !== "",
+].some(Boolean);
+const creatorPortraitCount = ((portraits?.[format] || []) as any[]).filter(
+  (p: any) => !p?.isBrandFace
+).length;
+const creatorEmojiCount = Array.isArray(emojis?.[format]) ? emojis[format].length : 0;
+const creatorLogoCount = logoUrl ? 1 : 0;
+const creatorAssetCount = creatorPortraitCount + creatorEmojiCount + creatorLogoCount;
+const creatorHasAssets = creatorAssetCount > 0;
+const creatorHasSubject = creatorPortraitCount > 0 || !!portraitUrl || !!blendSubject;
+const creatorCanUseMagicBlend = creatorHasScene && creatorHasSubject;
+const creatorUsingTemplateBase = !!templateId;
+const creatorWorkflowRecommended = !creatorHasScene
+  ? "scene"
+  : !creatorHasCopy
+  ? "copy"
+  : !creatorHasAssets
+  ? "assets"
+  : uiMode === "finish"
+  ? "finish"
+  : creatorUsingTemplateBase
+  ? "copy"
+  : "finish";
+const creatorWorkflowMeta = {
+  scene: {
+    label: "Scene",
+    summary: creatorHasScene ? "Background or template is set." : "Start with a template or background.",
+    ready: creatorHasScene,
+    count: creatorHasScene ? "Ready" : "Needed",
+  },
+  copy: {
+    label: "Copy",
+    summary: creatorHasCopy ? "Headline and event text are in place." : "Add headline and event details.",
+    ready: creatorHasCopy,
+    count: creatorHasCopy ? "Ready" : "Needed",
+  },
+  assets: {
+    label: "Assets",
+    summary: creatorHasAssets ? "Visual accents are on the flyer." : "Add logo, portraits, icons, or effects.",
+    ready: creatorHasAssets,
+    count: creatorHasAssets ? `${creatorAssetCount} live` : "Optional",
+  },
+  finish: {
+    label: "Finish",
+    summary: uiMode === "finish" ? "Final polish and export are open." : "Final polish, grade, then export.",
+    ready: uiMode === "finish",
+    count: uiMode === "finish" ? "Open" : "Next",
+  },
+} as const;
+const creatorWorkflowCurrent =
+  uiMode === "finish"
+    ? "finish"
+    : selectedPanel === "background" || selectedPanel === "template" || selectedPanel === "ai_background"
+    ? "scene"
+    : selectedPanel === "headline" ||
+      selectedPanel === "head2" ||
+      selectedPanel === "details" ||
+      selectedPanel === "details2" ||
+      selectedPanel === "venue" ||
+      selectedPanel === "subtag"
+    ? "copy"
+    : selectedPanel === "icons" ||
+      selectedPanel === "logo" ||
+      selectedPanel === "portrait" ||
+      selectedPanel === "cinema" ||
+      selectedPanel === "magic_blend"
+    ? "assets"
+    : creatorWorkflowRecommended;
+const creatorStepPanelClass = (step: "scene" | "copy" | "assets" | "finish") =>
+  !isDjStartupMode &&
+  creatorWorkflowCurrent !== step &&
+  creatorWorkflowRecommended !== step
+    ? "opacity-45 transition-opacity"
+    : "transition-opacity";
+
+const openCreatorWorkflowTarget = React.useCallback(
+  (
+    panel: string | null,
+    tab: "design" | "assets",
+    options?: { uiMode?: "design" | "finish"; targetId?: string }
+  ) => {
+    setWorkflowHelpOpen(false);
+    setUiMode(options?.uiMode ?? "design");
+    setMobileControlsOpen(true);
+    setMobileControlsTab(tab);
+    setSelectedPanel(panel);
+    if (options?.targetId) {
+      requestAnimationFrame(() => {
+        document.getElementById(options.targetId!)?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+    }
+  },
+  [setSelectedPanel]
+);
+const openCreatorWorkflowStep = React.useCallback(
+  (step: "scene" | "copy" | "assets" | "finish") => {
+    if (step === "scene") {
+      openCreatorWorkflowTarget("background", "assets");
+      return;
+    }
+    if (step === "copy") {
+      openCreatorWorkflowTarget("headline", "design");
+      return;
+    }
+    if (step === "assets") {
+      openCreatorWorkflowTarget("icons", "assets");
+      return;
+    }
+    openCreatorWorkflowTarget("mastergrade", "assets", { uiMode: "finish" });
+  },
+  [openCreatorWorkflowTarget]
 );
 const nudgeTextLayer = React.useCallback((key: TextLayerKey, dir: "up" | "down") => {
   const st = useFlyerState.getState();
@@ -16458,7 +18931,7 @@ const activeTextControls = React.useMemo(() => {
       };
     case "details2":
       return {
-        label: "Details 2",
+        label: "More Details",
         text: details2,
         font: details2Family ?? bodyFamily,
         fonts: BODY_FONTS2_LOCAL,
@@ -16706,20 +19179,11 @@ const activeAssetControls = React.useMemo(() => {
     const isBrandFace = !!(sel as any).isBrandFace;
     const isLogo = String(sel.id || "").startsWith("logo_") || !!(sel as any).isLogo;
     const isAsset = sel.isFlare || sel.isSticker || isLogo || isBrandFace;
-    const hasIconColor = !!(sel as any).isSticker && typeof (sel as any).svgTemplate === "string";
-    const assetName = (() => {
-      const label = typeof (sel as any).label === "string" ? String((sel as any).label).trim() : "";
-      if (label) return label;
-      const baseId = String(sel.id || "").split("_")[1] || "";
-      if (sel.isFlare) {
-        return FLARE_LIBRARY.find((f) => f.id === baseId)?.name || null;
-      }
-      if (sel.isSticker) {
-        return GRAPHIC_STICKERS.find((g) => g.id === baseId)?.name || null;
-      }
-      if (isLogo) return "3D Text";
-      return null;
-    })();
+    const isSeparator = !!(sel as any).isSeparator;
+    const isShapeGraphic = !!(sel as any).isShapeGraphic;
+    const hasIconColor =
+      (!!(sel as any).isSticker && typeof (sel as any).svgTemplate === "string") || isSeparator;
+    const assetName = resolveCanvasAssetName(sel) || (isLogo ? "3D Text" : null);
     const assetLabel = isBrandFace
       ? "Main Face"
       : assetName || (sel.isFlare ? "Flare" : sel.isSticker ? "Graphic" : "3D Text");
@@ -16750,28 +19214,100 @@ const activeAssetControls = React.useMemo(() => {
         };
       }
       return {
-        label: assetLabel,
+        label: formatUiLabelCaps(assetLabel),
         idLabel: `${sel.id}`,
         posX: sel.x ?? 0,
         posY: sel.y ?? 0,
         scale: sel.scale ?? 1,
+        showScale: true,
+        scaleLabel: "Scale",
+        scaleMin: 0.01,
+        scaleMax: isShapeGraphic ? 6 : 5,
+        scaleStep: 0.01,
         opacity: sel.opacity ?? 1,
         locked: !!sel.locked,
         showColor: hasIconColor,
         colorValue: (sel as any).iconColor || "#ffffff",
         rotation: sel.rotation ?? 0,
+        separatorLength: isSeparator
+          ? Number((sel as any).separatorWidth ?? 180)
+          : isShapeGraphic
+          ? Number((sel as any).shapeLength ?? 160)
+          : undefined,
+        shapeSkew: isShapeGraphic ? Number((sel as any).shapeSkew ?? 0) : undefined,
+        lengthLabel: "Length",
+        lengthMin: isShapeGraphic ? 48 : 128,
+        lengthMax: isShapeGraphic ? 12000 : 720,
+        lengthStep: isShapeGraphic ? 24 : 4,
+        separatorOffset: isSeparator ? Number((sel as any).separatorOffset ?? 0) : undefined,
         // Main Face should stay clean; keep tint off for this asset type.
-        tint: isBrandFace ? undefined : (typeof (sel as any).tint === "number" ? (sel as any).tint : 0),
+        tint:
+          isBrandFace || isShapeGraphic
+            ? undefined
+            : typeof (sel as any).tint === "number"
+            ? (sel as any).tint
+            : 0,
         onColor: (value: string) => {
-          const template = String((sel as any).svgTemplate || "");
-          const nextSvg = template.replace("{{COLOR}}", value);
-          const svgBase64 = btoa(unescape(encodeURIComponent(nextSvg)));
-          const nextUrl = `data:image/svg+xml;base64,${svgBase64}`;
+          const nextUrl = isSeparator
+            ? buildSeparatorSvgDataUrl(
+                String((sel as any).separatorKind || ""),
+                value,
+                Number((sel as any).separatorWidth ?? 180),
+                Number((sel as any).separatorOffset ?? 0)
+              )
+            : isShapeGraphic
+            ? (() => {
+                const kind = String((sel as any).shapeKind || "");
+                const shapeItem = SHAPE_GRAPHICS.find((item) => item.id === kind);
+                if (!shapeItem) return String(sel.url || "");
+                return buildShapeSvgDataUrl(kind, value);
+              })()
+            : (() => {
+                const template = String((sel as any).svgTemplate || "");
+                const nextSvg = template.replace("{{COLOR}}", value);
+                const svgBase64 = btoa(unescape(encodeURIComponent(nextSvg)));
+                return `data:image/svg+xml;base64,${svgBase64}`;
+              })();
           useFlyerState.getState().updatePortrait(format, sel.id, {
             url: nextUrl,
             iconColor: value,
           });
         },
+        onSeparatorLength: isSeparator
+          ? (v: number) =>
+              useFlyerState.getState().updatePortrait(format, sel.id, {
+                separatorWidth: v,
+                url: buildSeparatorSvgDataUrl(
+                  String((sel as any).separatorKind || ""),
+                  String((sel as any).iconColor || "#ffffff"),
+                  v,
+                  Number((sel as any).separatorOffset ?? 0)
+                ),
+              })
+          : undefined,
+        onSeparatorOffset: isSeparator
+          ? (v: number) =>
+              useFlyerState.getState().updatePortrait(format, sel.id, {
+                separatorOffset: v,
+                url: buildSeparatorSvgDataUrl(
+                  String((sel as any).separatorKind || ""),
+                  String((sel as any).iconColor || "#ffffff"),
+                  Number((sel as any).separatorWidth ?? 180),
+                  v
+                ),
+              })
+          : isShapeGraphic
+          ? (v: number) =>
+              useFlyerState.getState().updatePortrait(format, sel.id, {
+                shapeLength: v,
+              })
+          : undefined,
+        onShapeSkew: isShapeGraphic
+          ? (v: number) =>
+              useFlyerState.getState().updatePortrait(format, sel.id, {
+                shapeSkew: v,
+              })
+          : undefined,
         showLabel: !!(sel as any).showLabel,
         labelValue: String((sel as any).label ?? ""),
         onLabel: (v: string) =>
@@ -16781,6 +19317,9 @@ const activeAssetControls = React.useMemo(() => {
           : 9,
         onLabelSize: (v: number) =>
           useFlyerState.getState().updatePortrait(format, sel.id, { labelSize: v }),
+        labelOffsetY: Number((sel as any).labelOffsetY ?? 0),
+        onLabelOffsetY: (v: number) =>
+          useFlyerState.getState().updatePortrait(format, sel.id, { labelOffsetY: v }),
         onToggleLabel: () =>
           useFlyerState.getState().updatePortrait(format, sel.id, {
             showLabel: !(sel as any).showLabel,
@@ -16794,8 +19333,10 @@ const activeAssetControls = React.useMemo(() => {
           useFlyerState.getState().updatePortrait(format, sel.id, { scale: v }),
         onOpacity: (v: number) =>
           useFlyerState.getState().updatePortrait(format, sel.id, { opacity: v }),
-        onTint: (v: number) =>
-          useFlyerState.getState().updatePortrait(format, sel.id, { tint: v }),
+        onTint: isShapeGraphic
+          ? undefined
+          : (v: number) =>
+              useFlyerState.getState().updatePortrait(format, sel.id, { tint: v }),
         onPosX: (v: number) =>
           useFlyerState.getState().updatePortrait(format, sel.id, { x: clamp100(v) }),
         onPosY: (v: number) =>
@@ -16860,6 +19401,8 @@ const activeAssetControls = React.useMemo(() => {
   setCleanupAndRun,
   nudgeEmojiLayer,
   nudgePortraitLayer,
+  isLocked,
+  onToggleLock,
 ]);
 
 const hasAssetControls = !!activeAssetControls;
@@ -16895,7 +19438,6 @@ const recordMove = React.useCallback(
       | "icon"
       | "emoji"
       | "portrait"
-      | "shape"
       | "headline"
       | "headline2"
       | "details"
@@ -16934,9 +19476,6 @@ const undoAssetPosition = React.useCallback(() => {
         x: lastMovePos.x,
         y: lastMovePos.y,
       });
-      break;
-    case "shape":
-      updateShape(lastMovePos.id, { x: lastMovePos.x, y: lastMovePos.y });
       break;
     case "headline":
       setHeadX(lastMovePos.x);
@@ -16986,7 +19525,6 @@ const undoAssetPosition = React.useCallback(() => {
   updateIcon,
   updateEmoji,
   updatePortrait,
-  updateShape,
   setHeadX,
   setHeadY,
   setHead2X,
@@ -17161,7 +19699,6 @@ React.useEffect(() => {
     hasAssetControls ||
     moveTarget === "background" ||
     moveTarget === "icon" ||
-    moveTarget === "shape" ||
     moveTarget === "portrait" ||
     (selectedPanel ? designPanels.has(selectedPanel) : false)
   ) {
@@ -17375,14 +19912,93 @@ const handleBgPanelClick = React.useCallback(
   []
 );
 
-// Disable resume-on-load: always start fresh.
+/* ===== AUTOSAVE: SMART SAVE/LOAD (END) ===== */
+
 React.useEffect(() => {
   if (!storageReady) return;
-  try { sessionStorage.removeItem("nf:resume"); } catch {}
-  try { localStorage.removeItem("nf:lastDesign"); } catch {}
-  // do not auto-import or hide startup
+  if (didCheckSavedDesignRef.current) return;
+  didCheckSavedDesignRef.current = true;
+
+  try {
+    const saved =
+      sessionStorage.getItem(RESUME_DESIGN_KEY) ||
+      localStorage.getItem("nf:lastDesign");
+    const wantsResumeFlag =
+      sessionStorage.getItem("nf:resume") === "1" ||
+      localStorage.getItem("nf:resume") === "1";
+    const resumeMetaRaw =
+      sessionStorage.getItem(RESUME_META_KEY) ||
+      localStorage.getItem(RESUME_META_KEY);
+
+    let validResumeIntent = false;
+    if (wantsResumeFlag && resumeMetaRaw) {
+      try {
+        const meta = JSON.parse(resumeMetaRaw) as {
+          source?: string;
+          pathname?: string;
+          createdAt?: number;
+        };
+        validResumeIntent =
+          meta?.source === "app-navigation" &&
+          typeof meta?.pathname === "string" &&
+          meta.pathname.startsWith("/") &&
+          typeof meta?.createdAt === "number" &&
+          Date.now() - meta.createdAt < RESUME_MAX_AGE_MS;
+      } catch {
+        validResumeIntent = false;
+      }
+    }
+
+    if (!saved) {
+      try { sessionStorage.removeItem("nf:resume"); } catch {}
+      try { localStorage.removeItem("nf:resume"); } catch {}
+      try { sessionStorage.removeItem(RESUME_META_KEY); } catch {}
+      try { localStorage.removeItem(RESUME_META_KEY); } catch {}
+      try { sessionStorage.removeItem(RESUME_DESIGN_KEY); } catch {}
+      setHasSavedDesign(false);
+      return;
+    }
+
+    if (validResumeIntent) {
+      applyHistorySnapshot(saved);
+      setShowStartup(false);
+      setHasSavedDesign(false);
+      try { sessionStorage.removeItem("nf:resume"); } catch {}
+      try { localStorage.removeItem("nf:resume"); } catch {}
+      try { sessionStorage.removeItem(RESUME_META_KEY); } catch {}
+      try { localStorage.removeItem(RESUME_META_KEY); } catch {}
+      try { sessionStorage.removeItem(RESUME_DESIGN_KEY); } catch {}
+      return;
+    }
+
+    try { sessionStorage.removeItem("nf:resume"); } catch {}
+    try { localStorage.removeItem("nf:resume"); } catch {}
+    try { sessionStorage.removeItem(RESUME_META_KEY); } catch {}
+    try { localStorage.removeItem(RESUME_META_KEY); } catch {}
+    try { sessionStorage.removeItem(RESUME_DESIGN_KEY); } catch {}
+    try { localStorage.removeItem("nf:lastDesign"); } catch {}
+    setHasSavedDesign(true);
+    setHasSavedDesign(false);
+  } catch {
+    setHasSavedDesign(false);
+  }
+}, [storageReady, applyHistorySnapshot]);
+
+React.useEffect(() => {
+  if (!storageReady) return;
+  try {
+    setSaveNoticeDismissed(localStorage.getItem(SAVE_NOTICE_DISMISSED_KEY) === "1");
+  } catch {
+    setSaveNoticeDismissed(false);
+  }
 }, [storageReady]);
-/* ===== AUTOSAVE: SMART SAVE/LOAD (END) ===== */
+
+React.useEffect(() => {
+  if (!storageReady) return;
+  if (saveNoticeDismissed) return;
+  if (!sessionDirty.square && !sessionDirty.story) return;
+  setShowSaveNotice(true);
+}, [saveNoticeDismissed, sessionDirty.square, sessionDirty.story, storageReady]);
 
 // =========================================================
 // ✅ IMPLEMENTATION: "Photoshop contrast-copy → select darks → apply to original"
@@ -18246,6 +20862,10 @@ return (
                   try {
                     const saved = localStorage.getItem("nf:lastDesign");
                     if (saved) importDesignJSON(saved);
+                    try { sessionStorage.removeItem("nf:resume"); } catch {}
+                    try { localStorage.removeItem("nf:resume"); } catch {}
+                    try { sessionStorage.removeItem(RESUME_META_KEY); } catch {}
+                    try { localStorage.removeItem(RESUME_META_KEY); } catch {}
                     setHasSavedDesign(false);
                   } catch {
                     alert("Failed to load saved design.");
@@ -18262,6 +20882,11 @@ return (
                   const store = useFlyerState.getState();
                   store.setSession({ square: {}, story: {} });
                   store.setSessionDirty({ square: false, story: false });
+                  try { sessionStorage.removeItem("nf:resume"); } catch {}
+                  try { localStorage.removeItem("nf:resume"); } catch {}
+                  try { sessionStorage.removeItem(RESUME_META_KEY); } catch {}
+                  try { localStorage.removeItem(RESUME_META_KEY); } catch {}
+                  try { localStorage.removeItem("nf:lastDesign"); } catch {}
                   setHasSavedDesign(false);
                   setShowStartup(true);
                 }}
@@ -18275,7 +20900,7 @@ return (
       )}
     </AnimatePresence>
 
- <AnimatePresence>
+    <AnimatePresence>
       {showStartup && (
      <motion.div
           key="startup"
@@ -18287,9 +20912,60 @@ return (
         >
         <StartupTemplates 
             onSelect={handleTemplateSelect} 
-            // ✅ FIX: Pass the function directly. It handles the closing logic.
-            importDesignJSON={importDesignJSON}
+            importDesignJSON={(json) => {
+              importDesignJSON(json);
+              setProjectFileStatusAndPersist({ kind: "loaded", at: new Date().toISOString() });
+              setStartupStudioMode(null);
+              setLoadingStartup(false);
+              setShowStartup(false);
+              requestAnimationFrame(() => {
+                scrollToArtboard();
+              });
+            }}
+            buildForYouEnabled={hasCreatorAutoLayoutAccess}
+            buildForYouLoading={loadingStartup}
+            buildForYouError={startupBuildError}
+            onBuildForYou={handleStartupBuildForYou}
+            djBackgroundOptions={DJ_STARTUP_BACKGROUNDS}
           />
+        </motion.div>
+      )}
+    </AnimatePresence>
+
+    <AnimatePresence>
+      {showSaveNotice && !showStartup && !hasSavedDesign && (
+        <motion.div
+          key="save-notice"
+          initial={{ opacity: 0, y: -12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -12 }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
+          className="fixed left-1/2 top-4 z-[950] w-[min(92vw,540px)] -translate-x-1/2"
+        >
+          <div className="rounded-2xl border border-amber-400/30 bg-neutral-950/95 p-4 text-white shadow-2xl backdrop-blur">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-amber-200">Save your work</div>
+                <div className="mt-1 text-[12px] text-white/75">
+                  {isStarterPlan
+                    ? "Reloads or browser closes can clear this design. Starter does not include project file saves."
+                    : 'Reloads or browser closes can clear unsaved work. Use "Project -> Save Design" to keep a backup file.'}
+                </div>
+              </div>
+              <button
+                type="button"
+                className="h-7 w-7 rounded-full border border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
+                onClick={() => {
+                  setShowSaveNotice(false);
+                  setSaveNoticeDismissed(true);
+                  try { localStorage.setItem(SAVE_NOTICE_DISMISSED_KEY, "1"); } catch {}
+                }}
+                aria-label="Dismiss save notice"
+              >
+                ×
+              </button>
+            </div>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
@@ -18357,7 +21033,7 @@ return (
                 className="ml-2 text-[12px] px-2 py-[2px] rounded-md border border-white/20 bg-white/10 hover:bg-white/20 hidden lg:inline-flex
                            text-[#78E3FF] drop-shadow-[0_0_10px_rgba(120,227,255,0.95)]"
                 aria-label="View Pricing"
-                onClick={prepareResumeForReturn}
+                onClick={(event) => void handleStudioNavigation(event, "/pricing")}
               >
                 Pricing
               </Link>
@@ -18669,6 +21345,9 @@ return (
             <div>Access: {accountData?.status ?? "-"}</div>
             <div>Plan status: {accountData?.rawStatus ?? "-"}</div>
             <div>
+              Generations: {accountData?.generationRemaining ?? 0} left / {accountData?.generationLimit ?? 0}
+            </div>
+            <div>
               Expires:{" "}
               {accountData?.periodEnd
                 ? new Date(accountData.periodEnd).toDateString()
@@ -18682,18 +21361,62 @@ return (
           On-demand pass is active. You have temporary clean-export access without a recurring subscription.
         </div>
       )}
-      <div className="mt-4 flex items-center gap-2">
-        {!accountLoading && accountData?.status === "guest" && (
+      <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">
+          Quick Links
+        </div>
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
           <a
             href="/login"
-            className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
+            onClick={(event) => void handleStudioNavigation(event, "/login")}
+            className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/85 hover:bg-white/10"
           >
-            Sign in
+            Login
           </a>
-        )}
+          <a
+            href="/terms"
+            onClick={(event) => void handleStudioNavigation(event, "/terms")}
+            className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/85 hover:bg-white/10"
+          >
+            Terms
+          </a>
+          <a
+            href="/privacy"
+            onClick={(event) => void handleStudioNavigation(event, "/privacy")}
+            className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/85 hover:bg-white/10"
+          >
+            Privacy
+          </a>
+          <a
+            href="/terms#billing-refunds"
+            onClick={(event) => void handleStudioNavigation(event, "/terms#billing-refunds")}
+            className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/85 hover:bg-white/10"
+          >
+            Refunds & Cancellation
+          </a>
+          <a
+            href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Nightlife Flyers Bug Report")}`}
+            className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/85 hover:bg-white/10"
+          >
+            Report a Bug
+          </a>
+          <a
+            href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Nightlife Flyers Idea")}`}
+            className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/85 hover:bg-white/10"
+          >
+            Suggest an Idea
+          </a>
+        </div>
+        <div className="mt-3 text-[11px] text-white/45">
+          Nightlife Flyers is operated by {LEGAL_NAME}.
+        </div>
+      </div>
+      <div className="mt-4 flex items-center gap-2">
         <a
-          href="/pricing"
-          onClick={prepareResumeForReturn}
+          href={accountData?.status === "ondemand" ? "/pricing" : "/billing/portal"}
+          onClick={(event) =>
+            void handleStudioNavigation(event, accountData?.status === "ondemand" ? "/pricing" : "/billing/portal")
+          }
           className="rounded-lg border border-fuchsia-400/40 bg-fuchsia-500/20 px-3 py-2 text-xs text-white hover:bg-fuchsia-500/30"
         >
           {accountData?.status === "ondemand" ? "Buy another pass" : "Manage plan"}
@@ -18842,7 +21565,7 @@ return (
               {isStarterPlan && (
                 <a
                   href="/pricing"
-                  onClick={prepareResumeForReturn}
+                  onClick={(event) => void handleStudioNavigation(event, "/pricing")}
                   className="rounded-lg border border-fuchsia-400/40 bg-fuchsia-500/20 px-3 py-2 text-xs text-white hover:bg-fuchsia-500/30"
                 >
                   View passes
@@ -18887,35 +21610,40 @@ style={{ top: STICKY_TOP }}
   <div className={uiMode === "design" ? "space-y-3" : "hidden"}>
 {/* UI: STARTER TEMPLATES (BEGIN) */}
 
-<div className="mb-3" id="template-panel" data-tour="templates">
-  <div
-    className={
-      selectedPanel === "template"
-        ? "relative rounded-xl ring-1 ring-inset ring-[#00FFF0]/70 transition-all"
-        : "relative rounded-xl transition-all"
-    }
-  >
-    <TemplateGalleryPanel
-      items={visibleTemplateGallery}
-      format={format}
-      isOpen={selectedPanel === "template"}
-      onToggle={() => {
+{!isDjStartupMode && (
+  <div className="mb-3" id="template-panel" data-tour="templates">
+    <div
+      className={
+        clsx(
+          selectedPanel === "template"
+            ? "relative rounded-xl ring-1 ring-inset ring-[#00FFF0]/70 transition-all"
+            : "relative rounded-xl transition-all",
+          creatorStepPanelClass("scene")
+        )
+      }
+    >
+      <TemplateGalleryPanel
+        items={visibleTemplateGallery}
+        format={format}
+        isOpen={selectedPanel === "template"}
+        onToggle={() => {
 
 
-        // ✅ Toggle using the subscribed value
-        setSelectedPanel(selectedPanel === "template" ? null : "template");
+          // ✅ Toggle using the subscribed value
+          setSelectedPanel(selectedPanel === "template" ? null : "template");
 
-        setTimeout(() => {
+          setTimeout(() => {
 
-        }, 0);
-      }}
-      onApply={(t) => {
-        applyTemplateFromGallery(t);
-        window.setTimeout(scrollToArtboard, 180);
-      }}
-    />
+          }, 0);
+        }}
+        onApply={(t) => {
+          applyTemplateFromGallery(t);
+          window.setTimeout(scrollToArtboard, 180);
+        }}
+      />
+    </div>
   </div>
-</div>
+)}
 
 {/* UI: STARTER TEMPLATES (END) */}
 
@@ -19225,9 +21953,21 @@ style={{ top: STICKY_TOP }}
   {(() => {
     if (!moveTarget) return <span>No object selected</span>;
 
+    const displayLabels: Record<string, string> = {
+      headline: "Headline",
+      headline2: "Sub Headline",
+      details: "Details",
+      details2: "More Details",
+      venue: "Venue",
+      subtag: "Subtag",
+      portrait: "Portrait",
+      logo: "3D Logo",
+      background: "Background",
+      icon: "Asset",
+    };
+
     let x = 0, y = 0;
-    // ⚡️ FIX: Add ": string" so we can assign "Background" (Capital B) without error
-    let label: string = moveTarget;
+    let label: string = displayLabels[moveTarget] ?? moveTarget;
 
     switch (moveTarget) {
       case "headline":  x = headX; y = headY; break;
@@ -19257,22 +21997,21 @@ style={{ top: STICKY_TOP }}
         if (em) {
           x = em.x ?? 0; y = em.y ?? 0; label = em.char ? `Emoji ${em.char}` : "Emoji";
         } else if (flare) {
-          x = flare.x ?? 0; y = flare.y ?? 0; label = flare.isFlare ? "Flare" : "Graphic";
+          x = flare.x ?? 0;
+          y = flare.y ?? 0;
+          label = resolveCanvasAssetName(flare) || "Asset";
         } else {
           return <span>Icon selected</span>;
         }
         break;
       }
 
-      default: return <span>{moveTarget} selected</span>;
+      default: return <span>{formatUiLabelCaps(displayLabels[moveTarget] ?? moveTarget)} selected</span>;
     }
-
-    // Capitalize first letter for display
-    const displayLabel = label.charAt(0).toUpperCase() + label.slice(1);
 
     return (
       <div>
-        <strong>{displayLabel}</strong>
+        <strong>{formatUiLabelCaps(label)}</strong>
         <span className="mx-2 text-neutral-600">|</span>
         X: {x.toFixed(1)}% &nbsp; Y: {y.toFixed(1)}%
       </div>
@@ -19284,6 +22023,8 @@ style={{ top: STICKY_TOP }}
 
 {/* === /PATCH === */}
 
+{showDjTextEditing && (
+<>
 {/* UI: CINEMATIC HEADLINE (BEGIN) */}
 <div className="relative rounded-xl transition" data-tour="cinematic">
   <div className="p-3">
@@ -19309,11 +22050,11 @@ style={{ top: STICKY_TOP }}
 {/* UI: CINEMATIC HEADLINE (END) */}
 
 {/* UI: LOGO — MIRROR OF PORTRAIT LOGIC (BEGIN) */}
-{!isStarterPlan && (
+{isDjStartupMode && !isStarterPlan && (
 <div
   id="logo-panel"
   ref={logoPanelRef}
-  className="relative rounded-xl transition"
+  className={clsx("relative rounded-xl transition", creatorStepPanelClass("assets"))}
 >
   <Collapsible
     title="Logo / 3D"
@@ -19609,6 +22350,23 @@ style={{ top: STICKY_TOP }}
       </div>
 
       {/* 3. ACTIONS */}
+      <div className="grid grid-cols-2 gap-2 mt-4">
+        <button
+          type="button"
+          onClick={() => nudgePortraitLayer(sel.id, "up")}
+          className="py-2 rounded bg-neutral-800 border border-neutral-600 text-xs text-neutral-300 hover:bg-neutral-700"
+        >
+          Layer Up
+        </button>
+        <button
+          type="button"
+          onClick={() => nudgePortraitLayer(sel.id, "down")}
+          className="py-2 rounded bg-neutral-800 border border-neutral-600 text-xs text-neutral-300 hover:bg-neutral-700"
+        >
+          Layer Down
+        </button>
+      </div>
+
       <div className="flex gap-2 mt-4">
         <button
           type="button"
@@ -19648,9 +22406,15 @@ style={{ top: STICKY_TOP }}
 )}
 {/* UI: LOGO — MIRROR OF PORTRAIT LOGIC (END) */}
 
+{!isDjStartupMode && (
+  <div className={clsx("px-1 pt-1 text-[10px] uppercase tracking-[0.16em] text-neutral-500", creatorStepPanelClass("copy"))}>
+    Primary Copy
+  </div>
+)}
+
 {/* UI: HEADLINE (BEGIN) */}
 <div
-  className="relative rounded-xl transition"
+  className={clsx("relative rounded-xl transition", creatorStepPanelClass("copy"))}
   data-tour="headline"
   id="headline-panel"
 >
@@ -19673,11 +22437,11 @@ style={{ top: STICKY_TOP }}
         {/* HIDE TOGGLE */}
         <Chip
           small
-          active={headlineHidden}
+          active={!headlineHidden}
           onClick={() => setHeadlineHidden(!headlineHidden)}
-          title="Hide standard text"
+          title="Toggle headline"
         >
-          {headlineHidden ? "Hidden" : "Visible"}
+          {headlineHidden ? "Off" : "On"}
         </Chip>
         <span className="opacity-50">|</span>
         <Chip
@@ -19738,51 +22502,61 @@ style={{ top: STICKY_TOP }}
         placeholder="ENTER HEADLINE..."
       />
 
-      {/* SIZE & FONT */}
-      <div className="flex items-center gap-2 mt-2 text-[11px]">
-        <span>Size</span>
-        <Chip small active={headSizeAuto} onClick={() => setHeadSizeAuto((v) => !v)}>
-          {headSizeAuto ? "Auto" : "Manual"}
-        </Chip>
+      <div className="grid grid-cols-3 gap-3 mt-2">
+        <Stepper
+          label="Alpha"
+          value={textFx.alpha}
+          setValue={(n) => setTextFx((v) => ({ ...v, alpha: n }))}
+          min={0}
+          max={1}
+          step={0.05}
+          digits={2}
+        />
+        <Stepper
+          label="Track (em)"
+          value={textFx.tracking}
+          setValue={(n) => setTextFx((v) => ({ ...v, tracking: n }))}
+          min={-0.1}
+          max={0.3}
+          step={0.01}
+          digits={2}
+        />
+        <Stepper label="Rotation (°)" value={headRotate} setValue={setHeadRotate} min={-360} max={360} step={0.5} />
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mt-2">
+      <div className="grid grid-cols-3 gap-3 mt-2">
+        <Stepper
+          label="Size px"
+          value={headSizeAuto ? headMaxPx : headManualPx}
+          setValue={(v) => {
+            setHeadSizeAuto(false);
+            setHeadManualPx(v);
+            setHeadMaxPx(v);
+            setTextStyle("headline", format, { sizePx: v });
+          }}
+          min={36}
+          max={300}
+          step={2}
+        />
         <Stepper label="Line Height" value={lineHeight} setValue={setLineHeight} min={0.3} max={1.3} step={0.02} digits={2} />
         <Stepper label="Col Width %" value={textColWidth} setValue={setTextColWidth} min={30} max={100} step={1} />
-        <Stepper label="Track (em)" value={textFx.tracking} setValue={(n) => setTextFx((v) => ({ ...v, tracking: n }))} min={-0.1} max={0.3} step={0.01} digits={2} />
-
-        {headSizeAuto ? (
-          <Stepper label="Max Size px" value={headMaxPx} setValue={setHeadMaxPx} min={36} max={300} step={2} />
-        ) : (
-          <Stepper
-            label="Head Size px"
-            value={headManualPx}
-            setValue={(v) => {
-              setHeadManualPx(v);
-              setTextStyle("headline", format, { sizePx: v });
-            }}
-            min={36}
-            max={300}
-            step={2}
-          />
-        )}
       </div>
 
-      {/* TOGGLES ROW (No Gradient/Stroke) */}
       <div className="flex flex-wrap items-center gap-2 mt-2">
         <Chip small active={textFx.uppercase} onClick={() => setTextFx((v) => ({ ...v, uppercase: !v.uppercase }))}>Upper</Chip>
         <Chip small active={textFx.bold} onClick={() => setTextFx((v) => ({ ...v, bold: !v.bold }))}>Bold</Chip>
         <Chip small active={textFx.italic} onClick={() => setTextFx((v) => ({ ...v, italic: !v.italic }))}>Italic</Chip>
         <Chip small active={headShadow} onClick={() => setHeadShadow(!headShadow)}>Shadow</Chip>
-        <Chip small active={headBehindPortrait} onClick={() => setHeadBehindPortrait((v) => !v)}>Behind Portrait</Chip>
       </div>
 
-      {/* ROTATION & SHADOW */}
-      <div className="mt-2 grid grid-cols-3 gap-3 w-full items-end">
-        <Stepper label="Rotation (°)" value={headRotate} setValue={setHeadRotate} min={-360} max={360} step={0.5} />
-        <Stepper label="Shadow" value={headShadowStrength} setValue={setHeadShadowStrength} min={0} max={5} step={0.1} />
-        <div className="text-[11px] flex flex-col gap-1 items-end">
-          <span className="opacity-80">Color</span>
+      <div className="flex items-center justify-between mt-2">
+        <span className="text-xs opacity-70">Shadow Strength</span>
+        <Stepper value={headShadowStrength} setValue={setHeadShadowStrength} min={0} max={5} step={0.1} />
+      </div>
+
+      <div className="flex items-end mt-2 flex-wrap w-full">
+        <div className="ml-auto flex flex-wrap items-center gap-2 justify-end text-[11px]">
+          <span className="opacity-80">Fill</span>
           <ColorDot
             value={textFx.color}
             onChange={(c) => {
@@ -19803,7 +22577,7 @@ style={{ top: STICKY_TOP }}
 
 {/* UI: HEADLINE 2 (BEGIN) */}
 <div
-  className="relative rounded-xl transition"
+  className={clsx("relative rounded-xl transition", creatorStepPanelClass("copy"))}
 >
   <Collapsible
     title="Sub Headline"
@@ -19867,16 +22641,6 @@ style={{ top: STICKY_TOP }}
   >
     {/* ⭐ NEON ACTIVE WRAPPER (FUCHSIA) */}
     <div className="p-0">
-      {/* TEXT FIELD */}
-      <textarea
-        value={head2}
-        onChange={(e) => setHead2(e.target.value)}
-        rows={2}
-        disabled={!headline2Enabled[format]}
-        className="w-full rounded p-2 bg-[#17171b] text-white border border-neutral-700 disabled:opacity-50"
-        placeholder="Optional sub-headline"
-      />
-
       <div className="mt-2">
         <FontPicker
           label="Font"
@@ -19890,10 +22654,20 @@ style={{ top: STICKY_TOP }}
         />
       </div>
 
+      {/* TEXT FIELD */}
+      <textarea
+        value={head2}
+        onChange={(e) => setHead2(e.target.value)}
+        rows={2}
+        disabled={!headline2Enabled[format]}
+        className="w-full rounded p-2 bg-[#17171b] text-white border border-neutral-700 disabled:opacity-50"
+        placeholder="Optional sub-headline"
+      />
+
       {/* GRID 1 */}
       <div className="grid grid-cols-3 gap-3 mt-2">
         <Stepper
-          label="Headline 2 Alpha"
+          label="Alpha"
           value={head2Alpha}
           setValue={setHead2Alpha}
           min={0}
@@ -19962,7 +22736,6 @@ style={{ top: STICKY_TOP }}
         <Chip small active={head2Fx.uppercase} onClick={() => setHead2Fx((v) => ({ ...v, uppercase: !v.uppercase }))}>Upper</Chip>
         <Chip small active={head2Fx.bold} onClick={() => setHead2Fx((v) => ({ ...v, bold: !v.bold }))}>Bold</Chip>
         <Chip small active={head2Fx.italic} onClick={() => setHead2Fx((v) => ({ ...v, italic: !v.italic }))}>Italic</Chip>
-        <Chip small active={head2Fx.underline} onClick={() => setHead2Fx((v) => ({ ...v, underline: !v.underline }))}>Underline</Chip>
         <Chip small active={head2Shadow} onClick={() => setHead2Shadow(!head2Shadow)}>Shadow</Chip>
       </div>
 
@@ -19993,116 +22766,9 @@ style={{ top: STICKY_TOP }}
 
 
 
-{/* UI: SUBTAG (BEGIN) */}
-<div
-  className="relative rounded-xl transition"
->
-  <Collapsible
-    title="Subtag"
-    storageKey="p:subtag"
-    isOpen={selectedPanel === "subtag"}
-    onToggle={() =>
-      useFlyerState
-        .getState()
-        .setSelectedPanel(selectedPanel === "subtag" ? null : "subtag")
-    }
-    panelClassName={
-      selectedPanel === "subtag" ? "ring-1 ring-inset ring-[#00FFF0]/70" : undefined
-    }
-    right={
-      <div className="flex items-center gap-3 text-[11px]">
-        <Chip
-          small
-          active={subtagEnabled[format]}
-          onClick={() => setSubtagEnabled(format, !subtagEnabled[format])}
-        >
-          {subtagEnabled[format] ? "On" : "Off"}
-        </Chip>
-
-        <span className="opacity-80">Align</span>
-
-        <Chip small active={subtagAlign === "left"} onClick={() => setSubtagAlign("left")}>L</Chip>
-        <Chip small active={subtagAlign === "center"} onClick={() => setSubtagAlign("center")}>C</Chip>
-        <Chip small active={subtagAlign === "right"} onClick={() => setSubtagAlign("right")}>R</Chip>
-      </div>
-    }
-  >
-    {/* ⭐ Inner highlight wrapper only when active */}
-    <div className="p-0">
-      {/* Disable rest of panel when subtag is OFF */}
-      <div className={subtagEnabled[format] ? "" : "opacity-50 pointer-events-none"}>
-        {/* ---------- TEXT INPUT ---------- */}
-        <div className="mt-3 text-[11px]">
-          <label className="block opacity-80 mb-1">Text</label>
-          <input
-            value={subtag}
-            onChange={(e) => setSubtag(e.target.value)}
-            className="w-full rounded p-2 bg-[#17171b] text-white border border-neutral-700"
-          />
-        </div>
-
-        <div className="mt-3">
-          <FontPicker
-            label="Font"
-            value={subtagFamily}
-            options={SUBTAG_FONTS_LOCAL}
-            onChange={(v) => setSubtagFamily(v)}
-          />
-        </div>
-
-        {/* ---------- STEPPERS (Size + Alpha + Colors) ---------- */}
-        <div className="grid grid-cols-3 gap-3 mt-3">
-          <Stepper label="Size" value={subtagSize} setValue={setSubtagSize} min={10} max={48} step={1} />
-          <Stepper label="Alpha" value={subtagAlpha} setValue={setSubtagAlpha} min={0} max={1} step={0.05} digits={2} />
-
-          <div className="flex items-end justify-end text-[11px] gap-1">
-            <span className="opacity-80">Pill</span>
-            <ColorDot
-              value={subtagBgColor}
-              onChange={(c) => {
-                setSubtagBgColor(c);
-                setSessionValue(format, "subtagBgColor", c);
-              }}
-              title="Pill color"
-            />
-            <span className="opacity-80 ml-2">Text</span>
-            <ColorDot
-              value={subtagTextColor}
-              onChange={(c) => {
-                setSubtagTextColor(c);
-                setSessionValue(format, "subtagTextColor", c);
-              }}
-              title="Text color"
-            />
-          </div>
-        </div>
-
-        {/* ---------- SHADOW + STRENGTH ---------- */}
-        <div className="mt-4 pt-3 border-t border-neutral-800">
-          <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
-            <Chip small active={subtagUppercase} onClick={() => setSubtagUppercase((v) => !v)}>Upper</Chip>
-            <Chip small active={subtagBold} onClick={() => setSubtagBold((v) => !v)}>Bold</Chip>
-            <Chip small active={subtagItalic} onClick={() => setSubtagItalic((v) => !v)}>Italic</Chip>
-            <Chip small active={subtagShadow} onClick={() => setSubtagShadow(!subtagShadow)}>Shadow</Chip>
-          </div>
-          <div className="mt-2 flex items-center gap-2 text-[11px]">
-            <span className="opacity-80">Strength</span>
-            <div className="w-full sm:w-[110px]">
-              <Stepper label="" value={subtagShadowStrength} setValue={setSubtagShadowStrength} min={0} max={5} step={0.1} />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </Collapsible>
-</div>
-{/* UI: SUBTAG (END) */}
-
-
-
 {/* UI: DETAILS (BEGIN) */}
 <div
-  className="relative rounded-xl transition"
+  className={clsx("relative rounded-xl transition", creatorStepPanelClass("copy"))}
 >
   <Collapsible
     title="Details"
@@ -20147,26 +22813,12 @@ style={{ top: STICKY_TOP }}
         />
       </div>
 
-      {/* ---------- COLOR (RIGHT-ALIGNED) ---------- */}
-      <div className="flex justify-end mt-3">
-        <div className="flex items-center gap-2 text-[11px]">
-          <span className="opacity-80">Color</span>
-          <ColorDot
-            value={bodyColor}
-            onChange={(c) => {
-              setBodyColor(c);
-              setSessionValue(format, "bodyColor", c);
-              setSessionValue(format, "detailsColor", c);
-            }}
-          />
-        </div>
-      </div>
-
       {/* ---------- STEPPERS ---------- */}
-      <div className="grid grid-cols-3 gap-3 mt-4">
-        <Stepper label="Size" value={bodySize} setValue={setBodySize} min={10} max={32} step={1} />
-        <Stepper label="Tracking" value={bodyTracking} setValue={setBodyTracking} min={0} max={0.12} step={0.01} digits={2} />
+      <div className="grid grid-cols-2 gap-3 mt-4">
+        <Stepper label="Size px" value={bodySize} setValue={setBodySize} min={10} max={32} step={1} />
+        <Stepper label="Track (em)" value={bodyTracking} setValue={setBodyTracking} min={0} max={0.12} step={0.01} digits={2} />
         <Stepper label="Line Height" value={detailsLineHeight} setValue={setDetailsLineHeight} min={0.4} max={2.0} step={0.02} digits={2} />
+        <Stepper label="Rotation (°)" value={detailsRotate} setValue={(n) => setDetailsRotate(normDeg(n))} min={-360} max={360} step={1} />
       </div>
 
       {/* ---------- FORMATTING + SHADOW ---------- */}
@@ -20176,12 +22828,21 @@ style={{ top: STICKY_TOP }}
           <Chip small active={bodyBold} onClick={() => setBodyBold((v) => !v)}>Bold</Chip>
           <Chip small active={bodyItalic} onClick={() => setBodyItalic((v) => !v)}>Italic</Chip>
           <Chip small active={detailsShadow} onClick={() => setDetailsShadow(!detailsShadow)}>Shadow</Chip>
-        </div>
-        <div className="mt-2 flex items-center gap-2">
-          <span className="text-[11px] opacity-80">Strength</span>
-          <div className="w-full sm:w-[110px]">
-            <Stepper value={detailsShadowStrength} setValue={setDetailsShadowStrength} min={0} max={5} step={0.1} />
+          <div className="ml-auto flex items-center gap-2 text-[11px]">
+            <span className="opacity-80">Color</span>
+            <ColorDot
+              value={bodyColor}
+              onChange={(c) => {
+                setBodyColor(c);
+                setSessionValue(format, "bodyColor", c);
+                setSessionValue(format, "detailsColor", c);
+              }}
+            />
           </div>
+        </div>
+        <div className="mt-2 flex items-center justify-between">
+          <span className="text-xs opacity-70">Shadow Strength</span>
+          <Stepper value={detailsShadowStrength} setValue={setDetailsShadowStrength} min={0} max={5} step={0.1} />
         </div>
       </div>
     </div>
@@ -20189,11 +22850,17 @@ style={{ top: STICKY_TOP }}
 </div>
 {/* UI: DETAILS (END) */}
 
+{!isDjStartupMode && (
+  <div className={clsx("px-1 pt-1 text-[10px] uppercase tracking-[0.16em] text-neutral-500", creatorStepPanelClass("copy"))}>
+    Supporting Copy
+  </div>
+)}
+
 
 
 {/* UI: DETAILS 2 (BEGIN) */}
 <div
-  className="relative rounded-xl transition"
+  className={clsx("relative rounded-xl transition", creatorStepPanelClass("copy"))}
 >
   <Collapsible
     title="More Details"
@@ -20238,23 +22905,9 @@ style={{ top: STICKY_TOP }}
             disabled={!details2Enabled[format]}
           />
         </div>
-        {/* ---------- ALIGN + COLOR ---------- */}
-        <div className="flex justify-between items-center mt-3">
-          <div className="flex items-center gap-2 text-[11px]">
-            <span className="opacity-80">Color</span>
-            <ColorDot
-              value={details2Color}
-              onChange={(c) => {
-                setDetails2Color(c);
-                setSessionValue(format, "details2Color", c);
-              }}
-            />
-          </div>
-
-        </div>
-
         {/* ---------- TEXT FIELD ---------- */}
         <div className="mt-3">
+          <label className="block text-[11px] opacity-80 mb-1">Text</label>
           <textarea
             value={details2}
             onChange={(e) => setDetails2(e.target.value)}
@@ -20264,11 +22917,12 @@ style={{ top: STICKY_TOP }}
           />
         </div>
 
-        {/* ---------- SIZE / TRACK / LINE HEIGHT ---------- */}
-        <div className="grid grid-cols-3 gap-3 mt-4">
-          <Stepper label="Size" value={details2Size} setValue={setDetails2Size} min={10} max={80} step={1} />
-          <Stepper label="Track" value={details2LetterSpacing} setValue={setDetails2LetterSpacing} min={0} max={0.15} step={0.01} digits={2} />
+        {/* ---------- STEPPERS ---------- */}
+        <div className="grid grid-cols-2 gap-3 mt-4">
+          <Stepper label="Size px" value={details2Size} setValue={setDetails2Size} min={10} max={80} step={1} />
+          <Stepper label="Track (em)" value={details2LetterSpacing} setValue={setDetails2LetterSpacing} min={0} max={0.15} step={0.01} digits={2} />
           <Stepper label="Line Height" value={details2LineHeight} setValue={setDetails2LineHeight} min={0.5} max={2.5} step={0.05} digits={2} />
+          <Stepper label="Rotation (°)" value={details2Rotate} setValue={(n) => setDetails2Rotate(normDeg(n))} min={-360} max={360} step={1} />
         </div>
 
         {/* ---------- FORMATTING + SHADOW ---------- */}
@@ -20278,12 +22932,20 @@ style={{ top: STICKY_TOP }}
             <Chip small active={details2Bold} onClick={() => setDetails2Bold((v) => !v)}>Bold</Chip>
             <Chip small active={details2Italic} onClick={() => setDetails2Italic((v) => !v)}>Italic</Chip>
             <Chip small active={details2Shadow} onClick={() => setDetails2Shadow(!details2Shadow)}>Shadow</Chip>
-          </div>
-          <div className="mt-2 flex items-center gap-2 text-[11px]">
-            <span className="opacity-80">Strength</span>
-            <div className="w-full sm:w-[110px]">
-              <Stepper value={details2ShadowStrength} setValue={setDetails2ShadowStrength} min={0} max={5} step={0.1} />
+            <div className="ml-auto flex items-center gap-2 text-[11px]">
+              <span className="opacity-80">Color</span>
+              <ColorDot
+                value={details2Color}
+                onChange={(c) => {
+                  setDetails2Color(c);
+                  setSessionValue(format, "details2Color", c);
+                }}
+              />
             </div>
+          </div>
+          <div className="mt-2 flex items-center justify-between">
+            <span className="text-xs opacity-70">Shadow Strength</span>
+            <Stepper value={details2ShadowStrength} setValue={setDetails2ShadowStrength} min={0} max={5} step={0.1} />
           </div>
         </div>
       </div>
@@ -20296,7 +22958,7 @@ style={{ top: STICKY_TOP }}
 
 {/* UI: VENUE (BEGIN) */}
 <div
-  className="relative rounded-xl transition"
+  className={clsx("relative rounded-xl transition", creatorStepPanelClass("copy"))}
 >
   <Collapsible
     title="Venue"
@@ -20341,25 +23003,11 @@ style={{ top: STICKY_TOP }}
         />
       </div>
 
-      {/* ---------- COLOR ---------- */}
-      <div className="flex justify-end mt-3">
-        <div className="flex items-center gap-2 text-[11px]">
-          <span className="opacity-80">Color</span>
-          <ColorDot
-            value={venueColor}
-            onChange={(c) => {
-              setVenueColor(c);
-              setSessionValue(format, "venueColor", c);
-            }}
-          />
-        </div>
-      </div>
-
       {/* ---------- STEPPERS ---------- */}
       <div className="grid grid-cols-3 gap-3 mt-4">
-        <Stepper label="Size" value={venueSize} setValue={setVenueSize} min={10} max={96} step={1} />
+        <Stepper label="Size px" value={venueSize} setValue={setVenueSize} min={10} max={96} step={1} />
         <Stepper label="Line Height" value={venueLineHeight} setValue={setVenueLineHeight} min={0.7} max={1.4} step={0.02} digits={2} />
-        <Stepper label="Rotate" value={venueRotate} setValue={setVenueRotate} min={-180} max={180} step={1} />
+        <Stepper label="Rotation (°)" value={venueRotate} setValue={(n) => setVenueRotate(normDeg(n))} min={-360} max={360} step={1} />
       </div>
 
       {/* ---------- FORMATTING + SHADOW ---------- */}
@@ -20369,12 +23017,20 @@ style={{ top: STICKY_TOP }}
           <Chip small active={venueBold} onClick={() => setVenueBold((v) => !v)}>Bold</Chip>
           <Chip small active={venueItalic} onClick={() => setVenueItalic((v) => !v)}>Italic</Chip>
           <Chip small active={venueShadow} onClick={() => setVenueShadow(!venueShadow)}>Shadow</Chip>
-        </div>
-        <div className="mt-2 flex items-center gap-2 text-[11px]">
-          <span className="opacity-80">Strength</span>
-          <div className="w-full sm:w-[110px]">
-            <Stepper value={venueShadowStrength} setValue={setVenueShadowStrength} min={0} max={5} step={0.1} />
+          <div className="ml-auto flex items-center gap-2 text-[11px]">
+            <span className="opacity-80">Color</span>
+            <ColorDot
+              value={venueColor}
+              onChange={(c) => {
+                setVenueColor(c);
+                setSessionValue(format, "venueColor", c);
+              }}
+            />
           </div>
+        </div>
+        <div className="mt-2 flex items-center justify-between">
+          <span className="text-xs opacity-70">Shadow Strength</span>
+          <Stepper value={venueShadowStrength} setValue={setVenueShadowStrength} min={0} max={5} step={0.1} />
         </div>
       </div>
     </div>
@@ -20382,15 +23038,130 @@ style={{ top: STICKY_TOP }}
 </div>
 {/* UI: VENUE (END) */}
 
+{/* UI: SUBTAG (BEGIN) */}
+<div
+  className={clsx("relative rounded-xl transition", creatorStepPanelClass("copy"))}
+>
+  <Collapsible
+    title="Subtag"
+    storageKey="p:subtag"
+    isOpen={selectedPanel === "subtag"}
+    onToggle={() =>
+      useFlyerState
+        .getState()
+        .setSelectedPanel(selectedPanel === "subtag" ? null : "subtag")
+    }
+    panelClassName={
+      selectedPanel === "subtag" ? "ring-1 ring-inset ring-[#00FFF0]/70" : undefined
+    }
+    right={
+      <div className="flex items-center gap-3 text-[11px]">
+        <Chip
+          small
+          active={subtagEnabled[format]}
+          onClick={() => setSubtagEnabled(format, !subtagEnabled[format])}
+        >
+          {subtagEnabled[format] ? "On" : "Off"}
+        </Chip>
 
+        <span className="opacity-80">Align</span>
+
+        <Chip small active={subtagAlign === "left"} onClick={() => setSubtagAlign("left")}>L</Chip>
+        <Chip small active={subtagAlign === "center"} onClick={() => setSubtagAlign("center")}>C</Chip>
+        <Chip small active={subtagAlign === "right"} onClick={() => setSubtagAlign("right")}>R</Chip>
+      </div>
+    }
+  >
+    <div className="p-0">
+      <div className={subtagEnabled[format] ? "" : "opacity-50 pointer-events-none"}>
+        <div className="mt-3">
+          <FontPicker
+            label="Font"
+            value={subtagFamily}
+            options={SUBTAG_FONTS_LOCAL}
+            onChange={(v) => setSubtagFamily(v)}
+          />
+        </div>
+
+        <div className="mt-3 text-[11px]">
+          <label className="block opacity-80 mb-1">{isDjStartupMode ? "Handle" : "Text"}</label>
+          <input
+            value={subtag}
+            onChange={(e) => setSubtag(e.target.value)}
+            placeholder={isDjStartupMode ? "@DJNAME" : undefined}
+            className="w-full rounded p-2 bg-[#17171b] text-white border border-neutral-700"
+          />
+        </div>
+
+        <div className="grid grid-cols-3 gap-3 mt-3">
+          <Stepper label="Size px" value={subtagSize} setValue={setSubtagSize} min={10} max={48} step={1} />
+          <Stepper label="Alpha" value={subtagAlpha} setValue={setSubtagAlpha} min={0} max={1} step={0.05} digits={2} />
+          <Stepper label="Rotation (°)" value={subtagRotate} setValue={(n) => setSubtagRotate(normDeg(n))} min={-360} max={360} step={1} />
+        </div>
+
+        <div className="flex items-end justify-end text-[11px] gap-1 mt-3">
+          <span className="opacity-80">Pill</span>
+          <ColorDot
+            value={subtagBgColor}
+            onChange={(c) => {
+              setSubtagBgColor(c);
+              setSessionValue(format, "subtagBgColor", c);
+            }}
+            title="Pill color"
+          />
+          <span className="opacity-80 ml-2">Text</span>
+          <ColorDot
+            value={subtagTextColor}
+            onChange={(c) => {
+              setSubtagTextColor(c);
+              setSessionValue(format, "subtagTextColor", c);
+            }}
+            title="Text color"
+          />
+        </div>
+
+        <div className="mt-4 pt-3 border-t border-neutral-800">
+          <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
+            <Chip small active={subtagUppercase} onClick={() => setSubtagUppercase((v) => !v)}>Upper</Chip>
+            <Chip small active={subtagBold} onClick={() => setSubtagBold((v) => !v)}>Bold</Chip>
+            <Chip small active={subtagItalic} onClick={() => setSubtagItalic((v) => !v)}>Italic</Chip>
+            <Chip small active={subtagShadow} onClick={() => setSubtagShadow(!subtagShadow)}>Shadow</Chip>
+          </div>
+          <div className="mt-2 flex items-center justify-between">
+            <span className="text-xs opacity-70">Shadow Strength</span>
+            <Stepper value={subtagShadowStrength} setValue={setSubtagShadowStrength} min={0} max={5} step={0.1} />
+          </div>
+        </div>
+      </div>
+    </div>
+  </Collapsible>
+</div>
+{/* UI: SUBTAG (END) */}
+
+ </>
+)}
 
 </div>
 
 <div className={uiMode === "finish" ? "space-y-3" : "hidden"}>
+{!isDjStartupMode && (
+  <div className={clsx("border border-white/10 bg-white/[0.03] px-3 py-3", creatorStepPanelClass("finish"))}>
+    <div className="flex items-center justify-between gap-3">
+      <div>
+        <div className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">Final Step</div>
+        <div className="mt-1 text-sm font-medium text-white">Finish And Export</div>
+      </div>
+      <div className="text-[10px] uppercase tracking-[0.14em] text-neutral-300">Polish</div>
+    </div>
+    <div className="mt-2 text-[12px] text-neutral-400">
+      Apply overlays, grade the flyer, then save or export the finished result.
+    </div>
+  </div>
+)}
 {/* UI: CINEMATIC OVERLAYS (BEGIN) */}
 <div
   id="cinema-panel"
-  className="relative rounded-xl transition"
+  className={clsx("relative rounded-xl transition", creatorStepPanelClass("finish"))}
 >
   <Collapsible
     title="Cinematic Overlays"
@@ -20466,7 +23237,7 @@ style={{ top: STICKY_TOP }}
 {/* UI: MASTER COLOR GRADE (BEGIN) */}
 <div
   id="mastergrade-panel"
-  className="relative rounded-xl transition"
+  className={clsx("relative rounded-xl transition", creatorStepPanelClass("finish"))}
 >
   <Collapsible
     title="Master Color Grade"
@@ -20655,7 +23426,11 @@ style={{ top: STICKY_TOP }}
           return;
         }
 
-        if (!el.closest('[data-portrait-area="true"]') && !el.closest(".panel")) {
+        if (
+          !el.closest('[data-portrait-area="true"]') &&
+          !el.closest("#flare-layer-root") &&
+          !el.closest(".panel")
+        ) {
           clearSelection(e.nativeEvent);
         }
       }}
@@ -20681,6 +23456,19 @@ style={{ top: STICKY_TOP }}
         k3={String(Math.max(0, Math.min(1, 1 - filmGrade)))}
         k4="0"
       />
+    </filter>
+    <filter id="mainface-posterize" colorInterpolationFilters="sRGB">
+      <feColorMatrix
+        in="SourceGraphic"
+        type="matrix"
+        values="0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0 0 0 1 0"
+        result="posterMono"
+      />
+      <feComponentTransfer in="posterMono">
+        <feFuncR type="discrete" tableValues="0.024 0.612 0.890 0.961 1.000" />
+        <feFuncG type="discrete" tableValues="0.180 0.075 0.133 0.875 0.953" />
+        <feFuncB type="discrete" tableValues="0.290 0.125 0.157 0.663 0.820" />
+      </feComponentTransfer>
     </filter>
   </svg>
   {/* ✅ FILTERED CONTENT ONLY (everything BELOW the flare) */}
@@ -20791,21 +23579,6 @@ style={{ top: STICKY_TOP }}
               applyTemplate(tpl, { targetFormat: next, initialLoad: true });
             }
 
-            const sessionForNext = useFlyerState.getState().session?.[next] as any;
-            const currentBgForNext =
-              (sessionForNext?.bgUploadUrl as string | undefined) ||
-              (sessionForNext?.bgUrl as string | undefined) ||
-              null;
-            const savedBlendForNext = lastBlendByFormatRef.current[next];
-            if (
-              savedBlendForNext &&
-              (!currentBgForNext || currentBgForNext !== savedBlendForNext)
-            ) {
-              setBlendRecallPrompt({ format: next, blendUrl: savedBlendForNext });
-            } else {
-              setBlendRecallPrompt(null);
-            }
-
             // 3) Cleanup
             setPendingFormat(null);
             setFadeOut(false);
@@ -20839,7 +23612,6 @@ style={{ top: STICKY_TOP }}
             details2X={details2X}
             details2Y={details2Y}
             detailsFamily={detailsFamily}
-            shapes={shapes}
             allowPeople={allowPeople}
             ref={artRef}
             onPortraitScale={setPortraitScale}
@@ -20974,7 +23746,6 @@ style={{ top: STICKY_TOP }}
             portraitY={portraitY}
             portraitScale={portraitScale}
             portraitLocked={portraitLocked}
-            onShapeMove={onShapeMoveRaf}
             onPortraitMove={onPortraitMoveRaf}
             onLogoMove={onLogoMoveRaf}
             onHeadMove={onHeadMoveRafSafe}
@@ -20998,9 +23769,6 @@ style={{ top: STICKY_TOP }}
             details2LayerZ={textLayerZ.details2}
             venueLayerZ={textLayerZ.venue}
             subtagLayerZ={textLayerZ.subtag}
-            selShapeId={selShapeId}
-            onSelectShape={onSelectShape}
-            onDeleteShape={deleteShape}
             onClearIconSelection={handleClearIconSelection}
             onBgScale={setBgScale}
             isMobileView={isMobileView}
@@ -21009,6 +23777,7 @@ style={{ top: STICKY_TOP }}
             portraitCanvas={portraitCanvas}
             emojiCanvas={emojiCanvas}
             flareCanvas={flareCanvas}
+            showDjTextEditing={showDjTextEditing}
           />
           </div>
           
@@ -21046,7 +23815,7 @@ style={{ top: STICKY_TOP }}
         <div className="flex items-center gap-2 text-[11px] font-semibold text-white">
           <span className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</span>
           <span className="text-neutral-300">•</span>
-          <span>{activeTextControls.label === "Details 2" ? "More Details" : activeTextControls.label}</span>
+          <span>{formatUiLabelCaps(activeTextControls.label === "Details 2" ? "More Details" : activeTextControls.label)}</span>
           {activeTextControls.color && (
             <div className="ml-auto flex items-center gap-1">
               <span className="text-[10px] uppercase tracking-wider text-neutral-400">Color</span>
@@ -21078,58 +23847,41 @@ style={{ top: STICKY_TOP }}
           </div>
           <div className="grid grid-cols-2 gap-3 items-center">
             <div>
-              <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
-                <span>Size</span>
-                <div className="w-12 text-right text-[10px] text-white font-semibold">
-                  {Number(activeTextControls.size || 0).toFixed(0)}
-                </div>
-              </div>
-              <input
-                type="range"
-                min={activeTextControls.sizeMin}
-                max={activeTextControls.sizeMax}
-                step={activeTextControls.sizeStep}
+              <InlineSliderInput
+                label="Size"
                 value={Number(activeTextControls.size || 0)}
-                onChange={(e) => activeTextControls.onSize?.(Number(e.target.value))}
-                className="w-full accent-fuchsia-500"
-                style={{ touchAction: "pan-x" }}
+                min={Number(activeTextControls.sizeMin ?? 0)}
+                max={Number(activeTextControls.sizeMax ?? 0)}
+                step={Number(activeTextControls.sizeStep ?? 1)}
+                precision={0}
+                onChange={(next) => activeTextControls.onSize?.(next)}
+                rangeClassName="flex-1 accent-fuchsia-500"
               />
             </div>
             <div>
-              <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
-                <span>Line</span>
-                <div className="w-12 text-right text-[10px] text-white font-semibold">
-                  {Number(activeTextControls.lineHeight || 0).toFixed(2)}
-                </div>
-              </div>
-              <input
-                type="range"
-                min={activeTextControls.lineMin}
-                max={activeTextControls.lineMax}
-                step={activeTextControls.lineStep}
+              <InlineSliderInput
+                label="Line"
                 value={Number(activeTextControls.lineHeight || 0)}
-                onChange={(e) => activeTextControls.onLine?.(Number(e.target.value))}
-                className="w-full accent-indigo-400"
-                style={{ touchAction: "pan-x" }}
+                min={Number(activeTextControls.lineMin ?? 0)}
+                max={Number(activeTextControls.lineMax ?? 0)}
+                step={Number(activeTextControls.lineStep ?? 0.01)}
+                precision={2}
+                onChange={(next) => activeTextControls.onLine?.(next)}
+                rangeClassName="flex-1 accent-indigo-400"
               />
             </div>
           </div>
           <div>
-            <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
-              <span>Rotation</span>
-              <div className="w-12 text-right text-[10px] text-white font-semibold">
-                {Math.round(Number(activeTextControls.rotation || 0))}°
-              </div>
-            </div>
-            <input
-              type="range"
+            <InlineSliderInput
+              label="Rotation"
+              value={Number(activeTextControls.rotation || 0)}
               min={-180}
               max={180}
               step={1}
-              value={Number(activeTextControls.rotation || 0)}
-              onChange={(e) => activeTextControls.onRotate?.(Number(e.target.value))}
-              className="w-full accent-cyan-400"
-              style={{ touchAction: "pan-x" }}
+              precision={0}
+              suffix="°"
+              onChange={(next) => activeTextControls.onRotate?.(next)}
+              rangeClassName="flex-1 accent-cyan-400"
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -21196,7 +23948,7 @@ style={{ top: STICKY_TOP }}
         <div className="flex items-center gap-2 text-[11px] font-semibold text-white">
           <span className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</span>
           <span className="text-neutral-300">•</span>
-          <span>{activeAssetControls.label}</span>
+          <span>{formatUiLabelCaps(activeAssetControls.label)}</span>
           {activeAssetControls.showColor && (
             <div className="ml-auto flex items-center gap-1">
               <span className="text-[10px] uppercase tracking-wider text-neutral-400">Color</span>
@@ -21210,212 +23962,209 @@ style={{ top: STICKY_TOP }}
         {activeAssetControls.onPosX && activeAssetControls.onPosY && (
           <div className="mt-2 grid grid-cols-2 gap-3 items-center">
             <div>
-              <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
-                <span>X</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  step={0.1}
-                  value={Number(activeAssetControls.posX || 0)}
-                  onChange={(e) => activeAssetControls.onPosX?.(Number(e.target.value))}
-                  onInput={(e) => activeAssetControls.onPosX?.(Number((e.target as HTMLInputElement).value))}
-                  className="flex-1 accent-emerald-400"
-                  style={{ touchAction: "none" }}
-                  onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
-                  onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
-                  onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
-                  disabled={activeAssetControls.locked}
-                />
-                <div className="w-12 text-right text-[10px] text-white font-semibold">
-                  {Number(activeAssetControls.posX || 0).toFixed(1)}
-                </div>
-              </div>
+              <InlineSliderInput
+                label="X"
+                min={0}
+                max={100}
+                step={0.1}
+                value={Number(activeAssetControls.posX || 0)}
+                precision={1}
+                onChange={(next) => activeAssetControls.onPosX?.(next)}
+                rangeClassName="flex-1 accent-emerald-400"
+                onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
+                onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
+                onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
+                disabled={activeAssetControls.locked}
+              />
             </div>
             <div>
-              <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
-                <span>Y</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  step={0.1}
-                  value={Number(activeAssetControls.posY || 0)}
-                  onChange={(e) => activeAssetControls.onPosY?.(Number(e.target.value))}
-                  onInput={(e) => activeAssetControls.onPosY?.(Number((e.target as HTMLInputElement).value))}
-                  className="flex-1 accent-teal-400"
-                  style={{ touchAction: "none" }}
-                  onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
-                  onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
-                  onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
-                  disabled={activeAssetControls.locked}
-                />
-                <div className="w-12 text-right text-[10px] text-white font-semibold">
-                  {Number(activeAssetControls.posY || 0).toFixed(1)}
-                </div>
-              </div>
+              <InlineSliderInput
+                label="Y"
+                min={0}
+                max={100}
+                step={0.1}
+                value={Number(activeAssetControls.posY || 0)}
+                precision={1}
+                onChange={(next) => activeAssetControls.onPosY?.(next)}
+                rangeClassName="flex-1 accent-teal-400"
+                onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
+                onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
+                onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
+                disabled={activeAssetControls.locked}
+              />
             </div>
           </div>
         )}
         <div className="mt-2 grid grid-cols-2 gap-3 items-center">
-          <div>
-            <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
-              <span>Scale</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="range"
-                min={0.1}
-                max={5}
-                step={0.05}
+          {activeAssetControls.showScale !== false && (
+            <div>
+              <InlineSliderInput
+                label={activeAssetControls.scaleLabel || "Scale"}
+                min={Number(activeAssetControls.scaleMin ?? 0.1)}
+                max={Number(activeAssetControls.scaleMax ?? 5)}
+                step={Number(activeAssetControls.scaleStep ?? 0.05)}
                 value={Number(activeAssetControls.scale || 0)}
-                onChange={(e) => activeAssetControls.onScale(Number(e.target.value))}
-                onInput={(e) => activeAssetControls.onScale(Number((e.target as HTMLInputElement).value))}
-                className="flex-1 accent-fuchsia-500"
-                style={{ touchAction: "none" }}
+                displayScale={100}
+                precision={0}
+                suffix="%"
+                onChange={(next) => activeAssetControls.onScale(next)}
+                rangeClassName="flex-1 accent-fuchsia-500"
                 onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
                 onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
                 onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
                 disabled={activeAssetControls.locked}
               />
-              <div className="w-12 text-right text-[10px] text-white font-semibold">
-                {Number(activeAssetControls.scale || 0).toFixed(2)}
-              </div>
             </div>
-          </div>
+          )}
+          {activeAssetControls.separatorLength != null && (
+            <div>
+              <InlineSliderInput
+                label={activeAssetControls.lengthLabel || "Length"}
+                min={Number(activeAssetControls.lengthMin ?? 128)}
+                max={Number(activeAssetControls.lengthMax ?? 720)}
+                step={Number(activeAssetControls.lengthStep ?? 4)}
+                value={Number(activeAssetControls.separatorLength || 180)}
+                precision={0}
+                onChange={(next) => activeAssetControls.onSeparatorLength?.(next)}
+                rangeClassName="flex-1 accent-rose-400"
+                onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
+                onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
+                onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
+                disabled={activeAssetControls.locked}
+              />
+            </div>
+          )}
+          {activeAssetControls.separatorOffset != null && (
+            <div>
+              <InlineSliderInput
+                label="Offset"
+                min={-360}
+                max={360}
+                step={2}
+                value={Number(activeAssetControls.separatorOffset || 0)}
+                precision={0}
+                onChange={(next) => activeAssetControls.onSeparatorOffset?.(next)}
+                rangeClassName="flex-1 accent-cyan-400"
+                onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
+                onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
+                onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
+                disabled={activeAssetControls.locked}
+              />
+            </div>
+          )}
+          {activeAssetControls.shapeSkew != null && (
+            <div>
+              <InlineSliderInput
+                label="Skew"
+                min={-60}
+                max={60}
+                step={1}
+                value={Number(activeAssetControls.shapeSkew || 0)}
+                precision={0}
+                suffix="°"
+                onChange={(next) => activeAssetControls.onShapeSkew?.(next)}
+                rangeClassName="flex-1 accent-amber-400"
+                onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
+                onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
+                onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
+                disabled={activeAssetControls.locked}
+              />
+            </div>
+          )}
           {activeAssetControls.showOpacity !== false && (
             <div>
-              <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
-                <span>Opacity</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                type="range"
+              <InlineSliderInput
+                label="Opacity"
                 min={0}
                 max={1}
                 step={0.05}
                 value={Number(activeAssetControls.opacity || 0)}
-                onChange={(e) => activeAssetControls.onOpacity?.(Number(e.target.value))}
-                onInput={(e) => activeAssetControls.onOpacity?.(Number((e.target as HTMLInputElement).value))}
-                className="flex-1 accent-indigo-400"
-                style={{ touchAction: "none" }}
+                precision={0}
+                displayScale={100}
+                suffix="%"
+                onChange={(next) => activeAssetControls.onOpacity?.(next)}
+                rangeClassName="flex-1 accent-indigo-400"
                 onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
                 onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
                 onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
                 disabled={activeAssetControls.locked}
               />
-              <div className="w-12 text-right text-[10px] text-white font-semibold">
-                  {Math.round(Number(activeAssetControls.opacity || 0) * 100)}%
-                </div>
-              </div>
             </div>
           )}
           {activeAssetControls.tint != null && (
             <div>
-              <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
-                <span>Tint</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                type="range"
+              <InlineSliderInput
+                label="Tint"
                 min={-180}
                 max={180}
                 step={5}
                 value={Number(activeAssetControls.tint || 0)}
-                onChange={(e) => activeAssetControls.onTint?.(Number(e.target.value))}
-                onInput={(e) => activeAssetControls.onTint?.(Number((e.target as HTMLInputElement).value))}
-                className="flex-1 accent-amber-400"
-                style={{ touchAction: "none" }}
+                precision={0}
+                suffix="°"
+                onChange={(next) => activeAssetControls.onTint?.(next)}
+                rangeClassName="flex-1 accent-amber-400"
                 onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
                 onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
                 onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
                 disabled={activeAssetControls.locked}
               />
-              <div className="w-12 text-right text-[10px] text-white font-semibold">
-                  {Math.round(Number(activeAssetControls.tint || 0))}°
-                </div>
-              </div>
             </div>
           )}
           {activeAssetControls.rotation != null && (
             <div>
-              <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
-                <span>Rotate</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                type="range"
+              <InlineSliderInput
+                label="Rotate"
                 min={-180}
                 max={180}
                 step={5}
                 value={Number(activeAssetControls.rotation || 0)}
-                onChange={(e) => activeAssetControls.onRotate?.(Number(e.target.value))}
-                onInput={(e) => activeAssetControls.onRotate?.(Number((e.target as HTMLInputElement).value))}
-                className="flex-1 accent-sky-400"
-                style={{ touchAction: "none" }}
+                precision={0}
+                suffix="°"
+                onChange={(next) => activeAssetControls.onRotate?.(next)}
+                rangeClassName="flex-1 accent-sky-400"
                 onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
                 onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
                 onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
                 disabled={activeAssetControls.locked}
               />
-              <div className="w-12 text-right text-[10px] text-white font-semibold">
-                  {Math.round(Number(activeAssetControls.rotation || 0))}°
-                </div>
-              </div>
             </div>
           )}
         </div>
         {activeAssetControls.cleanup && (
           <div className="mt-2 grid grid-cols-2 gap-3 items-center">
             <div>
-              <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
-                <span>Shrink edge</span>
-              </div>
-              <input
-                type="range"
+              <InlineSliderInput
+                label="Shrink edge"
+                value={Number(activeAssetControls.cleanup.shrinkPx || 0)}
                 min={0}
                 max={10}
                 step={0.5}
-                value={Number(activeAssetControls.cleanup.shrinkPx || 0)}
-                onChange={(e) => activeAssetControls.cleanup?.onShrink?.(Number(e.target.value))}
-                onInput={(e) => activeAssetControls.cleanup?.onShrink?.(Number((e.target as HTMLInputElement).value))}
-                className="w-full accent-amber-400"
-                style={{ touchAction: "none" }}
+                precision={1}
+                suffix="px"
+                onChange={(next) => activeAssetControls.cleanup?.onShrink?.(next)}
+                rangeClassName="flex-1 accent-amber-400"
                 onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
                 onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
                 onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
                 disabled={activeAssetControls.locked}
               />
-              <div className="text-[10px] text-neutral-400 text-right mt-1">
-                {Number(activeAssetControls.cleanup.shrinkPx || 0).toFixed(1)} px
-              </div>
             </div>
             <div>
-              <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
-                <span>Feather</span>
-              </div>
-              <input
-                type="range"
+              <InlineSliderInput
+                label="Feather"
+                value={Number(activeAssetControls.cleanup.featherPx || 0)}
                 min={0}
                 max={10}
                 step={0.5}
-                value={Number(activeAssetControls.cleanup.featherPx || 0)}
-                onChange={(e) => activeAssetControls.cleanup?.onFeather?.(Number(e.target.value))}
-                onInput={(e) => activeAssetControls.cleanup?.onFeather?.(Number((e.target as HTMLInputElement).value))}
-                className="w-full accent-emerald-400"
-                style={{ touchAction: "none" }}
+                precision={1}
+                suffix="px"
+                onChange={(next) => activeAssetControls.cleanup?.onFeather?.(next)}
+                rangeClassName="flex-1 accent-emerald-400"
                 onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
                 onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
                 onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
                 disabled={activeAssetControls.locked}
               />
-              <div className="text-[10px] text-neutral-400 text-right mt-1">
-                {Number(activeAssetControls.cleanup.featherPx || 0).toFixed(1)} px
-              </div>
             </div>
           </div>
         )}
@@ -21463,22 +24212,30 @@ style={{ top: STICKY_TOP }}
                   disabled={activeAssetControls.locked}
                 />
                 <div className="mt-2">
-                  <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
-                    <span>Label Size</span>
-                    <span>{Math.round(Number(activeAssetControls.labelSize || 9))}px</span>
-                  </div>
-                  <input
-                    type="range"
+                  <InlineSliderInput
+                    label="Label Size"
+                    value={Number(activeAssetControls.labelSize || 9)}
                     min={7}
                     max={14}
                     step={1}
-                    value={Number(activeAssetControls.labelSize || 9)}
-                    onChange={(e) => activeAssetControls.onLabelSize?.(Number(e.target.value))}
-                    onInput={(e) =>
-                      activeAssetControls.onLabelSize?.(Number((e.target as HTMLInputElement).value))
-                    }
-                    className="w-full accent-blue-400"
-                    style={{ touchAction: "none" }}
+                    precision={0}
+                    suffix="px"
+                    onChange={(next) => activeAssetControls.onLabelSize?.(next)}
+                    rangeClassName="flex-1 accent-blue-400"
+                    disabled={activeAssetControls.locked}
+                  />
+                </div>
+                <div className="mt-2">
+                  <InlineSliderInput
+                    label="Label Y Offset"
+                    value={Number(activeAssetControls.labelOffsetY || 0)}
+                    min={-30}
+                    max={40}
+                    step={1}
+                    precision={0}
+                    suffix="px"
+                    onChange={(next) => activeAssetControls.onLabelOffsetY?.(next)}
+                    rangeClassName="flex-1 accent-cyan-400"
                     disabled={activeAssetControls.locked}
                   />
                 </div>
@@ -21572,84 +24329,53 @@ style={{ top: STICKY_TOP }}
         </div>
         <div className="mt-2 grid grid-cols-2 gap-3 items-center">
           <div>
-            <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
-              <span>Scale</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="range"
-                min={1}
-                max={5}
-                step={0.1}
+            <InlineSliderInput
+              label="Scale"
+              min={1}
+              max={5}
+              step={0.1}
                 value={Number(activeBgControls.scale || 1)}
-                onChange={(e) => activeBgControls.onScale(Number(e.target.value))}
-                className="flex-1 accent-fuchsia-500"
-                style={{ touchAction: "pan-x" }}
-              />
-              <div className="w-12 text-right text-[10px] text-white font-semibold">
-                {Number(activeBgControls.scale || 1).toFixed(2)}
-              </div>
-            </div>
+              precision={2}
+              onChange={(next) => activeBgControls.onScale(next)}
+              rangeClassName="flex-1 accent-fuchsia-500"
+            />
           </div>
           <div>
-            <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
-              <span>Blur</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="range"
-                min={0}
-                max={20}
-                step={0.5}
-                value={Number(activeBgControls.blur || 0)}
-                onChange={(e) => activeBgControls.onBlur(Number(e.target.value))}
-                className="flex-1 accent-indigo-400"
-                style={{ touchAction: "pan-x" }}
-              />
-              <div className="w-12 text-right text-[10px] text-white font-semibold">
-                {Number(activeBgControls.blur || 0).toFixed(1)}
-              </div>
-            </div>
-          </div>
-          <div>
-            <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
-              <span>Hue</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="range"
-                min={-180}
-                max={180}
-                step={5}
+            <InlineSliderInput
+              label="Hue"
+              min={-180}
+              max={180}
+              step={5}
                 value={Number(activeBgControls.hue || 0)}
-                onChange={(e) => activeBgControls.onHue?.(Number(e.target.value))}
-                className="flex-1 accent-amber-400"
-                style={{ touchAction: "pan-x" }}
-              />
-              <div className="w-12 text-right text-[10px] text-white font-semibold">
-                {Math.round(Number(activeBgControls.hue || 0))}°
-              </div>
-            </div>
+              precision={0}
+              suffix="°"
+              onChange={(next) => activeBgControls.onHue?.(next)}
+              rangeClassName="flex-1 accent-amber-400"
+            />
           </div>
           <div>
-            <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
-              <span>Vignette</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.02}
+            <InlineSliderInput
+              label="Blur"
+              min={0}
+              max={20}
+              step={0.5}
+                value={Number(activeBgControls.blur || 0)}
+              precision={1}
+              onChange={(next) => activeBgControls.onBlur(next)}
+              rangeClassName="flex-1 accent-indigo-400"
+            />
+          </div>
+          <div>
+            <InlineSliderInput
+              label="Vignette"
+              min={0}
+              max={1}
+              step={0.02}
                 value={Number(activeBgControls.vignette || 0)}
-                onChange={(e) => activeBgControls.onVignette?.(Number(e.target.value))}
-                className="flex-1 accent-emerald-400"
-                style={{ touchAction: "pan-x" }}
-              />
-              <div className="w-12 text-right text-[10px] text-white font-semibold">
-                {Number(activeBgControls.vignette || 0).toFixed(2)}
-              </div>
-            </div>
+              precision={2}
+              onChange={(next) => activeBgControls.onVignette?.(next)}
+              rangeClassName="flex-1 accent-emerald-400"
+            />
           </div>
         </div>
         <div className="mt-2">
@@ -21744,18 +24470,54 @@ style={{ top: STICKY_TOP }}
   <DjBrandingPanel
     selectedPanel={selectedPanel}
     setSelectedPanel={setSelectedPanel}
+    hasBackground={!!(bgUploadUrl || bgUrl || blendBackground)}
     kit={djBrandKit}
+    brandProfiles={djBrandCollection.kits.map((kit) => ({ id: kit.id, label: kit.label }))}
+    activeBrandId={djBrandCollection.activeId}
+    studioEnabled={isStudioPlan}
     onKitChange={persistDjBrandKit}
-    onSaveCurrentBrand={saveCurrentAsDjBrand}
-    onApplyMyBrand={() => applyDjBrandKit(djBrandKit)}
-    onApplyHandle={() => applyDjHandle(djBrandKit)}
-    onCaptureCurrentLogo={captureCurrentLogoToKit}
-    onCaptureCurrentFace={captureCurrentFaceToKit}
+    onSelectBrandProfile={selectDjBrandProfile}
+    onCreateBrandProfile={createDjBrandProfile}
+    onDuplicateBrandProfile={duplicateDjBrandProfile}
+	    onDeleteBrandProfile={deleteDjBrandProfile}
+	    onSaveCurrentBrand={saveCurrentAsDjBrand}
+	    onRenameBrandProfile={renameDjBrandProfile}
+	    onApplyMyBrand={() => applyDjBrandKit(djBrandKit)}
+	    onCaptureCurrentFace={captureCurrentFaceToKit}
     mainFaceOnCanvas={!!mainFaceOnCanvas}
+    mainFaceLocked={!!mainFaceOnCanvas?.locked}
     mainFaceScale={Number(mainFaceOnCanvas?.scale ?? 0.85)}
     mainFaceOpacity={Number(mainFaceOnCanvas?.opacity ?? 1)}
+    mainFaceLightingEnabled={mainFaceLighting.enabled}
+    mainFaceLightingAutoMatch={mainFaceLighting.autoMatch}
+    mainFaceLightingAnalyzed={mainFaceLighting.analyzed}
+    mainFaceLightingSide={mainFaceLighting.lightSide}
+    mainFaceLightingColor={mainFaceLighting.highlightColor}
+    mainFaceLightingAmbient={mainFaceLighting.ambient}
+    mainFaceLightingKey={mainFaceLighting.keyLight}
+    mainFaceLightingFill={mainFaceLighting.fillLight}
+    mainFaceLightingRim={mainFaceLighting.rimLight}
+    mainFaceLightingShadow={mainFaceLighting.shadowDepth}
+    mainFaceLightingWarmth={mainFaceLighting.warmth}
+    mainFaceLightingContrast={mainFaceLighting.contrast}
+    mainFaceFilterPreset={mainFaceFilterPreset}
+    mainFaceFilterStrength={mainFaceFilterStrength}
+    onMainFaceLockToggle={toggleMainFaceLock}
     onMainFaceScaleChange={setMainFaceScale}
     onMainFaceOpacityChange={setMainFaceOpacity}
+    onAnalyzeMainFaceLighting={() => {
+      void autoAnalyzeMainFaceLighting();
+    }}
+    onResetMainFaceLighting={resetMainFaceLighting}
+    onMainFaceLightingToggle={() =>
+      updateMainFaceLighting({ enabled: !mainFaceLighting.enabled })
+    }
+    onMainFaceLightingAutoMatchToggle={() =>
+      updateMainFaceLighting({ autoMatch: !mainFaceLighting.autoMatch })
+    }
+    onMainFaceLightingChange={updateMainFaceLighting}
+    onMainFaceFilterPresetChange={(preset) => updateMainFaceFilter({ preset })}
+    onMainFaceFilterStrengthChange={(value) => updateMainFaceFilter({ strength: value })}
     onUseBrandLogo={(idx) => {
       const src = djBrandKit.logos?.[idx];
       if (!src) return;
@@ -21763,189 +24525,357 @@ style={{ top: STICKY_TOP }}
       setLogoScale(1);
       setMoveMode(true);
       setDragging('logo');
-    }}
-    onUseBrandFace={() => {
-      if (!djBrandKit.primaryPortrait) return;
-      if (!isPngBrandFace(djBrandKit.primaryPortrait)) {
-        alert('Main Face must be a PNG file. Upload a PNG in DJ Branding > Main Face.');
-        return;
-      }
-      placeDjBrandFace(djBrandKit.primaryPortrait);
-    }}
-    onSnapLogoSafeZone={snapLogoToSafeZone}
-    currentLogoUrl={logoUrl}
-    currentPortraitUrl={portraitUrl}
-    headlineFonts={HEADLINE_FONTS_LOCAL}
+	    }}
+	    onUseBrandFace={placeSavedMainFace}
+    onRemoveMainFace={removeMainFaceFromCanvas}
+	    currentPortraitUrl={portraitUrl}
+	    headlineFonts={HEADLINE_FONTS_LOCAL}
     bodyFonts={BODY_FONTS_LOCAL}
   />
 )}
 
+{!isDjStartupMode && (
+  <Collapsible
+    title="Creator Workflow"
+    storageKey="p:creator-workflow"
+    defaultOpen
+    right={
+      <button
+        type="button"
+        onClick={() => setWorkflowHelpOpen(true)}
+        aria-label="Open creator workflow guide"
+        title="Open creator workflow guide"
+        className="h-6 px-2 border border-white/10 bg-white/[0.03] text-neutral-200 text-[10px] font-semibold uppercase tracking-[0.14em] hover:bg-white/[0.06]"
+      >
+        Guide
+      </button>
+    }
+  >
+    <div className="space-y-2.5">
+      <div className="border border-white/10 bg-white/[0.03] px-3 py-3">
+        <div className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">Recommended Now</div>
+        <div className="mt-1 text-sm font-medium text-white">
+          {creatorWorkflowMeta[creatorWorkflowRecommended].label}
+        </div>
+        <div className="mt-1 text-[11px] text-neutral-400">
+          {creatorWorkflowMeta[creatorWorkflowRecommended].summary}
+        </div>
+        <button
+          type="button"
+          onClick={() => openCreatorWorkflowStep(creatorWorkflowRecommended)}
+          className="mt-2 w-full border border-white/15 bg-white/[0.08] px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-white/[0.12]"
+        >
+          Open {creatorWorkflowMeta[creatorWorkflowRecommended].label}
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        {([
+          ["scene", "1"],
+          ["copy", "2"],
+          ["assets", "3"],
+          ["finish", "4"],
+        ] as const).map(([key, index]) => {
+          const meta = creatorWorkflowMeta[key];
+          const isCurrent = creatorWorkflowCurrent === key;
+          const isRecommended = creatorWorkflowRecommended === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => openCreatorWorkflowStep(key)}
+              className={clsx(
+                "border px-3 py-2.5 text-left transition",
+                isCurrent || isRecommended
+                  ? "border-white/15 bg-white/[0.06]"
+                  : "border-white/10 bg-white/[0.03] hover:bg-white/[0.05]"
+              )}
+            >
+              <div className="flex items-start gap-3">
+                <div className="text-[10px] uppercase tracking-[0.14em] text-neutral-500">{index}</div>
+                <div className="min-w-0">
+                  <div className="text-sm font-medium text-white">{meta.label}</div>
+                  <div
+                    className={clsx(
+                      "mt-1 text-[10px] uppercase tracking-[0.14em]",
+                      isCurrent ? "text-white" : meta.ready ? "text-emerald-300" : "text-neutral-500"
+                    )}
+                  >
+                    {isCurrent ? "Open" : meta.ready ? "Ready" : isRecommended ? "Next" : meta.count}
+                  </div>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  </Collapsible>
+)}
+
 {/* UI: AI BACKGROUND (BEGIN) */}
-<div id="ai-background-panel" data-tour="background">
-<AiBackgroundPanel
-  selectedPanel={selectedPanel}
-  setSelectedPanel={setSelectedPanel}
-  genStyle={genStyle}
-  setGenStyle={setGenStyle}
-  presetKey={presetKey}
-  setPresetKey={setPresetKey}
-  presets={PRESETS}
-  randomPreset={randomPreset}
-  genPrompt={genPrompt}
-  setGenPrompt={setGenPrompt}
-  genProvider={genProvider}
-  setGenProvider={setGenProvider}
-  genCount={genCount}
-  setGenCount={setGenCount}
-  genSize={genSize}
-  setGenSize={setGenSize}
-  allowPeople={allowPeople}
-  setAllowPeople={setAllowPeople}
-  variety={variety}
-  setVariety={setVariety}
-  clarity={clarity}
-  setClarity={setClarity}
-  genGender={genGender}
-  setGenGender={setGenGender}
-  genEthnicity={genEthnicity}
-  setGenEthnicity={setGenEthnicity}
-  genEnergy={genEnergy}
-  setGenEnergy={setGenEnergy}
-  genAttire={genAttire}
-  setGenAttire={setGenAttire}
-  genColorway={genColorway}
-  setGenColorway={setGenColorway}
-  genAttireColor={genAttireColor}
-  setGenAttireColor={setGenAttireColor}
-  genPose={genPose}
-  setGenPose={setGenPose}
-  genShot={genShot}
-  setGenShot={setGenShot}
-  genLighting={genLighting}
-  setGenLighting={setGenLighting}
-  resetCredits={resetCredits}
-  generateBackground={generateBackground}
-  genLoading={genLoading}
-  isPlaceholder={isPlaceholder}
-  genError={genError}
-  genCandidates={genCandidates}
-  setBgUploadUrl={setBgUploadUrl}
-  setBgUrl={setBgUrl}
-/>
-</div>
+{!isDjStartupMode && (
+  <div
+    id="ai-background-panel"
+    data-tour="background"
+    className={creatorStepPanelClass("scene")}
+  >
+  {isStarterPlan ? (
+    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-white/85">
+      <div className="text-sm font-semibold text-white">AI Background</div>
+      <div className="mt-2 text-xs text-white/65">
+        Paid users get AI generation. Starter mode lets you browse templates and edit layouts before upgrading.
+      </div>
+      <a
+        href="/pricing"
+        onClick={(event) => void handleStudioNavigation(event, "/pricing")}
+        className="mt-4 inline-flex rounded-lg border border-fuchsia-400/30 bg-fuchsia-500/15 px-3 py-2 text-xs text-white hover:bg-fuchsia-500/25"
+      >
+        Unlock AI tools
+      </a>
+    </div>
+  ) : (
+    <AiBackgroundPanel
+      selectedPanel={selectedPanel}
+      setSelectedPanel={setSelectedPanel}
+      creatorAutoLayoutEnabled={hasCreatorAutoLayoutAccess}
+      autoLayoutReferenceUrl={autoLayoutReferenceUrl}
+      autoLayoutLoading={autoLayoutLoading}
+      autoLayoutError={autoLayoutError}
+      onAutoLayoutReferenceUpload={handleAutoLayoutReferenceUpload}
+      onClearAutoLayoutReference={clearAutoLayoutReference}
+      onAutoLayoutFromBackground={handleAutoLayoutFromBackground}
+      genStyle={genStyle}
+      setGenStyle={setGenStyle}
+      presetKey={presetKey}
+      setPresetKey={setPresetKey}
+      presets={PRESETS}
+      randomPreset={randomPreset}
+      genPrompt={genPrompt}
+      setGenPrompt={setGenPrompt}
+      genProvider={genProvider}
+      setGenProvider={setGenProvider}
+      genCount={genCount}
+      setGenCount={setGenCount}
+      genSize={genSize}
+      setGenSize={setGenSize}
+      allowPeople={allowPeople}
+      setAllowPeople={setAllowPeople}
+      variety={variety}
+      setVariety={setVariety}
+      clarity={clarity}
+      setClarity={setClarity}
+      genGender={genGender}
+      setGenGender={setGenGender}
+      genEthnicity={genEthnicity}
+      setGenEthnicity={setGenEthnicity}
+      genEnergy={genEnergy}
+      setGenEnergy={setGenEnergy}
+      genAttire={genAttire}
+      setGenAttire={setGenAttire}
+      genColorway={genColorway}
+      setGenColorway={setGenColorway}
+      genAttireColor={genAttireColor}
+      setGenAttireColor={setGenAttireColor}
+      genPose={genPose}
+      setGenPose={setGenPose}
+      genShot={genShot}
+      setGenShot={setGenShot}
+      genLighting={genLighting}
+      setGenLighting={setGenLighting}
+      generationQuotaRemaining={generationQuota?.remaining ?? null}
+      generationQuotaLimit={generationQuota?.limit ?? null}
+      generateBackground={generateBackground}
+      genLoading={genLoading}
+      isPlaceholder={isPlaceholder}
+      genError={genError}
+      genCandidates={genCandidates}
+      hasSharedGeneratedBackground={!!sharedGeneratedBackground}
+      sharedGeneratedBackgroundSource={
+        sharedGeneratedBackground?.source === "magic_blend" ? "Magic Blend" : "AI Background"
+      }
+      canRestoreOriginalBackground={!!sharedGeneratedBackground?.original}
+      isOriginalBackgroundActive={
+        !!sharedGeneratedBackground?.original &&
+        (bgUploadUrl || bgUrl) === sharedGeneratedBackground.original.src
+      }
+      isGeneratedBackgroundActive={
+        !!sharedGeneratedBackground?.generated &&
+        (bgUploadUrl || bgUrl) === sharedGeneratedBackground.generated.src
+      }
+      onUseOriginalBackground={applyOriginalSharedBackground}
+      onUseGeneratedBackground={applyGeneratedSharedBackground}
+      onUseGeneratedCandidate={applyGeneratedCandidate}
+    />
+  )}
+  </div>
+)}
 {/* UI: AI BACKGROUND (END) */}
 
 
 
 {/* UI: MAGIC BLEND PANEL (BEGIN) */}
-<MagicBlendPanel
-  selectedPanel={selectedPanel}
-  onToggle={() =>
-    setSelectedPanel(selectedPanel === "magic_blend" ? null : "magic_blend")
-  }
-  blendStyle={blendStyle}
-  setBlendStyle={setBlendStyle}
-  blendAttireColor={blendAttireColor}
-  setBlendAttireColor={setBlendAttireColor}
-  blendLighting={blendLighting}
-  setBlendLighting={setBlendLighting}
-  blendCameraZoom={blendCameraZoom}
-  setBlendCameraZoom={setBlendCameraZoom}
-  blendExpressionPose={blendExpressionPose}
-  setBlendExpressionPose={setBlendExpressionPose}
-  blendSubjectAction={blendSubjectAction}
-  setBlendSubjectAction={setBlendSubjectAction}
-  blendBackgroundPriority={blendBackgroundPriority}
-  setBlendBackgroundPriority={setBlendBackgroundPriority}
-  isCuttingOut={isCuttingOut}
-  blendSubject={blendSubject}
-  blendBackground={blendBackground}
-  handleBlendUpload={handleBlendUpload}
-  pushCanvasBgToBlend={pushCanvasBgToBlend}
-  handleMagicBlend={handleMagicBlend}
-  isBlending={isBlending}
-/>
+{!isDjStartupMode && (isStarterPlan ? (
+  <div className={creatorStepPanelClass("assets")}>
+    <div
+      id="magic-blend-panel"
+      data-tour="magic-blend"
+      className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-white/85"
+    >
+    <div className="text-sm font-semibold text-white">Magic Blend</div>
+    <div className="mt-2 text-xs text-white/65">
+      Paid users can blend subjects and scenes here.
+    </div>
+    <a
+      href="/pricing"
+      onClick={(event) => void handleStudioNavigation(event, "/pricing")}
+      className="mt-4 inline-flex rounded-lg border border-fuchsia-400/30 bg-fuchsia-500/15 px-3 py-2 text-xs text-white hover:bg-fuchsia-500/25"
+    >
+      Unlock Magic Blend
+    </a>
+    </div>
+  </div>
+) : (
+  <div className={creatorStepPanelClass("assets")}>
+    <MagicBlendPanel
+      selectedPanel={selectedPanel}
+      onToggle={() =>
+        setSelectedPanel(selectedPanel === "magic_blend" ? null : "magic_blend")
+      }
+      blendStyle={blendStyle}
+      setBlendStyle={setBlendStyle}
+      blendAttireColor={blendAttireColor}
+      setBlendAttireColor={setBlendAttireColor}
+      blendLighting={blendLighting}
+      setBlendLighting={setBlendLighting}
+      blendCameraZoom={blendCameraZoom}
+      setBlendCameraZoom={setBlendCameraZoom}
+      blendExpressionPose={blendExpressionPose}
+      setBlendExpressionPose={setBlendExpressionPose}
+      blendSubjectAction={blendSubjectAction}
+      setBlendSubjectAction={setBlendSubjectAction}
+      blendBackgroundPriority={blendBackgroundPriority}
+      setBlendBackgroundPriority={setBlendBackgroundPriority}
+      isCuttingOut={isCuttingOut}
+      blendSubject={blendSubject}
+      blendBackground={blendBackground}
+      handleBlendUpload={handleBlendUpload}
+      pushCanvasBgToBlend={pushCanvasBgToBlend}
+      handleMagicBlend={handleMagicBlend}
+      isBlending={isBlending}
+      isCapturingBackground={isCapturingBlendBackground}
+      hasSharedGeneratedBackground={!!sharedGeneratedBackground}
+      sharedGeneratedBackgroundSource={
+        sharedGeneratedBackground?.source === "magic_blend" ? "Magic Blend" : "AI Background"
+      }
+      canRestoreOriginalBackground={!!sharedGeneratedBackground?.original}
+      isOriginalBackgroundActive={
+        !!sharedGeneratedBackground?.original &&
+        (bgUploadUrl || bgUrl) === sharedGeneratedBackground.original.src
+      }
+      isGeneratedBackgroundActive={
+        !!sharedGeneratedBackground?.generated &&
+        (bgUploadUrl || bgUrl) === sharedGeneratedBackground.generated.src
+      }
+      onUseOriginalBackground={applyOriginalSharedBackground}
+      onUseGeneratedBackground={applyGeneratedSharedBackground}
+    />
+  </div>
+))}
 {/* UI: MAGIC BLEND PANEL (END) */}
-<BackgroundPanels
-  selectedPanel={selectedPanel}
-  setSelectedPanel={setSelectedPanel}
-  triggerUpload={triggerUpload}
-  fitBackground={fitBackground}
-  clearBackground={clearBackground}
-  setBgScale={setBgScale}
-  bgFitMode={bgFitMode}
-  setBgFitMode={setBgFitMode}
-  setBgPosX={setBgPosX}
-  setBgPosY={setBgPosY}
-  bgUploadUrl={bgUploadUrl}
-  bgUrl={bgUrl}
-  bgRightRef={bgRightRef}
-  onRightBgFile={onRightBgFile}
-  logoPickerRef={logoPickerRef}
-  onLogoFiles={onLogoFiles}
-  logoSlotPickerRef={logoSlotPickerRef}
-  onLogoSlotFile={onLogoSlotFile}
-  portraitSlotPickerRef={portraitSlotPickerRef}
-  onPortraitSlotFile={onPortraitSlotFile}
-  vibeUploadInputRef={vibeUploadInputRef}
-  handleUploadDesignFromVibe={handleUploadDesignFromVibe}
-  bgScale={bgScale}
-  bgBlur={bgBlur}
-  hasSubject={!!portraitUrl}
-  onGenerateSubject={generateSubjectForBackground}
-  isGeneratingSubject={subjectGenLoading}
-  subjectError={subjectGenError}
-  subjectGender={genGender}
-  setSubjectGender={(v) => setGenGender(v as any)}
-  subjectEthnicity={genEthnicity}
-  setSubjectEthnicity={(v) => setGenEthnicity(v as any)}
-  subjectAttire={genAttire}
-  setSubjectAttire={(v) => setGenAttire(v as any)}
-  subjectShot={genShot}
-  setSubjectShot={(v) => setGenShot(v as any)}
-  subjectEnergy={genEnergy}
-  setSubjectEnergy={(v) => setGenEnergy(v as any)}
-  subjectPose={genPose}
-  setSubjectPose={(v) => setGenPose(v as any)}
-  setBgBlur={setBgBlur}
-  bgRotate={bgRotate}
-  setBgRotate={setBgRotate}
-  setHue={setHue}
-  setVignette={setVignette}
-  setVignetteStrength={setVignetteStrength}
-  hue={hue}
-  vignetteStrength={vignetteStrength}
-  genProvider={genProvider}
-  setGenProvider={setGenProvider}
-  onBackgroundPreviewClick={handleBgPanelClick}
-/>
+<div className={creatorStepPanelClass("scene")}>
+  <BackgroundPanels
+    presetBackgrounds={isDjStartupMode ? DJ_STARTUP_BACKGROUNDS : []}
+    presetBackgroundLabel="DJ Backgrounds"
+    onPresetBackgroundSelect={applyStartupBackground}
+    allowUploads={!isDjStartupMode}
+    selectedPanel={selectedPanel}
+    setSelectedPanel={setSelectedPanel}
+    triggerUpload={triggerUpload}
+    fitBackground={fitBackground}
+    clearBackground={clearBackground}
+    setBgScale={setBgScale}
+    bgFitMode={bgFitMode}
+    setBgFitMode={setBgFitMode}
+    setBgPosX={setBgPosX}
+    setBgPosY={setBgPosY}
+    bgUploadUrl={bgUploadUrl}
+    bgUrl={bgUrl}
+    bgRightRef={bgRightRef}
+    onRightBgFile={onRightBgFile}
+    logoPickerRef={logoPickerRef}
+    onLogoFiles={onLogoFiles}
+    logoSlotPickerRef={logoSlotPickerRef}
+    onLogoSlotFile={onLogoSlotFile}
+    portraitSlotPickerRef={portraitSlotPickerRef}
+    onPortraitSlotFile={onPortraitSlotFile}
+    vibeUploadInputRef={vibeUploadInputRef}
+    handleUploadDesignFromVibe={handleUploadDesignFromVibe}
+    bgScale={bgScale}
+    bgBlur={bgBlur}
+    hasSubject={!!portraitUrl}
+    onGenerateSubject={generateSubjectForBackground}
+    isGeneratingSubject={subjectGenLoading}
+    subjectError={subjectGenError}
+    subjectGender={genGender}
+    setSubjectGender={(v) => setGenGender(v as any)}
+    subjectEthnicity={genEthnicity}
+    setSubjectEthnicity={(v) => setGenEthnicity(v as any)}
+    subjectAttire={genAttire}
+    setSubjectAttire={(v) => setGenAttire(v as any)}
+    subjectShot={genShot}
+    setSubjectShot={(v) => setGenShot(v as any)}
+    subjectEnergy={genEnergy}
+    setSubjectEnergy={(v) => setGenEnergy(v as any)}
+    subjectPose={genPose}
+    setSubjectPose={(v) => setGenPose(v as any)}
+    setBgBlur={setBgBlur}
+    bgRotate={bgRotate}
+    setBgRotate={setBgRotate}
+    setHue={setHue}
+    setVignette={setVignette}
+    setVignetteStrength={setVignetteStrength}
+    hue={hue}
+    vignetteStrength={vignetteStrength}
+    genProvider={genProvider}
+    setGenProvider={setGenProvider}
+    showAiTools={!isStarterPlan}
+    onBackgroundPreviewClick={handleBgPanelClick}
+  />
+</div>
 
 
 
 
 {/* UI: LIBRARY (BEGIN) */}
-<LibraryPanel
-  format={format}
-  selectedEmojiId={selectedEmojiId}
-  setSelectedEmojiId={setSelectedEmojiId}
-  IS_iconSlotPickerRef={IS_iconSlotPickerRef}
-  IS_onIconSlotFile={IS_onIconSlotFile}
-  IS_iconSlots={IS_iconSlots}
-  IS_triggerIconSlotUpload={IS_triggerIconSlotUpload}
-  IS_placeIconFromSlot={IS_placeIconFromSlot}
-  IS_clearIconSlot={IS_clearIconSlot}
-  nightlifeGraphics={NIGHTLIFE_GRAPHICS}
-  graphicStickers={GRAPHIC_STICKERS}
-  flareLibrary={FLARE_LIBRARY}
-  onPlaceToCanvas={() => window.setTimeout(scrollToArtboard, 120)}
-/>
+<div className={creatorStepPanelClass("assets")}>
+  <LibraryPanel
+    format={format}
+    selectedEmojiId={selectedEmojiId}
+    setSelectedEmojiId={setSelectedEmojiId}
+    IS_iconSlotPickerRef={IS_iconSlotPickerRef}
+    IS_onIconSlotFile={IS_onIconSlotFile}
+    IS_iconSlots={IS_iconSlots}
+    IS_triggerIconSlotUpload={IS_triggerIconSlotUpload}
+    IS_placeIconFromSlot={IS_placeIconFromSlot}
+    IS_clearIconSlot={IS_clearIconSlot}
+    socialMediaStickers={visibleSocialMediaStickers}
+    nightlifeGraphics={visibleNightlifeGraphics}
+    textSeparators={TEXT_SEPARATOR_GRAPHICS}
+    graphicStickers={visibleGraphicStickers}
+    flareLibrary={visibleFlareLibrary}
+    textureLibrary={visibleTextureLibrary}
+    showEmojiLibrary={!isDjStartupMode}
+    onPlaceToCanvas={() => window.setTimeout(scrollToArtboard, 120)}
+  />
+</div>
 {/* UI: LIBRARY (END) */}
 
 
   {/* UI: PORTRAITS — COMBINED SLOTS (BEGIN) */}
-  {!isStarterPlan && (
+  {!isStarterPlan && !isDjStartupMode && (
   <div
-    className="relative rounded-xl transition"
+    className={clsx("relative rounded-xl transition", creatorStepPanelClass("assets"))}
 >
   <Collapsible
     title="Portraits"
@@ -22209,21 +25139,23 @@ style={{ top: STICKY_TOP }}
 
             {/* Push to Merge Portrait (Magic Blend) */}
             {src && !isProcessing && (
+              !isStarterPlan && (
               <button
                 type="button"
                 className="mt-2 w-full text-[10px] py-2 rounded-md bg-neutral-800/80 border border-neutral-600/80 text-neutral-200 font-medium tracking-[0.12em] uppercase whitespace-nowrap hover:bg-neutral-700/80 hover:border-neutral-400/80 transition-colors"
                 onClick={async () => {
-                  const source = portraitSlotSources[i] || src;
-                  const subjectSrc = source.startsWith("blob:")
-                    ? await blobUrlToDataUrl(source)
-                    : source;
-                  setBlendSubject(subjectSrc);
+                  const cutoutSrc = src.startsWith("blob:")
+                    ? await blobUrlToDataUrl(src)
+                    : src;
+                  setBlendSubject(cutoutSrc);
+                  setBlendSubjectCutout(cutoutSrc);
                   setSelectedPanel("magic_blend");
                   useFlyerState.getState().setSelectedPanel("magic_blend");
                 }}
               >
                 Merge Portrait
               </button>
+              )
             )}
           </div>
         );
@@ -22252,23 +25184,22 @@ style={{ top: STICKY_TOP }}
 
             {/* SCALE SLIDER */}
             <div className="mb-3">
-              <div className="flex justify-between text-[11px] text-neutral-400 mb-1">
-                <span>Scale</span>
-                <span>{Math.round((sel.scale || 1) * 100)}%</span>
-              </div>
-              <input
-                type="range"
-                min={0.1}
-                max={4}
-                step={0.05}
+              <InlineSliderInput
+                label="Scale"
                 value={sel.scale ?? 1}
-                onChange={(e) =>
+                min={0.01}
+                max={4}
+                step={0.01}
+                displayScale={100}
+                precision={0}
+                suffix="%"
+                onChange={(next) =>
                   useFlyerState.getState().updatePortrait(format, sel.id, {
-                    scale: Number(e.target.value),
+                    scale: next,
                   })
                 }
                 disabled={locked}
-                className={`w-full h-1 rounded-lg appearance-none cursor-pointer ${
+                rangeClassName={`flex-1 h-1 rounded-lg appearance-none cursor-pointer ${
                   locked ? "bg-neutral-800 accent-neutral-600" : "bg-neutral-700 accent-indigo-500"
                 }`}
               />
@@ -22428,7 +25359,335 @@ style={{ top: STICKY_TOP }}
   )}
   {/* UI: PORTRAITS — COMBINED SLOTS (END) */}
 
+  {!isDjStartupMode && !isStarterPlan && (
+  <div
+    id="logo-panel"
+    ref={logoPanelRef}
+    className={clsx("relative rounded-xl transition", creatorStepPanelClass("assets"))}
+>
+  <Collapsible
+    title="Logo / 3D"
+    storageKey="p:media"
+    defaultOpen={false}
+    isOpen={selectedPanel === "logo"}
+    onToggle={() => {
+      setSelectedPanel(selectedPanel === "logo" ? null : "logo");
+      if (selectedPanel !== "logo") {
+        setTimeout(() => {
+          const el = document.getElementById("logo-panel");
+          el?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 0);
+      }
+    }}
+    panelClassName={
+      selectedPanel === "logo" ? "ring-1 ring-inset ring-[#00FFF0]/70" : undefined
+    }
+    titleClassName={
+      selectedPanel === "logo"
+        ? "text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]"
+        : ""
+    }
+  >
+    <div className="text-[12px] text-neutral-300 mb-2">
+      Manage logos and 3D text. Upload or generate, then place.
+    </div>
+
+    <div className="grid grid-cols-2 gap-2 mb-4">
+      {[0, 1, 2, 3].map((i) => {
+        const src = logoSlots[i] || "";
+        const list = portraits[format] || [];
+        const onCanvas = list.find((p) => p.url === src);
+        const isActive = !!(onCanvas && selectedPortraitId === onCanvas.id);
+
+        return (
+          <div
+            key={i}
+            className={`border rounded-lg p-2 transition-colors ${
+              isActive
+                ? "border-indigo-500 bg-indigo-900/10"
+                : "border-neutral-700 bg-neutral-900/50"
+            }`}
+          >
+            <div className="h-20 rounded overflow-hidden border border-neutral-700 bg-neutral-900 grid place-items-center relative">
+              {src ? (
+                <img
+                  src={src}
+                  className="w-full h-full object-contain bg-[length:10px_10px] bg-[url('https://t3.ftcdn.net/jpg/02/03/90/58/360_F_203905816_kpsw9G2a6e02a0a256a5061695669046.jpg')]"
+                  draggable={false}
+                  alt=""
+                />
+              ) : (
+                <div className="text-[11px] text-neutral-500">Empty {i + 1}</div>
+              )}
+              {isActive && (
+                <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-green-500 shadow-[0_0_5px_#22c55e]" />
+              )}
+            </div>
+
+            <div className="mt-2 grid grid-cols-3 gap-1">
+              <button
+                type="button"
+                className="text-[10px] px-1 py-1.5 rounded-md bg-neutral-800 border border-neutral-600 hover:bg-neutral-700 text-neutral-300 truncate"
+                onClick={() => {
+                  const input = document.createElement("input");
+                  input.type = "file";
+                  input.accept = "image/*";
+                  input.onchange = (e: any) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const r = new FileReader();
+                    r.onload = () => {
+                      const next = [...logoSlots];
+                      next[i] = String(r.result);
+
+                      setLogoSlots(next);
+                      try {
+                        localStorage.setItem("nf:logoSlots", JSON.stringify(next));
+                      } catch {}
+
+                      setSelectedPanel("logo");
+                      setTimeout(() => {
+                        document
+                          .getElementById("logo-panel")
+                          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }, 0);
+                    };
+                    r.readAsDataURL(file);
+                  };
+                  input.click();
+                }}
+              >
+                {src ? "Rep" : "Up"}
+              </button>
+
+              <button
+                type="button"
+                disabled={!src}
+                className="text-[10px] px-1 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 truncate"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (!src) return;
+
+                  const id = `logo_${Date.now()}_${Math.random()
+                    .toString(36)
+                    .slice(2, 7)}`;
+
+                  addPortrait(format, {
+                    id,
+                    url: src,
+                    x: 50,
+                    y: 50,
+                    scale: 1.0,
+                    locked: false,
+                    shadowBlur: 0,
+                    shadowAlpha: 0.5,
+                    cleanup: DEFAULT_CLEANUP,
+                  });
+
+                  setSelectedPortraitId(id);
+                  setMoveTarget("portrait");
+                  setSelectedPanel("logo");
+                  window.setTimeout(scrollToArtboard, 120);
+                }}
+              >
+                Place
+              </button>
+
+              <button
+                type="button"
+                disabled={!src}
+                className="text-[10px] px-1 py-1.5 rounded-md bg-neutral-800 border border-neutral-600 hover:bg-neutral-700 text-neutral-300 disabled:opacity-50 truncate"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+
+                  const next = [...logoSlots];
+                  next[i] = "";
+                  setLogoSlots(next);
+                  try {
+                    localStorage.setItem("nf:logoSlots", JSON.stringify(next));
+                  } catch {}
+
+                  if (onCanvas?.id) {
+                    removePortrait(format, onCanvas.id);
+                    if (selectedPortraitId === onCanvas.id) {
+                      setSelectedPortraitId(null);
+                    }
+                  }
+                }}
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+
+   {(() => {
+      const store = useFlyerState.getState();
+      const list = store.portraits?.[format] || [];
+      const sel = list.find((p: any) => p.id === selectedPortraitId);
+
+      if (!sel || !String(sel.id || "").startsWith("logo_")) return null;
+
+      const shadowBlur = Number((sel as any).shadowBlur ?? 0);
+      const shadowAlpha = Number((sel as any).shadowAlpha ?? 0.5);
+      const locked = !!sel.locked;
+
+      const update = (patch: any) => {
+        const s = useFlyerState.getState();
+        s.updatePortrait(format, sel.id, patch);
+        s.setSelectedPortraitId(sel.id);
+        s.setSelectedPanel("logo");
+        s.setMoveTarget("logo");
+      };
+
+      return (
+        <div
+          className="mt-4 pt-4 border-t border-white/10"
+          data-portrait-area="true"
+          onMouseDownCapture={(e) => e.stopPropagation()}
+          onPointerDownCapture={(e) => e.stopPropagation()}
+        >
+          <div className="text-[12px] font-bold text-indigo-300 mb-3 flex items-center gap-2">
+            <span>✨ 3D / Logo Controls</span>
+          </div>
+
+          <div className="space-y-4 mb-6">
+            <SliderRow
+              label="Scale"
+              value={Number(sel.scale ?? 1)}
+              min={0.2}
+              max={3}
+              step={0.05}
+              onChange={(v) => update({ scale: v })}
+            />
+
+            <SliderRow
+              label="Opacity"
+              value={Number((sel as any).opacity ?? 1)}
+              min={0}
+              max={1}
+              step={0.05}
+              onChange={(v) => update({ opacity: v })}
+            />
+
+            <SliderRow
+              label="Tint"
+              value={Number((sel as any).tint ?? 0)}
+              min={-180}
+              max={180}
+              step={5}
+              onChange={(v) => update({ tint: v })}
+            />
+
+            <SliderRow
+              label="Drop Shadow"
+              value={shadowBlur}
+              min={0}
+              max={100}
+              step={1}
+              onChange={(v) => update({ shadowBlur: v })}
+            />
+
+            {shadowBlur > 0 && (
+              <SliderRow
+                label="Shadow Opacity"
+                value={shadowAlpha}
+                min={0}
+                max={1}
+                step={0.05}
+                onChange={(v) => update({ shadowAlpha: v })}
+              />
+            )}
+          </div>
+
+          <div className="bg-black/20 p-3 rounded-lg border border-white/5">
+            <div className="text-[11px] font-semibold text-neutral-400 mb-3 uppercase tracking-wider">
+              Cutout Refinement
+            </div>
+
+            <div className="space-y-3">
+              <SliderRow
+                label="Shrink Edge"
+                value={cleanupParams.shrinkPx}
+                min={0}
+                max={10}
+                step={0.5}
+                onChange={(v) => setCleanupAndRun({ ...cleanupParams, shrinkPx: v })}
+              />
+              <SliderRow
+                label="Feather"
+                value={cleanupParams.featherPx}
+                min={0}
+                max={10}
+                step={0.5}
+                onChange={(v) => setCleanupAndRun({ ...cleanupParams, featherPx: v })}
+              />
+              <SliderRow
+                label="Decontaminate"
+                value={cleanupParams.decontaminate}
+                min={0}
+                max={1}
+                step={0.05}
+                onChange={(v) => setCleanupAndRun({ ...cleanupParams, decontaminate: v })}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 mt-4">
+            <button
+              type="button"
+              onClick={() => nudgePortraitLayer(sel.id, "up")}
+              className="py-2 rounded bg-neutral-800 border border-neutral-600 text-xs text-neutral-300 hover:bg-neutral-700"
+            >
+              Layer Up
+            </button>
+            <button
+              type="button"
+              onClick={() => nudgePortraitLayer(sel.id, "down")}
+              className="py-2 rounded bg-neutral-800 border border-neutral-600 text-xs text-neutral-300 hover:bg-neutral-700"
+            >
+              Layer Down
+            </button>
+          </div>
+
+          <div className="flex gap-2 mt-4">
+            <button
+              type="button"
+              onClick={() => update({ locked: !locked })}
+              className="flex-1 py-2 rounded bg-neutral-800 border border-neutral-600 text-xs text-neutral-300 hover:bg-neutral-700"
+            >
+              {locked ? "Unlock Position" : "Lock Position"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                const s = useFlyerState.getState();
+                s.removePortrait(format, sel.id);
+                s.setSelectedPortraitId(null);
+                s.setDragging?.(null);
+                s.setSelectedPanel("logo");
+                s.setMoveTarget("logo");
+              }}
+              className="flex-1 py-2 rounded bg-red-900/20 border border-red-900/40 text-xs text-red-400 hover:bg-red-900/30"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      );
+    })()}
+
+  </Collapsible>
+</div>
+)}
+
 {/* UI: PROJECT PORTABLE SAVE (BEGIN) */}
+<div className={creatorStepPanelClass("finish")}>
 <Collapsible
           title="Project"
           storageKey="p:designs"
@@ -22439,22 +25698,39 @@ style={{ top: STICKY_TOP }}
               onClick={() => setProjectHelpOpen(true)}
               aria-label="Project help"
               title="How Project save/load works"
-              className="h-6 w-6 rounded-full border border-cyan-400/70 text-cyan-300 text-[11px] font-bold hover:bg-cyan-400/10"
+              className="h-6 w-6 border border-cyan-400/70 text-cyan-300 text-[11px] font-bold hover:bg-cyan-400/10"
             >
               ?
             </button>
           }
         >
-          <div className="space-y-2">
+          <div className="space-y-3">
+            {!isStarterPlan && (
+              <div className="border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                <div className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">Project File Safety</div>
+                <div className="mt-1 text-sm font-medium text-white">
+                  {projectFileStatus
+                    ? projectFileStatus.kind === "saved"
+                      ? "Project file backed up"
+                      : "Project file reopened"
+                    : "Save a project file before you leave"}
+                </div>
+                <div className="mt-1 text-[12px] text-neutral-400">
+                  {projectFileStatus && projectFileStatusLabel
+                    ? `${projectFileStatus.kind === "saved" ? "Last saved" : "Last loaded"} ${projectFileStatusLabel}.`
+                    : "Your current work lives in the browser until you save a project file."}
+                </div>
+              </div>
+            )}
             {/* Save to a portable .json file */}
             <button
               type="button"
               onClick={handleSaveProject}
               disabled={isStarterPlan}
-              className="w-full text-[12px] px-3 py-2 rounded bg-neutral-900/70 border border-neutral-700 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full text-[12px] px-3 py-2 border border-white/15 bg-white/[0.08] text-white hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:opacity-50"
               title="Save your current session as a portable file"
             >
-              Save Design
+              Save Project File
             </button>
 
             {/* Load from a .json file */}
@@ -22462,13 +25738,13 @@ style={{ top: STICKY_TOP }}
               <button
                 type="button"
                 disabled
-                className="block w-full text-[12px] px-3 py-2 rounded bg-neutral-900/70 border border-neutral-700 text-center opacity-50 cursor-not-allowed"
+                className="block w-full border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-center text-[12px] opacity-50 cursor-not-allowed"
               >
-                Load Design
+                Load Project File
               </button>
             ) : (
-              <label className="block w-full text-[12px] px-3 py-2 rounded bg-neutral-900/70 border border-neutral-700 hover:bg-neutral-800 cursor-pointer text-center">
-                Load Design
+              <label className="block w-full border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-center text-[12px] hover:bg-neutral-800 cursor-pointer">
+                Load Project File
                 <input
                   type="file"
                   accept="application/json"
@@ -22479,6 +25755,7 @@ style={{ top: STICKY_TOP }}
                     r.onload = () => {
                       try {
                         importDesignJSON(String(r.result));
+                        setProjectFileStatusAndPersist({ kind: "loaded", at: new Date().toISOString() });
                         alert('Loaded ✓');
                       } catch {
                         alert('Invalid or unsupported design file');
@@ -22492,29 +25769,211 @@ style={{ top: STICKY_TOP }}
             )}
 
             <div className="text-[11px] text-neutral-400">
-              Saves as a single <code>.json</code> you can reopen later on any device.
+              Portable <code>.json</code> project file.
             </div>
             {isStarterPlan && (
               <div className="text-[11px] text-amber-300">
                 Starter plan disables project save/load.
               </div>
             )}
-            <div className="text-[11px] text-neutral-400">
-              If save/load feels slow or storage is full, use <b>Clear Storage</b> to clean cached assets.
-            </div>
             <button
               type="button"
               onClick={clearHeavyStorage}
-              className="mt-2 w-full text-[12px] px-3 py-2 rounded bg-neutral-900/70 border border-neutral-700 hover:bg-neutral-800"
+              className="w-full border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-[12px] hover:bg-neutral-800"
               title="Remove large cached items (portraits/logos/background candidates) from localStorage"
             >
               Clear Storage
             </button>
           </div>
 </Collapsible>
+</div>
 {/* UI: PROJECT PORTABLE SAVE (END) */}
 
-{workflowHelpOpen && (
+{workflowHelpOpen && (!isDjStartupMode ? (
+  <div className="fixed inset-0 z-[5100] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+    <div className="w-full max-w-4xl overflow-hidden border border-cyan-400/30 bg-[#0a0d12] shadow-[0_30px_80px_rgba(0,0,0,.6)]">
+      <div className="border-b border-white/10 bg-neutral-950/90 px-5 py-4">
+        <div className="text-sm uppercase tracking-[0.2em] text-cyan-300">Creator Workflow</div>
+        <div className="mt-1 text-lg font-semibold text-white">Build a flyer with a clear sequence.</div>
+        <div className="mt-2 text-sm text-neutral-400">
+          Recommended now: <span className="text-white">{creatorWorkflowMeta[creatorWorkflowRecommended].label}</span>
+        </div>
+      </div>
+
+      <div className="grid max-h-[72vh] grid-cols-1 gap-2.5 overflow-y-auto p-4 md:grid-cols-2">
+        <div className="border border-white/10 bg-white/[0.03] p-3.5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-xs uppercase tracking-wide text-cyan-300">1. {creatorWorkflowMeta.scene.label}</div>
+              <div className="mt-1 text-sm text-neutral-300">{creatorWorkflowMeta.scene.summary}</div>
+            </div>
+            <div className="text-[10px] uppercase tracking-[0.14em] text-neutral-500">{creatorWorkflowMeta.scene.count}</div>
+          </div>
+          <div className="mt-3 grid grid-cols-1 gap-2">
+            <button
+              type="button"
+              onClick={() => openCreatorWorkflowTarget("template", "design", { uiMode: "design", targetId: "template-panel" })}
+              className="w-full border border-white/15 bg-white/[0.06] px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-white transition hover:bg-white/[0.09]"
+            >
+              Open Template Gallery
+            </button>
+            <button
+              type="button"
+              onClick={() => openCreatorWorkflowTarget("background", "assets")}
+              className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900"
+            >
+              Open Background
+            </button>
+            {!isStarterPlan && (
+              <button
+                type="button"
+                onClick={() => openCreatorWorkflowTarget("ai_background", "assets", { targetId: "ai-background-panel" })}
+                className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900"
+              >
+                Open AI Background
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="border border-white/10 bg-white/[0.03] p-3.5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-xs uppercase tracking-wide text-cyan-300">2. {creatorWorkflowMeta.copy.label}</div>
+              <div className="mt-1 text-sm text-neutral-300">{creatorWorkflowMeta.copy.summary}</div>
+            </div>
+            <div className="text-[10px] uppercase tracking-[0.14em] text-neutral-500">{creatorWorkflowMeta.copy.count}</div>
+          </div>
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => openCreatorWorkflowTarget("headline", "design")}
+              className="w-full border border-white/15 bg-white/[0.06] px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-white transition hover:bg-white/[0.09]"
+            >
+              Headline
+            </button>
+            <button
+              type="button"
+              onClick={() => openCreatorWorkflowTarget("head2", "design")}
+              className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900"
+            >
+              Sub Headline
+            </button>
+            <button
+              type="button"
+              onClick={() => openCreatorWorkflowTarget("details", "design")}
+              className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900"
+            >
+              Details
+            </button>
+            <button
+              type="button"
+              onClick={() => openCreatorWorkflowTarget("venue", "design")}
+              className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900"
+            >
+              Venue
+            </button>
+          </div>
+        </div>
+
+        <div className="border border-white/10 bg-white/[0.03] p-3.5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-xs uppercase tracking-wide text-cyan-300">3. {creatorWorkflowMeta.assets.label}</div>
+              <div className="mt-1 text-sm text-neutral-300">{creatorWorkflowMeta.assets.summary}</div>
+            </div>
+            <div className="text-[10px] uppercase tracking-[0.14em] text-neutral-500">{creatorWorkflowMeta.assets.count}</div>
+          </div>
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => openCreatorWorkflowTarget("icons", "assets")}
+              className="w-full border border-white/15 bg-white/[0.06] px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-white transition hover:bg-white/[0.09]"
+            >
+              Open Library
+            </button>
+            <button
+              type="button"
+              onClick={() => openCreatorWorkflowTarget("logo", "assets")}
+              className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900"
+            >
+              Logo / 3D
+            </button>
+            <button
+              type="button"
+              onClick={() => openCreatorWorkflowTarget("portrait", "assets")}
+              className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900"
+            >
+              Portraits
+            </button>
+            <button
+              type="button"
+              onClick={() => openCreatorWorkflowTarget("cinema", "assets")}
+              className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900"
+            >
+              Cinematic Overlays
+            </button>
+            {!isStarterPlan && (
+              <button
+                type="button"
+                onClick={() => openCreatorWorkflowTarget("magic_blend", "assets", { targetId: "magic-blend-panel" })}
+                className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900 sm:col-span-2"
+              >
+                Magic Blend
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="border border-white/10 bg-white/[0.03] p-3.5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-xs uppercase tracking-wide text-cyan-300">4. {creatorWorkflowMeta.finish.label}</div>
+              <div className="mt-1 text-sm text-neutral-300">{creatorWorkflowMeta.finish.summary}</div>
+            </div>
+            <div className="text-[10px] uppercase tracking-[0.14em] text-neutral-500">{creatorWorkflowMeta.finish.count}</div>
+          </div>
+          <div className="mt-3 grid grid-cols-1 gap-2">
+            <button
+              type="button"
+              onClick={() => openCreatorWorkflowTarget("mastergrade", "assets", { uiMode: "finish" })}
+              className="w-full border border-white/15 bg-white/[0.06] px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-white transition hover:bg-white/[0.09]"
+            >
+              Open Finish Mode
+            </button>
+            <button
+              type="button"
+              onClick={() => openCreatorWorkflowTarget("mastergrade", "assets", { uiMode: "finish" })}
+              className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900"
+            >
+              Open Master Color Grade
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setWorkflowHelpOpen(false);
+                setProjectHelpOpen(true);
+              }}
+              className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900"
+            >
+              Project Save Guide
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-end border-t border-white/10 px-5 py-4">
+        <button
+          type="button"
+          onClick={() => setWorkflowHelpOpen(false)}
+          className="border border-white/15 bg-white/[0.08] px-4 py-2 text-sm font-semibold text-white hover:bg-white/[0.12]"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+) : (
   <div className="fixed inset-0 z-[5100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
     <div className="w-full max-w-3xl rounded-2xl border border-cyan-400/30 bg-[#0a0d12] shadow-[0_30px_80px_rgba(0,0,0,.6)] overflow-hidden">
       <div className="px-5 py-4 border-b border-white/10 bg-gradient-to-r from-cyan-500/20 to-fuchsia-500/10">
@@ -22579,43 +26038,42 @@ style={{ top: STICKY_TOP }}
       </div>
     </div>
   </div>
-)}
+))}
 
 {projectHelpOpen && (
   <div className="fixed inset-0 z-[5100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
     <div className="w-full max-w-xl rounded-2xl border border-cyan-400/30 bg-[#0a0d12] shadow-[0_30px_80px_rgba(0,0,0,.6)] overflow-hidden">
-      <div className="px-5 py-4 border-b border-white/10 bg-gradient-to-r from-cyan-500/20 to-fuchsia-500/10">
+      <div className="px-5 py-4 border-b border-white/10 bg-neutral-950/90">
         <div className="text-sm uppercase tracking-[0.2em] text-cyan-300">Project Guide</div>
         <div className="mt-1 text-lg font-semibold text-white">Save your design file so you can open it on any device.</div>
       </div>
 
-      <div className="p-5 space-y-3 text-sm text-neutral-200">
+      <div className="p-5 space-y-2.5 text-sm text-neutral-200">
         <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-          <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">1. Save Design</div>
+          <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">1. Save Project File</div>
           <div className="text-neutral-300">
-            Click <b>Save Design</b> to download a portable <code>.json</code> project file.
+            Download a portable <code>.json</code> file.
           </div>
         </div>
 
         <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
           <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">2. Keep The File</div>
           <div className="text-neutral-300">
-            Store that file in iCloud Drive, Google Drive, Dropbox, or email it to yourself.
+            Store it in iCloud Drive, Google Drive, Dropbox, or email.
           </div>
         </div>
 
         <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-          <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">3. Open Anywhere</div>
+          <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">3. Load Project File</div>
           <div className="text-neutral-300">
-            On any device, open this app and use <b>Load Design</b> to continue exactly where you left off.
+            Reopen it on any device and continue where you left off.
           </div>
         </div>
 
         <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
           <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">4. Clear Storage (Optional)</div>
           <div className="text-neutral-300">
-            <b>Clear Storage</b> removes heavy local cache (background candidates, portraits, logos) to free browser space.
-            It does <b>not</b> delete your exported <code>.json</code> files.
+            Clears local cache only. Exported <code>.json</code> files stay untouched.
           </div>
         </div>
       </div>
@@ -22791,61 +26249,6 @@ style={{ top: STICKY_TOP }}
     </motion.div>
   )}
 </AnimatePresence>
-
-{blendRecallPrompt && (
-  <div className="fixed inset-0 z-[2600] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-    <div className="w-full max-w-md rounded-2xl border border-cyan-400/30 bg-[#0a0d12] shadow-[0_30px_80px_rgba(0,0,0,.6)] overflow-hidden">
-      <div className="px-5 py-4 border-b border-white/10 bg-gradient-to-r from-cyan-500/20 to-indigo-500/10">
-        <div className="text-sm uppercase tracking-[0.16em] text-cyan-300">Blend Found</div>
-        <div className="mt-1 text-base font-semibold text-white">
-          Use your saved blend for {blendRecallPrompt.format}?
-        </div>
-      </div>
-
-      <div className="p-5 text-sm text-neutral-300">
-        You have a generated blend saved for this format. Keep the current background or apply your blend.
-      </div>
-
-      <div className="px-5 pb-5 flex items-center justify-end gap-2">
-        <button
-          type="button"
-          onClick={() => setBlendRecallPrompt(null)}
-          className="px-3 py-2 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 text-white text-sm"
-        >
-          Keep Current
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            const fmtTarget = blendRecallPrompt.format;
-            const blendUrl = blendRecallPrompt.blendUrl;
-            setBgUploadUrl(blendUrl);
-            setBgUrl(null);
-            setBgScale(1);
-            setBgPosX(50);
-            setBgPosY(50);
-            useFlyerState.getState().setSession((prev: any) => ({
-              ...prev,
-              [fmtTarget]: {
-                ...(prev?.[fmtTarget] || {}),
-                bgUploadUrl: blendUrl,
-                bgUrl: null,
-              },
-            }));
-            setSessionValue(fmtTarget, "bgScale", 1);
-            setSessionValue(fmtTarget, "bgPosX", 50);
-            setSessionValue(fmtTarget, "bgPosY", 50);
-            setBlendRecallPrompt(null);
-          }}
-          className="px-3 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-sm"
-        >
-          Use Blend
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-
 
    </main>
   </>

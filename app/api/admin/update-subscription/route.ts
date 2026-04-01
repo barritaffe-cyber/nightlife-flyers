@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../lib/supabase/admin";
+import { applyDirectBillingUpdate } from "../../../../lib/billing/entitlements";
 
 export const runtime = "nodejs";
 
@@ -15,10 +16,22 @@ export async function POST(req: Request) {
       email,
       status,
       current_period_end,
+      plan,
     } = body as {
       email: string;
-      status: "active" | "past_due" | "canceled" | "trial";
+      status:
+        | "active"
+        | "past_due"
+        | "canceled"
+        | "trial"
+        | "ondemand"
+        | "on_demand"
+        | "day_pass"
+        | "night_pass"
+        | "weekend_pass"
+        | "export_pass";
       current_period_end: string;
+      plan?: "creator" | "studio" | "monthly" | "yearly";
     };
 
     if (!email || !status || !current_period_end) {
@@ -43,14 +56,13 @@ export async function POST(req: Request) {
       );
     }
 
-    const { error: updateErr } = await admin
-      .from("profiles")
-      .update({ status, current_period_end })
-      .eq("email", email);
-
-    if (updateErr) {
-      return NextResponse.json({ error: "Update failed" }, { status: 500 });
-    }
+    await applyDirectBillingUpdate(admin, {
+      email,
+      status,
+      plan,
+      current_period_end,
+      billing_provider: "manual",
+    });
 
     return NextResponse.json({ ok: true });
   } catch {
