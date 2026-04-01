@@ -168,9 +168,12 @@ type Portrait = {
   labelSize?: number;
   labelColor?: string;
   labelOffsetY?: number;
+  labelRotate?: number;
+  labelSkew?: number;
   isSticker?: boolean;
   isFlare?: boolean;
   isBrandFace?: boolean;
+  isShapeGraphic?: boolean;
   tint?: number;          // hue-rotate degrees for tinting overlays/flares
   tintMode?: "hue" | "colorize";
   svgTemplate?: string;
@@ -179,6 +182,8 @@ type Portrait = {
   separatorKind?: string;
   separatorWidth?: number;
   separatorOffset?: number;
+  shapeLength?: number;
+  shapeSkew?: number;
   layerOffset?: number;
   cleanup?: CleanupParams;
   cleanupBaseUrl?: string;

@@ -226,9 +226,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                       }
                       if (category.key === "advanced") {
                         openAdvancedStudio();
-                        return;
                       }
-                      onSelect(category.key);
                     }}
                     className={
                       "group w-full rounded-xl border bg-white/[0.03] px-4 py-3.5 text-center transition hover:border-cyan-400/30 hover:bg-white/[0.05] disabled:opacity-60 " +

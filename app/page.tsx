@@ -14037,6 +14037,10 @@ function loadSubtag(ss: SubtagState | null) {
   setSubtagY(ss.y);
   setSubtagRotate(ss.rotate);
 }
+
+function newId() {
+  return `id_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
 // === PER-FORMAT SUBTAG CACHE (END) ===========================================
 
 
@@ -17993,7 +17997,7 @@ function mergeStartupVariant(
   preview: string,
   overrides: Partial<TemplateBase>
 ): TemplateBase {
-  return {
+  const merged: TemplateBase = {
     ...(base ?? {}),
     backgroundUrl:
       typeof base?.backgroundUrl === "string" && base.backgroundUrl.trim().length > 0
@@ -18001,6 +18005,18 @@ function mergeStartupVariant(
         : preview,
     ...overrides,
   };
+
+  const emojiList = overrides.emojiList ?? base?.emojiList;
+  if (Array.isArray(emojiList)) {
+    merged.emojiList = [...emojiList];
+  }
+
+  const emojis = overrides.emojis ?? base?.emojis;
+  if (Array.isArray(emojis)) {
+    merged.emojis = [...emojis];
+  }
+
+  return merged;
 }
 
 function buildStartupCategoryTemplate(category: StartupCategoryKey): TemplateSpec {
@@ -18150,8 +18166,8 @@ function buildStartupCategoryTemplate(category: StartupCategoryKey): TemplateSpe
     preview,
     tags: [...selected.tags],
     formats: {
-      square: mergeStartupVariant(baseSquare, preview, selected.square),
-      story: mergeStartupVariant(baseStory, preview, selected.story),
+      square: mergeStartupVariant(baseSquare, preview, selected.square as Partial<TemplateBase>),
+      story: mergeStartupVariant(baseStory, preview, selected.story as Partial<TemplateBase>),
     },
   };
 }

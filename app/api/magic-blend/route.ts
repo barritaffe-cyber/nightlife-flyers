@@ -1571,7 +1571,7 @@ export async function POST(req: Request) {
       ? bufferToDataUrlPng(placementReferenceBuf)
       : bufferToDataUrlPng(generatedCompositeBuf);
     const replacementCompositeAssets =
-      useReplacementWorkflow
+      useReplacementWorkflow && placementMaskBuf
         ? await buildReplacementCompositeAssets({
             bgCanvas,
             subjectBuf: safeSubjBuf,
