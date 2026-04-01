@@ -68,7 +68,13 @@ Confidential information requires the highest level of access control and must n
 ## 5. Access to Sensitive Information
 
 - Access to production systems, Supabase, hosting platforms, code repositories, billing dashboards, and provider consoles must be role-based and limited to authorized personnel.
-- Shared accounts are prohibited unless technically unavoidable and explicitly approved; named user accounts are preferred.
+- Shared, group, generic, or other non-individual IDs are prohibited unless technically unavoidable and explicitly approved as a documented exception; named user accounts are preferred.
+- Shared or generic credentials may only be used when needed for an exceptional circumstance that cannot reasonably be handled through an individual named account.
+- Use of a shared or generic account must be prevented unless that exceptional circumstance exists, and such use must be limited to the time needed for the circumstance.
+- The business justification for any shared or generic account use must be documented.
+- Management approval must be explicitly recorded before shared or generic account access is granted, except in emergencies requiring immediate operational action; emergency use must be documented and formally approved as soon as practical afterward.
+- The identity of the individual user must be confirmed before access to a shared or generic account is granted.
+- Actions taken through a shared or generic account must remain attributable to an individual through access approvals, activity logs, provider records, or equivalent audit evidence.
 - Access should be removed promptly when no longer required, including contractor offboarding.
 - Administrative actions related to billing, exports, subscriptions, and security settings should be limited to a small set of trusted operators.
 
@@ -114,7 +120,25 @@ Nightlife Flyers retains the minimum billing-related account data necessary for 
 - Team members must know how to report suspicious activity, credential exposure, phishing attempts, or signs of provider compromise.
 - Changes to billing or payment architecture must be reviewed for security impact before launch.
 
-## 11. Payment and PCI Controls
+## 11. Vulnerability Identification and Risk Ranking
+
+Nightlife Flyers must identify and manage security vulnerabilities using industry-recognized information sources and a documented internal review process.
+
+- New security vulnerabilities must be identified from reputable and industry-recognized sources, including vendor security advisories, software and cloud-provider alerts, dependency disclosures, CVE publications, and alerts from applicable international or national computer emergency response teams such as CERTs.
+- Vulnerability monitoring should cover the application stack, hosting environment, payment-related integrations, authentication systems, supporting SaaS providers, developer tooling, and any other systems that could materially affect the security of the environment.
+- Identified vulnerabilities must be assigned a risk ranking using industry best practices and the potential impact to Nightlife Flyers systems and data.
+- Risk ranking must consider at least severity, exploitability, exposure of the affected system, availability of mitigations, whether payment or account-related systems are affected, and potential business or customer impact.
+- Risk rankings must clearly identify vulnerabilities that are considered high risk or critical to the environment.
+- High-risk and critical vulnerabilities must be prioritized for remediation, mitigation, or documented compensating controls within a timeframe appropriate to the risk.
+- Security patches and updates for critical vulnerabilities must be installed within one month of release, unless documented compensating controls, vendor limitations, or a formally approved risk-based exception applies.
+- Where a patch cannot be applied within one month, the reason, interim protections, responsible owner, and revised remediation target date must be documented and tracked.
+- Vulnerability findings, risk decisions, remediation actions, and closure dates should be documented in an internal tracking record or equivalent operating log.
+- External vulnerability scans must be performed after any significant change to the in-scope environment, including material changes to hosting, payment flows, authentication systems, internet-facing services, or other security-relevant infrastructure.
+- Vulnerabilities identified by such scans that are scored 4.0 or higher by CVSS must be resolved according to the applicable risk and remediation process.
+- Rescans must be conducted as needed after remediation to confirm that identified vulnerabilities have been addressed.
+- External vulnerability scans performed after significant change must be conducted by qualified personnel with appropriate independence from the system components being tested; the tester is not required to be a QSA or ASV unless otherwise required by the applicable assessment program.
+
+## 12. Payment and PCI Controls
 
 Nightlife Flyers uses an outsourced ecommerce payment model.
 
@@ -124,7 +148,7 @@ Nightlife Flyers uses an outsourced ecommerce payment model.
 - Only the minimum billing metadata required for entitlements, subscriptions, support, or reconciliation may be stored by Nightlife Flyers.
 - Retention and disposal requirements for stored account data must follow Section 9 of this policy and be reviewed at least quarterly.
 
-## 12. Security Incident Response
+## 13. Security Incident Response
 
 All suspected security incidents must be reported immediately to management or the designated incident owner.
 
@@ -145,7 +169,7 @@ Minimum response actions:
 5. Notify required providers, partners, or affected parties where appropriate.
 6. Document remediation and preventive actions.
 
-## 13. Third-Party Service Providers
+## 14. Third-Party Service Providers
 
 Nightlife Flyers relies on third-party providers for core operations. Providers should be selected and maintained with reasonable due diligence, especially where they affect:
 
@@ -158,21 +182,27 @@ Nightlife Flyers relies on third-party providers for core operations. Providers 
 
 Where a provider handles billing or customer-related data, Nightlife Flyers should maintain clear documentation of what that provider is responsible for and what Nightlife Flyers retains internally.
 
-## 14. User Access Management
+## 15. User Access Management
 
 - Access must be granted according to least privilege.
 - MFA should be enabled for high-risk systems whenever available.
 - Access reviews should be performed periodically for production, billing, and administrative platforms.
 - Departed users and expired contractors must be removed from production and vendor systems promptly.
+- If passwords or passphrases are used, they must be at least 12 characters long. If a specific system cannot technically support 12 characters, the minimum length must be at least 8 characters.
+- Passwords or passphrases used for authentication must contain both numeric and alphabetic characters where the authentication platform supports that policy.
+- Individuals must not be permitted to submit a new password or passphrase that matches any of the last four passwords or passphrases used for the same account, where the authentication platform supports password history enforcement.
+- If passwords or passphrases are used as the only authentication factor for user access, they must be changed at least once every 90 days unless an approved authentication system provides dynamic security-posture analysis and real-time access decisions that satisfy the same control objective.
+- If passwords or passphrases are used as authentication factors, first-time credentials and reset credentials must be assigned a unique value for each individual user.
+- Users must be required to change first-time or reset passwords immediately after the first successful use, where the authentication platform supports that workflow.
 
-## 15. Access Control Policy
+## 16. Access Control Policy
 
 - Development, production, and billing access should be separated as much as practical.
 - Client-side code must never contain private keys or secrets intended only for server-side use.
 - Environment variables and secret values must be managed through approved deployment and hosting controls.
 - Admin-only capabilities should not be exposed to standard customer sessions.
 
-## 16. Payment Architecture Statement
+## 17. Payment Architecture Statement
 
 Current intended payment model:
 
