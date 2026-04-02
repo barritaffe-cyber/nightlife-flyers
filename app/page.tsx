@@ -9932,6 +9932,14 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
     },
     [format, mainFaceLighting, mainFaceOnCanvas, updatePortrait]
   );
+  const updateMainFaceLightingRaf = useRafThrottle(
+    React.useCallback(
+      (patch: Partial<PortraitLighting>) => {
+        updateMainFaceLighting(patch);
+      },
+      [updateMainFaceLighting]
+    )
+  );
 
   const updateMainFaceFilter = React.useCallback(
     (patch: { preset?: MainFaceFilterPreset; strength?: number }) => {
@@ -9944,6 +9952,14 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
       });
     },
     [format, mainFaceOnCanvas, updatePortrait]
+  );
+  const updateMainFaceFilterRaf = useRafThrottle(
+    React.useCallback(
+      (patch: { preset?: MainFaceFilterPreset; strength?: number }) => {
+        updateMainFaceFilter(patch);
+      },
+      [updateMainFaceFilter]
+    )
   );
 
   const resetMainFaceLighting = React.useCallback(() => {
@@ -24582,7 +24598,7 @@ style={{ top: STICKY_TOP }}
                 min={0}
                 max={1}
                 step={0.01}
-                onChange={(next) => updateMainFaceFilter({ strength: next })}
+                onChange={(next) => updateMainFaceFilterRaf({ strength: next })}
                 displayScale={100}
                 precision={0}
                 suffix="%"
@@ -24611,7 +24627,7 @@ style={{ top: STICKY_TOP }}
                 min={Number(min)}
                 max={Number(max)}
                 step={Number(step)}
-                onChange={(next) => updateMainFaceLighting({ [String(key)]: next })}
+                onChange={(next) => updateMainFaceLightingRaf({ [String(key)]: next })}
                 displayScale={100}
                 precision={0}
                 suffix="%"
