@@ -99,12 +99,19 @@ function renderPowerTranzResumePage(args: {
       .card { width: min(92vw, 420px); border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.04); padding: 24px; }
       h1 { margin: 0 0 12px; font-size: 22px; }
       p { margin: 0; color: rgba(255,255,255,.72); line-height: 1.5; }
+      .actions { margin-top: 18px; display: flex; gap: 10px; align-items: center; }
+      button { padding: 10px 14px; color: #fff; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.16); cursor: pointer; }
+      .note { font-size: 12px; color: rgba(255,255,255,.5); }
     </style>
   </head>
   <body>
     <div class="card">
       <h1>${safeTitle}</h1>
       <p>${safeMessage}</p>
+      <div class="actions">
+        <button type="button" id="continueButton">Continue Secure Checkout</button>
+        <div class="note" id="countdownNote">Continuing automatically...</div>
+      </div>
     </div>
     <form id="powertranz_resume" action="${safeConductorUrl}" method="POST">
       <input type="hidden" name="SpiToken" value="${safeToken}" />
@@ -118,6 +125,13 @@ function renderPowerTranzResumePage(args: {
     </form>
     <script>
       (function () {
+        var submitted = false;
+        function submitResume() {
+          if (submitted) return;
+          submitted = true;
+          document.getElementById("countdownNote").textContent = "Opening secure checkout...";
+          document.getElementById("powertranz_resume").submit();
+        }
         var lang = "";
         try {
           lang = window.navigator && (window.navigator.language || window.navigator.browserLanguage) || "";
@@ -132,7 +146,8 @@ function renderPowerTranzResumePage(args: {
             : "";
         document.getElementById("browserJavascriptEnabled").value = "true";
         document.getElementById("browserColorDepth").value = window && window.screen ? String(window.screen.colorDepth || "") : "";
-        document.getElementById("powertranz_resume").submit();
+        document.getElementById("continueButton").addEventListener("click", submitResume);
+        window.setTimeout(submitResume, 1200);
       })();
     </script>
   </body>
