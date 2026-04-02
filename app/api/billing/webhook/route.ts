@@ -228,6 +228,31 @@ function resolvePaymentString(payload: Record<string, unknown>, ...keys: string[
   return null;
 }
 
+function resolveNestedPowerTranzResponse(payload: Record<string, unknown>): Record<string, unknown> | null {
+  const raw =
+    payload.Response ||
+    payload.response ||
+    payload.PaymentResponse ||
+    payload.paymentResponse;
+
+  if (isPlainObject(raw)) {
+    return raw;
+  }
+
+  if (typeof raw === "string" && raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (isPlainObject(parsed)) {
+        return parsed;
+      }
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
+
 function hasCompletionSignal(payload: Record<string, unknown>) {
   const callbackCode = resolveCallbackCode(payload);
   return Boolean(
@@ -378,25 +403,37 @@ export async function POST(req: Request) {
       });
     }
 
-    let payment;
-    try {
-      payment = await completePowerTranzPayment(effectiveSpiToken);
-    } catch (error) {
-      console.error("PowerTranz payment completion failed", {
+    const nestedResponse = isPlainObject(body) ? resolveNestedPowerTranzResponse(body) : null;
+    let paymentPayload: Record<string, unknown>;
+
+    if (nestedResponse) {
+      console.log("PowerTranz callback included nested payment response", {
         checkoutId,
-        callbackCode,
-        body: sanitizeLogValue(body),
-        error:
-          error instanceof Error
-            ? {
-                name: error.name,
-                message: error.message,
-              }
-            : String(error),
+        payment: sanitizeLogValue(nestedResponse),
       });
-      throw error;
+      paymentPayload = nestedResponse;
+    } else {
+      let payment;
+      try {
+        payment = await completePowerTranzPayment(effectiveSpiToken);
+      } catch (error) {
+        console.error("PowerTranz payment completion failed", {
+          checkoutId,
+          callbackCode,
+          body: sanitizeLogValue(body),
+          error:
+            error instanceof Error
+              ? {
+                  name: error.name,
+                  message: error.message,
+                }
+              : String(error),
+        });
+        throw error;
+      }
+      paymentPayload = payment as unknown as Record<string, unknown>;
     }
-    const paymentPayload = payment as unknown as Record<string, unknown>;
+
     const paymentApproved = resolvePaymentApproved(paymentPayload) ?? false;
     const paymentTransactionId = resolvePaymentString(
       paymentPayload,
@@ -411,9 +448,9 @@ export async function POST(req: Request) {
     );
     const paymentMessage =
       resolvePaymentString(paymentPayload, "ResponseMessage", "responseMessage", "IsoResponseCode", "isoResponseCode") ||
-      ((payment as { Errors?: Array<{ Message?: string | null }>; errors?: Array<{ message?: string | null }> })
+      ((paymentPayload as { Errors?: Array<{ Message?: string | null }>; errors?: Array<{ message?: string | null }> })
         .Errors?.[0]?.Message ??
-        (payment as { errors?: Array<{ message?: string | null }> }).errors?.[0]?.message) ||
+        (paymentPayload as { errors?: Array<{ message?: string | null }> }).errors?.[0]?.message) ||
       "PowerTranz did not approve the payment.";
 
     if (!paymentApproved) {
@@ -436,8 +473,8 @@ export async function POST(req: Request) {
     const selection = resolveBillingSelection(isPlainObject(checkout.selection) ? checkout.selection : {});
     if (!selection) {
       await markPowerTranzCheckoutStatus(checkout.id, "failed", {
-        powertranz_transaction_id: payment.TransactionIdentifier || null,
-        powertranz_pan_token: payment.PanToken || null,
+        powertranz_transaction_id: paymentTransactionId || null,
+        powertranz_pan_token: paymentPanToken || null,
       });
       return renderBillingCallbackPage({
         title: "Billing selection missing",
