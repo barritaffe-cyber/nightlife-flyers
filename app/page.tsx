@@ -9950,11 +9950,15 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
     updatePortrait(format, mainFaceOnCanvas.id, {
       locked: true,
     });
+    const st = useFlyerState.getState();
+    st.setSelectedPortraitId(null);
+    st.setMoveTarget(null);
+    floatFocusLockRef.current = false;
+    setFloatingAssetVisible(false);
     setDjWorkflowJump({ step: "lighting", nonce: Date.now() });
     setMobileControlsOpen(true);
     setMobileControlsTab("assets");
     setSelectedPanel("dj_branding");
-    setFloatingAssetVisible(false);
   }, [format, mainFaceOnCanvas, setSelectedPanel, updatePortrait]);
 
   const hasTransparentCutoutDataUrl = React.useCallback(async (dataUrl: string): Promise<boolean> => {
@@ -21667,7 +21671,7 @@ style={{ minHeight: 'calc(100vh - 96px)' }}
 <aside
 id="mobile-controls-panel"
 className={clsx(
-  "order-2 lg:sticky self-start max-h-none lg:max-h-[calc(100vh-120px)] overflow-visible lg:overflow-y-auto space-y-3 px-3 lg:px-0 lg:pr-1",
+  "order-2 lg:sticky self-start max-h-none lg:max-h-[calc(100vh-120px)] overflow-visible lg:overflow-y-auto space-y-3 lg:pr-1",
   mobileControlsOpen && mobileControlsTab === "design" ? "block" : "hidden",
   "lg:block"
 )}
@@ -23860,7 +23864,7 @@ style={{ top: STICKY_TOP }}
   {activeTextControls && floatingEditorVisible && (
     <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 flex justify-center px-3 z-[1200]" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
       <div
-        className="w-full max-w-[340px] rounded-2xl border border-white/5 bg-neutral-900/85 px-3 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl"
+        className="w-full max-w-[320px] overflow-hidden rounded-2xl border border-white/5 bg-neutral-900/85 px-3 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl sm:max-w-[340px]"
         ref={floatingTextRef}
         data-floating-controls="text"
         onPointerDownCapture={(e) => {
@@ -23996,7 +24000,7 @@ style={{ top: STICKY_TOP }}
   {activeAssetControls && floatingAssetVisible && (
     <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 flex justify-center px-3 z-[1200]" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
       <div
-        className="w-full max-w-[340px] rounded-2xl border border-white/5 bg-neutral-900/85 px-3 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl"
+        className="w-full max-w-[320px] overflow-hidden rounded-2xl border border-white/5 bg-neutral-900/85 px-3 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl sm:max-w-[340px]"
         ref={floatingAssetRef}
         data-floating-controls="asset"
         onPointerDownCapture={(e) => {

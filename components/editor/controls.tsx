@@ -405,11 +405,11 @@ export function InlineSliderInput({
   };
 
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 w-full">
       <div className={`mb-1 flex min-w-0 items-center justify-between ${controlLabelClass} ${labelClassName || ""}`}>
         <span className="block min-w-0 truncate">{label}</span>
       </div>
-      <div className="flex min-w-0 items-center gap-1">
+      <div className="flex min-w-0 w-full items-center gap-1">
         <input
           type="range"
           min={min}
@@ -417,14 +417,14 @@ export function InlineSliderInput({
           step={step}
           value={safeValue}
           onChange={(e) => onChange(Number(e.target.value))}
-          className={rangeClassName || controlRangeClass}
+          className={clsx("min-w-0 flex-1", rangeClassName || controlRangeClass)}
           style={{ touchAction: "none" }}
           onPointerDown={onPointerDown}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerCancel}
           disabled={disabled}
         />
-        <div className="flex shrink-0 items-center gap-0.5">
+        <div className="ml-1 flex shrink-0 items-center justify-end gap-0.5 max-w-[64px]">
           <input
             type="number"
             min={min * displayScale}
@@ -450,10 +450,10 @@ export function InlineSliderInput({
             disabled={disabled}
             className={
               inputClassName ||
-              `w-[38px] sm:w-[44px] ${controlInputClass} text-right font-semibold`
+              `w-[40px] min-w-0 ${controlInputClass} text-right font-semibold [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`
             }
           />
-          {suffix ? <span className="text-[9px] text-white font-semibold">{suffix}</span> : null}
+          {suffix ? <span className="shrink-0 text-[8px] text-white font-semibold">{suffix}</span> : null}
         </div>
       </div>
     </div>
