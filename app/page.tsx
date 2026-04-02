@@ -9950,9 +9950,9 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
     });
     setMobileControlsOpen(true);
     setMobileControlsTab("assets");
-    setSelectedPanel(isStarterPlan ? "portrait" : "dj_branding");
+    setSelectedPanel("dj_branding");
     setFloatingAssetVisible(false);
-  }, [format, isStarterPlan, mainFaceOnCanvas, setSelectedPanel, updatePortrait]);
+  }, [format, mainFaceOnCanvas, setSelectedPanel, updatePortrait]);
 
   const hasTransparentCutoutDataUrl = React.useCallback(async (dataUrl: string): Promise<boolean> => {
     try {
