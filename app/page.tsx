@@ -24469,7 +24469,7 @@ style={{ top: STICKY_TOP }}
   )}
 
   {floatingLightingVisible && (
-    <div className="lg:hidden fixed bottom-3 left-0 right-0 z-[1200] flex justify-center px-3">
+    <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 z-[1200] flex justify-center px-3" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
       <div
         className="w-full max-w-[320px] max-h-[72vh] overflow-y-auto rounded-2xl border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl sm:max-w-[340px]"
         ref={floatingLightingRef}
