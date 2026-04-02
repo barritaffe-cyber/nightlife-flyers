@@ -199,8 +199,9 @@ function resolvePaymentString(payload: Record<string, unknown>, ...keys: string[
 }
 
 function hasCompletionSignal(payload: Record<string, unknown>) {
+  const callbackCode = resolveCallbackCode(payload);
   return Boolean(
-    resolveCallbackCode(payload) ||
+    (callbackCode && !["HP0", "3D0", "3D1"].includes(callbackCode)) ||
       resolvePaymentString(payload, "TransactionIdentifier", "transactionIdentifier", "OrderIdentifier", "orderIdentifier") ||
       resolvePaymentApproved(payload) !== null
   );
