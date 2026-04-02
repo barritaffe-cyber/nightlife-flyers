@@ -10003,7 +10003,7 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
     setMobileControlsOpen(true);
     setMobileControlsTab("assets");
     setSelectedPanel("dj_branding");
-    setMobileLightingAdvancedOpen(false);
+    setMobileLightingSlide(0);
     window.setTimeout(scrollToArtboard, 120);
   }, [format, mainFaceOnCanvas, scrollToArtboard, setSelectedPanel, updatePortrait]);
 
@@ -18576,7 +18576,7 @@ const [floatingEditorVisible, setFloatingEditorVisible] = React.useState(false);
 const [floatingAssetVisible, setFloatingAssetVisible] = React.useState(false);
 const [floatingBgVisible, setFloatingBgVisible] = React.useState(false);
 const [floatingLightingVisible, setFloatingLightingVisible] = React.useState(false);
-const [mobileLightingAdvancedOpen, setMobileLightingAdvancedOpen] = React.useState(false);
+const [mobileLightingSlide, setMobileLightingSlide] = React.useState<0 | 1 | 2>(0);
 const [projectHelpOpen, setProjectHelpOpen] = React.useState(false);
 const [workflowHelpOpen, setWorkflowHelpOpen] = React.useState(false);
 const [djWorkflowJump, setDjWorkflowJump] = React.useState<null | {
@@ -19788,6 +19788,9 @@ React.useEffect(() => {
     !!mainFaceOnCanvas?.id;
 
   if (shouldShowLightingFloat) {
+    if (!floatingLightingVisible) {
+      setMobileLightingSlide(0);
+    }
     setFloatingLightingVisible(true);
     setFloatingAssetVisible(false);
     setFloatingEditorVisible(false);
@@ -19798,6 +19801,7 @@ React.useEffect(() => {
   setFloatingLightingVisible(false);
 }, [
   djActiveWorkflowStep,
+  floatingLightingVisible,
   isMobileView,
   isStarterPlan,
   mainFaceOnCanvas?.id,
@@ -23945,7 +23949,7 @@ style={{ top: STICKY_TOP }}
   {activeTextControls && floatingEditorVisible && (
     <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 flex justify-center px-3 z-[1200]" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
       <div
-        className="w-full max-w-[320px] overflow-hidden rounded-2xl border border-white/5 bg-neutral-900/85 px-3 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl sm:max-w-[340px]"
+        className="w-full max-w-[320px] overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl sm:max-w-[340px]"
         ref={floatingTextRef}
         data-floating-controls="text"
         onPointerDownCapture={(e) => {
@@ -24081,7 +24085,7 @@ style={{ top: STICKY_TOP }}
   {activeAssetControls && floatingAssetVisible && (
     <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 flex justify-center px-3 z-[1200]" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
       <div
-        className="w-full max-w-[320px] overflow-hidden rounded-2xl border border-white/5 bg-neutral-900/85 px-3 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl sm:max-w-[340px]"
+        className="w-full max-w-[320px] overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl sm:max-w-[340px]"
         ref={floatingAssetRef}
         data-floating-controls="asset"
         onPointerDownCapture={(e) => {
@@ -24467,7 +24471,7 @@ style={{ top: STICKY_TOP }}
   {floatingLightingVisible && (
     <div className="lg:hidden fixed bottom-3 left-0 right-0 z-[1200] flex justify-center px-3">
       <div
-        className="w-full max-w-[320px] max-h-[72vh] overflow-y-auto rounded-2xl border border-white/5 bg-neutral-900/88 px-3 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl sm:max-w-[340px]"
+        className="w-full max-w-[320px] max-h-[72vh] overflow-y-auto rounded-2xl border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl sm:max-w-[340px]"
         ref={floatingLightingRef}
         data-floating-controls="lighting"
         onPointerDownCapture={(e) => {
@@ -24492,138 +24496,104 @@ style={{ top: STICKY_TOP }}
             <span>{mainFaceLighting.highlightColor.toUpperCase()}</span>
           </div>
         </div>
-
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            data-mobile-float-lock="true"
-            onClick={() => updateMainFaceLighting({ enabled: !mainFaceLighting.enabled })}
-            className="border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-[11px] font-medium uppercase tracking-[0.14em] text-neutral-200"
-          >
-            {mainFaceLighting.enabled ? "Lighting On" : "Lighting Off"}
-          </button>
-          <button
-            type="button"
-            data-mobile-float-lock="true"
-            onClick={() => updateMainFaceLighting({ autoMatch: !mainFaceLighting.autoMatch })}
-            className={clsx(
-              "border px-3 py-2 text-[11px] font-medium uppercase tracking-[0.14em]",
-              mainFaceLighting.autoMatch
-                ? "border-cyan-400/70 bg-cyan-500/10 text-cyan-100"
-                : "border-neutral-700 bg-neutral-900/60 text-neutral-200"
-            )}
-          >
-            Auto Match
-          </button>
+        <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-neutral-500">
+          Slide {mobileLightingSlide + 1} of 3
         </div>
 
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            data-mobile-float-lock="true"
-            onClick={() => {
-              void autoAnalyzeMainFaceLighting();
-            }}
-            className="border border-cyan-400/70 bg-cyan-500/10 px-3 py-2 text-[11px] font-medium uppercase tracking-[0.14em] text-cyan-100"
-          >
-            {mainFaceLighting.analyzed ? "Analyze + Reapply" : "Analyze + Apply"}
-          </button>
-          <button
-            type="button"
-            data-mobile-float-lock="true"
-            onClick={resetMainFaceLighting}
-            className="border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-[11px] font-medium uppercase tracking-[0.14em] text-neutral-200"
-          >
-            Reset
-          </button>
-        </div>
-
-        <div className="mt-2 grid grid-cols-3 gap-1.5">
-          {mainFaceLightingPresets.map((preset) => (
+        {mobileLightingSlide === 0 && (
+          <div className="mt-2 grid grid-cols-2 gap-2">
             <button
-              key={preset.id}
               type="button"
               data-mobile-float-lock="true"
-              onClick={() => updateMainFaceLighting(preset.patch)}
-              disabled={!mainFaceLighting.enabled}
-              className="border border-neutral-700 bg-neutral-900/60 px-2 py-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-200 disabled:opacity-50"
+              onClick={() => {
+                void autoAnalyzeMainFaceLighting();
+              }}
+              className="border border-cyan-400/70 bg-cyan-500/10 px-3 py-2 text-[11px] font-medium uppercase tracking-[0.14em] text-cyan-100"
             >
-              {preset.label}
+              {mainFaceLighting.analyzed ? "Analyze + Reapply" : "Analyze + Apply"}
             </button>
-          ))}
-        </div>
-
-        <div className="mt-2 grid grid-cols-2 gap-1.5">
-          {([
-            ["none", "Clean"],
-            ["mono", "Mono"],
-            ["contrast", "Punch"],
-            ["halftone", "Halftone"],
-            ["poster", "Poster"],
-            ["pop", "Pop"],
-          ] as const).map(([preset, label]) => (
             <button
-              key={preset}
               type="button"
               data-mobile-float-lock="true"
-              onClick={() => updateMainFaceFilter({ preset })}
+              onClick={() => updateMainFaceLighting({ autoMatch: !mainFaceLighting.autoMatch })}
               className={clsx(
-                "border px-2 py-1.5 text-[10px] font-medium uppercase tracking-[0.12em]",
-                mainFaceFilterPreset === preset
-                  ? "border-fuchsia-400/70 bg-fuchsia-500/10 text-fuchsia-100"
+                "border px-3 py-2 text-[11px] font-medium uppercase tracking-[0.14em]",
+                mainFaceLighting.autoMatch
+                  ? "border-cyan-400/70 bg-cyan-500/10 text-cyan-100"
                   : "border-neutral-700 bg-neutral-900/60 text-neutral-200"
               )}
             >
-              {label}
+              Auto Match
             </button>
-          ))}
-        </div>
-
-        {mainFaceFilterPreset !== "none" && (
-          <div className="mt-2">
-            <InlineSliderInput
-              label="Filter Strength"
-              value={mainFaceFilterStrength}
-              min={0}
-              max={1}
-              step={0.01}
-              onChange={(next) => updateMainFaceFilter({ strength: next })}
-              displayScale={100}
-              precision={0}
-              suffix="%"
-              rangeClassName="flex-1 accent-fuchsia-400"
-            />
+            {mainFaceLightingPresets.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                data-mobile-float-lock="true"
+                onClick={() => updateMainFaceLighting(preset.patch)}
+                disabled={!mainFaceLighting.enabled}
+                className="border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-[11px] font-medium uppercase tracking-[0.14em] text-neutral-200 disabled:opacity-50"
+              >
+                {preset.label}
+              </button>
+            ))}
+            <button
+              type="button"
+              data-mobile-float-lock="true"
+              onClick={resetMainFaceLighting}
+              className="border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-[11px] font-medium uppercase tracking-[0.14em] text-neutral-200"
+            >
+              Reset
+            </button>
           </div>
         )}
 
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            data-mobile-float-lock="true"
-            onClick={() => setMobileLightingAdvancedOpen((open) => !open)}
-            className={clsx(
-              "border px-3 py-2 text-[11px] font-medium uppercase tracking-[0.14em]",
-              mobileLightingAdvancedOpen
-                ? "border-cyan-400/70 bg-cyan-500/10 text-cyan-100"
-                : "border-neutral-700 bg-neutral-900/60 text-neutral-200"
-            )}
-          >
-            Advanced
-          </button>
-          <button
-            type="button"
-            data-mobile-float-lock="true"
-            onClick={() => {
-              setDjWorkflowJump({ step: "design", nonce: Date.now() });
-              setSelectedPanel("dj_branding");
-            }}
-            className="border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-[11px] font-medium uppercase tracking-[0.14em] text-neutral-200"
-          >
-            Next To Design
-          </button>
-        </div>
+        {mobileLightingSlide === 1 && (
+          <>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {([
+                ["none", "Clean"],
+                ["mono", "Mono"],
+                ["contrast", "Punch"],
+                ["halftone", "Halftone"],
+                ["poster", "Poster"],
+                ["pop", "Pop"],
+              ] as const).map(([preset, label]) => (
+                <button
+                  key={preset}
+                  type="button"
+                  data-mobile-float-lock="true"
+                  onClick={() => updateMainFaceFilter({ preset })}
+                  className={clsx(
+                    "border px-3 py-2 text-[11px] font-medium uppercase tracking-[0.14em]",
+                    mainFaceFilterPreset === preset
+                      ? "border-fuchsia-400/70 bg-fuchsia-500/10 text-fuchsia-100"
+                      : "border-neutral-700 bg-neutral-900/60 text-neutral-200"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="mt-2">
+              <InlineSliderInput
+                label="Filter Strength"
+                value={mainFaceFilterStrength}
+                min={0}
+                max={1}
+                step={0.01}
+                onChange={(next) => updateMainFaceFilter({ strength: next })}
+                displayScale={100}
+                precision={0}
+                suffix="%"
+                rangeClassName="flex-1 accent-fuchsia-400"
+                disabled={mainFaceFilterPreset === "none"}
+              />
+            </div>
+          </>
+        )}
 
-        {mobileLightingAdvancedOpen && (
+        {mobileLightingSlide === 2 && (
           <div className="mt-2 space-y-2">
             {[
               ["Ambient", mainFaceLighting.ambient, 0, 1, 0.01, "ambient", "cyan"],
@@ -24654,6 +24624,22 @@ style={{ top: STICKY_TOP }}
             ))}
           </div>
         )}
+
+        <button
+          type="button"
+          data-mobile-float-lock="true"
+          onClick={() => {
+            if (mobileLightingSlide < 2) {
+              setMobileLightingSlide((current) => (current < 2 ? ((current + 1) as 0 | 1 | 2) : current));
+              return;
+            }
+            setDjWorkflowJump({ step: "design", nonce: Date.now() });
+            setSelectedPanel("dj_branding");
+          }}
+          className="mt-2 w-full border border-cyan-400/70 bg-cyan-500/10 px-3 py-2 text-[11px] font-medium uppercase tracking-[0.14em] text-cyan-100"
+        >
+          {mobileLightingSlide < 2 ? "Next" : "Next To Design"}
+        </button>
       </div>
     </div>
   )}
@@ -24661,7 +24647,7 @@ style={{ top: STICKY_TOP }}
   {activeBgControls && floatingBgVisible && (
     <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 flex justify-center px-3 z-[1200]" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
       <div
-        className="w-full max-w-[340px] rounded-2xl border border-white/5 bg-neutral-900/85 px-3 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl"
+        className="w-full max-w-[340px] rounded-2xl border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl"
         ref={floatingBgRef}
         data-floating-controls="bg"
         onPointerDownCapture={(e) => {
