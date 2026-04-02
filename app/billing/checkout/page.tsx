@@ -37,6 +37,7 @@ function BillingCheckoutInner() {
   const [msg, setMsg] = React.useState<string | null>(null);
   const [missing, setMissing] = React.useState<string[]>([]);
   const [checkoutHtml, setCheckoutHtml] = React.useState<string | null>(null);
+  const [checkoutMode, setCheckoutMode] = React.useState<"popup" | "inline" | null>(null);
   const supportEmail = getPublicSupportEmail();
   const supportPhone = getPublicSupportPhone();
   const merchantAddress = getPublicMerchantAddress();
@@ -73,10 +74,24 @@ function BillingCheckoutInner() {
       return;
     }
 
+    let checkoutPopup: Window | null = null;
+    try {
+      checkoutPopup = window.open("", "_blank", "noopener,noreferrer");
+      if (checkoutPopup) {
+        checkoutPopup.document.write(
+          "<!doctype html><html><head><title>Loading secure checkout</title></head><body style=\"margin:0;display:grid;place-items:center;min-height:100vh;background:#0a0a0a;color:#fff;font-family:ui-sans-serif,system-ui,sans-serif;\">Preparing secure checkout...</body></html>"
+        );
+        checkoutPopup.document.close();
+      }
+    } catch {
+      checkoutPopup = null;
+    }
+
     setLoading(true);
     setMsg(null);
     setMissing([]);
     setCheckoutHtml(null);
+    setCheckoutMode(null);
     try {
       const res = await fetch("/api/billing/checkout", {
         method: "POST",
@@ -93,12 +108,28 @@ function BillingCheckoutInner() {
         return;
       }
       if (json?.mode === "iframe" && typeof json?.redirectDataHtml === "string") {
+        if (checkoutPopup && !checkoutPopup.closed) {
+          checkoutPopup.document.open();
+          checkoutPopup.document.write(json.redirectDataHtml);
+          checkoutPopup.document.close();
+          setCheckoutMode("popup");
+          setMsg("Secure checkout opened in a new window.");
+          return;
+        }
         setCheckoutHtml(json.redirectDataHtml);
+        setCheckoutMode("inline");
+        setMsg("Popup blocked. Secure checkout loaded below instead.");
         return;
       }
       setMsg("Checkout is not ready yet.");
+      if (checkoutPopup && !checkoutPopup.closed) {
+        checkoutPopup.close();
+      }
     } catch {
       setMsg("Checkout failed to initialize.");
+      if (checkoutPopup && !checkoutPopup.closed) {
+        checkoutPopup.close();
+      }
     } finally {
       setLoading(false);
     }
@@ -243,7 +274,7 @@ function BillingCheckoutInner() {
               disabled={loading}
               className="rounded-lg bg-fuchsia-600 px-4 py-2 text-sm font-semibold disabled:opacity-60"
             >
-              {loading ? "Preparing checkout..." : checkoutHtml ? "Reload secure checkout" : "Load secure checkout"}
+              {loading ? "Preparing checkout..." : checkoutMode === "popup" ? "Reopen secure checkout" : checkoutHtml ? "Reload secure checkout" : "Load secure checkout"}
             </button>
           )}
           <Link href="/" className="rounded-lg border border-white/10 px-4 py-2 text-sm text-white/75 hover:bg-white/5">
@@ -268,7 +299,7 @@ function BillingCheckoutInner() {
           </div>
         ) : (
           <div className="mt-6 border-t border-white/10 pt-4 text-xs text-white/45">
-            PowerTranz checkout will load inside this page once the hosted page credentials and callback settings are configured.
+            PowerTranz checkout opens in a secure window first. If your browser blocks that window, the hosted page will load inside this page instead.
           </div>
         )}
       </div>
