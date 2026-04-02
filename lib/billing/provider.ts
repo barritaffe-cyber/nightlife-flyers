@@ -195,6 +195,8 @@ function buildRecurringData(selection: BillingSelection) {
   }
 
   const startDate = new Date();
+  const expiryDate = new Date(startDate);
+  expiryDate.setUTCFullYear(expiryDate.getUTCFullYear() + 5);
   const recurringFrequency = selection.billing === "yearly" ? "Y" : "M";
 
   return {
@@ -202,6 +204,7 @@ function buildRecurringData(selection: BillingSelection) {
     Tokenize: true,
     ExtendedData: {
       Recurring: {
+        ExpiryDate: formatRecurringDate(expiryDate),
         Frequency: recurringFrequency,
         Managed: getRecurringMode() === "managed",
         StartDate: formatRecurringDate(startDate),
