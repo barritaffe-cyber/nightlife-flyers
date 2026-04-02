@@ -19,6 +19,36 @@ function getString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+function sanitizeLogValue(value: unknown): unknown {
+  if (typeof value === "string") {
+    if (!value.trim()) return value;
+    if (value.length > 24) {
+      return `${value.slice(0, 6)}...${value.slice(-4)}`;
+    }
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.map(sanitizeLogValue);
+  }
+  if (isPlainObject(value)) {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, nested]) => {
+        const lowerKey = key.toLowerCase();
+        if (
+          lowerKey.includes("token") ||
+          lowerKey.includes("password") ||
+          lowerKey.includes("pan") ||
+          lowerKey.includes("cvv")
+        ) {
+          return [key, nested ? "[present]" : "[empty]"];
+        }
+        return [key, sanitizeLogValue(nested)];
+      })
+    );
+  }
+  return value;
+}
+
 function renderBillingCallbackPage(args: {
   title: string;
   message: string;
@@ -295,6 +325,19 @@ export async function POST(req: Request) {
 
     const callbackSpiToken = isPlainObject(body) ? resolveCallbackToken(body) : null;
     const effectiveSpiToken = callbackSpiToken || checkout.spi_token;
+    const callbackCode = isPlainObject(body) ? resolveCallbackCode(body) : null;
+    const completionSignal = isPlainObject(body) ? hasCompletionSignal(body) : false;
+
+    console.log("PowerTranz callback received", {
+      checkoutId,
+      checkoutStatus: checkout.status,
+      query: Object.fromEntries(url.searchParams.entries()),
+      callbackCode,
+      hasCallbackSpiToken: Boolean(callbackSpiToken),
+      hasStoredSpiToken: Boolean(checkout.spi_token),
+      completionSignal,
+      body: sanitizeLogValue(body),
+    });
 
     if (!effectiveSpiToken) {
       await markPowerTranzCheckoutStatus(checkout.id, "invalid");
@@ -306,8 +349,12 @@ export async function POST(req: Request) {
       });
     }
 
-    const callbackCode = resolveCallbackCode(body);
     if (isPlainObject(body) && !hasCompletionSignal(body)) {
+      console.log("PowerTranz callback treated as non-final", {
+        checkoutId,
+        callbackCode,
+        body: sanitizeLogValue(body),
+      });
       return renderPowerTranzResumePage({
         title: "Secure checkout loading",
         message: "PowerTranz is preparing the hosted payment page.",
@@ -318,6 +365,11 @@ export async function POST(req: Request) {
 
     if (callbackCode && !["HP0", "3D0", "3D1"].includes(callbackCode)) {
       await markPowerTranzCheckoutStatus(checkout.id, "failed");
+      console.warn("PowerTranz callback returned non-success code before completion", {
+        checkoutId,
+        callbackCode,
+        body: sanitizeLogValue(body),
+      });
       return renderBillingCallbackPage({
         title: "Payment was not completed",
         message: `PowerTranz returned ${callbackCode} before payment completion.`,
@@ -326,7 +378,24 @@ export async function POST(req: Request) {
       });
     }
 
-    const payment = await completePowerTranzPayment(effectiveSpiToken);
+    let payment;
+    try {
+      payment = await completePowerTranzPayment(effectiveSpiToken);
+    } catch (error) {
+      console.error("PowerTranz payment completion failed", {
+        checkoutId,
+        callbackCode,
+        body: sanitizeLogValue(body),
+        error:
+          error instanceof Error
+            ? {
+                name: error.name,
+                message: error.message,
+              }
+            : String(error),
+      });
+      throw error;
+    }
     const paymentPayload = payment as unknown as Record<string, unknown>;
     const paymentApproved = resolvePaymentApproved(paymentPayload) ?? false;
     const paymentTransactionId = resolvePaymentString(
@@ -351,6 +420,10 @@ export async function POST(req: Request) {
       await markPowerTranzCheckoutStatus(checkout.id, "failed", {
         powertranz_transaction_id: paymentTransactionId || null,
         powertranz_pan_token: paymentPanToken || null,
+      });
+      console.warn("PowerTranz payment completed without approval", {
+        checkoutId,
+        payment: sanitizeLogValue(paymentPayload),
       });
       return renderBillingCallbackPage({
         title: "Payment declined",
@@ -384,6 +457,11 @@ export async function POST(req: Request) {
     await markPowerTranzCheckoutStatus(checkout.id, "completed", {
       powertranz_transaction_id: paymentTransactionId || null,
       powertranz_pan_token: paymentPanToken || null,
+    });
+
+    console.log("PowerTranz payment completed successfully", {
+      checkoutId,
+      payment: sanitizeLogValue(paymentPayload),
     });
 
     return renderBillingCallbackPage({

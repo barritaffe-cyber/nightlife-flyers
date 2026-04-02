@@ -315,6 +315,12 @@ async function powerTranzRequest<T>(
       json = JSON.parse(text) as Record<string, unknown>;
     } catch {
       if (!res.ok) {
+        console.error("PowerTranz non-JSON error response", {
+          path,
+          method: options?.method || "GET",
+          status: res.status,
+          bodyPreview: text.slice(0, 400),
+        });
         throw new PowerTranzApiError(`PowerTranz returned ${res.status} with a non-JSON response.`, res.status, {
           bodyPreview: text.slice(0, 400),
           url,
@@ -338,6 +344,12 @@ async function powerTranzRequest<T>(
       errorPayload.errors?.[0]?.message ||
       errorPayload.error?.message ||
       "PowerTranz request failed.";
+    console.error("PowerTranz API request failed", {
+      path,
+      method: options?.method || "GET",
+      status: res.status,
+      response: json,
+    });
     throw new PowerTranzApiError(errorMessage, res.status, json);
   }
 
