@@ -148,6 +148,12 @@ function getPowerTranzApiBase(environment = getPowerTranzEnvironment()): string 
   return environment ? `https://${environment}.ptranz.com/Api` : "";
 }
 
+function buildPowerTranzUrl(path: string, environment = getPowerTranzEnvironment()): string {
+  const base = getPowerTranzApiBase(environment).replace(/\/+$/, "");
+  const normalizedPath = String(path || "").replace(/^\/+/, "");
+  return `${base}/${normalizedPath}`;
+}
+
 function buildProviderState(): BillingProviderState {
   const configEnv = getConfigEnv();
   const missing: string[] = [];
@@ -286,7 +292,8 @@ async function powerTranzRequest<T>(
     throw new PowerTranzApiError("PowerTranz is not configured yet.", 503, { missing: state.missing });
   }
 
-  const res = await fetch(new URL(path, `${state.apiBase}/`), {
+  const url = buildPowerTranzUrl(path);
+  const res = await fetch(url, {
     method: options?.method || "GET",
     headers: {
       Accept: "application/json",
@@ -299,15 +306,34 @@ async function powerTranzRequest<T>(
   });
 
   const text = await res.text();
-  const json = text ? JSON.parse(text) : {};
+  let json: Record<string, unknown> = {};
+  if (text) {
+    try {
+      json = JSON.parse(text) as Record<string, unknown>;
+    } catch {
+      if (!res.ok) {
+        throw new PowerTranzApiError(`PowerTranz returned ${res.status} with a non-JSON response.`, res.status, {
+          bodyPreview: text.slice(0, 400),
+          url,
+        });
+      }
+    }
+  }
 
   if (!res.ok) {
+    const errorPayload = json as {
+      ResponseMessage?: string;
+      responseMessage?: string;
+      Errors?: Array<{ Message?: string }>;
+      errors?: Array<{ message?: string }>;
+      error?: { message?: string };
+    };
     const errorMessage =
-      json?.ResponseMessage ||
-      json?.responseMessage ||
-      json?.Errors?.[0]?.Message ||
-      json?.errors?.[0]?.message ||
-      json?.error?.message ||
+      errorPayload.ResponseMessage ||
+      errorPayload.responseMessage ||
+      errorPayload.Errors?.[0]?.Message ||
+      errorPayload.errors?.[0]?.message ||
+      errorPayload.error?.message ||
       "PowerTranz request failed.";
     throw new PowerTranzApiError(errorMessage, res.status, json);
   }
