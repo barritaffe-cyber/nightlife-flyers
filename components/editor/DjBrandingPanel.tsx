@@ -15,6 +15,7 @@ import {
 type Props = {
   selectedPanel: string | null;
   setSelectedPanel: (panel: string | null) => void;
+  requestedWorkflowStep?: { step: WorkflowStep; nonce: number } | null;
   hasBackground: boolean;
   kit: DJBrandKit;
   brandProfiles: Array<{ id: string; label: string }>;
@@ -82,6 +83,7 @@ function dedupeFonts(list: string[]): string[] {
 export default function DjBrandingPanel({
   selectedPanel,
   setSelectedPanel,
+  requestedWorkflowStep = null,
   hasBackground,
   kit,
   brandProfiles,
@@ -260,6 +262,12 @@ export default function DjBrandingPanel({
     }
     wasDjBrandingOpen.current = isOpen;
   }, [recommendedStep, selectedPanel]);
+  React.useEffect(() => {
+    if (selectedPanel !== 'dj_branding') return;
+    if (!requestedWorkflowStep) return;
+    if (!stepEnabled[requestedWorkflowStep.step]) return;
+    setWorkflowStep(requestedWorkflowStep.step);
+  }, [requestedWorkflowStep, selectedPanel, stepEnabled]);
   React.useEffect(() => {
     if (!vaultFeedback) return;
     const timer = window.setTimeout(() => setVaultFeedback(null), 2400);

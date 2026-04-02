@@ -9950,6 +9950,7 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
     updatePortrait(format, mainFaceOnCanvas.id, {
       locked: true,
     });
+    setDjWorkflowJump({ step: "lighting", nonce: Date.now() });
     setMobileControlsOpen(true);
     setMobileControlsTab("assets");
     setSelectedPanel("dj_branding");
@@ -10059,6 +10060,9 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
         persistToKit: true,
       });
       placeDjBrandFace(mainFaceUrl, djBrandKit.primaryPortraitPlacement);
+      requestAnimationFrame(() => {
+        scrollToArtboard();
+      });
     } catch (err: any) {
       alert(err?.message || "Main Face could not be prepared.");
     }
@@ -10067,6 +10071,7 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
     djBrandKit.primaryPortraitPlacement,
     ensureTransparentMainFace,
     placeDjBrandFace,
+    scrollToArtboard,
   ]);
 
   const applyDjBrandKit = React.useCallback(
@@ -18522,6 +18527,10 @@ const [floatingAssetVisible, setFloatingAssetVisible] = React.useState(false);
 const [floatingBgVisible, setFloatingBgVisible] = React.useState(false);
 const [projectHelpOpen, setProjectHelpOpen] = React.useState(false);
 const [workflowHelpOpen, setWorkflowHelpOpen] = React.useState(false);
+const [djWorkflowJump, setDjWorkflowJump] = React.useState<null | {
+  step: "background" | "mainface" | "lighting" | "design";
+  nonce: number;
+}>(null);
 const PROJECT_FILE_STATUS_KEY = "nf:projectFileStatus";
 const [projectFileStatus, setProjectFileStatus] = React.useState<null | {
   kind: "saved" | "loaded";
@@ -19613,7 +19622,7 @@ const mobileControlsTabs = (
         onClick={() => setMobileControlsTab("design")}
         data-tour="mobile-text-tab"
         data-mobile-float-lock="true"
-        className={`px-2.5 py-1 text-[10px] font-semibold border shrink-0 whitespace-nowrap ${
+        className={`px-2 py-[3px] text-[9px] font-semibold uppercase tracking-[0.12em] border shrink-0 whitespace-nowrap ${
           mobileControlsTab === "design"
             ? "border-blue-400 text-blue-300 bg-blue-500/10"
             : "border-neutral-700 text-neutral-300 bg-neutral-900/60"
@@ -19626,7 +19635,7 @@ const mobileControlsTabs = (
         onClick={() => setMobileControlsTab("assets")}
         data-tour="mobile-design-tab"
         data-mobile-float-lock="true"
-        className={`px-2.5 py-1 text-[10px] font-semibold border shrink-0 whitespace-nowrap ${
+        className={`px-2 py-[3px] text-[9px] font-semibold uppercase tracking-[0.12em] border shrink-0 whitespace-nowrap ${
           mobileControlsTab === "assets"
             ? "border-blue-400 text-blue-300 bg-blue-500/10"
             : "border-neutral-700 text-neutral-300 bg-neutral-900/60"
@@ -19639,7 +19648,7 @@ const mobileControlsTabs = (
         onClick={undoAssetPosition}
         data-mobile-float-lock="true"
         disabled={!lastMoveStack.length}
-        className={`px-2.5 py-1 text-[10px] font-semibold border shrink-0 whitespace-nowrap ${
+        className={`px-2 py-[3px] text-[9px] font-semibold uppercase tracking-[0.12em] border shrink-0 whitespace-nowrap ${
           lastMoveStack.length
             ? "border-emerald-400 text-emerald-200 bg-emerald-500/10"
             : "border-neutral-700 text-neutral-500 bg-neutral-900/60 cursor-not-allowed"
@@ -19651,7 +19660,7 @@ const mobileControlsTabs = (
       <button
         type="button"
         onClick={startTour}
-        className="px-2.5 py-1 text-[10px] font-semibold border border-fuchsia-400/70 text-fuchsia-100 bg-fuchsia-500/20 hover:bg-fuchsia-500/30 shadow-[0_0_14px_rgba(217,70,239,0.65)] shrink-0 whitespace-nowrap"
+        className="px-2 py-[3px] text-[9px] font-semibold uppercase tracking-[0.12em] border border-fuchsia-400/70 text-fuchsia-100 bg-fuchsia-500/20 hover:bg-fuchsia-500/30 shadow-[0_0_14px_rgba(217,70,239,0.65)] shrink-0 whitespace-nowrap"
         title="Start Tour"
       >
         Start Tour
@@ -23851,7 +23860,7 @@ style={{ top: STICKY_TOP }}
   {activeTextControls && floatingEditorVisible && (
     <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 flex justify-center px-3 z-[1200]" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
       <div
-        className="w-full max-w-[380px] rounded-2xl border border-white/5 bg-neutral-900/85 px-3 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl"
+        className="w-full max-w-[340px] rounded-2xl border border-white/5 bg-neutral-900/85 px-3 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl"
         ref={floatingTextRef}
         data-floating-controls="text"
         onPointerDownCapture={(e) => {
@@ -23904,7 +23913,7 @@ style={{ top: STICKY_TOP }}
               onChange={(v) => activeTextControls.onFont?.(v)}
             />
           </div>
-          <div className="grid grid-cols-1 gap-2.5 min-[360px]:grid-cols-2 items-center">
+          <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
             <div>
               <InlineSliderInput
                 label="Size"
@@ -23987,7 +23996,7 @@ style={{ top: STICKY_TOP }}
   {activeAssetControls && floatingAssetVisible && (
     <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 flex justify-center px-3 z-[1200]" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
       <div
-        className="w-full max-w-[380px] rounded-2xl border border-white/5 bg-neutral-900/85 px-3 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl"
+        className="w-full max-w-[340px] rounded-2xl border border-white/5 bg-neutral-900/85 px-3 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl"
         ref={floatingAssetRef}
         data-floating-controls="asset"
         onPointerDownCapture={(e) => {
@@ -24018,7 +24027,7 @@ style={{ top: STICKY_TOP }}
           )}
         </div>
         {activeAssetControls.onPosX && activeAssetControls.onPosY && (
-          <div className="mt-2 grid grid-cols-1 gap-2.5 min-[360px]:grid-cols-2 items-center">
+          <div className="mt-2 grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
             <div>
               <InlineSliderInput
                 label="X"
@@ -24053,7 +24062,7 @@ style={{ top: STICKY_TOP }}
             </div>
           </div>
         )}
-        <div className="mt-2 grid grid-cols-1 gap-2.5 min-[360px]:grid-cols-2 items-center">
+        <div className="mt-2 grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
           {activeAssetControls.showScale !== false && (
             <div>
               <InlineSliderInput
@@ -24189,7 +24198,7 @@ style={{ top: STICKY_TOP }}
           )}
         </div>
         {activeAssetControls.cleanup && (
-          <div className="mt-2 grid grid-cols-1 gap-2.5 min-[360px]:grid-cols-2 items-center">
+          <div className="mt-2 grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
             <div>
               <InlineSliderInput
                 label="Shrink edge"
@@ -24373,7 +24382,7 @@ style={{ top: STICKY_TOP }}
   {activeBgControls && floatingBgVisible && (
     <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 flex justify-center px-3 z-[1200]" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
       <div
-        className="w-full max-w-[380px] rounded-2xl border border-white/5 bg-neutral-900/85 px-3 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl"
+        className="w-full max-w-[340px] rounded-2xl border border-white/5 bg-neutral-900/85 px-3 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl"
         ref={floatingBgRef}
         data-floating-controls="bg"
         onPointerDownCapture={(e) => {
@@ -24394,7 +24403,7 @@ style={{ top: STICKY_TOP }}
           <span className="text-neutral-300">•</span>
           <span className="min-w-0 truncate">{activeBgControls.label}</span>
         </div>
-        <div className="mt-2 grid grid-cols-1 gap-2.5 min-[360px]:grid-cols-2 items-center">
+        <div className="mt-2 grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
           <div>
             <InlineSliderInput
               label="Scale"
@@ -24537,6 +24546,7 @@ style={{ top: STICKY_TOP }}
   <DjBrandingPanel
     selectedPanel={selectedPanel}
     setSelectedPanel={setSelectedPanel}
+    requestedWorkflowStep={djWorkflowJump}
     hasBackground={!!(bgUploadUrl || bgUrl || blendBackground)}
     kit={djBrandKit}
     brandProfiles={djBrandCollection.kits.map((kit) => ({ id: kit.id, label: kit.label }))}

@@ -409,7 +409,7 @@ export function InlineSliderInput({
       <div className={`mb-1 flex min-w-0 items-center justify-between ${controlLabelClass} ${labelClassName || ""}`}>
         <span className="block min-w-0 truncate">{label}</span>
       </div>
-      <div className="flex min-w-0 items-center gap-1.5">
+      <div className="flex min-w-0 items-center gap-1">
         <input
           type="range"
           min={min}
@@ -424,7 +424,7 @@ export function InlineSliderInput({
           onPointerCancel={onPointerCancel}
           disabled={disabled}
         />
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 items-center gap-0.5">
           <input
             type="number"
             min={min * displayScale}
@@ -450,10 +450,10 @@ export function InlineSliderInput({
             disabled={disabled}
             className={
               inputClassName ||
-              `w-[44px] sm:w-[52px] ${controlInputClass} text-right font-semibold`
+              `w-[38px] sm:w-[44px] ${controlInputClass} text-right font-semibold`
             }
           />
-          {suffix ? <span className="text-[10px] text-white font-semibold">{suffix}</span> : null}
+          {suffix ? <span className="text-[9px] text-white font-semibold">{suffix}</span> : null}
         </div>
       </div>
     </div>
