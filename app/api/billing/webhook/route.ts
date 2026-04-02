@@ -110,7 +110,7 @@ function renderPowerTranzResumePage(args: {
       <p>${safeMessage}</p>
       <div class="actions">
         <button type="button" id="continueButton">Continue Secure Checkout</button>
-        <div class="note" id="countdownNote">Continuing automatically...</div>
+        <div class="note" id="countdownNote">Continue when you are ready.</div>
       </div>
     </div>
     <form id="powertranz_resume" action="${safeConductorUrl}" method="POST">
@@ -147,7 +147,6 @@ function renderPowerTranzResumePage(args: {
         document.getElementById("browserJavascriptEnabled").value = "true";
         document.getElementById("browserColorDepth").value = window && window.screen ? String(window.screen.colorDepth || "") : "";
         document.getElementById("continueButton").addEventListener("click", submitResume);
-        window.setTimeout(submitResume, 1200);
       })();
     </script>
   </body>
