@@ -19723,9 +19723,9 @@ React.useEffect(() => {
     nextTab = "assets"; // Design tab
   }
 
-  if (nextTab && mobileControlsTab !== nextTab) {
+  if (nextTab) {
     setMobileControlsOpen(true);
-    setMobileControlsTab(nextTab);
+    setMobileControlsTab((current) => (current === nextTab ? current : nextTab));
   }
 }, [
   isMobileView,
@@ -19735,7 +19735,6 @@ React.useEffect(() => {
   selectedPanel,
   activeBgControls,
   hasAssetControls,
-  mobileControlsTab,
 ]);
 
 // Consolidated scroll/touch hide logic for mobile floats
@@ -21082,7 +21081,7 @@ return (
 
 {/* === FORMAT TOGGLE & VIEW SETTINGS === */}
           <div className="justify-self-stretch lg:justify-self-center">
-            <div className="flex w-full items-center gap-2 overflow-x-auto text-[12px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex w-full items-center justify-center lg:justify-start gap-2 overflow-x-auto text-[12px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <span className="opacity-80 hidden sm:inline shrink-0">Canvas</span>
 
               <Chip
