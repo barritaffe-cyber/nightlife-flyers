@@ -24,8 +24,9 @@ function renderBillingCallbackPage(args: {
   message: string;
   redirectTo?: string;
   actionLabel?: string;
+  autoBack?: boolean;
 }) {
-  const { title, message, redirectTo, actionLabel = "Return to billing" } = args;
+  const { title, message, redirectTo, actionLabel = "Return to billing", autoBack = false } = args;
   const safeTitle = title.replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const safeMessage = message.replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const safeRedirect = redirectTo ? redirectTo.replace(/"/g, "&quot;") : "";
@@ -50,7 +51,18 @@ function renderBillingCallbackPage(args: {
       ${redirectTo ? `<a href="${safeRedirect}">${actionLabel}</a>` : ""}
     </div>
     ${
-      redirectTo
+      autoBack
+        ? `<script>
+      (function () {
+        try {
+          if (window.history && window.history.length > 1) {
+            window.history.back();
+            return;
+          }
+        } catch (_) {}
+      })();
+    </script>`
+        : redirectTo
         ? `<script>
       (function () {
         var target = ${JSON.stringify(redirectTo)};
@@ -243,6 +255,8 @@ export async function POST(req: Request) {
       return renderBillingCallbackPage({
         title: "Secure checkout loading",
         message: "PowerTranz has started the hosted checkout session. Continue in the payment panel.",
+        actionLabel: "Return to secure checkout",
+        autoBack: true,
       });
     }
 
