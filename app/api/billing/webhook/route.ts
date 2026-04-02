@@ -24,9 +24,8 @@ function renderBillingCallbackPage(args: {
   message: string;
   redirectTo?: string;
   actionLabel?: string;
-  autoBack?: boolean;
 }) {
-  const { title, message, redirectTo, actionLabel = "Return to billing", autoBack = false } = args;
+  const { title, message, redirectTo, actionLabel = "Return to billing" } = args;
   const safeTitle = title.replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const safeMessage = message.replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const safeRedirect = redirectTo ? redirectTo.replace(/"/g, "&quot;") : "";
@@ -51,18 +50,7 @@ function renderBillingCallbackPage(args: {
       ${redirectTo ? `<a href="${safeRedirect}">${actionLabel}</a>` : ""}
     </div>
     ${
-      autoBack
-        ? `<script>
-      (function () {
-        try {
-          if (window.history && window.history.length > 1) {
-            window.history.back();
-            return;
-          }
-        } catch (_) {}
-      })();
-    </script>`
-        : redirectTo
+      redirectTo
         ? `<script>
       (function () {
         var target = ${JSON.stringify(redirectTo)};
@@ -77,6 +65,76 @@ function renderBillingCallbackPage(args: {
     </script>`
         : ""
     }
+  </body>
+</html>`;
+
+  return new Response(html, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store",
+    },
+  });
+}
+
+function renderPowerTranzResumePage(args: {
+  title: string;
+  message: string;
+  spiToken: string;
+  conductorUrl: string;
+}) {
+  const { title, message, spiToken, conductorUrl } = args;
+  const safeTitle = title.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const safeMessage = message.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const safeToken = spiToken.replace(/"/g, "&quot;");
+  const safeConductorUrl = conductorUrl.replace(/"/g, "&quot;");
+  const html = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${safeTitle}</title>
+    <style>
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0a0a0a; color: #fff; font-family: ui-sans-serif, system-ui, sans-serif; }
+      .card { width: min(92vw, 420px); border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.04); padding: 24px; }
+      h1 { margin: 0 0 12px; font-size: 22px; }
+      p { margin: 0; color: rgba(255,255,255,.72); line-height: 1.5; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>${safeTitle}</h1>
+      <p>${safeMessage}</p>
+    </div>
+    <form id="powertranz_resume" action="${safeConductorUrl}" method="POST">
+      <input type="hidden" name="SpiToken" value="${safeToken}" />
+      <input type="hidden" name="browserLanguage" id="browserLanguage" value="" />
+      <input type="hidden" name="browserWidth" id="browserWidth" value="" />
+      <input type="hidden" name="browserHeight" id="browserHeight" value="" />
+      <input type="hidden" name="browserTimeZone" id="browserTimeZone" value="" />
+      <input type="hidden" name="browserJavaEnabled" id="browserJavaEnabled" value="" />
+      <input type="hidden" name="browserJavascriptEnabled" id="browserJavascriptEnabled" value="" />
+      <input type="hidden" name="browserColorDepth" id="browserColorDepth" value="" />
+    </form>
+    <script>
+      (function () {
+        var lang = "";
+        try {
+          lang = window.navigator && (window.navigator.language || window.navigator.browserLanguage) || "";
+        } catch (_) {}
+        document.getElementById("browserLanguage").value = lang;
+        document.getElementById("browserWidth").value = window && window.screen ? String(window.screen.width || "") : "";
+        document.getElementById("browserHeight").value = window && window.screen ? String(window.screen.height || "") : "";
+        document.getElementById("browserTimeZone").value = String(new Date().getTimezoneOffset());
+        document.getElementById("browserJavaEnabled").value =
+          window && window.navigator && typeof window.navigator.javaEnabled === "function"
+            ? String(window.navigator.javaEnabled())
+            : "";
+        document.getElementById("browserJavascriptEnabled").value = "true";
+        document.getElementById("browserColorDepth").value = window && window.screen ? String(window.screen.colorDepth || "") : "";
+        document.getElementById("powertranz_resume").submit();
+      })();
+    </script>
   </body>
 </html>`;
 
@@ -252,11 +310,11 @@ export async function POST(req: Request) {
 
     const callbackCode = resolveCallbackCode(body);
     if (isPlainObject(body) && !hasCompletionSignal(body)) {
-      return renderBillingCallbackPage({
+      return renderPowerTranzResumePage({
         title: "Secure checkout loading",
-        message: "PowerTranz has started the hosted checkout session. Continue in the payment panel.",
-        actionLabel: "Return to secure checkout",
-        autoBack: true,
+        message: "PowerTranz is preparing the hosted payment page.",
+        spiToken: effectiveSpiToken,
+        conductorUrl: `${providerState.apiBase.replace(/\/+$/, "")}/spi/Conductor`,
       });
     }
 
