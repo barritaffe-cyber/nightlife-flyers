@@ -349,7 +349,7 @@ function toFailure(error: unknown, fallbackContext?: Record<string, unknown>): B
     return {
       ok: false,
       code: error.status,
-      error: error.message,
+      error: error.message || `PowerTranz request failed with HTTP ${error.status}.`,
       missing: Array.isArray((error.details as { missing?: unknown })?.missing)
         ? (((error.details as { missing?: unknown }).missing as string[]) || [])
         : [],
@@ -546,7 +546,7 @@ export async function markPowerTranzCheckoutStatus(
 }
 
 export async function completePowerTranzPayment(spiToken: string) {
-  return powerTranzRequest<PowerTranzFinancialResponse>("/spi/Payment", {
+  return powerTranzRequest<PowerTranzFinancialResponse>("/spi/payment", {
     method: "POST",
     body: spiToken,
   });
