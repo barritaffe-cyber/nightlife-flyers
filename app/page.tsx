@@ -943,6 +943,8 @@ const DJ_STARTUP_BACKGROUNDS = [
   { id: "club08", src: "/DJ/club08.jpg", name: "Club 08" },
   { id: "club09", src: "/DJ/club09.jpg", name: "Club 09" },
   { id: "club10", src: "/DJ/club10.jpg", name: "Club 10" },
+  { id: "club11", src: "/DJ/club11.jpg", name: "Club 11" },
+  { id: "club12", src: "/DJ/club12.jpg", name: "Club 12" },
 ] as const;
 
 const GRAPHIC_STICKERS = [
@@ -11318,6 +11320,7 @@ const mobileFloatSticky = isMobileView && format === "story";
   );
   const visibleTemplateGallery = isStarterPlan ? starterTemplateGallery : TEMPLATE_GALLERY;
   const isDjStartupMode = startupStudioMode === "dj";
+  const currentStudioModeLabel = isDjStartupMode ? "DJ / Artist" : "Creator Studio";
   const isDjCompositionStage = false;
   const showDjTextEditing = true;
   const visibleSocialMediaStickers = SOCIAL_MEDIA_STICKERS;
@@ -19608,7 +19611,7 @@ const mobileControlsTabs = (
       onClick={() => setMobileControlsTab("design")}
       data-tour="mobile-text-tab"
       data-mobile-float-lock="true"
-      className={`px-3 py-1 rounded text-[11px] font-semibold border shrink-0 whitespace-nowrap ${
+      className={`px-3 py-1 text-[11px] font-semibold border shrink-0 whitespace-nowrap ${
         mobileControlsTab === "design"
           ? "border-blue-400 text-blue-300 bg-blue-500/10"
           : "border-neutral-700 text-neutral-300 bg-neutral-900/60"
@@ -19621,7 +19624,7 @@ const mobileControlsTabs = (
       onClick={() => setMobileControlsTab("assets")}
       data-tour="mobile-design-tab"
       data-mobile-float-lock="true"
-      className={`px-3 py-1 rounded text-[11px] font-semibold border shrink-0 whitespace-nowrap ${
+      className={`px-3 py-1 text-[11px] font-semibold border shrink-0 whitespace-nowrap ${
         mobileControlsTab === "assets"
           ? "border-blue-400 text-blue-300 bg-blue-500/10"
           : "border-neutral-700 text-neutral-300 bg-neutral-900/60"
@@ -19634,7 +19637,7 @@ const mobileControlsTabs = (
       onClick={undoAssetPosition}
       data-mobile-float-lock="true"
       disabled={!lastMoveStack.length}
-      className={`px-3 py-1 rounded text-[11px] font-semibold border shrink-0 whitespace-nowrap ${
+      className={`px-3 py-1 text-[11px] font-semibold border shrink-0 whitespace-nowrap ${
         lastMoveStack.length
           ? "border-emerald-400 text-emerald-200 bg-emerald-500/10"
           : "border-neutral-700 text-neutral-500 bg-neutral-900/60 cursor-not-allowed"
@@ -19646,11 +19649,14 @@ const mobileControlsTabs = (
     <button
       type="button"
       onClick={startTour}
-      className="px-3 py-1 rounded text-[11px] font-semibold border border-fuchsia-400/70 text-fuchsia-100 bg-fuchsia-500/20 hover:bg-fuchsia-500/30 shadow-[0_0_14px_rgba(217,70,239,0.65)] shrink-0 whitespace-nowrap"
+      className="px-3 py-1 text-[11px] font-semibold border border-fuchsia-400/70 text-fuchsia-100 bg-fuchsia-500/20 hover:bg-fuchsia-500/30 shadow-[0_0_14px_rgba(217,70,239,0.65)] shrink-0 whitespace-nowrap"
       title="Start Tour"
     >
       Start Tour
     </button>
+    <span className="shrink-0 border border-white/10 bg-white/[0.03] px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-300">
+      {currentStudioModeLabel}
+    </span>
   </div>
 );
 
@@ -21055,27 +21061,10 @@ return (
         <div className="mx-auto max-w-7xl px-4 py-2 lg:h-14 grid grid-cols-1 lg:grid-cols-[clamp(260px,22vw,360px)_minmax(560px,1fr)_clamp(260px,22vw,360px)] gap-2 lg:gap-4 items-center">
           {/* LEFT: Brand */}
              <div className="hidden lg:flex items-center gap-3">
-              <button
-                id="account-logo-button"
-                type="button"
-                onClick={openAccountPanel}
-                onPointerUp={openAccountPanel}
-                className="flex items-center gap-3"
-                aria-label="Open account"
-              >
-                <img
-                  src="/branding/nf-logo.png"
-                  alt="Nightlife Flyers"
-                  className="h-12 w-12 rounded-full shadow-[0_8px_28px_rgba(0,0,0,.45)]"
-                  draggable={false}
-                />
-                <div className="text-sm opacity-90">Nightlife Flyers</div>
-              </button>
-
               {/* ALWAYS-SHOW PRICING LINK */}
               <Link
                 href="/pricing"  // ← change to "/pricing-plans" if your route is app/pricing-plans/page.tsx
-                className="ml-2 text-[12px] px-2 py-[2px] rounded-md border border-white/20 bg-white/10 hover:bg-white/20 hidden lg:inline-flex
+                className="text-[12px] px-2 py-[2px] border border-white/20 bg-white/10 hover:bg-white/20 hidden lg:inline-flex
                            text-[#78E3FF] drop-shadow-[0_0_10px_rgba(120,227,255,0.95)]"
                 aria-label="View Pricing"
                 onClick={(event) => void handleStudioNavigation(event, "/pricing")}
@@ -21085,7 +21074,7 @@ return (
               <button
                 type="button"
                 onClick={startTour}
-                className="ml-1 text-[12px] px-2 py-[2px] rounded-md border border-fuchsia-400/70 bg-fuchsia-500/20 hover:bg-fuchsia-500/30 hidden lg:inline-flex text-fuchsia-100 whitespace-nowrap shadow-[0_0_14px_rgba(217,70,239,0.65)]"
+                className="ml-1 text-[12px] px-2 py-[2px] border border-fuchsia-400/70 bg-fuchsia-500/20 hover:bg-fuchsia-500/30 hidden lg:inline-flex text-fuchsia-100 whitespace-nowrap shadow-[0_0_14px_rgba(217,70,239,0.65)]"
                 aria-label="Start Tour"
                 title="Start Tour"
               >
@@ -21095,7 +21084,7 @@ return (
                 type="button"
                 onClick={undoAssetPosition}
                 disabled={!lastMoveStack.length}
-                className={`ml-1 text-[12px] px-2 py-[2px] rounded-md border hidden lg:inline-flex ${
+                className={`ml-1 text-[12px] px-2 py-[2px] border hidden lg:inline-flex ${
                   lastMoveStack.length
                     ? "border-emerald-400/60 text-emerald-200 bg-emerald-500/10 hover:bg-emerald-500/20"
                     : "border-neutral-700 text-neutral-500 bg-neutral-900/60 cursor-not-allowed"
@@ -21104,13 +21093,14 @@ return (
               >
                 Undo
               </button>
+              <span className="hidden shrink-0 border border-white/10 bg-white/[0.03] px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-300 lg:inline-flex">
+                {currentStudioModeLabel}
+              </span>
             </div>
 
 {/* === FORMAT TOGGLE & VIEW SETTINGS === */}
           <div className="justify-self-stretch lg:justify-self-center">
             <div className="flex w-full items-center justify-center lg:justify-start gap-2 overflow-x-auto text-[12px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <span className="opacity-80 hidden sm:inline shrink-0">Canvas</span>
-
               <Chip
                 small
                 className="shrink-0 whitespace-nowrap"
@@ -21144,6 +21134,38 @@ return (
               </Chip>
 
               <button
+                id="account-logo-button"
+                type="button"
+                onClick={openAccountPanel}
+                onPointerUp={openAccountPanel}
+                className="hidden lg:inline-flex shrink-0 items-center"
+                aria-label="Open account"
+              >
+                <img
+                  src="/branding/nf-logo.png"
+                  alt="Nightlife Flyers"
+                  className="h-10 w-10 shadow-[0_8px_28px_rgba(0,0,0,.45)]"
+                  draggable={false}
+                />
+              </button>
+
+              <button
+                type="button"
+                data-mobile-float-lock="true"
+                onClick={openWorkflowHelp}
+                onPointerUp={openWorkflowHelp}
+                className={clsx(
+                  "shrink-0 whitespace-nowrap border px-2 py-[3px] text-[11px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400",
+                  workflowHelpOpen
+                    ? "bg-indigo-600 border-indigo-300 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.12)_inset]"
+                    : "border-neutral-700 bg-neutral-900/70 text-neutral-200 hover:bg-neutral-800"
+                )}
+                title="Open mode and workflow guide"
+              >
+                Mode
+              </button>
+
+              <button
                 id="account-logo-button-mobile"
                 type="button"
                 onClick={openAccountPanel}
@@ -21159,22 +21181,6 @@ return (
                 />
               </button>
 
-              {/* Suggested workflow */}
-              <button
-                type="button"
-                data-mobile-float-lock="true"
-                onClick={openWorkflowHelp}
-                onPointerUp={openWorkflowHelp}
-                className={clsx(
-                  "shrink-0 whitespace-nowrap border px-2 py-[3px] text-[11px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400",
-                  workflowHelpOpen
-                    ? "bg-indigo-600 border-indigo-300 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.12)_inset]"
-                    : "border-neutral-700 bg-neutral-900/70 text-neutral-200 hover:bg-neutral-800"
-                )}
-                title="Open workflow guide"
-              >
-                Workflow
-              </button>
               {!isMobileView && activeTextLayerKey && (
                 <>
                   <Chip
