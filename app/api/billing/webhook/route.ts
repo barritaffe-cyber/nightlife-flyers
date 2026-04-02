@@ -130,6 +130,15 @@ function resolvePaymentString(payload: Record<string, unknown>, ...keys: string[
   return null;
 }
 
+function hasCompletionSignal(payload: Record<string, unknown>) {
+  return Boolean(
+    resolveCallbackCode(payload) ||
+      resolveCallbackToken(payload) ||
+      resolvePaymentString(payload, "TransactionIdentifier", "transactionIdentifier", "OrderIdentifier", "orderIdentifier") ||
+      resolvePaymentApproved(payload) !== null
+  );
+}
+
 export async function GET(req: Request) {
   return POST(req);
 }
@@ -230,6 +239,13 @@ export async function POST(req: Request) {
     }
 
     const callbackCode = resolveCallbackCode(body);
+    if (isPlainObject(body) && !hasCompletionSignal(body)) {
+      return renderBillingCallbackPage({
+        title: "Secure checkout loading",
+        message: "PowerTranz has started the hosted checkout session. Continue in the payment panel.",
+      });
+    }
+
     if (callbackCode && !["HP0", "3D0", "3D1"].includes(callbackCode)) {
       await markPowerTranzCheckoutStatus(checkout.id, "failed");
       return renderBillingCallbackPage({
