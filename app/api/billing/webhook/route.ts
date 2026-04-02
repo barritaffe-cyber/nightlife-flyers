@@ -392,10 +392,15 @@ export async function POST(req: Request) {
       redirectTo: "/billing/success",
       actionLabel: "Open success page",
     });
-  } catch {
+  } catch (error) {
+    const message =
+      error instanceof Error && error.message.trim()
+        ? error.message.trim()
+        : "Nightlife Flyers could not complete the PowerTranz billing callback.";
+    console.error("PowerTranz callback failure", error);
     return renderBillingCallbackPage({
       title: "Payment processing failed",
-      message: "Nightlife Flyers could not complete the PowerTranz billing callback.",
+      message,
       redirectTo: "/pricing",
       actionLabel: "Return to pricing",
     });
