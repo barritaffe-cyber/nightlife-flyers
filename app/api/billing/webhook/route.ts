@@ -49,22 +49,6 @@ function renderBillingCallbackPage(args: {
       <p>${safeMessage}</p>
       ${redirectTo ? `<a href="${safeRedirect}">${actionLabel}</a>` : ""}
     </div>
-    ${
-      redirectTo
-        ? `<script>
-      (function () {
-        var target = ${JSON.stringify(redirectTo)};
-        try {
-          if (window.top && window.top !== window) {
-            window.top.location.href = target;
-            return;
-          }
-        } catch (_) {}
-        window.location.href = target;
-      })();
-    </script>`
-        : ""
-    }
   </body>
 </html>`;
 
