@@ -75,7 +75,8 @@ export default function BillingPortalPage() {
         </div>
 
         <div className="mt-5 rounded-xl border border-white/10 bg-black/20 p-4 text-sm text-white/70">
-          Open the billing portal to manage renewal, payment method, or cancellation once the hosted payment provider is connected.
+          PowerTranz self-service billing management is not available in this build yet. For renewal, payment-method,
+          or cancellation help, contact support directly.
         </div>
 
         <div className="mt-5 text-sm text-white/75">
@@ -105,7 +106,7 @@ export default function BillingPortalPage() {
               disabled={loading}
               className="rounded-lg bg-fuchsia-600 px-4 py-2 text-sm font-semibold disabled:opacity-60"
             >
-              {loading ? "Opening portal..." : "Open billing portal"}
+              {loading ? "Checking support options..." : "Check billing support"}
             </button>
           )}
           <Link href="/pricing" className="rounded-lg border border-white/10 px-4 py-2 text-sm text-white/75 hover:bg-white/5">

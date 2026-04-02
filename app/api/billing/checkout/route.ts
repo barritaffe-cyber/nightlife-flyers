@@ -30,7 +30,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid billing selection." }, { status: 400 });
     }
 
-    const result = await createProviderCheckout(selection, userData.user.email);
+    const siteUrl = req.headers.get("origin") || new URL(req.url).origin;
+    const result = await createProviderCheckout(selection, userData.user.email, { siteUrl });
     if (!result.ok) {
       return NextResponse.json(
         {
@@ -42,7 +43,11 @@ export async function POST(req: Request) {
       );
     }
 
-    return NextResponse.json({ url: result.url });
+    return NextResponse.json({
+      mode: result.mode,
+      checkoutId: result.checkoutId,
+      redirectDataHtml: result.redirectDataHtml,
+    });
   } catch {
     return NextResponse.json({ error: "Checkout initialization failed." }, { status: 500 });
   }

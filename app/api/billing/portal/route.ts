@@ -18,7 +18,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    const result = await createProviderPortal(userData.user.email);
+    const result = await createProviderPortal();
     if (!result.ok) {
       return NextResponse.json(
         {
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
       );
     }
 
-    return NextResponse.json({ url: result.url });
+    return NextResponse.json({ error: "Billing portal is not available." }, { status: 501 });
   } catch {
     return NextResponse.json({ error: "Billing portal failed." }, { status: 500 });
   }

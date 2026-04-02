@@ -36,6 +36,7 @@ function BillingCheckoutInner() {
   const [loading, setLoading] = React.useState(false);
   const [msg, setMsg] = React.useState<string | null>(null);
   const [missing, setMissing] = React.useState<string[]>([]);
+  const [checkoutHtml, setCheckoutHtml] = React.useState<string | null>(null);
   const supportEmail = getPublicSupportEmail();
   const supportPhone = getPublicSupportPhone();
   const merchantAddress = getPublicMerchantAddress();
@@ -75,6 +76,7 @@ function BillingCheckoutInner() {
     setLoading(true);
     setMsg(null);
     setMissing([]);
+    setCheckoutHtml(null);
     try {
       const res = await fetch("/api/billing/checkout", {
         method: "POST",
@@ -90,8 +92,8 @@ function BillingCheckoutInner() {
         setMissing(Array.isArray(json?.missing) ? json.missing : []);
         return;
       }
-      if (json?.url) {
-        window.location.href = json.url;
+      if (json?.mode === "iframe" && typeof json?.redirectDataHtml === "string") {
+        setCheckoutHtml(json.redirectDataHtml);
         return;
       }
       setMsg("Checkout is not ready yet.");
@@ -241,7 +243,7 @@ function BillingCheckoutInner() {
               disabled={loading}
               className="rounded-lg bg-fuchsia-600 px-4 py-2 text-sm font-semibold disabled:opacity-60"
             >
-              {loading ? "Preparing checkout..." : "Continue to checkout"}
+              {loading ? "Preparing checkout..." : checkoutHtml ? "Reload secure checkout" : "Load secure checkout"}
             </button>
           )}
           <Link href="/" className="rounded-lg border border-white/10 px-4 py-2 text-sm text-white/75 hover:bg-white/5">
@@ -249,9 +251,26 @@ function BillingCheckoutInner() {
           </Link>
         </div>
 
-        <div className="mt-6 border-t border-white/10 pt-4 text-xs text-white/45">
-          Hosted checkout will not open until the payment-provider credentials and catalog IDs are configured.
-        </div>
+        {checkoutHtml ? (
+          <div className="mt-6 space-y-3 border-t border-white/10 pt-4">
+            <div className="text-xs uppercase tracking-[0.22em] text-white/45">PowerTranz payment panel</div>
+            <div className="border border-white/10 bg-black/20 p-2">
+              <iframe
+                title="PowerTranz Hosted Payment Page"
+                srcDoc={checkoutHtml}
+                className="h-[720px] w-full bg-white"
+              />
+            </div>
+            <div className="text-xs text-white/45">
+              Complete payment inside the secure panel. Nightlife Flyers will finish the transaction and update your
+              account when PowerTranz returns to the callback.
+            </div>
+          </div>
+        ) : (
+          <div className="mt-6 border-t border-white/10 pt-4 text-xs text-white/45">
+            PowerTranz checkout will load inside this page once the hosted page credentials and callback settings are configured.
+          </div>
+        )}
       </div>
     </main>
   );

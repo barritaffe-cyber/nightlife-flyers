@@ -5,12 +5,28 @@ create table if not exists profiles (
   email text,
   status text default 'trial',
   current_period_end timestamptz,
-  billing_provider text default 'paddle',
+  billing_provider text default 'powertranz',
   plan text default 'monthly',
-  paddle_customer_id text,
-  paddle_subscription_id text,
+  powertranz_transaction_id text,
+  powertranz_pan_token text,
+  powertranz_order_id text,
   generation_used integer not null default 0,
   generation_cycle_end timestamptz,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create table if not exists billing_checkouts (
+  id uuid primary key default gen_random_uuid(),
+  email text not null,
+  selection jsonb not null,
+  spi_token text,
+  transaction_identifier text not null,
+  order_identifier text not null,
+  powertranz_transaction_id text,
+  powertranz_pan_token text,
+  status text not null default 'initiated',
+  expires_at timestamptz not null,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -27,8 +43,22 @@ create table if not exists devices (
 
 alter table profiles add column if not exists generation_used integer not null default 0;
 alter table profiles add column if not exists generation_cycle_end timestamptz;
-alter table profiles add column if not exists paddle_customer_id text;
-alter table profiles add column if not exists paddle_subscription_id text;
+alter table profiles add column if not exists powertranz_transaction_id text;
+alter table profiles add column if not exists powertranz_pan_token text;
+alter table profiles add column if not exists powertranz_order_id text;
+alter table profiles alter column billing_provider set default 'powertranz';
+
+alter table billing_checkouts add column if not exists email text;
+alter table billing_checkouts add column if not exists selection jsonb;
+alter table billing_checkouts add column if not exists spi_token text;
+alter table billing_checkouts add column if not exists transaction_identifier text;
+alter table billing_checkouts add column if not exists order_identifier text;
+alter table billing_checkouts add column if not exists powertranz_transaction_id text;
+alter table billing_checkouts add column if not exists powertranz_pan_token text;
+alter table billing_checkouts add column if not exists status text default 'initiated';
+alter table billing_checkouts add column if not exists expires_at timestamptz;
+alter table billing_checkouts add column if not exists created_at timestamptz default now();
+alter table billing_checkouts add column if not exists updated_at timestamptz default now();
 
 alter table profiles enable row level security;
 alter table devices enable row level security;

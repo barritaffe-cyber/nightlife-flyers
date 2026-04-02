@@ -2,110 +2,166 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../lib/supabase/admin";
 import { applyBillingSelectionToProfile, applyDirectBillingUpdate } from "../../../../lib/billing/entitlements";
 import {
-  extractPaddlePriceIds,
-  getPaddleWebhookState,
-  mapPaddleSubscriptionStatus,
-  readPaddleUserEmail,
-  resolveSelectionFromPaddleCustomData,
-  resolveSelectionFromPaddlePriceIds,
-  verifyPaddleWebhookSignature,
+  completePowerTranzPayment,
+  getBillingProviderState,
+  getPendingPowerTranzCheckout,
+  markPowerTranzCheckoutStatus,
 } from "../../../../lib/billing/provider";
+import { resolveBillingSelection } from "../../../../lib/billing/catalog";
 
 export const runtime = "nodejs";
 
-type PaddleWebhookEvent = {
-  event_type?: string;
-  occurred_at?: string;
-  data?: {
-    id?: string;
-    status?: string;
-    customer_id?: string | null;
-    subscription_id?: string | null;
-    custom_data?: Record<string, unknown> | null;
-    items?: unknown;
-    billed_at?: string | null;
-    next_billed_at?: string | null;
-    canceled_at?: string | null;
-    current_billing_period?: {
-      starts_at?: string | null;
-      ends_at?: string | null;
-    } | null;
-  } | null;
-};
-
-async function findProfileEmailFromCustomerId(customerId: string | null | undefined): Promise<string | null> {
-  if (!customerId) {
-    return null;
-  }
-
-  const admin = supabaseAdmin();
-  const { data, error } = await admin
-    .from("profiles")
-    .select("email")
-    .eq("paddle_customer_id", customerId)
-    .limit(1)
-    .maybeSingle();
-
-  if (error || !data?.email) {
-    return null;
-  }
-
-  return data.email;
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
-function resolveWebhookSelection(event: PaddleWebhookEvent): ReturnType<typeof resolveSelectionFromPaddleCustomData> {
-  const customSelection = resolveSelectionFromPaddleCustomData(event.data?.custom_data);
-  if (customSelection) {
-    return customSelection;
-  }
-  return resolveSelectionFromPaddlePriceIds(extractPaddlePriceIds(event.data?.items));
+function getString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-function resolveWebhookPeriodEnd(event: PaddleWebhookEvent): string {
-  const direct =
-    event.data?.current_billing_period?.ends_at ||
-    event.data?.next_billed_at ||
-    event.data?.canceled_at ||
-    event.data?.billed_at ||
-    event.occurred_at;
+function renderBillingCallbackPage(args: {
+  title: string;
+  message: string;
+  redirectTo?: string;
+  actionLabel?: string;
+}) {
+  const { title, message, redirectTo, actionLabel = "Return to billing" } = args;
+  const safeTitle = title.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const safeMessage = message.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const safeRedirect = redirectTo ? redirectTo.replace(/"/g, "&quot;") : "";
+  const html = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${safeTitle}</title>
+    <style>
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0a0a0a; color: #fff; font-family: ui-sans-serif, system-ui, sans-serif; }
+      .card { width: min(92vw, 420px); border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.04); padding: 24px; }
+      h1 { margin: 0 0 12px; font-size: 22px; }
+      p { margin: 0; color: rgba(255,255,255,.72); line-height: 1.5; }
+      a { display: inline-block; margin-top: 18px; padding: 10px 14px; color: #fff; background: rgba(255,255,255,.1); text-decoration: none; border: 1px solid rgba(255,255,255,.12); }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>${safeTitle}</h1>
+      <p>${safeMessage}</p>
+      ${redirectTo ? `<a href="${safeRedirect}">${actionLabel}</a>` : ""}
+    </div>
+    ${
+      redirectTo
+        ? `<script>
+      (function () {
+        var target = ${JSON.stringify(redirectTo)};
+        try {
+          if (window.top && window.top !== window) {
+            window.top.location.href = target;
+            return;
+          }
+        } catch (_) {}
+        window.location.href = target;
+      })();
+    </script>`
+        : ""
+    }
+  </body>
+</html>`;
 
-  const parsed = direct ? new Date(direct) : new Date();
-  if (Number.isNaN(parsed.getTime())) {
-    return new Date().toISOString();
-  }
-  return parsed.toISOString();
+  return new Response(html, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store",
+    },
+  });
 }
 
-function resolveOfferActivationDate(event: PaddleWebhookEvent): Date {
-  const raw = event.data?.billed_at || event.occurred_at;
-  const parsed = raw ? new Date(raw) : new Date();
-  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+async function parseBody(req: Request) {
+  const contentType = String(req.headers.get("content-type") || "").toLowerCase();
+  if (contentType.includes("application/json")) {
+    return (await req.json().catch(() => ({}))) as Record<string, unknown>;
+  }
+  if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
+    const form = await req.formData().catch(() => null);
+    if (!form) {
+      return {};
+    }
+    return Object.fromEntries(form.entries());
+  }
+
+  const text = await req.text().catch(() => "");
+  if (!text) {
+    return {};
+  }
+  try {
+    return JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
+function resolveCallbackCode(payload: Record<string, unknown>) {
+  return (
+    getString(payload.IsoResponseCode) ||
+    getString(payload.isoResponseCode) ||
+    getString(payload.ResponseCode) ||
+    getString(payload.responseCode)
+  );
+}
+
+function resolveCallbackToken(payload: Record<string, unknown>) {
+  return getString(payload.SpiToken) || getString(payload.spiToken);
+}
+
+function resolvePaymentApproved(payload: Record<string, unknown>) {
+  if (typeof payload.Approved === "boolean") return payload.Approved;
+  if (typeof payload.approved === "boolean") return payload.approved;
+  return null;
+}
+
+function resolvePaymentString(payload: Record<string, unknown>, ...keys: string[]) {
+  for (const key of keys) {
+    const value = getString(payload[key]);
+    if (value) {
+      return value;
+    }
+  }
+  return null;
+}
+
+export async function GET(req: Request) {
+  return POST(req);
 }
 
 export async function POST(req: Request) {
   try {
     const adminSecret = req.headers.get("x-admin-secret") || "";
-    const rawBody = await req.text();
-    const body = rawBody ? JSON.parse(rawBody) : {};
+    const body = await parseBody(req);
+    const url = new URL(req.url);
     const admin = supabaseAdmin();
 
     if (process.env.ADMIN_SECRET && adminSecret === process.env.ADMIN_SECRET) {
-      if (body?.email && (body?.offer || body?.plan)) {
-        const selection = resolveSelectionFromPaddleCustomData(body);
+      if (isPlainObject(body) && getString(body.email) && (getString(body.offer) || getString(body.plan))) {
+        const selection = resolveBillingSelection({
+          plan: getString(body.plan),
+          billing: getString(body.billing),
+          offer: getString(body.offer),
+        });
         if (!selection) {
           return NextResponse.json({ error: "Invalid billing selection." }, { status: 400 });
         }
-        const result = await applyBillingSelectionToProfile(admin, body.email, selection);
+        const result = await applyBillingSelectionToProfile(admin, getString(body.email) as string, selection);
         return NextResponse.json({ ok: true, mode: "admin-selection", ...result });
       }
 
-      if (body?.email && body?.status && body?.current_period_end) {
+      if (isPlainObject(body) && getString(body.email) && getString(body.status) && getString(body.current_period_end)) {
         await applyDirectBillingUpdate(admin, {
-          email: body.email,
-          status: body.status,
-          plan: body.plan,
-          current_period_end: body.current_period_end,
-          billing_provider: body.billing_provider || "manual",
+          email: getString(body.email) as string,
+          status: getString(body.status) as string,
+          plan: getString(body.plan),
+          current_period_end: getString(body.current_period_end) as string,
+          billing_provider: getString(body.billing_provider) || "manual",
         });
         return NextResponse.json({ ok: true, mode: "admin-direct" });
       }
@@ -116,57 +172,146 @@ export async function POST(req: Request) {
       );
     }
 
-    const providerState = getPaddleWebhookState();
+    const providerState = getBillingProviderState();
     if (!providerState.configured) {
-      return NextResponse.json(
-        {
-          error: "Paddle webhook is not configured yet.",
-          missing: providerState.missing,
-        },
-        { status: 503 }
-      );
-    }
-
-    const signatureHeader = req.headers.get("paddle-signature");
-    if (!verifyPaddleWebhookSignature(rawBody, signatureHeader)) {
-      return NextResponse.json({ error: "Invalid Paddle signature." }, { status: 401 });
-    }
-
-    const event = body as PaddleWebhookEvent;
-    const eventType = String(event.event_type || "");
-    const selection = resolveWebhookSelection(event);
-    const email =
-      readPaddleUserEmail(event.data?.custom_data) ||
-      (await findProfileEmailFromCustomerId(event.data?.customer_id));
-
-    if (!eventType || !email) {
-      return NextResponse.json({ ok: true, ignored: "missing_context" });
-    }
-
-    if (eventType === "transaction.completed" && selection?.kind === "offer") {
-      const result = await applyBillingSelectionToProfile(admin, email, selection, {
-        from: resolveOfferActivationDate(event),
-        paddleCustomerId: event.data?.customer_id || null,
-        paddleSubscriptionId: event.data?.subscription_id || null,
+      return renderBillingCallbackPage({
+        title: "Payment setup incomplete",
+        message: `Missing PowerTranz configuration: ${providerState.missing.join(", ")}`,
       });
-      return NextResponse.json({ ok: true, mode: "offer", ...result });
     }
 
-    if (eventType.startsWith("subscription.") && selection?.kind === "plan") {
-      await applyDirectBillingUpdate(admin, {
-        email,
-        status: mapPaddleSubscriptionStatus(event.data?.status),
-        plan: selection.plan,
-        current_period_end: resolveWebhookPeriodEnd(event),
-        billing_provider: "paddle",
-        paddle_customer_id: event.data?.customer_id || null,
-        paddle_subscription_id: event.data?.id || null,
+    const checkoutId = url.searchParams.get("checkout");
+    if (!checkoutId) {
+      return renderBillingCallbackPage({
+        title: "Checkout session not found",
+        message: "The PowerTranz callback did not include a checkout session identifier.",
       });
-      return NextResponse.json({ ok: true, mode: "subscription" });
     }
 
-    return NextResponse.json({ ok: true, ignored: eventType || "unknown_event" });
+    const checkout = await getPendingPowerTranzCheckout(checkoutId);
+    if (!checkout) {
+      return renderBillingCallbackPage({
+        title: "Checkout session missing",
+        message: "The saved PowerTranz checkout session could not be found.",
+      });
+    }
+
+    if (checkout.status === "completed") {
+      return renderBillingCallbackPage({
+        title: "Payment received",
+        message: "This PowerTranz checkout was already completed.",
+        redirectTo: "/billing/success",
+        actionLabel: "Open success page",
+      });
+    }
+
+    const expiresAt = new Date(checkout.expires_at);
+    if (Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() < Date.now()) {
+      await markPowerTranzCheckoutStatus(checkout.id, "expired");
+      return renderBillingCallbackPage({
+        title: "Checkout expired",
+        message: "The PowerTranz checkout session expired before payment completion.",
+        redirectTo: "/pricing",
+        actionLabel: "Return to pricing",
+      });
+    }
+
+    const callbackSpiToken = isPlainObject(body) ? resolveCallbackToken(body) : null;
+    const effectiveSpiToken = callbackSpiToken || checkout.spi_token;
+
+    if (!effectiveSpiToken) {
+      await markPowerTranzCheckoutStatus(checkout.id, "invalid");
+      return renderBillingCallbackPage({
+        title: "Checkout not ready",
+        message: "The PowerTranz checkout session is missing its payment token.",
+        redirectTo: "/pricing",
+        actionLabel: "Return to pricing",
+      });
+    }
+
+    const callbackCode = resolveCallbackCode(body);
+    if (callbackCode && !["HP0", "3D0", "3D1"].includes(callbackCode)) {
+      await markPowerTranzCheckoutStatus(checkout.id, "failed");
+      return renderBillingCallbackPage({
+        title: "Payment was not completed",
+        message: `PowerTranz returned ${callbackCode} before payment completion.`,
+        redirectTo: "/pricing",
+        actionLabel: "Return to pricing",
+      });
+    }
+
+    const payment = await completePowerTranzPayment(effectiveSpiToken);
+    const paymentPayload = payment as unknown as Record<string, unknown>;
+    const paymentApproved = resolvePaymentApproved(paymentPayload) ?? false;
+    const paymentTransactionId = resolvePaymentString(
+      paymentPayload,
+      "TransactionIdentifier",
+      "transactionIdentifier"
+    );
+    const paymentPanToken = resolvePaymentString(paymentPayload, "PanToken", "panToken");
+    const paymentOrderIdentifier = resolvePaymentString(
+      paymentPayload,
+      "OrderIdentifier",
+      "orderIdentifier"
+    );
+    const paymentMessage =
+      resolvePaymentString(paymentPayload, "ResponseMessage", "responseMessage", "IsoResponseCode", "isoResponseCode") ||
+      ((payment as { Errors?: Array<{ Message?: string | null }>; errors?: Array<{ message?: string | null }> })
+        .Errors?.[0]?.Message ??
+        (payment as { errors?: Array<{ message?: string | null }> }).errors?.[0]?.message) ||
+      "PowerTranz did not approve the payment.";
+
+    if (!paymentApproved) {
+      await markPowerTranzCheckoutStatus(checkout.id, "failed", {
+        powertranz_transaction_id: paymentTransactionId || null,
+        powertranz_pan_token: paymentPanToken || null,
+      });
+      return renderBillingCallbackPage({
+        title: "Payment declined",
+        message: paymentMessage,
+        redirectTo: "/pricing",
+        actionLabel: "Return to pricing",
+      });
+    }
+
+    const selection = resolveBillingSelection(isPlainObject(checkout.selection) ? checkout.selection : {});
+    if (!selection) {
+      await markPowerTranzCheckoutStatus(checkout.id, "failed", {
+        powertranz_transaction_id: payment.TransactionIdentifier || null,
+        powertranz_pan_token: payment.PanToken || null,
+      });
+      return renderBillingCallbackPage({
+        title: "Billing selection missing",
+        message: "The checkout session no longer contains a valid billing selection.",
+        redirectTo: "/pricing",
+        actionLabel: "Return to pricing",
+      });
+    }
+
+    await applyBillingSelectionToProfile(admin, checkout.email, selection, {
+      from: new Date(),
+      providerTransactionId: paymentTransactionId || checkout.transaction_identifier,
+      panToken: paymentPanToken || null,
+      orderIdentifier: paymentOrderIdentifier || checkout.order_identifier,
+    });
+
+    await markPowerTranzCheckoutStatus(checkout.id, "completed", {
+      powertranz_transaction_id: paymentTransactionId || null,
+      powertranz_pan_token: paymentPanToken || null,
+    });
+
+    return renderBillingCallbackPage({
+      title: "Payment received",
+      message: "Your PowerTranz payment was approved and your Nightlife Flyers access has been updated.",
+      redirectTo: "/billing/success",
+      actionLabel: "Open success page",
+    });
   } catch {
-    return NextResponse.json({ error: "Webhook handling failed." }, { status: 500 });
+    return renderBillingCallbackPage({
+      title: "Payment processing failed",
+      message: "Nightlife Flyers could not complete the PowerTranz billing callback.",
+      redirectTo: "/pricing",
+      actionLabel: "Return to pricing",
+    });
   }
 }

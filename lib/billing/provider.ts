@@ -1,21 +1,14 @@
-import { buildBillingCheckoutHref, type BillingSelection } from "./catalog";
-import {
-  extractPaddlePriceIds,
-  mapPaddleSubscriptionStatus,
-  readPaddleUserEmail,
-  resolveSelectionFromPaddleCustomData,
-  resolveSelectionFromPaddlePriceIds,
-  verifyPaddleWebhookSignature,
-} from "./paddle-helpers";
+import { randomUUID } from "node:crypto";
+import { buildBillingCheckoutHref, getBillingCatalogItem, type BillingSelection } from "./catalog";
 import { supabaseAdmin } from "../supabase/admin";
 
-export type BillingProvider = "paddle";
+export type BillingProvider = "powertranz";
 
 export type BillingProviderState = {
   provider: BillingProvider;
   configured: boolean;
   missing: string[];
-  productEnv: Record<string, string>;
+  configEnv: Record<string, string>;
   apiBase: string;
 };
 
@@ -27,186 +20,281 @@ type BillingProviderFailure = {
   context?: Record<string, unknown>;
 };
 
-type BillingProviderSuccess = {
+type BillingProviderCheckoutSuccess = {
   ok: true;
-  url: string;
+  mode: "iframe";
+  checkoutId: string;
+  redirectDataHtml: string;
 };
 
-type PaddleApiListResponse<T> = {
-  data: T[];
-};
+type BillingProviderSuccess = BillingProviderCheckoutSuccess;
 
-type PaddleApiEntityResponse<T> = {
-  data: T;
-};
-
-type PaddleTransactionResponse = {
+type PowerTranzCheckoutRow = {
   id: string;
-  checkout?: {
-    url?: string | null;
-  } | null;
+  email: string;
+  selection: BillingSelection | null;
+  spi_token: string | null;
+  transaction_identifier: string;
+  order_identifier: string;
+  status: string;
+  expires_at: string;
 };
 
-type PaddlePortalSessionResponse = {
-  urls?: {
-    general?: {
-      overview?: string | null;
-    } | null;
-  } | null;
+type PowerTranzFinancialResponse = {
+  Approved?: boolean;
+  AuthorizationCode?: string | null;
+  CurrencyCode?: string | null;
+  IsoResponseCode?: string | null;
+  OrderIdentifier?: string | null;
+  PanToken?: string | null;
+  RedirectData?: string | null;
+  ResponseMessage?: string | null;
+  RRN?: string | null;
+  SpiToken?: string | null;
+  TotalAmount?: number | null;
+  TransactionIdentifier?: string | null;
+  TransactionType?: number | null;
+  Errors?: Array<{ Code?: string | null; Message?: string | null }> | null;
+  approved?: boolean;
+  authorizationCode?: string | null;
+  currencyCode?: string | null;
+  isoResponseCode?: string | null;
+  orderIdentifier?: string | null;
+  panToken?: string | null;
+  redirectData?: string | null;
+  responseMessage?: string | null;
+  rrn?: string | null;
+  spiToken?: string | null;
+  totalAmount?: number | null;
+  transactionIdentifier?: string | null;
+  transactionType?: number | null;
+  errors?: Array<{ code?: string | null; message?: string | null }> | null;
 };
 
-type PaddleProfileRow = {
-  paddle_customer_id: string | null;
-  paddle_subscription_id: string | null;
-};
-
-const PADDLE_API_VERSION = "1";
-
-const PRICE_ENV_KEYS = {
-  creatorMonthly: "PADDLE_PRICE_CREATOR_MONTHLY",
-  creatorYearly: "PADDLE_PRICE_CREATOR_YEARLY",
-  studioMonthly: "PADDLE_PRICE_STUDIO_MONTHLY",
-  studioYearly: "PADDLE_PRICE_STUDIO_YEARLY",
-  nightPass: "PADDLE_PRICE_NIGHT_PASS",
-  weekendPass: "PADDLE_PRICE_WEEKEND_PASS",
+const CONFIG_ENV_KEYS = {
+  powerTranzId: "POWERTRANZ_ID",
+  powerTranzPassword: "POWERTRANZ_PASSWORD",
+  environment: "POWERTRANZ_ENVIRONMENT",
+  pageSet: "POWERTRANZ_PAGESET",
+  pageName: "POWERTRANZ_PAGENAME",
+  currencyCode: "POWERTRANZ_CURRENCY_CODE",
 } as const;
 
-class PaddleApiError extends Error {
+class PowerTranzApiError extends Error {
   status: number;
   details: unknown;
 
   constructor(message: string, status: number, details?: unknown) {
     super(message);
-    this.name = "PaddleApiError";
+    this.name = "PowerTranzApiError";
     this.status = status;
     this.details = details;
   }
 }
 
-function getPaddleApiKey(): string {
-  return String(process.env.PADDLE_API_KEY || "").trim();
+function getPowerTranzId(): string {
+  return String(process.env.POWERTRANZ_ID || "").trim();
 }
 
-function getPaddleWebhookSecret(): string {
-  return String(process.env.PADDLE_WEBHOOK_SECRET || "").trim();
+function getPowerTranzPassword(): string {
+  return String(process.env.POWERTRANZ_PASSWORD || "").trim();
 }
 
-function getProductEnv() {
+function getPowerTranzEnvironment(): string {
+  const raw = String(process.env.POWERTRANZ_ENVIRONMENT || "").trim().toLowerCase();
+  if (raw === "stag") {
+    return "staging";
+  }
+  if (raw === "prod" || raw === "production" || raw === "live") {
+    return "api";
+  }
+  return raw;
+}
+
+function getPowerTranzPageSet(): string {
+  return String(process.env.POWERTRANZ_PAGESET || "").trim();
+}
+
+function getPowerTranzPageName(): string {
+  return String(process.env.POWERTRANZ_PAGENAME || "").trim();
+}
+
+function getPowerTranzCurrencyCode(): string {
+  return String(process.env.POWERTRANZ_CURRENCY_CODE || "").trim();
+}
+
+function getRecurringMode(): "managed" | "merchant" {
+  return String(process.env.POWERTRANZ_RECURRING_MODE || "").trim().toLowerCase() === "merchant"
+    ? "merchant"
+    : "managed";
+}
+
+function getConfigEnv() {
   return {
-    creatorMonthly: process.env.PADDLE_PRICE_CREATOR_MONTHLY || "",
-    creatorYearly: process.env.PADDLE_PRICE_CREATOR_YEARLY || "",
-    studioMonthly: process.env.PADDLE_PRICE_STUDIO_MONTHLY || "",
-    studioYearly: process.env.PADDLE_PRICE_STUDIO_YEARLY || "",
-    nightPass: process.env.PADDLE_PRICE_NIGHT_PASS || "",
-    weekendPass: process.env.PADDLE_PRICE_WEEKEND_PASS || "",
+    powerTranzId: process.env.POWERTRANZ_ID || "",
+    powerTranzPassword: process.env.POWERTRANZ_PASSWORD || "",
+    environment: process.env.POWERTRANZ_ENVIRONMENT || "",
+    pageSet: process.env.POWERTRANZ_PAGESET || "",
+    pageName: process.env.POWERTRANZ_PAGENAME || "",
+    currencyCode: process.env.POWERTRANZ_CURRENCY_CODE || "",
   };
 }
 
-function requiredPriceEnvKeys() {
-  return Object.values(PRICE_ENV_KEYS);
+function requiredConfigEnvKeys() {
+  return Object.values(CONFIG_ENV_KEYS);
 }
 
-function buildProviderState(options?: {
-  requireApiKey?: boolean;
-  requireWebhookSecret?: boolean;
-  requirePrices?: boolean;
-}): BillingProviderState {
-  const apiKey = getPaddleApiKey();
-  const productEnv = getProductEnv();
+function getPowerTranzApiBase(environment = getPowerTranzEnvironment()): string {
+  return environment ? `https://${environment}.ptranz.com/Api` : "";
+}
+
+function buildProviderState(): BillingProviderState {
+  const configEnv = getConfigEnv();
   const missing: string[] = [];
 
-  if (options?.requireApiKey !== false && !apiKey) {
-    missing.push("PADDLE_API_KEY");
-  }
-  if (options?.requireWebhookSecret && !getPaddleWebhookSecret()) {
-    missing.push("PADDLE_WEBHOOK_SECRET");
-  }
-  if (options?.requirePrices) {
-    for (const key of requiredPriceEnvKeys()) {
-      if (!process.env[key]) {
-        missing.push(key);
-      }
+  for (const key of requiredConfigEnvKeys()) {
+    if (!process.env[key]) {
+      missing.push(key);
     }
   }
 
   return {
-    provider: "paddle",
+    provider: "powertranz",
     configured: missing.length === 0,
     missing,
-    productEnv,
-    apiBase: getPaddleApiBase(apiKey),
+    configEnv,
+    apiBase: getPowerTranzApiBase(),
   };
 }
 
 export function getBillingProviderState(): BillingProviderState {
-  return buildProviderState({ requireApiKey: true, requireWebhookSecret: true, requirePrices: true });
+  return buildProviderState();
 }
 
-export function getPaddleWebhookState(): BillingProviderState {
-  return buildProviderState({ requireApiKey: false, requireWebhookSecret: true });
+function buildOrderIdentifier(selection: BillingSelection) {
+  const tag = selection.kind === "offer" ? selection.offer : `${selection.plan}-${selection.billing}`;
+  return `NLF-${tag}-${Date.now()}-${randomUUID().slice(0, 8)}`;
 }
 
-export function getPaddleApiBase(apiKey = getPaddleApiKey()): string {
-  return apiKey.includes("_sdbx_") ? "https://sandbox-api.paddle.com" : "https://api.paddle.com";
+function formatRecurringDate(date: Date) {
+  const year = date.getUTCFullYear();
+  const month = `${date.getUTCMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getUTCDate()}`.padStart(2, "0");
+  return `${year}${month}${day}`;
 }
 
-function selectionToPriceId(selection: BillingSelection): string {
-  const productEnv = getProductEnv();
-  if (selection.kind === "offer") {
-    return selection.offer === "night-pass" ? productEnv.nightPass : productEnv.weekendPass;
+function buildRecurringData(selection: BillingSelection) {
+  if (selection.kind !== "plan") {
+    return {};
   }
-  if (selection.plan === "creator") {
-    return selection.billing === "monthly" ? productEnv.creatorMonthly : productEnv.creatorYearly;
+
+  const startDate = new Date();
+  const recurringFrequency = selection.billing === "yearly" ? "Y" : "M";
+
+  return {
+    RecurringInitial: true,
+    Tokenize: true,
+    ExtendedData: {
+      Recurring: {
+        Frequency: recurringFrequency,
+        Managed: getRecurringMode() === "managed",
+        StartDate: formatRecurringDate(startDate),
+      },
+    },
+  };
+}
+
+function buildMerchantResponseUrl(siteUrl: string, checkoutId: string) {
+  const base = siteUrl.replace(/\/+$/, "");
+  return `${base}/api/billing/webhook?checkout=${encodeURIComponent(checkoutId)}`;
+}
+
+function getResponseString(response: PowerTranzFinancialResponse, ...keys: Array<keyof PowerTranzFinancialResponse>) {
+  for (const key of keys) {
+    const value = response[key];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
   }
-  return selection.billing === "monthly" ? productEnv.studioMonthly : productEnv.studioYearly;
+  return null;
 }
 
-function buildSelectionCustomData(selection: BillingSelection, customerEmail: string) {
-  return selection.kind === "offer"
-    ? {
-        app: "nightlife-flyers",
-        user_email: customerEmail,
-        selection_kind: "offer",
-        offer: selection.offer,
-      }
-    : {
-        app: "nightlife-flyers",
-        user_email: customerEmail,
-        selection_kind: "plan",
-        plan: selection.plan,
-        billing: selection.billing,
-      };
+function buildSalePayload(
+  selection: BillingSelection,
+  customerEmail: string,
+  checkoutId: string,
+  siteUrl: string
+) {
+  const item = getBillingCatalogItem(selection);
+  const transactionIdentifier = randomUUID();
+  const orderIdentifier = buildOrderIdentifier(selection);
+  const merchantResponseUrl = buildMerchantResponseUrl(siteUrl, checkoutId);
+  const recurring = buildRecurringData(selection);
+  const hostedPage = {
+    PAGESET: getPowerTranzPageSet(),
+    PAGENAME: getPowerTranzPageName(),
+  };
+  const threeDSecure = {
+    ChallengeIndicator: "01",
+    ChallengeWindowSize: 4,
+  };
+  const extendedData = {
+    // PowerTranz samples are inconsistent about key casing, so keep both forms.
+    HOSTEDPAGE: hostedPage,
+    HostedPage: {
+      PageSet: hostedPage.PAGESET,
+      PageName: hostedPage.PAGENAME,
+    },
+    MERCHANTRESPONSEURL: merchantResponseUrl,
+    MerchantResponseUrl: merchantResponseUrl,
+    ThreeDSecure: threeDSecure,
+    threeDSecure: {
+      challengeIndicator: "01",
+      challengeWindowSize: 4,
+    },
+    ...(recurring.ExtendedData || {}),
+  };
+
+  return {
+    transactionIdentifier,
+    orderIdentifier,
+    payload: {
+      CurrencyCode: getPowerTranzCurrencyCode(),
+      ExtendedData: extendedData,
+      OrderIdentifier: orderIdentifier,
+      Source: {},
+      source: {},
+      ThreeDSecure: true,
+      TotalAmount: item.price,
+      TransactionIdentifier: transactionIdentifier,
+      ...(customerEmail ? { BillingAddress: { EmailAddress: customerEmail } } : {}),
+      ...(recurring.RecurringInitial ? { RecurringInitial: true } : {}),
+      ...(recurring.Tokenize ? { Tokenize: true } : {}),
+    },
+  };
 }
 
-async function paddleRequest<T>(
+async function powerTranzRequest<T>(
   path: string,
   options?: {
     method?: "GET" | "POST";
-    body?: Record<string, unknown>;
-    query?: Record<string, string | undefined>;
+    body?: unknown;
   }
 ): Promise<T> {
-  const apiKey = getPaddleApiKey();
-  if (!apiKey) {
-    throw new PaddleApiError("Paddle is not configured yet.", 503, { missing: ["PADDLE_API_KEY"] });
+  const state = buildProviderState();
+  if (!state.configured) {
+    throw new PowerTranzApiError("PowerTranz is not configured yet.", 503, { missing: state.missing });
   }
 
-  const url = new URL(path, `${getPaddleApiBase(apiKey)}/`);
-  for (const [key, value] of Object.entries(options?.query || {})) {
-    if (value) {
-      url.searchParams.set(key, value);
-    }
-  }
-
-  const res = await fetch(url, {
+  const res = await fetch(new URL(path, `${state.apiBase}/`), {
     method: options?.method || "GET",
     headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
       Accept: "application/json",
-      "Paddle-Version": PADDLE_API_VERSION,
+      "Content-Type": "application/json",
+      "PowerTranz-PowerTranzId": getPowerTranzId(),
+      "PowerTranz-PowerTranzPassword": getPowerTranzPassword(),
     },
-    ...(options?.body ? { body: JSON.stringify(options.body) } : {}),
+    ...(typeof options?.body === "undefined" ? {} : { body: JSON.stringify(options.body) }),
     cache: "no-store",
   });
 
@@ -215,24 +303,27 @@ async function paddleRequest<T>(
 
   if (!res.ok) {
     const errorMessage =
-      json?.error?.detail ||
-      json?.error?.message ||
-      json?.errors?.[0]?.detail ||
+      json?.ResponseMessage ||
+      json?.responseMessage ||
+      json?.Errors?.[0]?.Message ||
       json?.errors?.[0]?.message ||
-      "Paddle request failed.";
-    throw new PaddleApiError(errorMessage, res.status, json);
+      json?.error?.message ||
+      "PowerTranz request failed.";
+    throw new PowerTranzApiError(errorMessage, res.status, json);
   }
 
   return json as T;
 }
 
 function toFailure(error: unknown, fallbackContext?: Record<string, unknown>): BillingProviderFailure {
-  if (error instanceof PaddleApiError) {
+  if (error instanceof PowerTranzApiError) {
     return {
       ok: false,
       code: error.status,
       error: error.message,
-      missing: [],
+      missing: Array.isArray((error.details as { missing?: unknown })?.missing)
+        ? (((error.details as { missing?: unknown }).missing as string[]) || [])
+        : [],
       ...(fallbackContext ? { context: fallbackContext } : {}),
     };
   }
@@ -240,67 +331,92 @@ function toFailure(error: unknown, fallbackContext?: Record<string, unknown>): B
   return {
     ok: false,
     code: 500,
-    error: "Paddle request failed.",
+    error: "PowerTranz request failed.",
     missing: [],
     ...(fallbackContext ? { context: fallbackContext } : {}),
   };
 }
 
-export {
-  extractPaddlePriceIds,
-  mapPaddleSubscriptionStatus,
-  readPaddleUserEmail,
-  resolveSelectionFromPaddleCustomData,
-  resolveSelectionFromPaddlePriceIds,
-  verifyPaddleWebhookSignature,
-};
-
 export async function createProviderCheckout(
   selection: BillingSelection,
-  customerEmail: string
+  customerEmail: string,
+  options?: { siteUrl?: string }
 ): Promise<BillingProviderFailure | BillingProviderSuccess> {
-  const providerState = buildProviderState({ requirePrices: true });
+  const providerState = buildProviderState();
   if (!providerState.configured) {
     return {
       ok: false,
       code: 503,
-      error: "Paddle checkout is not configured yet.",
+      error: "PowerTranz checkout is not configured yet.",
       missing: providerState.missing,
     };
   }
 
-  const priceId = selectionToPriceId(selection);
-  if (!priceId) {
+  const siteUrl = String(options?.siteUrl || process.env.NEXT_PUBLIC_SITE_URL || "").trim();
+  if (!siteUrl) {
     return {
       ok: false,
       code: 503,
-      error: "Missing Paddle price ID for this billing selection.",
+      error: "Missing site URL for PowerTranz callback handling.",
+      missing: ["NEXT_PUBLIC_SITE_URL"],
+    };
+  }
+
+  const checkoutId = randomUUID();
+  const admin = supabaseAdmin();
+  const { transactionIdentifier, orderIdentifier, payload } = buildSalePayload(
+    selection,
+    customerEmail,
+    checkoutId,
+    siteUrl
+  );
+
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+  const baseCheckoutRow = {
+    id: checkoutId,
+    email: customerEmail,
+    selection,
+    transaction_identifier: transactionIdentifier,
+    order_identifier: orderIdentifier,
+    status: "initiated",
+    expires_at: expiresAt,
+  };
+
+  const { error: insertError } = await admin.from("billing_checkouts").insert({
+    ...baseCheckoutRow,
+    spi_token: null,
+  });
+  if (insertError) {
+    return {
+      ok: false,
+      code: 500,
+      error: "Unable to prepare the PowerTranz checkout session.",
       missing: [],
-      context: {
-        selection,
-      },
     };
   }
 
   try {
-    const response = await paddleRequest<PaddleApiEntityResponse<PaddleTransactionResponse>>("/transactions", {
+    const response = await powerTranzRequest<PowerTranzFinancialResponse>("/spi/Sale", {
       method: "POST",
-      body: {
-        items: [{ price_id: priceId, quantity: 1 }],
-        collection_mode: "automatic",
-        checkout: {
-          url: process.env.NEXT_PUBLIC_SITE_URL || null,
-        },
-        custom_data: buildSelectionCustomData(selection, customerEmail),
-      },
+      body: payload,
     });
 
-    const checkoutUrl = response.data?.checkout?.url;
-    if (!checkoutUrl) {
+    const redirectData = getResponseString(response, "RedirectData", "redirectData");
+    const spiToken = getResponseString(response, "SpiToken", "spiToken");
+
+    if (!redirectData || !spiToken) {
+      await admin
+        .from("billing_checkouts")
+        .update({
+          status: "failed",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", checkoutId);
+
       return {
         ok: false,
         code: 502,
-        error: "Paddle did not return a checkout URL.",
+        error: "PowerTranz did not return hosted checkout markup.",
         missing: [],
         context: {
           selection,
@@ -310,11 +426,41 @@ export async function createProviderCheckout(
       };
     }
 
+    await admin
+      .from("billing_checkouts")
+      .update({
+        spi_token: spiToken,
+        ...(getResponseString(response, "TransactionIdentifier", "transactionIdentifier")
+          ? {
+              powertranz_transaction_id:
+                getResponseString(response, "TransactionIdentifier", "transactionIdentifier"),
+            }
+          : {}),
+        ...(getResponseString(response, "PanToken", "panToken")
+          ? {
+              powertranz_pan_token: getResponseString(response, "PanToken", "panToken"),
+            }
+          : {}),
+        status: "pending",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", checkoutId);
+
     return {
       ok: true,
-      url: checkoutUrl,
+      mode: "iframe",
+      checkoutId,
+      redirectDataHtml: redirectData,
     };
   } catch (error) {
+    await admin
+      .from("billing_checkouts")
+      .update({
+        status: "failed",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", checkoutId);
+
     return toFailure(error, {
       selection,
       customerEmail,
@@ -323,12 +469,21 @@ export async function createProviderCheckout(
   }
 }
 
-async function getProfileBillingState(email: string): Promise<PaddleProfileRow | null> {
+export async function createProviderPortal(): Promise<BillingProviderFailure> {
+  return {
+    ok: false,
+    code: 501,
+    error: "PowerTranz self-service billing portal is not available in this build.",
+    missing: [],
+  };
+}
+
+export async function getPendingPowerTranzCheckout(checkoutId: string): Promise<PowerTranzCheckoutRow | null> {
   const admin = supabaseAdmin();
   const { data, error } = await admin
-    .from("profiles")
-    .select("paddle_customer_id,paddle_subscription_id")
-    .eq("email", email)
+    .from("billing_checkouts")
+    .select("id,email,selection,spi_token,transaction_identifier,order_identifier,status,expires_at")
+    .eq("id", checkoutId)
     .limit(1)
     .maybeSingle();
 
@@ -336,79 +491,34 @@ async function getProfileBillingState(email: string): Promise<PaddleProfileRow |
     return null;
   }
 
-  return data as PaddleProfileRow;
+  return data as PowerTranzCheckoutRow;
 }
 
-async function listPortalSubscriptionIds(customerId: string, fallbackSubscriptionId: string | null): Promise<string[]> {
-  if (fallbackSubscriptionId) {
-    return [fallbackSubscriptionId];
-  }
-
-  try {
-    const response = await paddleRequest<PaddleApiListResponse<{ id: string }>>("/subscriptions", {
-      query: {
-        customer_id: customerId,
-        status: "active,trialing,past_due,paused",
-        per_page: "10",
-      },
-    });
-    return response.data.map((subscription) => subscription.id).filter(Boolean);
-  } catch {
-    return [];
-  }
+export async function markPowerTranzCheckoutStatus(
+  checkoutId: string,
+  status: string,
+  details?: Partial<{
+    powertranz_transaction_id: string | null;
+    powertranz_pan_token: string | null;
+  }>
+) {
+  const admin = supabaseAdmin();
+  await admin
+    .from("billing_checkouts")
+    .update({
+      status,
+      ...(typeof details?.powertranz_transaction_id === "string"
+        ? { powertranz_transaction_id: details.powertranz_transaction_id }
+        : {}),
+      ...(typeof details?.powertranz_pan_token === "string" ? { powertranz_pan_token: details.powertranz_pan_token } : {}),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", checkoutId);
 }
 
-export async function createProviderPortal(
-  customerEmail: string
-): Promise<BillingProviderFailure | BillingProviderSuccess> {
-  const providerState = buildProviderState({ requireApiKey: true });
-  if (!providerState.configured) {
-    return {
-      ok: false,
-      code: 503,
-      error: "Paddle portal is not configured yet.",
-      missing: providerState.missing,
-    };
-  }
-
-  const profile = await getProfileBillingState(customerEmail);
-  if (!profile?.paddle_customer_id) {
-    return {
-      ok: false,
-      code: 404,
-      error: "No Paddle customer was found for this account yet.",
-      missing: [],
-    };
-  }
-
-  try {
-    const subscriptionIds = await listPortalSubscriptionIds(
-      profile.paddle_customer_id,
-      profile.paddle_subscription_id
-    );
-    const response = await paddleRequest<PaddleApiEntityResponse<PaddlePortalSessionResponse>>(
-      `/customers/${profile.paddle_customer_id}/portal-sessions`,
-      {
-        method: "POST",
-        body: subscriptionIds.length > 0 ? { subscription_ids: subscriptionIds } : {},
-      }
-    );
-
-    const url = response.data?.urls?.general?.overview;
-    if (!url) {
-      return {
-        ok: false,
-        code: 502,
-        error: "Paddle did not return a customer portal URL.",
-        missing: [],
-      };
-    }
-
-    return {
-      ok: true,
-      url,
-    };
-  } catch (error) {
-    return toFailure(error, { customerEmail });
-  }
+export async function completePowerTranzPayment(spiToken: string) {
+  return powerTranzRequest<PowerTranzFinancialResponse>("/spi/Payment", {
+    method: "POST",
+    body: spiToken,
+  });
 }

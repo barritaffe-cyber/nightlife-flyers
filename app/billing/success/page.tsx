@@ -7,7 +7,7 @@ export default function BillingSuccessPage() {
         <div className="text-xs uppercase tracking-[0.2em] text-emerald-300">Billing</div>
         <h1 className="mt-2 text-2xl font-semibold">Payment received</h1>
         <p className="mt-3 text-sm text-white/70">
-          When live billing is connected, this page will be the return target after successful checkout.
+          Your PowerTranz payment was approved and Nightlife Flyers has updated your access.
         </p>
         <div className="mt-6 flex flex-wrap gap-2">
           <Link href="/" className="rounded-lg bg-fuchsia-600 px-4 py-2 text-sm font-semibold">
