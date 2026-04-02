@@ -19592,71 +19592,74 @@ const undoAssetPosition = React.useCallback(() => {
 ]);
 
 const mobileControlsTabs = (
-  <div
-    data-tour="mobile-tabs"
-    className="lg:hidden flex items-center justify-start gap-2 px-4 py-2 bg-neutral-950/90 border-b border-neutral-800 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-    onPointerDownCapture={(e) => {
-      const t = e.target as Element | null;
-      if (t?.closest?.('[data-mobile-float-lock="true"]')) {
-        return;
-      }
-      if (floatingAssetRef.current && floatingAssetRef.current.contains(e.target as Node)) {
-        return;
-      }
-      setFloatingAssetVisible(false);
-    }}
-  >
-    <button
-      type="button"
-      onClick={() => setMobileControlsTab("design")}
-      data-tour="mobile-text-tab"
-      data-mobile-float-lock="true"
-      className={`px-3 py-1 text-[11px] font-semibold border shrink-0 whitespace-nowrap ${
-        mobileControlsTab === "design"
-          ? "border-blue-400 text-blue-300 bg-blue-500/10"
-          : "border-neutral-700 text-neutral-300 bg-neutral-900/60"
-      }`}
+  <div className="lg:hidden flex justify-center px-3 py-2">
+    <div
+      data-tour="mobile-tabs"
+      className="flex items-center justify-start gap-1.5 overflow-x-auto border-b border-neutral-800 bg-neutral-950/90 px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      style={{ width: scaledCanvasW, maxWidth: "100%" }}
+      onPointerDownCapture={(e) => {
+        const t = e.target as Element | null;
+        if (t?.closest?.('[data-mobile-float-lock="true"]')) {
+          return;
+        }
+        if (floatingAssetRef.current && floatingAssetRef.current.contains(e.target as Node)) {
+          return;
+        }
+        setFloatingAssetVisible(false);
+      }}
     >
-      Text
-    </button>
-    <button
-      type="button"
-      onClick={() => setMobileControlsTab("assets")}
-      data-tour="mobile-design-tab"
-      data-mobile-float-lock="true"
-      className={`px-3 py-1 text-[11px] font-semibold border shrink-0 whitespace-nowrap ${
-        mobileControlsTab === "assets"
-          ? "border-blue-400 text-blue-300 bg-blue-500/10"
-          : "border-neutral-700 text-neutral-300 bg-neutral-900/60"
-      }`}
-    >
-      Design
-    </button>
-    <button
-      type="button"
-      onClick={undoAssetPosition}
-      data-mobile-float-lock="true"
-      disabled={!lastMoveStack.length}
-      className={`px-3 py-1 text-[11px] font-semibold border shrink-0 whitespace-nowrap ${
-        lastMoveStack.length
-          ? "border-emerald-400 text-emerald-200 bg-emerald-500/10"
-          : "border-neutral-700 text-neutral-500 bg-neutral-900/60 cursor-not-allowed"
-      }`}
-      title="Undo last position"
-    >
-      Undo Move
-    </button>
-    <button
-      type="button"
-      onClick={startTour}
-      className="px-3 py-1 text-[11px] font-semibold border border-fuchsia-400/70 text-fuchsia-100 bg-fuchsia-500/20 hover:bg-fuchsia-500/30 shadow-[0_0_14px_rgba(217,70,239,0.65)] shrink-0 whitespace-nowrap"
-      title="Start Tour"
-    >
-      Start Tour
-    </button>
-    <span className="shrink-0 border border-white/10 bg-white/[0.03] px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-300">
-      {currentStudioModeLabel}
-    </span>
+      <button
+        type="button"
+        onClick={() => setMobileControlsTab("design")}
+        data-tour="mobile-text-tab"
+        data-mobile-float-lock="true"
+        className={`px-2.5 py-1 text-[10px] font-semibold border shrink-0 whitespace-nowrap ${
+          mobileControlsTab === "design"
+            ? "border-blue-400 text-blue-300 bg-blue-500/10"
+            : "border-neutral-700 text-neutral-300 bg-neutral-900/60"
+        }`}
+      >
+        Text
+      </button>
+      <button
+        type="button"
+        onClick={() => setMobileControlsTab("assets")}
+        data-tour="mobile-design-tab"
+        data-mobile-float-lock="true"
+        className={`px-2.5 py-1 text-[10px] font-semibold border shrink-0 whitespace-nowrap ${
+          mobileControlsTab === "assets"
+            ? "border-blue-400 text-blue-300 bg-blue-500/10"
+            : "border-neutral-700 text-neutral-300 bg-neutral-900/60"
+        }`}
+      >
+        Design
+      </button>
+      <button
+        type="button"
+        onClick={undoAssetPosition}
+        data-mobile-float-lock="true"
+        disabled={!lastMoveStack.length}
+        className={`px-2.5 py-1 text-[10px] font-semibold border shrink-0 whitespace-nowrap ${
+          lastMoveStack.length
+            ? "border-emerald-400 text-emerald-200 bg-emerald-500/10"
+            : "border-neutral-700 text-neutral-500 bg-neutral-900/60 cursor-not-allowed"
+        }`}
+        title="Undo last position"
+      >
+        Undo
+      </button>
+      <button
+        type="button"
+        onClick={startTour}
+        className="px-2.5 py-1 text-[10px] font-semibold border border-fuchsia-400/70 text-fuchsia-100 bg-fuchsia-500/20 hover:bg-fuchsia-500/30 shadow-[0_0_14px_rgba(217,70,239,0.65)] shrink-0 whitespace-nowrap"
+        title="Start Tour"
+      >
+        Start Tour
+      </button>
+      <span className="shrink-0 border border-white/10 bg-white/[0.03] px-2 py-[3px] text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-300">
+        {currentStudioModeLabel}
+      </span>
+    </div>
   </div>
 );
 
@@ -21134,6 +21137,22 @@ return (
               </Chip>
 
               <button
+                id="account-logo-button-mobile"
+                type="button"
+                onClick={openAccountPanel}
+                onPointerUp={openAccountPanel}
+                className="lg:hidden shrink-0"
+                aria-label="Open account"
+              >
+                <img
+                  src="/branding/nf-logo.png"
+                  alt="Nightlife Flyers"
+                  className="h-10 w-10 mx-2"
+                  draggable={false}
+                />
+              </button>
+
+              <button
                 id="account-logo-button"
                 type="button"
                 onClick={openAccountPanel}
@@ -21163,22 +21182,6 @@ return (
                 title="Open mode and workflow guide"
               >
                 Mode
-              </button>
-
-              <button
-                id="account-logo-button-mobile"
-                type="button"
-                onClick={openAccountPanel}
-                onPointerUp={openAccountPanel}
-                className="lg:hidden shrink-0"
-                aria-label="Open account"
-              >
-                <img
-                  src="/branding/nf-logo.png"
-                  alt="Nightlife Flyers"
-                  className="h-10 w-10 mx-2"
-                  draggable={false}
-                />
               </button>
 
               {!isMobileView && activeTextLayerKey && (
