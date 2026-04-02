@@ -341,6 +341,7 @@ export type InlineSliderInputProps = {
   suffix?: string;
   rangeClassName?: string;
   inputClassName?: string;
+  labelClassName?: string;
   onPointerDown?: () => void;
   onPointerUp?: () => void;
   onPointerCancel?: () => void;
@@ -359,6 +360,7 @@ export function InlineSliderInput({
   suffix,
   rangeClassName,
   inputClassName,
+  labelClassName,
   onPointerDown,
   onPointerUp,
   onPointerCancel,
@@ -404,10 +406,10 @@ export function InlineSliderInput({
 
   return (
     <div className="min-w-0">
-      <div className={`flex items-center justify-between mb-1 ${controlLabelClass}`}>
-        <span>{label}</span>
+      <div className={`mb-1 flex min-w-0 items-center justify-between ${controlLabelClass} ${labelClassName || ""}`}>
+        <span className="block min-w-0 truncate">{label}</span>
       </div>
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="flex min-w-0 items-center gap-1.5">
         <input
           type="range"
           min={min}
@@ -448,7 +450,7 @@ export function InlineSliderInput({
             disabled={disabled}
             className={
               inputClassName ||
-              `w-[52px] ${controlInputClass} text-right font-semibold`
+              `w-[44px] sm:w-[52px] ${controlInputClass} text-right font-semibold`
             }
           />
           {suffix ? <span className="text-[10px] text-white font-semibold">{suffix}</span> : null}

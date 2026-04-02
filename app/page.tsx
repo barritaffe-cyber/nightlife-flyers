@@ -9943,6 +9943,17 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
     setDragging(null);
   }, [format, mainFaceOnCanvas, setDragging]);
 
+  const continueMainFaceToLighting = React.useCallback(() => {
+    if (!mainFaceOnCanvas?.id) return;
+    updatePortrait(format, mainFaceOnCanvas.id, {
+      locked: true,
+    });
+    setMobileControlsOpen(true);
+    setMobileControlsTab("assets");
+    setSelectedPanel(isStarterPlan ? "portrait" : "dj_branding");
+    setFloatingAssetVisible(false);
+  }, [format, isStarterPlan, mainFaceOnCanvas, setSelectedPanel, updatePortrait]);
+
   const hasTransparentCutoutDataUrl = React.useCallback(async (dataUrl: string): Promise<boolean> => {
     try {
       const img = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -18819,6 +18830,20 @@ const openCreatorWorkflowStep = React.useCallback(
   },
   [openCreatorWorkflowTarget]
 );
+const openWorkflowHelp = React.useCallback(() => {
+  setWorkflowHelpOpen(true);
+}, []);
+const switchWorkflowStudioMode = React.useCallback(
+  (next: "creator" | "dj") => {
+    const nextIsDj = next === "dj";
+    setStartupStudioMode(nextIsDj ? "dj" : null);
+    setUiMode("design");
+    setMobileControlsOpen(true);
+    setMobileControlsTab(nextIsDj ? "assets" : "design");
+    setSelectedPanel(nextIsDj ? (isStarterPlan ? "portrait" : "dj_branding") : "template");
+  },
+  [isStarterPlan, setSelectedPanel]
+);
 const nudgeTextLayer = React.useCallback((key: TextLayerKey, dir: "up" | "down") => {
   const st = useFlyerState.getState();
   const panelKey = key === "headline2" ? "head2" : key;
@@ -19209,6 +19234,7 @@ const activeAssetControls = React.useMemo(() => {
         return {
           label: "Main Face",
           idLabel: `${sel.id}`,
+          isMainFace: true,
           scale: sel.scale ?? 1,
           opacity: sel.opacity ?? 1,
           locked: !!sel.locked,
@@ -19227,6 +19253,7 @@ const activeAssetControls = React.useMemo(() => {
             removePortrait(format, sel.id);
             useFlyerState.getState().setSelectedPortraitId(null);
           },
+          onContinueToLighting: continueMainFaceToLighting,
         };
       }
       return {
@@ -21133,15 +21160,21 @@ return (
               </button>
 
               {/* Suggested workflow */}
-              <Chip 
-                small 
-                className="shrink-0 whitespace-nowrap"
-                active={workflowHelpOpen}
-                onClick={() => setWorkflowHelpOpen(true)}
-                title="Open suggested workflow"
+              <button
+                type="button"
+                data-mobile-float-lock="true"
+                onClick={openWorkflowHelp}
+                onPointerUp={openWorkflowHelp}
+                className={clsx(
+                  "shrink-0 whitespace-nowrap border px-2 py-[3px] text-[11px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400",
+                  workflowHelpOpen
+                    ? "bg-indigo-600 border-indigo-300 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.12)_inset]"
+                    : "border-neutral-700 bg-neutral-900/70 text-neutral-200 hover:bg-neutral-800"
+                )}
+                title="Open workflow guide"
               >
                 Workflow
-              </Chip>
+              </button>
               {!isMobileView && activeTextLayerKey && (
                 <>
                   <Chip
@@ -23809,8 +23842,7 @@ style={{ top: STICKY_TOP }}
   {activeTextControls && floatingEditorVisible && (
     <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 flex justify-center px-3 z-[1200]" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
       <div
-        className="rounded-2xl border border-white/5 bg-neutral-900/85 backdrop-blur-xl px-3 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/5"
-        style={{ width: scaledCanvasW, maxWidth: "100%" }}
+        className="w-full max-w-[380px] rounded-2xl border border-white/5 bg-neutral-900/85 px-3 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl"
         ref={floatingTextRef}
         data-floating-controls="text"
         onPointerDownCapture={(e) => {
@@ -23830,10 +23862,10 @@ style={{ top: STICKY_TOP }}
           e.stopPropagation();
         }}
       >
-        <div className="flex items-center gap-2 text-[11px] font-semibold text-white">
+        <div className="flex min-w-0 items-center gap-2 text-[11px] font-semibold text-white">
           <span className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</span>
           <span className="text-neutral-300">•</span>
-          <span>{formatUiLabelCaps(activeTextControls.label === "Details 2" ? "More Details" : activeTextControls.label)}</span>
+          <span className="min-w-0 truncate">{formatUiLabelCaps(activeTextControls.label === "Details 2" ? "More Details" : activeTextControls.label)}</span>
           {activeTextControls.color && (
             <div className="ml-auto flex items-center gap-1">
               <span className="text-[10px] uppercase tracking-wider text-neutral-400">Color</span>
@@ -23863,7 +23895,7 @@ style={{ top: STICKY_TOP }}
               onChange={(v) => activeTextControls.onFont?.(v)}
             />
           </div>
-          <div className="grid grid-cols-2 gap-3 items-center">
+          <div className="grid grid-cols-1 gap-2.5 min-[360px]:grid-cols-2 items-center">
             <div>
               <InlineSliderInput
                 label="Size"
@@ -23946,8 +23978,7 @@ style={{ top: STICKY_TOP }}
   {activeAssetControls && floatingAssetVisible && (
     <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 flex justify-center px-3 z-[1200]" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
       <div
-        className="rounded-2xl border border-white/5 bg-neutral-900/85 backdrop-blur-xl px-3 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/5"
-        style={{ width: scaledCanvasW, maxWidth: "100%" }}
+        className="w-full max-w-[380px] rounded-2xl border border-white/5 bg-neutral-900/85 px-3 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl"
         ref={floatingAssetRef}
         data-floating-controls="asset"
         onPointerDownCapture={(e) => {
@@ -23963,10 +23994,10 @@ style={{ top: STICKY_TOP }}
           e.stopPropagation();
         }}
       >
-        <div className="flex items-center gap-2 text-[11px] font-semibold text-white">
+        <div className="flex min-w-0 items-center gap-2 text-[11px] font-semibold text-white">
           <span className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</span>
           <span className="text-neutral-300">•</span>
-          <span>{formatUiLabelCaps(activeAssetControls.label)}</span>
+          <span className="min-w-0 truncate">{formatUiLabelCaps(activeAssetControls.label)}</span>
           {activeAssetControls.showColor && (
             <div className="ml-auto flex items-center gap-1">
               <span className="text-[10px] uppercase tracking-wider text-neutral-400">Color</span>
@@ -23978,7 +24009,7 @@ style={{ top: STICKY_TOP }}
           )}
         </div>
         {activeAssetControls.onPosX && activeAssetControls.onPosY && (
-          <div className="mt-2 grid grid-cols-2 gap-3 items-center">
+          <div className="mt-2 grid grid-cols-1 gap-2.5 min-[360px]:grid-cols-2 items-center">
             <div>
               <InlineSliderInput
                 label="X"
@@ -24013,7 +24044,7 @@ style={{ top: STICKY_TOP }}
             </div>
           </div>
         )}
-        <div className="mt-2 grid grid-cols-2 gap-3 items-center">
+        <div className="mt-2 grid grid-cols-1 gap-2.5 min-[360px]:grid-cols-2 items-center">
           {activeAssetControls.showScale !== false && (
             <div>
               <InlineSliderInput
@@ -24149,7 +24180,7 @@ style={{ top: STICKY_TOP }}
           )}
         </div>
         {activeAssetControls.cleanup && (
-          <div className="mt-2 grid grid-cols-2 gap-3 items-center">
+          <div className="mt-2 grid grid-cols-1 gap-2.5 min-[360px]:grid-cols-2 items-center">
             <div>
               <InlineSliderInput
                 label="Shrink edge"
@@ -24261,6 +24292,16 @@ style={{ top: STICKY_TOP }}
             )}
           </div>
         )}
+        {activeAssetControls.isMainFace && activeAssetControls.onContinueToLighting && (
+          <button
+            type="button"
+            data-mobile-float-lock="true"
+            onClick={() => activeAssetControls.onContinueToLighting?.()}
+            className="mt-2 w-full rounded-md border border-cyan-400/70 bg-cyan-500/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-100 hover:bg-cyan-500/16"
+          >
+            Next To Lighting
+          </button>
+        )}
         <div className="mt-2 grid grid-cols-2 gap-2">
           <button
             type="button"
@@ -24323,8 +24364,7 @@ style={{ top: STICKY_TOP }}
   {activeBgControls && floatingBgVisible && (
     <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 flex justify-center px-3 z-[1200]" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
       <div
-        className="rounded-2xl border border-white/5 bg-neutral-900/85 backdrop-blur-xl px-3 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/5"
-        style={{ width: scaledCanvasW, maxWidth: "100%" }}
+        className="w-full max-w-[380px] rounded-2xl border border-white/5 bg-neutral-900/85 px-3 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl"
         ref={floatingBgRef}
         data-floating-controls="bg"
         onPointerDownCapture={(e) => {
@@ -24340,12 +24380,12 @@ style={{ top: STICKY_TOP }}
           e.stopPropagation();
         }}
       >
-        <div className="flex items-center gap-2 text-[11px] font-semibold text-white">
+        <div className="flex min-w-0 items-center gap-2 text-[11px] font-semibold text-white">
           <span className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</span>
           <span className="text-neutral-300">•</span>
-          <span>{activeBgControls.label}</span>
+          <span className="min-w-0 truncate">{activeBgControls.label}</span>
         </div>
-        <div className="mt-2 grid grid-cols-2 gap-3 items-center">
+        <div className="mt-2 grid grid-cols-1 gap-2.5 min-[360px]:grid-cols-2 items-center">
           <div>
             <InlineSliderInput
               label="Scale"
@@ -24560,7 +24600,8 @@ style={{ top: STICKY_TOP }}
     right={
       <button
         type="button"
-        onClick={() => setWorkflowHelpOpen(true)}
+        onClick={openWorkflowHelp}
+        onPointerUp={openWorkflowHelp}
         aria-label="Open creator workflow guide"
         title="Open creator workflow guide"
         className="h-6 px-2 border border-white/10 bg-white/[0.03] text-neutral-200 text-[10px] font-semibold uppercase tracking-[0.14em] hover:bg-white/[0.06]"
@@ -25811,10 +25852,30 @@ style={{ top: STICKY_TOP }}
   <div className="fixed inset-0 z-[5100] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
     <div className="w-full max-w-4xl overflow-hidden border border-cyan-400/30 bg-[#0a0d12] shadow-[0_30px_80px_rgba(0,0,0,.6)]">
       <div className="border-b border-white/10 bg-neutral-950/90 px-5 py-4">
-        <div className="text-sm uppercase tracking-[0.2em] text-cyan-300">Creator Workflow</div>
-        <div className="mt-1 text-lg font-semibold text-white">Build a flyer with a clear sequence.</div>
-        <div className="mt-2 text-sm text-neutral-400">
-          Recommended now: <span className="text-white">{creatorWorkflowMeta[creatorWorkflowRecommended].label}</span>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="text-sm uppercase tracking-[0.2em] text-cyan-300">Workflow</div>
+            <div className="mt-1 text-lg font-semibold text-white">Build a flyer with a clear sequence.</div>
+            <div className="mt-2 text-sm text-neutral-400">
+              Recommended now: <span className="text-white">{creatorWorkflowMeta[creatorWorkflowRecommended].label}</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:min-w-[260px]">
+            <button
+              type="button"
+              onClick={() => switchWorkflowStudioMode("creator")}
+              className="border border-white/15 bg-white/[0.08] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white"
+            >
+              Creator Studio
+            </button>
+            <button
+              type="button"
+              onClick={() => switchWorkflowStudioMode("dj")}
+              className="border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-200 transition hover:bg-neutral-900"
+            >
+              DJ / Artist
+            </button>
+          </div>
         </div>
       </div>
 
@@ -25993,10 +26054,30 @@ style={{ top: STICKY_TOP }}
   </div>
 ) : (
   <div className="fixed inset-0 z-[5100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-    <div className="w-full max-w-3xl rounded-2xl border border-cyan-400/30 bg-[#0a0d12] shadow-[0_30px_80px_rgba(0,0,0,.6)] overflow-hidden">
-      <div className="px-5 py-4 border-b border-white/10 bg-gradient-to-r from-cyan-500/20 to-fuchsia-500/10">
-        <div className="text-sm uppercase tracking-[0.2em] text-cyan-300">Suggested Workflow</div>
-        <div className="mt-1 text-lg font-semibold text-white">Create a flyer in 10 minutes or less.</div>
+    <div className="w-full max-w-3xl overflow-hidden border border-cyan-400/30 bg-[#0a0d12] shadow-[0_30px_80px_rgba(0,0,0,.6)]">
+      <div className="border-b border-white/10 bg-neutral-950/90 px-5 py-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="text-sm uppercase tracking-[0.2em] text-cyan-300">Workflow</div>
+            <div className="mt-1 text-lg font-semibold text-white">Create a flyer in 10 minutes or less.</div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:min-w-[260px]">
+            <button
+              type="button"
+              onClick={() => switchWorkflowStudioMode("creator")}
+              className="border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-200 transition hover:bg-neutral-900"
+            >
+              Creator Studio
+            </button>
+            <button
+              type="button"
+              onClick={() => switchWorkflowStudioMode("dj")}
+              className="border border-white/15 bg-white/[0.08] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white"
+            >
+              DJ / Artist
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-neutral-200 max-h-[70vh] overflow-y-auto">
