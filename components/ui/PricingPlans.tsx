@@ -253,12 +253,12 @@ function PlanCard({
 
       {id === 'creator' && (
         <p className="mt-3 text-[11px] text-white/55">
-          Upgrade or downgrade any time. Your profile data stays intact.
+          Renews automatically on the selected billing cycle until canceled. Upgrade or downgrade any time.
         </p>
       )}
       {id === 'studio' && (
         <p className="mt-3 text-[11px] text-white/70 inline-flex items-center gap-1">
-          <Shield className="h-3.5 w-3.5" /> Clean exports remove guides, handles, and overlays.
+          <Shield className="h-3.5 w-3.5" /> Renews automatically until canceled. Clean exports remove guides, handles, and overlays.
         </p>
       )}
     </motion.div>

@@ -40,6 +40,10 @@ function BillingCheckoutInner() {
   const supportPhone = getPublicSupportPhone();
   const merchantAddress = getPublicMerchantAddress();
   const currency = getPublicTransactionCurrency();
+  const isRecurringPlan = selection?.kind === "plan";
+  const recurringAmount = item ? `${currency} ${item.price}` : "";
+  const recurringCadenceLabel =
+    selection?.kind === "plan" ? (selection.billing === "yearly" ? "every year" : "every month") : "";
 
   React.useEffect(() => {
     let cancelled = false;
@@ -143,6 +147,29 @@ function BillingCheckoutInner() {
           </div>
           <p className="mt-3 text-sm text-white/70">{item.description}</p>
         </div>
+
+        {isRecurringPlan ? (
+          <div className="mt-5 space-y-3 border border-fuchsia-500/20 bg-fuchsia-500/8 p-4">
+            <div className="text-xs uppercase tracking-[0.22em] text-fuchsia-200/70">
+              Recurring Payment Agreement
+            </div>
+            <div className="grid gap-2 text-xs text-white/72 sm:grid-cols-2">
+              <div>Amount: {recurringAmount}.</div>
+              <div>Amount type: fixed unless we notify you of a change.</div>
+              <div>Schedule: {recurringCadenceLabel} until canceled.</div>
+              <div>Schedule date: same renewal date each billing cycle, based on the initial purchase date.</div>
+              <div>Schedule date type: fixed relative to the original purchase date.</div>
+              <div>
+                Communication method: email to {email || "the email on your Nightlife Flyers account"}.
+              </div>
+              <div className="sm:col-span-2">
+                By continuing, you authorize recurring charges on this schedule until you cancel.
+                We will send agreement confirmation by email and will notify you by email at least
+                7 working days before any qualifying recurring-agreement changes.
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         <div className="mt-5 space-y-3 border border-white/10 bg-white/[0.03] p-4">
           <div className="text-xs uppercase tracking-[0.22em] text-white/45">Secure Checkout</div>

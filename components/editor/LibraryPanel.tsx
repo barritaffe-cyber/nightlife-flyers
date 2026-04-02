@@ -114,7 +114,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
     const [helpOpen, setHelpOpen] = React.useState(false);
     const [librarySectionsOpen, setLibrarySectionsOpen] = React.useState(() => ({
       emoji: false,
-      uploads: true,
+      uploads: false,
       nightlife: false,
       separators: false,
       shapes: false,

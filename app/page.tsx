@@ -19580,6 +19580,7 @@ const mobileControlsTabs = (
       type="button"
       onClick={() => setMobileControlsTab("design")}
       data-tour="mobile-text-tab"
+      data-mobile-float-lock="true"
       className={`px-3 py-1 rounded text-[11px] font-semibold border shrink-0 whitespace-nowrap ${
         mobileControlsTab === "design"
           ? "border-blue-400 text-blue-300 bg-blue-500/10"
@@ -19592,6 +19593,7 @@ const mobileControlsTabs = (
       type="button"
       onClick={() => setMobileControlsTab("assets")}
       data-tour="mobile-design-tab"
+      data-mobile-float-lock="true"
       className={`px-3 py-1 rounded text-[11px] font-semibold border shrink-0 whitespace-nowrap ${
         mobileControlsTab === "assets"
           ? "border-blue-400 text-blue-300 bg-blue-500/10"
@@ -20956,11 +20958,12 @@ return (
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -12 }}
           transition={{ duration: 0.25, ease: "easeOut" }}
-          className="fixed left-1/2 top-4 z-[950] w-[min(92vw,540px)] -translate-x-1/2"
+          className="fixed inset-x-3 z-[950] sm:left-1/2 sm:right-auto sm:w-[min(92vw,540px)] sm:-translate-x-1/2"
+          style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
         >
-          <div className="rounded-2xl border border-amber-400/30 bg-neutral-950/95 p-4 text-white shadow-2xl backdrop-blur">
+          <div className="border border-amber-400/30 bg-neutral-950/95 p-3 text-white shadow-2xl backdrop-blur sm:rounded-2xl sm:p-4">
             <div className="flex items-start justify-between gap-3">
-              <div>
+              <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold text-amber-200">Save your work</div>
                 <div className="mt-1 text-[12px] text-white/75">
                   {isStarterPlan
@@ -20970,7 +20973,7 @@ return (
               </div>
               <button
                 type="button"
-                className="h-7 w-7 rounded-full border border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
+                className="h-7 w-7 shrink-0 border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 sm:rounded-full"
                 onClick={() => {
                   setShowSaveNotice(false);
                   setSaveNoticeDismissed(true);
