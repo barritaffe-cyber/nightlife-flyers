@@ -201,7 +201,6 @@ function resolvePaymentString(payload: Record<string, unknown>, ...keys: string[
 function hasCompletionSignal(payload: Record<string, unknown>) {
   return Boolean(
     resolveCallbackCode(payload) ||
-      resolveCallbackToken(payload) ||
       resolvePaymentString(payload, "TransactionIdentifier", "transactionIdentifier", "OrderIdentifier", "orderIdentifier") ||
       resolvePaymentApproved(payload) !== null
   );
