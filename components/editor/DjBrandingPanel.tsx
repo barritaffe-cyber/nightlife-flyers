@@ -16,6 +16,7 @@ type Props = {
   selectedPanel: string | null;
   setSelectedPanel: (panel: string | null) => void;
   requestedWorkflowStep?: { step: WorkflowStep; nonce: number } | null;
+  onWorkflowStepChange?: (step: WorkflowStep) => void;
   hasBackground: boolean;
   kit: DJBrandKit;
   brandProfiles: Array<{ id: string; label: string }>;
@@ -84,6 +85,7 @@ export default function DjBrandingPanel({
   selectedPanel,
   setSelectedPanel,
   requestedWorkflowStep = null,
+  onWorkflowStepChange,
   hasBackground,
   kit,
   brandProfiles,
@@ -273,6 +275,9 @@ export default function DjBrandingPanel({
     const timer = window.setTimeout(() => setVaultFeedback(null), 2400);
     return () => window.clearTimeout(timer);
   }, [vaultFeedback]);
+  React.useEffect(() => {
+    onWorkflowStepChange?.(workflowStep);
+  }, [onWorkflowStepChange, workflowStep]);
   const headlineOptions = dedupeFonts([kit.preferredFonts.headline, ...headlineFonts]);
   const bodyOptions = dedupeFonts([kit.preferredFonts.body, ...bodyFonts]);
   const lightingPresets: Array<{
