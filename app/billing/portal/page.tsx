@@ -75,7 +75,7 @@ export default function BillingPortalPage() {
         </div>
 
         <div className="mt-5 rounded-xl border border-white/10 bg-black/20 p-4 text-sm text-white/70">
-          Open the Paddle billing portal to manage renewal, payment method, or cancellation once Paddle is connected.
+          Open the billing portal to manage renewal, payment method, or cancellation once the hosted payment provider is connected.
         </div>
 
         <div className="mt-5 text-sm text-white/75">

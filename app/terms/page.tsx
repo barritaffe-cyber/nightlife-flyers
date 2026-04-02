@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { getPublicLegalName } from "../../lib/publicIdentity";
+import {
+  getPublicLegalName,
+  getPublicMerchantAddress,
+  getPublicSupportPhone,
+  getPublicTransactionCurrency,
+} from "../../lib/publicIdentity";
 
 export const metadata = {
   title: "Terms of Service",
@@ -24,6 +29,9 @@ function getContactEmail() {
 
 const CONTACT_EMAIL = getContactEmail();
 const LEGAL_NAME = getPublicLegalName();
+const MERCHANT_ADDRESS = getPublicMerchantAddress();
+const SUPPORT_PHONE = getPublicSupportPhone();
+const TRANSACTION_CURRENCY = getPublicTransactionCurrency();
 
 const sections = [
   {
@@ -103,8 +111,24 @@ const sections = [
     ],
   },
   {
+    id: "delivery-policy",
+    title: "10. Delivery Policy",
+    body: [
+      "Nightlife Flyers is a digital service. Access to plans, passes, and related paid features is delivered electronically after successful payment and account confirmation.",
+      "Subscription access generally becomes available after the payment provider confirms the transaction. One-time pass access activates for the purchase window shown at checkout. Delivery may be delayed by payment review, fraud checks, provider outages, account-authentication issues, or other security controls.",
+    ],
+  },
+  {
+    id: "export-restrictions",
+    title: "11. Export Restrictions and Prohibited Use",
+    body: [
+      "You may not use the service in violation of applicable export controls, sanctions, payment restrictions, or other laws governing digital services and software access.",
+      "If export, sanctions, banking, or card-network restrictions apply to your location, entity, or intended use, you are responsible for complying with them before purchase or use.",
+    ],
+  },
+  {
     id: "intellectual-property",
-    title: "10. Intellectual Property",
+    title: "12. Intellectual Property",
     body: [
       "Nightlife Flyers and its underlying software, branding, templates, interface elements, and service design are owned by Nightlife Flyers or its licensors and are protected by applicable intellectual property laws.",
       "These Terms do not transfer ownership of the service or our intellectual property to you. Except as expressly allowed by the service, you may not copy, resell, license, or distribute the service itself.",
@@ -112,7 +136,7 @@ const sections = [
   },
   {
     id: "service-availability",
-    title: "11. Service Changes and Availability",
+    title: "13. Service Changes and Availability",
     body: [
       "We may add, remove, limit, or modify features, templates, quotas, pricing, providers, or access rules at any time. We may also suspend or discontinue the service, in whole or in part.",
       "We do not guarantee uninterrupted availability, error-free operation, permanent storage, or compatibility with every device, browser, or third-party provider.",
@@ -120,14 +144,14 @@ const sections = [
   },
   {
     id: "disclaimers",
-    title: "12. Disclaimers",
+    title: "14. Disclaimers",
     body: [
       "The service is provided on an 'as is' and 'as available' basis to the fullest extent permitted by law. We disclaim all warranties, express or implied, including warranties of merchantability, fitness for a particular purpose, non-infringement, and uninterrupted availability.",
     ],
   },
   {
     id: "liability",
-    title: "13. Limitation of Liability",
+    title: "15. Limitation of Liability",
     body: [
       "To the fullest extent permitted by law, Nightlife Flyers and its operators, affiliates, service providers, and licensors will not be liable for indirect, incidental, special, consequential, exemplary, or punitive damages, or for lost profits, lost revenue, lost data, lost goodwill, or business interruption arising out of or related to your use of the service.",
       "To the fullest extent permitted by law, our total liability for any claim arising out of or relating to the service will not exceed the amount you paid to Nightlife Flyers for the service giving rise to the claim during the 12 months before the event giving rise to liability.",
@@ -135,7 +159,7 @@ const sections = [
   },
   {
     id: "termination",
-    title: "14. Termination",
+    title: "16. Termination",
     body: [
       "You may stop using the service at any time. We may suspend or terminate your access at any time if we believe you violated these Terms, misused the service, failed to pay, or created legal, billing, security, or operational risk.",
       "Sections that by their nature should survive termination will survive, including provisions on payment obligations, intellectual property, disclaimers, limitation of liability, and dispute-related terms.",
@@ -143,7 +167,7 @@ const sections = [
   },
   {
     id: "changes",
-    title: "15. Changes to These Terms",
+    title: "17. Changes to These Terms",
     body: [
       "We may update these Terms from time to time. The updated version becomes effective when posted on this page unless otherwise stated. Your continued use of the service after an update means you accept the revised Terms.",
     ],
@@ -199,6 +223,23 @@ export default function TermsPage() {
           </p>
         </div>
 
+        <div className="mt-4 space-y-2 rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-sm text-neutral-200">
+          <h2 className="text-base font-semibold text-white">Merchant and Purchase Information</h2>
+          <p>Transaction currency: {TRANSACTION_CURRENCY}.</p>
+          <p>
+            Customer service:{" "}
+            <a href={`mailto:${CONTACT_EMAIL}`} className="text-white underline underline-offset-4">
+              {CONTACT_EMAIL}
+            </a>
+            {SUPPORT_PHONE ? <span>{` · ${SUPPORT_PHONE}`}</span> : null}
+          </p>
+          {MERCHANT_ADDRESS ? <p>Merchant address: {MERCHANT_ADDRESS}</p> : null}
+          <p>
+            Payment card details are transmitted through encrypted HTTPS/TLS connections to the
+            hosted payment flow. Nightlife Flyers does not store full payment card numbers on its own servers.
+          </p>
+        </div>
+
         <div className="mt-8 space-y-6">
           {sections.map((section) => (
             <section key={section.title} id={section.id} className="scroll-mt-24 space-y-2">
@@ -210,12 +251,13 @@ export default function TermsPage() {
           ))}
 
           <section className="space-y-2">
-            <h2 className="text-base font-semibold text-white">16. Contact</h2>
+            <h2 className="text-base font-semibold text-white">18. Contact</h2>
             <p>
               Questions about these Terms can be sent to{" "}
               <a href={`mailto:${CONTACT_EMAIL}`} className="text-white underline underline-offset-4">
                 {CONTACT_EMAIL}
               </a>
+              {SUPPORT_PHONE ? <span>{` or ${SUPPORT_PHONE}`}</span> : null}
               .
             </p>
           </section>

@@ -4,13 +4,22 @@ import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import PaymentMarks from "../../components/ui/PaymentMarks";
 import PublicSiteFooter from "../../components/ui/PublicSiteFooter";
+import {
+  getPublicSupportEmail,
+  getPublicSupportPhone,
+  getPublicTransactionCurrency,
+} from "../../lib/publicIdentity";
 
 export default function LandingPage() {
   const [format, setFormat] = React.useState<"square" | "story">("story");
   const [glow, setGlow] = React.useState(58);
 
   const glowAlpha = Math.min(0.6, 0.16 + glow / 180);
+  const supportEmail = getPublicSupportEmail();
+  const supportPhone = getPublicSupportPhone();
+  const currency = getPublicTransactionCurrency();
 
   return (
     <main className="nf-landing relative min-h-screen overflow-hidden bg-neutral-950 text-white">
@@ -137,6 +146,24 @@ export default function LandingPage() {
                 Open Studio
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
+            </div>
+          </div>
+        </div>
+
+        <div className="mx-auto mt-6 w-full max-w-4xl border border-white/10 bg-white/[0.03] p-4 text-sm text-white/72">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-2">
+              <div className="text-xs uppercase tracking-[0.22em] text-white/45">Accepted Payments</div>
+              <PaymentMarks compact />
+            </div>
+            <div className="max-w-xl space-y-1 text-xs text-white/62">
+              <div>Digital flyer-design service with instant account access after successful payment.</div>
+              <div>Transaction currency: {currency}.</div>
+              <div>Refunds, cancellation, privacy, and delivery terms are posted in Terms and Privacy.</div>
+              <div>
+                Support: <a href={`mailto:${supportEmail}`} className="text-white underline underline-offset-4">{supportEmail}</a>
+                {supportPhone ? <span>{` · ${supportPhone}`}</span> : null}
+              </div>
             </div>
           </div>
         </div>

@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { getPublicLegalName } from "../../lib/publicIdentity";
+import {
+  getPublicLegalName,
+  getPublicMerchantAddress,
+  getPublicSupportPhone,
+  getPublicTransactionCurrency,
+} from "../../lib/publicIdentity";
 
 export const metadata = {
   title: "Privacy Policy",
@@ -26,6 +31,9 @@ function getContactEmail() {
 
 const CONTACT_EMAIL = getContactEmail();
 const LEGAL_NAME = getPublicLegalName();
+const MERCHANT_ADDRESS = getPublicMerchantAddress();
+const SUPPORT_PHONE = getPublicSupportPhone();
+const TRANSACTION_CURRENCY = getPublicTransactionCurrency();
 
 export default function PrivacyPage() {
   return (
@@ -49,6 +57,8 @@ export default function PrivacyPage() {
             billing flows, and related services.
           </p>
           <p className="text-neutral-400">Nightlife Flyers is operated by {LEGAL_NAME}.</p>
+          <p className="text-neutral-400">Transaction currency: {TRANSACTION_CURRENCY}.</p>
+          {MERCHANT_ADDRESS ? <p className="text-neutral-400">Merchant address: {MERCHANT_ADDRESS}.</p> : null}
         </div>
 
         <div className="mt-8 space-y-6">
@@ -150,6 +160,10 @@ export default function PrivacyPage() {
               We use reasonable administrative, technical, and organizational measures to help
               protect information, but no system can be guaranteed completely secure.
             </p>
+            <p>
+              Payment card details are transmitted to the hosted payment flow over encrypted HTTPS/TLS
+              connections. Nightlife Flyers does not store full payment card numbers on its own servers.
+            </p>
           </section>
 
           <section className="space-y-2">
@@ -167,6 +181,7 @@ export default function PrivacyPage() {
               <a href={`mailto:${CONTACT_EMAIL}`} className="text-white underline underline-offset-4">
                 {CONTACT_EMAIL}
               </a>
+              {SUPPORT_PHONE ? <span>{` or ${SUPPORT_PHONE}`}</span> : null}
               .
             </p>
           </section>

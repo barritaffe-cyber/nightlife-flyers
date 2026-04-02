@@ -13,3 +13,15 @@ export function getPublicSupportEmail() {
 export function getPublicLegalName() {
   return process.env.NEXT_PUBLIC_COMPANY_LEGAL_NAME || "Nightlife Flyers";
 }
+
+export function getPublicSupportPhone() {
+  return process.env.NEXT_PUBLIC_SUPPORT_PHONE || "";
+}
+
+export function getPublicMerchantAddress() {
+  return process.env.NEXT_PUBLIC_MERCHANT_ADDRESS || "";
+}
+
+export function getPublicTransactionCurrency() {
+  return process.env.NEXT_PUBLIC_TRANSACTION_CURRENCY || "USD";
+}

@@ -3,6 +3,13 @@
 import Link from "next/link";
 import React from "react";
 import { useSearchParams } from "next/navigation";
+import PaymentMarks from "../../../components/ui/PaymentMarks";
+import {
+  getPublicMerchantAddress,
+  getPublicSupportEmail,
+  getPublicSupportPhone,
+  getPublicTransactionCurrency,
+} from "../../../lib/publicIdentity";
 import { supabaseBrowser } from "../../../lib/supabase/client";
 import {
   buildBillingLoginHref,
@@ -29,6 +36,10 @@ function BillingCheckoutInner() {
   const [loading, setLoading] = React.useState(false);
   const [msg, setMsg] = React.useState<string | null>(null);
   const [missing, setMissing] = React.useState<string[]>([]);
+  const supportEmail = getPublicSupportEmail();
+  const supportPhone = getPublicSupportPhone();
+  const merchantAddress = getPublicMerchantAddress();
+  const currency = getPublicTransactionCurrency();
 
   React.useEffect(() => {
     let cancelled = false;
@@ -133,6 +144,43 @@ function BillingCheckoutInner() {
           <p className="mt-3 text-sm text-white/70">{item.description}</p>
         </div>
 
+        <div className="mt-5 space-y-3 border border-white/10 bg-white/[0.03] p-4">
+          <div className="text-xs uppercase tracking-[0.22em] text-white/45">Secure Checkout</div>
+          <PaymentMarks showPowerTranz compact />
+          <div className="grid gap-2 text-xs text-white/68 sm:grid-cols-2">
+            <div>Service: digital flyer design tools, exports, plans, and passes.</div>
+            <div>Transaction currency: {currency}.</div>
+            <div>Delivery: paid access is activated digitally after successful payment.</div>
+            <div>
+              Support:{" "}
+              <a href={`mailto:${supportEmail}`} className="text-white underline underline-offset-4">
+                {supportEmail}
+              </a>
+              {supportPhone ? <span>{` · ${supportPhone}`}</span> : null}
+            </div>
+            {merchantAddress ? <div className="sm:col-span-2">Merchant address: {merchantAddress}</div> : null}
+            <div className="sm:col-span-2">
+              Payment details are transmitted over encrypted HTTPS/TLS connections to the hosted
+              payment flow. Nightlife Flyers does not store full payment card numbers on its own servers.
+            </div>
+            <div className="sm:col-span-2">
+              By continuing, you agree to the{" "}
+              <Link href="/terms" className="text-white underline underline-offset-4">
+                Terms
+              </Link>
+              ,{" "}
+              <Link href="/privacy" className="text-white underline underline-offset-4">
+                Privacy Policy
+              </Link>
+              , and{" "}
+              <Link href="/terms#billing-refunds" className="text-white underline underline-offset-4">
+                Refunds & Cancellation
+              </Link>
+              .
+            </div>
+          </div>
+        </div>
+
         <div className="mt-5 space-y-3 text-sm text-white/75">
           <div>
             Signed in as: <span className="text-white">{email || "guest"}</span>
@@ -175,7 +223,7 @@ function BillingCheckoutInner() {
         </div>
 
         <div className="mt-6 border-t border-white/10 pt-4 text-xs text-white/45">
-          Live checkout will not open until the Paddle API key, webhook secret, and price IDs are configured.
+          Hosted checkout will not open until the payment-provider credentials and catalog IDs are configured.
         </div>
       </div>
     </main>
