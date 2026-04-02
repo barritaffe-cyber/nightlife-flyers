@@ -11325,7 +11325,7 @@ const mobileFloatSticky = isMobileView && format === "story";
   );
   const visibleTemplateGallery = isStarterPlan ? starterTemplateGallery : TEMPLATE_GALLERY;
   const isDjStartupMode = startupStudioMode === "dj";
-  const currentStudioModeLabel = isDjStartupMode ? "DJ / Artist" : "Creator Studio";
+  const currentStudioModeLabel = isDjStartupMode ? "DJ / Artist" : "Creator";
   const isDjCompositionStage = false;
   const showDjTextEditing = true;
   const visibleSocialMediaStickers = SOCIAL_MEDIA_STICKERS;
@@ -19622,7 +19622,7 @@ const mobileControlsTabs = (
         onClick={() => setMobileControlsTab("design")}
         data-tour="mobile-text-tab"
         data-mobile-float-lock="true"
-        className={`px-2 py-[3px] text-[9px] font-semibold uppercase tracking-[0.12em] border shrink-0 whitespace-nowrap ${
+        className={`w-[62px] px-2 py-[3px] text-center text-[9px] font-semibold uppercase tracking-[0.12em] border shrink-0 whitespace-nowrap ${
           mobileControlsTab === "design"
             ? "border-blue-400 text-blue-300 bg-blue-500/10"
             : "border-neutral-700 text-neutral-300 bg-neutral-900/60"
@@ -19635,7 +19635,7 @@ const mobileControlsTabs = (
         onClick={() => setMobileControlsTab("assets")}
         data-tour="mobile-design-tab"
         data-mobile-float-lock="true"
-        className={`px-2 py-[3px] text-[9px] font-semibold uppercase tracking-[0.12em] border shrink-0 whitespace-nowrap ${
+        className={`w-[62px] px-2 py-[3px] text-center text-[9px] font-semibold uppercase tracking-[0.12em] border shrink-0 whitespace-nowrap ${
           mobileControlsTab === "assets"
             ? "border-blue-400 text-blue-300 bg-blue-500/10"
             : "border-neutral-700 text-neutral-300 bg-neutral-900/60"
@@ -19660,7 +19660,7 @@ const mobileControlsTabs = (
       <button
         type="button"
         onClick={startTour}
-        className="px-2 py-[3px] text-[9px] font-semibold uppercase tracking-[0.12em] border border-fuchsia-400/70 text-fuchsia-100 bg-fuchsia-500/20 hover:bg-fuchsia-500/30 shadow-[0_0_14px_rgba(217,70,239,0.65)] shrink-0 whitespace-nowrap"
+        className="px-2 py-[3px] text-[9px] font-semibold uppercase tracking-[0.12em] border border-fuchsia-400/70 text-fuchsia-100 bg-fuchsia-500/20 hover:bg-fuchsia-500/30 shrink-0 whitespace-nowrap"
         title="Start Tour"
       >
         Start Tour
