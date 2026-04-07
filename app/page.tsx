@@ -19651,6 +19651,17 @@ const mobileCreatorProgressStrip =
       <div className="mt-1 text-[10px] uppercase tracking-[0.12em] text-neutral-500">
         Editing: {currentMobileAction.label}
       </div>
+      <div className="mt-1 text-[10px] leading-4 text-cyan-100/90">
+        {creatorFlowCurrentStep === "scene"
+          ? "After choosing the scene, tap Next."
+          : creatorFlowCurrentStep === "copy"
+          ? "After adding your text, tap Next."
+          : creatorFlowCurrentStep === "assets"
+          ? creatorHasSubject
+            ? "After adding graphics or effects, tap Next."
+            : "After placing the portrait, tap Next."
+          : "After checking the final flyer, tap Publish."}
+      </div>
     </div>
   );
 const handleCreatorWorkflowPrimaryAction = React.useCallback(() => {
