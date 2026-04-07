@@ -19640,34 +19640,30 @@ const handleCreatorWorkflowPrimaryAction = React.useCallback(() => {
 }, [advanceCreatorWorkflow, creatorFlowCurrentStep, creatorWorkflowCurrent, openCreatorWorkflowStep, uiMode]);
 const mobileCreatorProgressStrip =
   !isMobileView || isDjStartupMode ? null : (
-    <div className="w-full max-w-[320px] overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/72 px-3 py-2 shadow-[0_14px_34px_rgba(0,0,0,0.32)] ring-1 ring-white/10 backdrop-blur-2xl sm:max-w-[340px]">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
-            Current Action
-          </div>
-          <div className="mt-1 truncate text-[11px] font-semibold text-white">
-            {currentMobileAction.label}
-          </div>
-          <div className="mt-1 text-[10px] leading-4 text-neutral-400">
-            {creatorFlowCurrentStep === "scene"
-              ? "After choosing the scene, tap Next."
-              : creatorFlowCurrentStep === "copy"
-              ? "After adding your text, tap Next."
-              : creatorFlowCurrentStep === "assets"
-              ? creatorHasSubject
-                ? "After adding graphics or effects, tap Next."
-                : "After placing the portrait, tap Next."
-              : "After checking the final flyer, tap Publish."}
-          </div>
+    <div className="absolute bottom-full left-0 right-0 mb-2 border border-white/10 bg-neutral-950/82 px-3 py-2 shadow-[0_14px_34px_rgba(0,0,0,0.32)] ring-1 ring-white/10 backdrop-blur-2xl">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 flex items-center gap-1.5 text-[11px] font-semibold text-white">
+          <span className="shrink-0 text-neutral-500">Current Action :</span>
+          <span className="truncate">{currentMobileAction.label}</span>
         </div>
         <button
           type="button"
           onClick={handleCreatorWorkflowPrimaryAction}
-          className="shrink-0 rounded-xl border border-cyan-400/35 bg-cyan-500/10 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-100 transition hover:bg-cyan-500/20"
+          className="shrink-0 border border-cyan-400/35 bg-cyan-500/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-100 transition hover:bg-cyan-500/20"
         >
           {creatorFlowCurrentStep === "finish" ? "Publish" : "Next"}
         </button>
+      </div>
+      <div className="mt-1 text-[10px] leading-4 text-neutral-400">
+        {creatorFlowCurrentStep === "scene"
+          ? "Finished choosing the scene? Hit Next."
+          : creatorFlowCurrentStep === "copy"
+          ? "Finished adding text? Hit Next."
+          : creatorFlowCurrentStep === "assets"
+          ? creatorHasSubject
+            ? "Finished adding visuals? Hit Next."
+            : "Finished placing the portrait? Hit Next."
+          : "Finished checking the flyer? Hit Publish."}
       </div>
     </div>
   );
@@ -24730,10 +24726,10 @@ style={{ top: STICKY_TOP }}
 
   {activeTextControls && floatingEditorVisible && (
     <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 flex justify-center px-3 z-[1200]" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
-      <div className="w-full max-w-[320px] space-y-2 sm:max-w-[340px]">
+      <div className="relative w-full max-w-[320px] pt-[52px] sm:max-w-[340px]">
         {mobileCreatorProgressStrip}
         <div
-          className="overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl"
+          className="overflow-hidden border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl"
           ref={floatingTextRef}
           data-floating-controls="text"
           onPointerDownCapture={(e) => {
@@ -24774,7 +24770,7 @@ style={{ top: STICKY_TOP }}
             onChange={(e) => activeTextControls.onText?.(e.target.value)}
             placeholder="Edit text"
             inputMode="text"
-            className="w-full rounded-md bg-neutral-900 border border-white/10 px-3 py-2 text-[16px] text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-fuchsia-500"
+            className="w-full border border-white/10 bg-neutral-900 px-3 py-2 text-[16px] text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-fuchsia-500"
             style={{ resize: "none" }}
           />
         </div>
@@ -24839,7 +24835,7 @@ style={{ top: STICKY_TOP }}
                 e.stopPropagation();
                 activeTextControls.onLayerDown?.();
               }}
-              className="text-[11px] rounded-md border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 px-2 py-1.5 text-white"
+              className="text-[11px] border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-white hover:bg-neutral-800"
             >
               Text Down
             </button>
@@ -24856,7 +24852,7 @@ style={{ top: STICKY_TOP }}
                 e.stopPropagation();
                 activeTextControls.onLayerUp?.();
               }}
-              className="text-[11px] rounded-md border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 px-2 py-1.5 text-white"
+              className="text-[11px] border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-white hover:bg-neutral-800"
             >
               Text Up
             </button>
@@ -24869,10 +24865,10 @@ style={{ top: STICKY_TOP }}
 
   {activeAssetControls && floatingAssetVisible && (
     <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 flex justify-center px-3 z-[1200]" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
-      <div className="w-full max-w-[320px] space-y-2 sm:max-w-[340px]">
+      <div className="relative w-full max-w-[320px] pt-[52px] sm:max-w-[340px]">
         {mobileCreatorProgressStrip}
         <div
-          className="overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl"
+          className="overflow-hidden border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl"
           ref={floatingAssetRef}
           data-floating-controls="asset"
           onPointerDownCapture={(e) => {
@@ -25153,7 +25149,7 @@ style={{ top: STICKY_TOP }}
             type="button"
             data-mobile-float-lock="true"
             onClick={() => activeAssetControls.onContinueToLighting?.()}
-            className="mt-2 w-full rounded-md border border-cyan-400/70 bg-cyan-500/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-100 hover:bg-cyan-500/16"
+            className="mt-2 w-full border border-cyan-400/70 bg-cyan-500/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-100 hover:bg-cyan-500/16"
           >
             Next To Lighting
           </button>
@@ -25172,7 +25168,7 @@ style={{ top: STICKY_TOP }}
               e.stopPropagation();
               activeAssetControls.onLayerUp?.();
             }}
-            className="text-[11px] rounded-md border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 px-2 py-1.5"
+            className="text-[11px] border border-neutral-700 bg-neutral-900 px-2 py-1.5 hover:bg-neutral-800"
           >
             Layer Up
           </button>
@@ -25189,7 +25185,7 @@ style={{ top: STICKY_TOP }}
               e.stopPropagation();
               activeAssetControls.onLayerDown?.();
             }}
-            className="text-[11px] rounded-md border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 px-2 py-1.5"
+            className="text-[11px] border border-neutral-700 bg-neutral-900 px-2 py-1.5 hover:bg-neutral-800"
           >
             Layer Down
           </button>
@@ -25200,14 +25196,14 @@ style={{ top: STICKY_TOP }}
             <button
               type="button"
               onClick={() => activeAssetControls.onToggleLock?.()}
-              className="text-[11px] rounded-md border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 px-2 py-1.5"
+              className="text-[11px] border border-neutral-700 bg-neutral-900 px-2 py-1.5 hover:bg-neutral-800"
             >
               {activeAssetControls.locked ? "Unlock" : "Lock"}
             </button>
             <button
               type="button"
               onClick={() => activeAssetControls.onDelete?.()}
-              className="text-[11px] rounded-md border border-red-700 bg-red-900/30 text-red-200 hover:bg-red-900/40 px-2 py-1.5"
+              className="text-[11px] border border-red-700 bg-red-900/30 px-2 py-1.5 text-red-200 hover:bg-red-900/40"
             >
               {activeAssetControls.deleteLabel || "Delete"}
             </button>
@@ -25220,10 +25216,10 @@ style={{ top: STICKY_TOP }}
 
   {floatingLightingVisible && (
     <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 z-[1200] flex justify-center px-3" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
-      <div className="w-full max-w-[320px] space-y-2 sm:max-w-[340px]">
+      <div className="relative w-full max-w-[320px] pt-[52px] sm:max-w-[340px]">
         {mobileCreatorProgressStrip}
         <div
-          className="max-h-[72vh] overflow-y-auto rounded-2xl border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl"
+          className="max-h-[72vh] overflow-y-auto border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl"
           ref={floatingLightingRef}
           data-floating-controls="lighting"
           onPointerDownCapture={(e) => {
@@ -25399,10 +25395,10 @@ style={{ top: STICKY_TOP }}
 
   {activeBgControls && floatingBgVisible && (
     <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 flex justify-center px-3 z-[1200]" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
-      <div className="w-full max-w-[340px] space-y-2">
+      <div className="relative w-full max-w-[340px] pt-[52px]">
         {mobileCreatorProgressStrip}
         <div
-          className="rounded-2xl border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl"
+          className="border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl"
           ref={floatingBgRef}
           data-floating-controls="bg"
           onPointerDownCapture={(e) => {
@@ -25477,7 +25473,7 @@ style={{ top: STICKY_TOP }}
         <div className="mt-2">
           <button
             type="button"
-            className="w-full rounded-md border border-white/10 bg-white/10 px-3 py-2 text-[12px] text-white hover:bg-white/15"
+            className="w-full border border-white/10 bg-white/10 px-3 py-2 text-[12px] text-white hover:bg-white/15"
             onClick={() => activeBgControls.onToggleLock?.()}
           >
             {activeBgControls.locked ? "Unlock Background" : "Lock Background"}
