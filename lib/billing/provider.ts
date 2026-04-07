@@ -272,7 +272,7 @@ function buildSalePayload(
       OrderIdentifier: orderIdentifier,
       source: {},
       ThreeDSecure: true,
-      TotalAmount: String(Math.round(item.price * 100)),
+      TotalAmount: item.price,
       TransactionIdentifier: transactionIdentifier,
       ...(recurring.RecurringInitial ? { RecurringInitial: true } : {}),
       ...(recurring.Tokenize ? { Tokenize: true } : {}),
