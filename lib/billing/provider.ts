@@ -260,6 +260,8 @@ function buildSalePayload(
   };
 
   return {
+    hostedPage,
+    merchantResponseUrl,
     transactionIdentifier,
     orderIdentifier,
     payload: {
@@ -386,7 +388,7 @@ export async function createProviderCheckout(
 
   const checkoutId = randomUUID();
   const admin = supabaseAdmin();
-  const { transactionIdentifier, orderIdentifier, payload } = buildSalePayload(
+  const { transactionIdentifier, orderIdentifier, payload, hostedPage, merchantResponseUrl } = buildSalePayload(
     selection,
     customerEmail,
     checkoutId,
