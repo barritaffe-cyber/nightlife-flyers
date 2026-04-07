@@ -19640,21 +19640,23 @@ const handleCreatorWorkflowPrimaryAction = React.useCallback(() => {
 }, [advanceCreatorWorkflow, creatorFlowCurrentStep, creatorWorkflowCurrent, openCreatorWorkflowStep, uiMode]);
 const mobileCreatorProgressStrip =
   !isMobileView || isDjStartupMode ? null : (
-    <div className="absolute bottom-full left-0 right-0 mb-2 border border-white/10 bg-neutral-950/82 px-3 py-2 shadow-[0_14px_34px_rgba(0,0,0,0.32)] ring-1 ring-white/10 backdrop-blur-2xl">
+    <div className="absolute bottom-full left-0 right-0 mb-2 border border-white/10 bg-neutral-950/82 px-2.5 py-1.5 shadow-[0_14px_34px_rgba(0,0,0,0.32)] ring-1 ring-white/10 backdrop-blur-2xl">
       <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0 flex items-center gap-1.5 text-[11px] font-semibold text-white">
-          <span className="shrink-0 text-neutral-500">Current Action :</span>
-          <span className="truncate">{currentMobileAction.label}</span>
+        <div className="min-w-0 truncate text-[10px] font-semibold text-white">
+          <span className="text-neutral-500">Current Action:</span>{" "}
+          <span className="truncate">
+            {currentMobileAction.label === "Text" ? "Editing Text" : currentMobileAction.label}
+          </span>
         </div>
         <button
           type="button"
           onClick={handleCreatorWorkflowPrimaryAction}
-          className="shrink-0 border border-cyan-400/35 bg-cyan-500/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-100 transition hover:bg-cyan-500/20"
+          className="shrink-0 border border-cyan-400/35 bg-cyan-500/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-cyan-100 transition hover:bg-cyan-500/20"
         >
           {creatorFlowCurrentStep === "finish" ? "Publish" : "Next"}
         </button>
       </div>
-      <div className="mt-1 text-[10px] leading-4 text-neutral-400">
+      <div className="mt-0.5 text-[9px] leading-4 text-neutral-400">
         {creatorFlowCurrentStep === "scene"
           ? "Finished choosing the scene? Hit Next."
           : creatorFlowCurrentStep === "copy"
@@ -24726,7 +24728,7 @@ style={{ top: STICKY_TOP }}
 
   {activeTextControls && floatingEditorVisible && (
     <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 flex justify-center px-3 z-[1200]" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
-      <div className="relative w-full max-w-[320px] pt-[52px] sm:max-w-[340px]">
+      <div className="relative w-full max-w-[320px] pt-[58px] sm:max-w-[340px]">
         {mobileCreatorProgressStrip}
         <div
           className="overflow-hidden border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl"
@@ -24865,7 +24867,7 @@ style={{ top: STICKY_TOP }}
 
   {activeAssetControls && floatingAssetVisible && (
     <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 flex justify-center px-3 z-[1200]" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
-      <div className="relative w-full max-w-[320px] pt-[52px] sm:max-w-[340px]">
+      <div className="relative w-full max-w-[320px] pt-[58px] sm:max-w-[340px]">
         {mobileCreatorProgressStrip}
         <div
           className="overflow-hidden border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl"
@@ -25216,7 +25218,7 @@ style={{ top: STICKY_TOP }}
 
   {floatingLightingVisible && (
     <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 z-[1200] flex justify-center px-3" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
-      <div className="relative w-full max-w-[320px] pt-[52px] sm:max-w-[340px]">
+      <div className="relative w-full max-w-[320px] pt-[58px] sm:max-w-[340px]">
         {mobileCreatorProgressStrip}
         <div
           className="max-h-[72vh] overflow-y-auto border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl"
@@ -25395,7 +25397,7 @@ style={{ top: STICKY_TOP }}
 
   {activeBgControls && floatingBgVisible && (
     <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 flex justify-center px-3 z-[1200]" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
-      <div className="relative w-full max-w-[340px] pt-[52px]">
+      <div className="relative w-full max-w-[340px] pt-[58px]">
         {mobileCreatorProgressStrip}
         <div
           className="border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl"
