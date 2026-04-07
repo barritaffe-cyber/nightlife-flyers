@@ -19641,30 +19641,13 @@ const handleCreatorWorkflowPrimaryAction = React.useCallback(() => {
 const mobileCreatorProgressStrip =
   !isMobileView || isDjStartupMode ? null : (
     <div className="w-full max-w-[320px] overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/72 px-3 py-2 shadow-[0_14px_34px_rgba(0,0,0,0.32)] ring-1 ring-white/10 backdrop-blur-2xl sm:max-w-[340px]">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
-            Creator Flow · Step {creatorWorkflowStepNumber} / 4
-          </div>
-          <div className="mt-1 truncate text-[11px] font-semibold text-white">
-            {creatorWorkflowGuide.title}
-          </div>
-          <div className="mt-1 text-[10px] leading-4 text-neutral-400">
-            {creatorWorkflowGuide.hint}
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={handleCreatorWorkflowPrimaryAction}
-          className="shrink-0 border border-cyan-400/35 bg-cyan-500/10 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-100 transition hover:bg-cyan-500/20"
-        >
-          {creatorWorkflowGuide.mobileButtonLabel}
-        </button>
+      <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+        Current Action
       </div>
-      <div className="mt-1 text-[10px] uppercase tracking-[0.12em] text-neutral-500">
-        Editing: {currentMobileAction.label}
+      <div className="mt-1 truncate text-[11px] font-semibold text-white">
+        {currentMobileAction.label}
       </div>
-      <div className="mt-1 text-[10px] leading-4 text-cyan-100/90">
+      <div className="mt-1 text-[10px] leading-4 text-neutral-400">
         {creatorFlowCurrentStep === "scene"
           ? "After choosing the scene, tap Next."
           : creatorFlowCurrentStep === "copy"
