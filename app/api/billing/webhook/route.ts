@@ -337,7 +337,7 @@ export async function POST(req: Request) {
         title: "Secure checkout loading",
         message: "PowerTranz is preparing the hosted payment page.",
         spiToken: effectiveSpiToken,
-        conductorUrl: `${providerState.apiBase.replace(/\/+$/, "")}/spi/Conductor`,
+        conductorUrl: `${providerState.apiBase.replace(/\/+$/, "")}/spi/conductor`,
       });
     }
 

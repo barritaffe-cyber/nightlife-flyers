@@ -145,7 +145,7 @@ function requiredConfigEnvKeys() {
 }
 
 function getPowerTranzApiBase(environment = getPowerTranzEnvironment()): string {
-  return environment ? `https://${environment}.ptranz.com/Api` : "";
+  return environment ? `https://${environment}.ptranz.com/api` : "";
 }
 
 function buildPowerTranzUrl(path: string, environment = getPowerTranzEnvironment()): string {
@@ -243,23 +243,12 @@ function buildSalePayload(
     PAGESET: getPowerTranzPageSet(),
     PAGENAME: getPowerTranzPageName(),
   };
-  const threeDSecure = {
-    ChallengeIndicator: "01",
-    ChallengeWindowSize: 4,
-  };
   const extendedData = {
-    // PowerTranz samples are inconsistent about key casing, so keep both forms.
     HOSTEDPAGE: hostedPage,
-    HostedPage: {
-      PageSet: hostedPage.PAGESET,
-      PageName: hostedPage.PAGENAME,
-    },
     MERCHANTRESPONSEURL: merchantResponseUrl,
-    MerchantResponseUrl: merchantResponseUrl,
-    ThreeDSecure: threeDSecure,
     threeDSecure: {
       challengeIndicator: "01",
-      challengeWindowSize: 4,
+      challengeWindowSize: "4",
     },
     ...(recurring.ExtendedData || {}),
   };
@@ -271,12 +260,10 @@ function buildSalePayload(
       CurrencyCode: getPowerTranzCurrencyCode(),
       ExtendedData: extendedData,
       OrderIdentifier: orderIdentifier,
-      Source: {},
       source: {},
       ThreeDSecure: true,
-      TotalAmount: item.price,
+      TotalAmount: String(Math.round(item.price * 100)),
       TransactionIdentifier: transactionIdentifier,
-      ...(customerEmail ? { BillingAddress: { EmailAddress: customerEmail } } : {}),
       ...(recurring.RecurringInitial ? { RecurringInitial: true } : {}),
       ...(recurring.Tokenize ? { Tokenize: true } : {}),
     },
@@ -425,7 +412,7 @@ export async function createProviderCheckout(
   }
 
   try {
-    const response = await powerTranzRequest<PowerTranzFinancialResponse>("/spi/Sale", {
+    const response = await powerTranzRequest<PowerTranzFinancialResponse>("/spi/sale", {
       method: "POST",
       body: payload,
     });
