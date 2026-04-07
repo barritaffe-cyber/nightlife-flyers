@@ -322,6 +322,16 @@ export async function POST(req: Request) {
     const effectiveSpiToken = callbackSpiToken || checkout.spi_token;
     const callbackCode = isPlainObject(body) ? resolveCallbackCode(body) : null;
 
+    console.info("PowerTranz callback received", {
+      checkoutId,
+      checkoutStatus: checkout.status,
+      callbackCode,
+      hasBody: isPlainObject(body),
+      bodyKeys: isPlainObject(body) ? Object.keys(body).slice(0, 20) : [],
+      hasCallbackSpiToken: Boolean(callbackSpiToken),
+      hasStoredSpiToken: Boolean(checkout.spi_token),
+    });
+
     if (!effectiveSpiToken) {
       await markPowerTranzCheckoutStatus(checkout.id, "invalid");
       return renderBillingCallbackPage({
@@ -343,6 +353,11 @@ export async function POST(req: Request) {
 
     if (callbackCode && !["HP0", "3D0", "3D1"].includes(callbackCode)) {
       await markPowerTranzCheckoutStatus(checkout.id, "failed");
+      console.error("PowerTranz callback pre-completion failure", {
+        checkoutId,
+        callbackCode,
+        body,
+      });
       return renderBillingCallbackPage({
         title: "Payment was not completed",
         message: `PowerTranz returned ${callbackCode} before payment completion.`,
@@ -385,10 +400,24 @@ export async function POST(req: Request) {
         (paymentPayload as { errors?: Array<{ message?: string | null }> }).errors?.[0]?.message) ||
       "PowerTranz did not approve the payment.";
 
+    console.info("PowerTranz payment response", {
+      checkoutId,
+      approved: paymentApproved,
+      transactionIdentifier: paymentTransactionId,
+      orderIdentifier: paymentOrderIdentifier,
+      paymentMessage,
+      payloadKeys: Object.keys(paymentPayload).slice(0, 20),
+    });
+
     if (!paymentApproved) {
       await markPowerTranzCheckoutStatus(checkout.id, "failed", {
         powertranz_transaction_id: paymentTransactionId || null,
         powertranz_pan_token: paymentPanToken || null,
+      });
+      console.error("PowerTranz payment declined", {
+        checkoutId,
+        paymentMessage,
+        paymentPayload,
       });
       return renderBillingCallbackPage({
         title: "Payment declined",

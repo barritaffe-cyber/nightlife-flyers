@@ -228,6 +228,12 @@ function getResponseString(response: PowerTranzFinancialResponse, ...keys: Array
   return null;
 }
 
+function maskValue(value: string | null | undefined, keep = 6) {
+  if (!value) return null;
+  if (value.length <= keep) return value;
+  return `${"*".repeat(Math.max(0, value.length - keep))}${value.slice(-keep)}`;
+}
+
 function buildSalePayload(
   selection: BillingSelection,
   customerEmail: string,
@@ -412,6 +418,20 @@ export async function createProviderCheckout(
   }
 
   try {
+    console.info("PowerTranz sale request", {
+      checkoutId,
+      orderIdentifier,
+      transactionIdentifier,
+      selection,
+      apiBase: providerState.apiBase,
+      pageSet: hostedPage.PAGESET,
+      pageName: hostedPage.PAGENAME,
+      currencyCode: payload.CurrencyCode,
+      totalAmount: payload.TotalAmount,
+      merchantResponseUrl,
+      recurring: selection.kind === "plan",
+    });
+
     const response = await powerTranzRequest<PowerTranzFinancialResponse>("/spi/sale", {
       method: "POST",
       body: payload,
@@ -419,6 +439,17 @@ export async function createProviderCheckout(
 
     const redirectData = getResponseString(response, "RedirectData", "redirectData");
     const spiToken = getResponseString(response, "SpiToken", "spiToken");
+
+    console.info("PowerTranz sale response", {
+      checkoutId,
+      approved: response.Approved ?? response.approved ?? null,
+      transactionIdentifier:
+        getResponseString(response, "TransactionIdentifier", "transactionIdentifier"),
+      orderIdentifier: getResponseString(response, "OrderIdentifier", "orderIdentifier"),
+      spiToken: maskValue(spiToken),
+      hasRedirectData: Boolean(redirectData),
+      responseMessage: getResponseString(response, "ResponseMessage", "responseMessage"),
+    });
 
     if (!redirectData || !spiToken) {
       await admin
@@ -469,6 +500,19 @@ export async function createProviderCheckout(
       redirectDataHtml: redirectData,
     };
   } catch (error) {
+    console.error("PowerTranz sale failed", {
+      checkoutId,
+      selection,
+      customerEmail,
+      error:
+        error instanceof Error
+          ? {
+              name: error.name,
+              message: error.message,
+              ...(error instanceof PowerTranzApiError ? { status: error.status, details: error.details } : {}),
+            }
+          : error,
+    });
     await admin
       .from("billing_checkouts")
       .update({
