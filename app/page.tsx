@@ -1312,6 +1312,84 @@ const TemplateGalleryPanel = React.memo(({
 });
 TemplateGalleryPanel.displayName = 'TemplateGalleryPanel';
 
+const BackgroundGalleryPanel = React.memo(({
+  items,
+  onApply,
+  isOpen,
+  onToggle,
+}: {
+  items: ReadonlyArray<{
+    id: string;
+    name: string;
+    src: string;
+  }>;
+  onApply: (src: string) => void;
+  isOpen?: boolean;
+  onToggle?: () => void;
+}) => {
+  const INITIAL_VISIBLE_BACKGROUNDS = 4;
+  const [visibleCount, setVisibleCount] = React.useState(INITIAL_VISIBLE_BACKGROUNDS);
+  const visible = React.useMemo(
+    () => items.slice(0, visibleCount),
+    [items, visibleCount]
+  );
+
+  React.useEffect(() => {
+    setVisibleCount(INITIAL_VISIBLE_BACKGROUNDS);
+  }, [items]);
+
+  return (
+    <Collapsible
+      title="Backgrounds"
+      storageKey="p:dj-backgrounds"
+      isOpen={isOpen}
+      onToggle={onToggle}
+      titleClassName={isOpen ? "text-amber-400" : ""}
+    >
+      <div className="grid grid-cols-2 gap-3">
+        {visible.map((background) => (
+          <div
+            key={background.id}
+            className="overflow-hidden rounded-lg border border-neutral-700 bg-neutral-900/60"
+          >
+            <img
+              src={background.src}
+              alt={background.name}
+              className="block h-[120px] w-full object-cover"
+              draggable={false}
+            />
+            <div className="flex items-center justify-between gap-2 p-2">
+              <div className="text-[12px] font-semibold">{background.name}</div>
+              <button
+                type="button"
+                className="rounded-md border border-indigo-400/40 bg-indigo-600/20 px-2 py-1 text-[12px] hover:bg-indigo-600/30 focus-ring"
+                onClick={() => onApply(background.src)}
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+      {items.length > visibleCount && (
+        <div className="mt-3 grid place-items-center">
+          <button
+            type="button"
+            className="rounded-lg border border-amber-300/25 bg-amber-300/10 px-3 py-1 text-xs text-amber-100 hover:bg-amber-300/15"
+            onClick={() => setVisibleCount(items.length)}
+          >
+            <span className="inline-flex items-center gap-1 animate-pulse [animation-duration:4.2s] [animation-timing-function:ease-in-out]">
+              View more backgrounds
+              <span aria-hidden="true">↓</span>
+            </span>
+          </button>
+        </div>
+      )}
+    </Collapsible>
+  );
+});
+BackgroundGalleryPanel.displayName = 'BackgroundGalleryPanel';
+
 
 type Align = 'left' | 'center' | 'right';
 type TextSide = 'left' | 'right';
@@ -18854,7 +18932,10 @@ const creatorWorkflowMeta = {
 const creatorWorkflowCurrent =
   uiMode === "finish"
     ? "finish"
-    : selectedPanel === "background" || selectedPanel === "template" || selectedPanel === "ai_background"
+    : selectedPanel === "background" ||
+      selectedPanel === "template" ||
+      selectedPanel === "template_backgrounds" ||
+      selectedPanel === "ai_background"
     ? "scene"
     : selectedPanel === "headline" ||
       selectedPanel === "head2" ||
@@ -18917,6 +18998,191 @@ const openCreatorWorkflowStep = React.useCallback(
   },
   [openCreatorWorkflowTarget]
 );
+const currentMobileAction = React.useMemo(() => {
+  if (uiMode === "finish" || selectedPanel === "mastergrade" || exportModalOpen) {
+    return {
+      label: "Export",
+      panel: "mastergrade",
+      tab: "assets" as const,
+      uiMode: "finish" as const,
+      targetId: "mastergrade-panel",
+    };
+  }
+
+  if (selectedPanel === "template") {
+    return {
+      label: "Template",
+      panel: "template",
+      tab: "design" as const,
+      uiMode: "design" as const,
+      targetId: "template-panel",
+    };
+  }
+
+  if (selectedPanel === "template_backgrounds") {
+    return {
+      label: "Background",
+      panel: "template_backgrounds",
+      tab: "design" as const,
+      uiMode: "design" as const,
+      targetId: "template-backgrounds-panel",
+    };
+  }
+
+  if (selectedPanel === "background" || selectedPanel === "bgfx") {
+    return {
+      label: "Background",
+      panel: "background",
+      tab: "assets" as const,
+      uiMode: "design" as const,
+      targetId: "background-panel",
+    };
+  }
+
+  if (selectedPanel === "ai_background") {
+    return {
+      label: "Background",
+      panel: "ai_background",
+      tab: "assets" as const,
+      uiMode: "design" as const,
+      targetId: "ai-background-panel",
+    };
+  }
+
+  if (selectedPanel === "magic_blend") {
+    return {
+      label: "Magic Blend",
+      panel: "magic_blend",
+      tab: "assets" as const,
+      uiMode: "design" as const,
+      targetId: "magic-blend-panel",
+    };
+  }
+
+  if (
+    selectedPanel === "headline" ||
+    selectedPanel === "head2" ||
+    selectedPanel === "details" ||
+    selectedPanel === "details2" ||
+    selectedPanel === "venue" ||
+    selectedPanel === "subtag"
+  ) {
+    return {
+      label: "Text",
+      panel: "headline",
+      tab: "design" as const,
+      uiMode: "design" as const,
+      targetId: "headline-panel",
+    };
+  }
+
+  if (selectedPanel === "logo") {
+    return {
+      label: "Assets",
+      panel: "logo",
+      tab: "assets" as const,
+      uiMode: "design" as const,
+      targetId: "logo-panel",
+    };
+  }
+
+  if (selectedPanel === "cinema") {
+    return {
+      label: "Assets",
+      panel: "cinema",
+      tab: "assets" as const,
+      uiMode: "design" as const,
+      targetId: "cinema-panel",
+    };
+  }
+
+  if (selectedPanel === "icons" || selectedPanel === "portrait" || selectedPanel === "dj_branding") {
+    return {
+      label: "Assets",
+      panel: selectedPanel === "dj_branding" ? "dj_branding" : "icons",
+      tab: "assets" as const,
+      uiMode: "design" as const,
+      targetId: "library-panel",
+    };
+  }
+
+  if (creatorWorkflowCurrent === "scene") {
+    return mobileControlsTab === "design"
+      ? {
+          label: "Template",
+          panel: "template",
+          tab: "design" as const,
+          uiMode: "design" as const,
+          targetId: "template-panel",
+        }
+      : {
+          label: "Background",
+          panel: "background",
+          tab: "assets" as const,
+          uiMode: "design" as const,
+          targetId: "background-panel",
+        };
+  }
+
+  if (creatorWorkflowCurrent === "copy") {
+    return {
+      label: "Text",
+      panel: "headline",
+      tab: "design" as const,
+      uiMode: "design" as const,
+      targetId: "headline-panel",
+    };
+  }
+
+  if (creatorWorkflowCurrent === "assets") {
+    return {
+      label: "Assets",
+      panel: "icons",
+      tab: "assets" as const,
+      uiMode: "design" as const,
+      targetId: "library-panel",
+    };
+  }
+
+  return {
+    label: "Template",
+    panel: "template",
+    tab: "design" as const,
+    uiMode: "design" as const,
+    targetId: "template-panel",
+  };
+}, [creatorWorkflowCurrent, exportModalOpen, mobileControlsTab, selectedPanel, uiMode]);
+const jumpToCurrentMobileAction = React.useCallback(() => {
+  openCreatorWorkflowTarget(currentMobileAction.panel, currentMobileAction.tab, {
+    uiMode: currentMobileAction.uiMode,
+    targetId: currentMobileAction.targetId,
+  });
+}, [currentMobileAction, openCreatorWorkflowTarget]);
+const mobileCurrentActionBar =
+  !isMobileView || isDjStartupMode ? null : (
+    <div
+      className="sticky z-[36] px-3 pb-2 lg:hidden"
+      style={{ top: "calc(env(safe-area-inset-top, 0px) + 6px)" }}
+    >
+      <div className="flex items-center justify-between gap-3 border border-cyan-400/20 bg-neutral-950/92 px-3 py-2 shadow-[0_14px_28px_rgba(0,0,0,0.32)] backdrop-blur">
+        <div className="min-w-0">
+          <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+            Current Action
+          </div>
+          <div className="truncate text-[12px] font-semibold text-white">
+            Editing: {currentMobileAction.label}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={jumpToCurrentMobileAction}
+          className="shrink-0 border border-cyan-400/35 bg-cyan-500/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-100 transition hover:bg-cyan-500/20"
+        >
+          Jump
+        </button>
+      </div>
+    </div>
+  );
 const openWorkflowHelp = React.useCallback(() => {
   setWorkflowHelpOpen(true);
 }, []);
@@ -21779,6 +22045,7 @@ className={clsx(
 style={{ top: STICKY_TOP }}
 >               
   {uiMode === "design" && mobileControlsOpen && mobileControlsTabs}
+  {mobileCurrentActionBar}
 
   
   <div className={uiMode === "design" ? "space-y-3" : "hidden"}>
@@ -21820,6 +22087,24 @@ style={{ top: STICKY_TOP }}
 )}
 
 {/* UI: STARTER TEMPLATES (END) */}
+
+{!isDjStartupMode && (
+  <div className="mb-3" id="template-backgrounds-panel">
+    <div className={creatorStepPanelClass("scene")}>
+      <BackgroundGalleryPanel
+        items={DJ_STARTUP_BACKGROUNDS}
+        isOpen={selectedPanel === "template_backgrounds"}
+        onToggle={() => {
+          setSelectedPanel(selectedPanel === "template_backgrounds" ? null : "template_backgrounds");
+        }}
+        onApply={(src) => {
+          applyStartupBackground(src);
+          window.setTimeout(scrollToArtboard, 180);
+        }}
+      />
+    </div>
+  </div>
+)}
 
 
 
@@ -24818,6 +25103,7 @@ className={clsx(
 style={{ top: STICKY_TOP }}
 >               
   {uiMode === "design" && mobileControlsOpen && mobileControlsTabs}
+  {mobileCurrentActionBar}
 
 {isStarterPlan ? (
   <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-[12px] text-amber-100">
