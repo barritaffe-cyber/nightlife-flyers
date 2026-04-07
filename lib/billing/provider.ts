@@ -112,7 +112,9 @@ function getPowerTranzEnvironment(): string {
 }
 
 function getPowerTranzPageSet(): string {
-  return String(process.env.POWERTRANZ_PAGESET || "").trim();
+  const value = String(process.env.POWERTRANZ_PAGESET || "").trim();
+  if (!value) return "";
+  return value.startsWith("PTZ/") ? value : `PTZ/${value}`;
 }
 
 function getPowerTranzPageName(): string {
