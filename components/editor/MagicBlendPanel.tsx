@@ -3,6 +3,7 @@
 
 import * as React from 'react';
 import { Collapsible } from './controls';
+import BackgroundVersionReview from './BackgroundVersionReview';
 
 type BlendStyle = 'club' | 'tropical' | 'jazz_bar' | 'outdoor_summer';
 type BlendPriority = 'upload' | 'canvas';
@@ -34,6 +35,8 @@ type Props = {
   isCapturingBackground: boolean;
   hasSharedGeneratedBackground: boolean;
   sharedGeneratedBackgroundSource: string;
+  originalBackgroundSrc: string | null;
+  generatedBackgroundSrc: string | null;
   canRestoreOriginalBackground: boolean;
   isOriginalBackgroundActive: boolean;
   isGeneratedBackgroundActive: boolean;
@@ -68,6 +71,8 @@ function MagicBlendPanel({
   isCapturingBackground,
   hasSharedGeneratedBackground,
   sharedGeneratedBackgroundSource,
+  originalBackgroundSrc,
+  generatedBackgroundSrc,
   canRestoreOriginalBackground,
   isOriginalBackgroundActive,
   isGeneratedBackgroundActive,
@@ -97,7 +102,7 @@ function MagicBlendPanel({
         className="relative rounded-xl transition-all"
       >
         <Collapsible
-          title="Magic Blend"
+          title="Portrait Blend"
           storageKey="p:magic_blend"
           isOpen={selectedPanel === 'magic_blend'}
           onToggle={onToggle}
@@ -111,8 +116,8 @@ function MagicBlendPanel({
             <button
               type="button"
               onClick={() => setHelpOpen(true)}
-              aria-label="Magic Blend help"
-              title="How Magic Blend works"
+              aria-label="Portrait Blend help"
+              title="How Portrait Blend works"
               className="h-6 w-6 border border-cyan-400/70 text-cyan-300 text-[11px] font-bold hover:bg-cyan-400/10"
             >
               ?
@@ -123,45 +128,21 @@ function MagicBlendPanel({
             Select a cinematic <b>Style</b>, upload your assets, and let AI fuse them into a unified photo.
           </div>
           <div className="mb-4 rounded-lg border border-amber-400/30 bg-amber-500/5 px-3 py-2 text-[10px] text-amber-200/90">
-            If Magic Blend is blocked for sensitive content, try a different subject/background, crop tighter, or use less revealing imagery.
+            If Portrait Blend is blocked for sensitive content, try a different subject/background, crop tighter, or use less revealing imagery.
           </div>
 
           {hasSharedGeneratedBackground && (
-            <div className="mb-4 space-y-2 rounded-xl border border-cyan-400/20 bg-cyan-500/5 p-3">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-300">
-                Background Versions
-              </div>
-              <div className="text-[11px] leading-relaxed text-neutral-300">
-                Your latest {sharedGeneratedBackgroundSource.toLowerCase()} result stays available on square and story. Toggle this canvas between the original background and the generated version anytime.
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={onUseOriginalBackground}
-                  disabled={!canRestoreOriginalBackground}
-                  className={[
-                    "rounded-md border px-3 py-2 text-[10px] font-bold uppercase tracking-wide transition-all",
-                    isOriginalBackgroundActive
-                      ? "border-cyan-400 bg-cyan-400/15 text-cyan-100"
-                      : "border-neutral-700 bg-neutral-900/50 text-neutral-300 hover:border-neutral-500 hover:text-white",
-                    !canRestoreOriginalBackground ? "cursor-not-allowed opacity-50" : "",
-                  ].join(" ")}
-                >
-                  Original
-                </button>
-                <button
-                  type="button"
-                  onClick={onUseGeneratedBackground}
-                  className={[
-                    "rounded-md border px-3 py-2 text-[10px] font-bold uppercase tracking-wide transition-all",
-                    isGeneratedBackgroundActive
-                      ? "border-cyan-400 bg-cyan-400/15 text-cyan-100"
-                      : "border-neutral-700 bg-neutral-900/50 text-neutral-300 hover:border-neutral-500 hover:text-white",
-                  ].join(" ")}
-                >
-                  Generated
-                </button>
-              </div>
+            <div className="mb-4">
+              <BackgroundVersionReview
+                sourceLabel={sharedGeneratedBackgroundSource}
+                originalSrc={originalBackgroundSrc}
+                generatedSrc={generatedBackgroundSrc}
+                canRestoreOriginal={canRestoreOriginalBackground}
+                isOriginalActive={isOriginalBackgroundActive}
+                isGeneratedActive={isGeneratedBackgroundActive}
+                onUseOriginal={onUseOriginalBackground}
+                onUseGenerated={onUseGeneratedBackground}
+              />
             </div>
           )}
 
@@ -516,7 +497,7 @@ function MagicBlendPanel({
         <div className="fixed inset-0 z-[5100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-xl rounded-2xl border border-cyan-400/30 bg-[#0a0d12] shadow-[0_30px_80px_rgba(0,0,0,.6)] overflow-hidden">
             <div className="px-5 py-4 border-b border-white/10 bg-gradient-to-r from-cyan-500/20 to-fuchsia-500/10">
-              <div className="text-sm uppercase tracking-[0.2em] text-cyan-300">Magic Blend Guide</div>
+              <div className="text-sm uppercase tracking-[0.2em] text-cyan-300">Portrait Blend Guide</div>
               <div className="mt-1 text-lg font-semibold text-white">Blend subject + scene in seconds.</div>
             </div>
 

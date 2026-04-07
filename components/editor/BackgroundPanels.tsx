@@ -17,7 +17,6 @@ type Props = {
   setSelectedPanel: (v: string | null) => void;
   triggerUpload: () => void;
   fitBackground: () => void;
-  clearBackground: () => void;
   setBgScale: React.Dispatch<React.SetStateAction<number>>;
   bgFitMode: boolean;
   setBgFitMode: React.Dispatch<React.SetStateAction<boolean>>;
@@ -84,7 +83,6 @@ function BackgroundPanels({
   setSelectedPanel,
   triggerUpload,
   fitBackground,
-  clearBackground,
   setBgScale,
   setBgPosX,
   setBgPosY,
@@ -169,7 +167,7 @@ function BackgroundPanels({
         className="relative rounded-xl transition"
       >
         <Collapsible
-          title="Background"
+          title="Scene Builder"
           storageKey="p:bg"
           isOpen={selectedPanel === 'background'}
           onToggle={() =>
@@ -216,9 +214,6 @@ function BackgroundPanels({
                     title="Slight zoom"
                   >
                     Fill
-                  </Chip>
-                  <Chip small onClick={clearBackground}>
-                    Clear
                   </Chip>
                 </>
               )}
@@ -488,7 +483,7 @@ function BackgroundPanels({
               {allowUploads ? (
                 <>
                   No background yet. Upload one
-                  {showAiTools ? <> or use AI Background.</> : <>.</>}
+                  {showAiTools ? <> or use AI Scene.</> : <>.</>}
                 </>
               ) : (
                 <>
@@ -513,7 +508,7 @@ function BackgroundPanels({
         className="relative rounded-xl transition"
       >
         <Collapsible
-          title="Background Effects"
+          title="Scene Effects"
           storageKey="p:bgfx"
           defaultOpen={false}
           isOpen={selectedPanel === 'background' || selectedPanel === 'bgfx'}

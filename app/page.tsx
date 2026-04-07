@@ -6591,7 +6591,7 @@ export default function Page() {
   // =========================================================
  const handleCreateCinematic = async () => {
   if (isStarterPlan) {
-    alert("Starter plan has 0 AI generations. Upgrade or use a pass to access Cinematic 3D.");
+    alert("Starter plan has 0 AI generations. Upgrade or use a pass to access Cinematic Text.");
     return;
   }
   let ref = cinematicRefUrl;
@@ -7756,6 +7756,7 @@ const DEFAULT_CLEANUP: CleanupParams = {
 
 const [cleanupById, setCleanupById] = useState<CleanupById>({});
 const [cleanupParams, setCleanupParams] = useState<CleanupParams>(DEFAULT_CLEANUP);
+const [portraitLightingAdvancedOpen, setPortraitLightingAdvancedOpen] = useState(false);
 
 // prevents reprocessing on every tiny slider tick
 const cleanupTimerRef = useRef<number | null>(null);
@@ -7796,6 +7797,15 @@ const activeBlendPortraitLayer = React.useMemo(() => {
   }
   return list.length ? (list[list.length - 1] as any) : null;
 }, [format, portraits, selectedPortrait, selectedPortraitIsAsset]);
+
+const selectedPortraitLighting = React.useMemo(
+  () => normalizeMainFaceLighting((selectedPortrait as any)?.lighting),
+  [selectedPortrait]
+);
+
+React.useEffect(() => {
+  setPortraitLightingAdvancedOpen(false);
+}, [selectedPortraitId]);
 
 // ✅ SINGLE source-of-truth slider sync on portrait switch
 useEffect(() => {
@@ -8409,12 +8419,30 @@ const TOUR_STEPS = [
     selector: '#template-panel',
     onEnter: () => {
       setUiMode("design");
+      setSelectedPanel("template");
       if (isMobileView) {
         setMobileControlsOpen(true);
         setMobileControlsTab("design");
       }
       setTimeout(() => {
         document.querySelector("#template-panel")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
+    },
+  },
+  {
+    id: 'template_backgrounds',
+    title: 'Try built-in backgrounds',
+    body: 'You can also start the scene from the Backgrounds panel just below templates for fast club-ready backdrops.',
+    selector: '#template-backgrounds-panel',
+    onEnter: () => {
+      setUiMode("design");
+      setSelectedPanel("template_backgrounds");
+      if (isMobileView) {
+        setMobileControlsOpen(true);
+        setMobileControlsTab("design");
+      }
+      setTimeout(() => {
+        document.querySelector("#template-backgrounds-panel")?.scrollIntoView({ behavior: "smooth", block: "center" });
       }, 150);
     },
   },
@@ -8445,17 +8473,17 @@ const TOUR_STEPS = [
     },
   },
   {
-    id: 'background',
-    title: 'Set the background',
-    body: 'Upload your own or use AI Background to generate the vibe.',
+    id: 'ai_background',
+    title: 'AI Scene',
+    body: 'If templates or built-in backgrounds are not enough, use AI Scene to generate a new scene.',
     selector: '#ai-background-panel', 
     onEnter: () => {
       setUiMode("design");
+      setSelectedPanel("ai_background");
       if (isMobileView) {
         setMobileControlsOpen(true);
         setMobileControlsTab("assets"); // background controls live under the Design/Assets tab labeled "Design"
       }
-      setSelectedPanel(null); // ensure panels are closed while switching to Design tab
       setTimeout(() => {
         const target = document.querySelector("#ai-background-panel");
         target?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -8464,8 +8492,8 @@ const TOUR_STEPS = [
   },
   {
     id: 'magic_blend',
-    title: 'Magic Blend',
-    body: 'Fuse your subject and background into a single cinematic photo with Magic Blend.',
+    title: 'Portrait Blend',
+    body: 'Fuse your subject and background into a single cinematic photo with Portrait Blend.',
     selector: '#magic-blend-panel',
     onEnter: () => {
       setUiMode("design");
@@ -8508,8 +8536,8 @@ const TOUR_STEPS = [
   },
   {
     id: 'cinematic3d',
-    title: 'Cinematic 3D',
-    body: 'Create 3D effects from our templates here.',
+    title: 'Cinematic Text',
+    body: 'Create cinematic text from the built-in styles here.',
     selector: '[data-tour="cinematic"]',
     onEnter: () => {
       setUiMode("design");
@@ -8673,7 +8701,7 @@ useEffect(() => {
     el = resolveMobileTab("text");
   } else if (step?.id === "design_tab") {
     el = resolveMobileTab("design");
-  } else if (step?.id === "background") {
+  } else if (step?.id === "ai_background") {
     // Specifically target the AI panel within the expanded sidebar
     el = document.querySelector("#ai-background-panel") as HTMLElement | null;
   } else if (step?.id === "artboard" || step?.id === "gestures") {
@@ -11445,6 +11473,94 @@ const mobileFloatSticky = isMobileView && format === "story";
     updatePortrait,
   ]);
 
+  const updateSelectedPortraitLighting = React.useCallback(
+    (patch: Partial<PortraitLighting>) => {
+      if (!selectedPortrait?.id || selectedPortraitIsAsset) return;
+      updatePortrait(format, selectedPortrait.id, {
+        lighting: normalizeMainFaceLighting({
+          ...selectedPortraitLighting,
+          ...patch,
+        }),
+      });
+    },
+    [format, selectedPortrait, selectedPortraitIsAsset, selectedPortraitLighting, updatePortrait]
+  );
+
+  const updateSelectedPortraitLightingRaf = useRafThrottle(
+    React.useCallback(
+      (patch: Partial<PortraitLighting>) => {
+        updateSelectedPortraitLighting(patch);
+      },
+      [updateSelectedPortraitLighting]
+    )
+  );
+
+  const resetSelectedPortraitLighting = React.useCallback(() => {
+    if (!selectedPortrait?.id || selectedPortraitIsAsset) return;
+    updatePortrait(format, selectedPortrait.id, {
+      lighting: { ...DEFAULT_MAIN_FACE_LIGHTING },
+    });
+  }, [format, selectedPortrait, selectedPortraitIsAsset, updatePortrait]);
+
+  const autoAnalyzeSelectedPortraitLighting = React.useCallback(async () => {
+    if (!selectedPortrait?.id || selectedPortraitIsAsset) {
+      alert("Place a portrait on the canvas first.");
+      return;
+    }
+
+    const backgroundToAnalyze =
+      (await (async () => {
+        if (!artRef.current) return null;
+        try {
+          return (
+            (await artRef.current?.exportBackgroundDataUrl?.({
+              size: 768,
+            })) || null
+          );
+        } catch {
+          return null;
+        }
+      })()) || blendBackground || bgUploadUrl || bgUrl;
+
+    if (!backgroundToAnalyze) {
+      alert("Add a background first so portrait lighting can analyze it.");
+      return;
+    }
+
+    const placement = capturePortraitPlacementFromCanvas(selectedPortrait.id);
+    if (!placement) {
+      alert("Portrait placement could not be measured on the canvas.");
+      return;
+    }
+
+    try {
+      const analyzedLighting = await analyzeBackgroundLightingFromPlacement(
+        backgroundToAnalyze,
+        placement
+      );
+      updatePortrait(format, selectedPortrait.id, {
+        lighting: normalizeMainFaceLighting({
+          ...selectedPortraitLighting,
+          ...analyzedLighting,
+          enabled: true,
+          autoMatch: true,
+        }),
+      });
+    } catch (err: any) {
+      alert(err?.message || "Portrait lighting analysis failed.");
+    }
+  }, [
+    bgUploadUrl,
+    bgUrl,
+    blendBackground,
+    capturePortraitPlacementFromCanvas,
+    format,
+    selectedPortrait,
+    selectedPortraitIsAsset,
+    selectedPortraitLighting,
+    updatePortrait,
+  ]);
+
   const [subscriptionStatus, setSubscriptionStatus] = React.useState<"active" | "ondemand" | "inactive">("inactive");
   const [accessPlan, setAccessPlan] = React.useState<string | null>(null);
   const isPaid = subscriptionStatus === "active";
@@ -13433,7 +13549,8 @@ React.useEffect(() => {
   saveDebounce.current = window.setTimeout(() => {
     try {
       persistLastDesignSafely(exportDesignJSON());
-      safeLocalSet('NLF:auto:savedAt', String(Date.now()), [
+      const savedAt = String(Date.now());
+      safeLocalSet(LOCAL_AUTOSAVE_AT_KEY, savedAt, [
         'nf:portraitSlots',
         'nf:portraitLibrary',
         'nf:logoSlots',
@@ -15910,13 +16027,18 @@ const portraitCanvas = React.useMemo(() => {
     const labelPaddingY = labelBg ? Math.max(1, Math.round(labelSize * 0.15)) : 0;
     const labelPaddingX = labelBg ? Math.max(4, Math.round(labelSize * 0.45)) : 0;
     const isBrandFace = !!(p as any).isBrandFace;
+    const isPortraitAsset =
+      !!(p as any).isFlare ||
+      !!(p as any).isSticker ||
+      !!(p as any).isLogo ||
+      String((p as any).id || "").startsWith("logo_");
     const shapeScale = Math.max(0.01, Math.min(6, Number(p.scale ?? 1)));
     const shapeLength = Math.max(48, Math.min(12000, Number((p as any).shapeLength ?? 160)));
     const shapeSkew = Math.max(-60, Math.min(60, Number((p as any).shapeSkew ?? 0)));
     const shapeWidth = Math.max(12, Math.round(shapeLength * shapeScale));
     const shapeHeight = Math.max(12, Math.round(160 * shapeScale));
     const portraitLighting = normalizeMainFaceLighting((p as any).lighting);
-    const showSubjectLighting = isBrandFace && portraitLighting.enabled;
+    const showSubjectLighting = !isShapeGraphic && !isPortraitAsset && portraitLighting.enabled;
     const mainFaceFilterPreset = isBrandFace
       ? normalizeMainFaceFilterPreset((p as any).mainFaceFilterPreset)
       : "none";
@@ -18681,6 +18803,7 @@ const [djActiveWorkflowStep, setDjActiveWorkflowStep] = React.useState<
   "background" | "mainface" | "lighting" | "design" | null
 >(null);
 const PROJECT_FILE_STATUS_KEY = "nf:projectFileStatus";
+const LOCAL_AUTOSAVE_AT_KEY = "NLF:auto:savedAt";
 const [projectFileStatus, setProjectFileStatus] = React.useState<null | {
   kind: "saved" | "loaded";
   at: string;
@@ -18714,9 +18837,15 @@ const setProjectFileStatusAndPersist = React.useCallback(
   },
   []
 );
-const projectFileStatusLabel = React.useMemo(() => {
-  if (!projectFileStatus?.at) return null;
-  const parsed = new Date(projectFileStatus.at);
+const formatStatusTimestamp = React.useCallback((raw: string | number | null | undefined) => {
+  if (raw == null) return null;
+  const normalized =
+    typeof raw === "number"
+      ? raw
+      : /^\d+$/.test(String(raw).trim())
+      ? Number(raw)
+      : raw;
+  const parsed = new Date(normalized);
   if (Number.isNaN(parsed.getTime())) return null;
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
@@ -18724,8 +18853,10 @@ const projectFileStatusLabel = React.useMemo(() => {
     hour: "numeric",
     minute: "2-digit",
   }).format(parsed);
-}, [projectFileStatus]);
-
+}, []);
+const projectFileStatusLabel = React.useMemo(() => {
+  return formatStatusTimestamp(projectFileStatus?.at);
+}, [formatStatusTimestamp, projectFileStatus?.at]);
 const floatingAssetRef = React.useRef<HTMLDivElement | null>(null);
 const floatingTextRef = React.useRef<HTMLDivElement | null>(null);
 const floatingBgRef = React.useRef<HTMLDivElement | null>(null);
@@ -18938,6 +19069,7 @@ const creatorWorkflowCurrent =
       selectedPanel === "ai_background"
     ? "scene"
     : selectedPanel === "headline" ||
+      selectedPanel === "logo" ||
       selectedPanel === "head2" ||
       selectedPanel === "details" ||
       selectedPanel === "details2" ||
@@ -18945,7 +19077,6 @@ const creatorWorkflowCurrent =
       selectedPanel === "subtag"
     ? "copy"
     : selectedPanel === "icons" ||
-      selectedPanel === "logo" ||
       selectedPanel === "portrait" ||
       selectedPanel === "cinema" ||
       selectedPanel === "magic_blend"
@@ -19031,7 +19162,7 @@ const currentMobileAction = React.useMemo(() => {
 
   if (selectedPanel === "background" || selectedPanel === "bgfx") {
     return {
-      label: "Background",
+      label: "Scene Builder",
       panel: "background",
       tab: "assets" as const,
       uiMode: "design" as const,
@@ -19041,7 +19172,7 @@ const currentMobileAction = React.useMemo(() => {
 
   if (selectedPanel === "ai_background") {
     return {
-      label: "Background",
+      label: "AI Scene",
       panel: "ai_background",
       tab: "assets" as const,
       uiMode: "design" as const,
@@ -19051,7 +19182,7 @@ const currentMobileAction = React.useMemo(() => {
 
   if (selectedPanel === "magic_blend") {
     return {
-      label: "Magic Blend",
+      label: "Portrait Blend",
       panel: "magic_blend",
       tab: "assets" as const,
       uiMode: "design" as const,
@@ -19078,9 +19209,9 @@ const currentMobileAction = React.useMemo(() => {
 
   if (selectedPanel === "logo") {
     return {
-      label: "Assets",
+      label: "Logo / 3D",
       panel: "logo",
-      tab: "assets" as const,
+      tab: "design" as const,
       uiMode: "design" as const,
       targetId: "logo-panel",
     };
@@ -19762,14 +19893,6 @@ const activeAssetControls = React.useMemo(() => {
         opacity: sel.opacity ?? 1,
         locked: !!sel.locked,
         showOpacity: false,
-      cleanup: {
-        shrinkPx: cleanupParams.shrinkPx,
-        featherPx: cleanupParams.featherPx,
-        onShrink: (v: number) =>
-          setCleanupAndRun({ ...cleanupParams, shrinkPx: v }),
-        onFeather: (v: number) =>
-          setCleanupAndRun({ ...cleanupParams, featherPx: v }),
-      },
       onScale: (v: number) =>
         useFlyerState.getState().updatePortrait(format, sel.id, { scale: v }),
       onToggleLock: () =>
@@ -19792,9 +19915,7 @@ const activeAssetControls = React.useMemo(() => {
   emojis,
   portraits,
   format,
-  cleanupParams,
   removePortrait,
-  setCleanupAndRun,
   nudgeEmojiLayer,
   nudgePortraitLayer,
   isLocked,
@@ -22487,7 +22608,7 @@ style={{ top: STICKY_TOP }}
 {/* UI: CINEMATIC HEADLINE (BEGIN) */}
 <div className="relative rounded-xl transition" data-tour="cinematic">
   <div className="p-3">
-    <div className="text-[12px] font-semibold text-neutral-200 text-center">Cinematic Headline</div>
+    <div className="text-[12px] font-semibold text-neutral-200 text-center">Cinematic Text</div>
     <button
       type="button"
       disabled={isStarterPlan}
@@ -22499,21 +22620,24 @@ style={{ top: STICKY_TOP }}
       }}
       className="w-full mt-3 py-2 rounded-lg bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:from-indigo-500 hover:to-fuchsia-500 text-white text-xs font-bold shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
     >
-      <span>✨</span> Create Cinematic 3D
+      <span>✨</span> Create Cinematic Text
     </button>
     {isStarterPlan && (
-      <div className="mt-2 text-[11px] text-amber-300">Cinematic 3D is available on subscriptions and on-demand passes.</div>
+      <div className="mt-2 text-[11px] text-amber-300">Cinematic Text is available on subscriptions and on-demand passes.</div>
     )}
   </div>
 </div>
 {/* UI: CINEMATIC HEADLINE (END) */}
 
 {/* UI: LOGO — MIRROR OF PORTRAIT LOGIC (BEGIN) */}
-{isDjStartupMode && !isStarterPlan && (
+{!isStarterPlan && (
 <div
   id="logo-panel"
   ref={logoPanelRef}
-  className={clsx("relative rounded-xl transition", creatorStepPanelClass("assets"))}
+  className={clsx(
+    "relative rounded-xl transition",
+    creatorStepPanelClass(isDjStartupMode ? "assets" : "copy")
+  )}
 >
   <Collapsible
     title="Logo / 3D"
@@ -24587,44 +24711,6 @@ style={{ top: STICKY_TOP }}
             </div>
           )}
         </div>
-        {activeAssetControls.cleanup && (
-          <div className="mt-2 grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
-            <div>
-              <InlineSliderInput
-                label="Shrink edge"
-                value={Number(activeAssetControls.cleanup.shrinkPx || 0)}
-                min={0}
-                max={10}
-                step={0.5}
-                precision={1}
-                suffix="px"
-                onChange={(next) => activeAssetControls.cleanup?.onShrink?.(next)}
-                rangeClassName="flex-1 accent-amber-400"
-                onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
-                onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
-                onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
-                disabled={activeAssetControls.locked}
-              />
-            </div>
-            <div>
-              <InlineSliderInput
-                label="Feather"
-                value={Number(activeAssetControls.cleanup.featherPx || 0)}
-                min={0}
-                max={10}
-                step={0.5}
-                precision={1}
-                suffix="px"
-                onChange={(next) => activeAssetControls.cleanup?.onFeather?.(next)}
-                rangeClassName="flex-1 accent-emerald-400"
-                onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
-                onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
-                onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
-                disabled={activeAssetControls.locked}
-              />
-            </div>
-          </div>
-        )}
         {activeAssetControls.onToggleLabel && (
           <div
             className="mt-2"
@@ -25268,7 +25354,7 @@ style={{ top: STICKY_TOP }}
   >
   {isStarterPlan ? (
     <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-white/85">
-      <div className="text-sm font-semibold text-white">AI Background</div>
+      <div className="text-sm font-semibold text-white">AI Scene</div>
       <div className="mt-2 text-xs text-white/65">
         Paid users get AI generation. Starter mode lets you browse templates and edit layouts before upgrading.
       </div>
@@ -25338,8 +25424,10 @@ style={{ top: STICKY_TOP }}
       genCandidates={genCandidates}
       hasSharedGeneratedBackground={!!sharedGeneratedBackground}
       sharedGeneratedBackgroundSource={
-        sharedGeneratedBackground?.source === "magic_blend" ? "Magic Blend" : "AI Background"
+        sharedGeneratedBackground?.source === "magic_blend" ? "Portrait Blend" : "AI Scene"
       }
+      originalBackgroundSrc={sharedGeneratedBackground?.original?.src ?? null}
+      generatedBackgroundSrc={sharedGeneratedBackground?.generated?.src ?? null}
       canRestoreOriginalBackground={!!sharedGeneratedBackground?.original}
       isOriginalBackgroundActive={
         !!sharedGeneratedBackground?.original &&
@@ -25368,7 +25456,7 @@ style={{ top: STICKY_TOP }}
       data-tour="magic-blend"
       className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-white/85"
     >
-    <div className="text-sm font-semibold text-white">Magic Blend</div>
+    <div className="text-sm font-semibold text-white">Portrait Blend</div>
     <div className="mt-2 text-xs text-white/65">
       Paid users can blend subjects and scenes here.
     </div>
@@ -25377,7 +25465,7 @@ style={{ top: STICKY_TOP }}
       onClick={(event) => void handleStudioNavigation(event, "/pricing")}
       className="mt-4 inline-flex rounded-lg border border-fuchsia-400/30 bg-fuchsia-500/15 px-3 py-2 text-xs text-white hover:bg-fuchsia-500/25"
     >
-      Unlock Magic Blend
+      Unlock Portrait Blend
     </a>
     </div>
   </div>
@@ -25412,8 +25500,10 @@ style={{ top: STICKY_TOP }}
       isCapturingBackground={isCapturingBlendBackground}
       hasSharedGeneratedBackground={!!sharedGeneratedBackground}
       sharedGeneratedBackgroundSource={
-        sharedGeneratedBackground?.source === "magic_blend" ? "Magic Blend" : "AI Background"
+        sharedGeneratedBackground?.source === "magic_blend" ? "Portrait Blend" : "AI Scene"
       }
+      originalBackgroundSrc={sharedGeneratedBackground?.original?.src ?? null}
+      generatedBackgroundSrc={sharedGeneratedBackground?.generated?.src ?? null}
       canRestoreOriginalBackground={!!sharedGeneratedBackground?.original}
       isOriginalBackgroundActive={
         !!sharedGeneratedBackground?.original &&
@@ -25439,7 +25529,6 @@ style={{ top: STICKY_TOP }}
     setSelectedPanel={setSelectedPanel}
     triggerUpload={triggerUpload}
     fitBackground={fitBackground}
-    clearBackground={clearBackground}
     setBgScale={setBgScale}
     bgFitMode={bgFitMode}
     setBgFitMode={setBgFitMode}
@@ -25884,119 +25973,217 @@ style={{ top: STICKY_TOP }}
         );
       })()}
 
-    {/* 🔥 RESTORED: CUTOUT CLEANUP PANEL 🔥 */}
-    <div
-      style={{
-        marginTop: 14,
-        padding: 12,
-        borderRadius: 12,
-        border: "1px solid rgba(255,255,255,0.08)",
-        background: "rgba(0,0,0,0.25)",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 10,
-        }}
-      >
-        <div style={{ fontWeight: 800, letterSpacing: 0.6, opacity: 0.9 }}>
-          Cutout Cleanup
+    <div className="mt-3 rounded-xl border border-white/10 bg-black/25 p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-200">
+            Advanced Lighting
+          </div>
+          <div className="mt-1 text-[11px] text-neutral-500">
+            {!selectedPortraitId
+              ? "Select a placed portrait to shape the light."
+              : selectedPortraitIsAsset
+              ? "Lighting controls are only for regular cutout portraits."
+              : selectedPortraitLighting.analyzed
+              ? "Analyze has been applied. Refine the light below."
+              : "Analyze the current scene to build a clean starting light."}
+          </div>
         </div>
-        <div style={{ fontSize: 10, opacity: 0.5, fontFamily: "monospace" }}>
-          {selectedPortraitId ? `ID: ${selectedPortraitId.slice(-4)}` : "No Selection"}
-        </div>
+        {!selectedPortraitIsAsset && !!selectedPortraitId && (
+          <Chip
+            small
+            active={selectedPortraitLighting.enabled}
+            onClick={() =>
+              updateSelectedPortraitLighting({ enabled: !selectedPortraitLighting.enabled })
+            }
+          >
+            {selectedPortraitLighting.enabled ? "On" : "Off"}
+          </Chip>
+        )}
       </div>
 
       {!selectedPortraitId ? (
-        <div style={{ fontSize: 13, opacity: 0.6, fontStyle: "italic" }}>
-          Select a placed portrait to adjust edges.
+        <div className="mt-3 text-[12px] italic text-neutral-500">
+          Place and select a portrait on the canvas first.
         </div>
       ) : selectedPortraitIsAsset ? (
-        <div style={{ fontSize: 13, opacity: 0.6, fontStyle: "italic" }}>
-          Cleanup controls are only for regular cutout portraits.
+        <div className="mt-3 text-[12px] italic text-neutral-500">
+          This section is reserved for cutout portraits rather than graphics, logos, or main-face assets.
         </div>
       ) : (
-        <div style={{ display: "grid", gap: 12 }}>
-          <SliderRow
-            label="Shrink edge (px)"
-            value={cleanupParams.shrinkPx}
-            min={0}
-            max={20}
-            step={1}
-            onChange={(v) => {
-              const next = { ...cleanupParams, shrinkPx: v };
-              setCleanupAndRun(next);
-            }}
-          />
+        <div className="mt-3 space-y-3">
+          <div className="border border-neutral-800 bg-neutral-900/40 px-3 py-2.5 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-[10px] uppercase tracking-[0.12em] text-neutral-400">Easy Mode</div>
+              <div className="text-[10px] text-neutral-500">
+                {selectedPortraitLighting.analyzed ? "Applied" : "Ready"}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => void autoAnalyzeSelectedPortraitLighting()}
+                className="rounded border border-cyan-400/70 bg-cyan-500/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-100 hover:bg-cyan-500/16"
+              >
+                {selectedPortraitLighting.analyzed ? "Analyze + Reapply" : "Analyze + Apply"}
+              </button>
+              <button
+                type="button"
+                onClick={resetSelectedPortraitLighting}
+                className="rounded border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-[11px] font-medium uppercase tracking-[0.14em] text-neutral-200 hover:bg-neutral-900"
+              >
+                Reset Lighting
+              </button>
+            </div>
+            <div className="text-[10px] text-neutral-500">
+              Analyze reads the current scene behind this portrait and builds a lighting baseline.
+            </div>
+          </div>
 
-          <SliderRow
-            label="Feather (px)"
-            value={cleanupParams.featherPx}
-            min={0}
-            max={20}
-            step={1}
-            onChange={(v) => {
-              const next = { ...cleanupParams, featherPx: v };
-              setCleanupAndRun(next);
-            }}
-          />
+          <div className="space-y-2">
+            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+              <Chip
+                small
+                className="!w-full !rounded-none"
+                active={selectedPortraitLighting.autoMatch}
+                onClick={() =>
+                  updateSelectedPortraitLighting({
+                    autoMatch: !selectedPortraitLighting.autoMatch,
+                  })
+                }
+              >
+                Auto Match
+              </Chip>
+              <Chip
+                small
+                className="!w-full !rounded-none"
+                active={portraitLightingAdvancedOpen}
+                onClick={() => setPortraitLightingAdvancedOpen((open) => !open)}
+              >
+                Advanced
+              </Chip>
+            </div>
 
-          <SliderRow
-            label="Alpha boost"
-            value={cleanupParams.alphaBoost}
-            min={0.8}
-            max={3}
-            step={0.02}
-            precision={2}
-            onChange={(v) => {
-              const next = { ...cleanupParams, alphaBoost: v };
-              setCleanupAndRun(next);
-            }}
-          />
+            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+              {mainFaceLightingPresets.map((preset) => (
+                <Chip
+                  key={preset.id}
+                  small
+                  className="!w-full !rounded-none"
+                  onClick={() => updateSelectedPortraitLighting(preset.patch)}
+                  disabled={!selectedPortraitLighting.enabled}
+                >
+                  {preset.label}
+                </Chip>
+              ))}
+            </div>
+          </div>
 
-          <SliderRow
-            label="Decontaminate"
-            value={cleanupParams.decontaminate}
-            min={0}
-            max={1}
-            step={0.01}
-            precision={2}
-            onChange={(v) => {
-              const next = { ...cleanupParams, decontaminate: v };
-              setCleanupAndRun(next);
-            }}
-          />
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
+            <div className="flex items-center gap-2 text-[11px] text-neutral-400">
+              <span>Light Side</span>
+              <Chip
+                small
+                active={selectedPortraitLighting.lightSide === "left"}
+                onClick={() => updateSelectedPortraitLighting({ lightSide: "left" })}
+                disabled={!selectedPortraitLighting.enabled}
+              >
+                Left
+              </Chip>
+              <Chip
+                small
+                active={selectedPortraitLighting.lightSide === "right"}
+                onClick={() => updateSelectedPortraitLighting({ lightSide: "right" })}
+                disabled={!selectedPortraitLighting.enabled}
+              >
+                Right
+              </Chip>
+            </div>
+            <div className="flex items-center gap-2 text-[11px] text-neutral-400">
+              <span>Light Color</span>
+              <ColorDot
+                value={selectedPortraitLighting.highlightColor}
+                onChange={(next) => updateSelectedPortraitLighting({ highlightColor: next })}
+                title="Lighting color"
+              />
+            </div>
+          </div>
 
-          {/* Advanced / Extra Params */}
-          <div className="pt-2 border-t border-white/10" />
+          {portraitLightingAdvancedOpen && (
+            <div className="space-y-2.5">
+              <div className="space-y-2.5 border border-neutral-800 bg-neutral-900/40 p-2.5">
+                <div className="text-[10px] uppercase tracking-wide text-neutral-500">Light</div>
+                {[
+                  ["Ambient", selectedPortraitLighting.ambient, 0, 1, 0.01, "ambient"],
+                  ["Key Light", selectedPortraitLighting.keyLight, 0, 1, 0.01, "keyLight"],
+                  ["Fill Light", selectedPortraitLighting.fillLight, 0, 1, 0.01, "fillLight"],
+                ].map(([label, value, min, max, step, key]) => (
+                  <InlineSliderInput
+                    key={String(key)}
+                    label={String(label)}
+                    value={Number(value)}
+                    min={Number(min)}
+                    max={Number(max)}
+                    step={Number(step)}
+                    onChange={(next) =>
+                      updateSelectedPortraitLightingRaf({ [String(key)]: next })
+                    }
+                    displayScale={100}
+                    precision={0}
+                    suffix="%"
+                    rangeClassName="flex-1 accent-cyan-400"
+                    disabled={!selectedPortraitLighting.enabled}
+                  />
+                ))}
+              </div>
 
-          <SliderRow
-            label="Alpha smooth"
-            value={cleanupParams.alphaSmoothPx}
-            min={0}
-            max={8}
-            step={1}
-            onChange={(v) => {
-              const next = { ...cleanupParams, alphaSmoothPx: v };
-              setCleanupAndRun(next);
-            }}
-          />
+              <div className="space-y-2.5 border border-neutral-800 bg-neutral-900/40 p-2.5">
+                <div className="text-[10px] uppercase tracking-wide text-neutral-500">Finish</div>
+                {[
+                  ["Rim Light", selectedPortraitLighting.rimLight, 0, 1, 0.01, "rimLight"],
+                  ["Shadow Depth", selectedPortraitLighting.shadowDepth, 0, 1, 0.01, "shadowDepth"],
+                ].map(([label, value, min, max, step, key]) => (
+                  <InlineSliderInput
+                    key={String(key)}
+                    label={String(label)}
+                    value={Number(value)}
+                    min={Number(min)}
+                    max={Number(max)}
+                    step={Number(step)}
+                    onChange={(next) =>
+                      updateSelectedPortraitLightingRaf({ [String(key)]: next })
+                    }
+                    displayScale={100}
+                    precision={0}
+                    suffix="%"
+                    rangeClassName="flex-1 accent-cyan-400"
+                    disabled={!selectedPortraitLighting.enabled}
+                  />
+                ))}
 
-          <SliderRow
-            label="Edge gamma"
-            value={cleanupParams.edgeGamma}
-            min={0.6}
-            max={1.8}
-            step={0.01}
-            precision={2}
-            onChange={(v) => {
-              const next = { ...cleanupParams, edgeGamma: v };
-              setCleanupAndRun(next);
-            }}
-          />
+                {[
+                  ["Warmth", selectedPortraitLighting.warmth, "warmth"],
+                  ["Contrast", selectedPortraitLighting.contrast, "contrast"],
+                ].map(([label, value, key]) => (
+                  <InlineSliderInput
+                    key={String(key)}
+                    label={String(label)}
+                    value={Number(value)}
+                    min={-1}
+                    max={1}
+                    step={0.01}
+                    onChange={(next) =>
+                      updateSelectedPortraitLightingRaf({ [String(key)]: next })
+                    }
+                    displayScale={100}
+                    precision={0}
+                    rangeClassName="flex-1 accent-amber-400"
+                    disabled={!selectedPortraitLighting.enabled}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -26004,333 +26191,6 @@ style={{ top: STICKY_TOP }}
   </div>
   )}
   {/* UI: PORTRAITS — COMBINED SLOTS (END) */}
-
-  {!isDjStartupMode && !isStarterPlan && (
-  <div
-    id="logo-panel"
-    ref={logoPanelRef}
-    className={clsx("relative rounded-xl transition", creatorStepPanelClass("assets"))}
->
-  <Collapsible
-    title="Logo / 3D"
-    storageKey="p:media"
-    defaultOpen={false}
-    isOpen={selectedPanel === "logo"}
-    onToggle={() => {
-      setSelectedPanel(selectedPanel === "logo" ? null : "logo");
-      if (selectedPanel !== "logo") {
-        setTimeout(() => {
-          const el = document.getElementById("logo-panel");
-          el?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }, 0);
-      }
-    }}
-    panelClassName={
-      selectedPanel === "logo" ? "ring-1 ring-inset ring-[#00FFF0]/70" : undefined
-    }
-    titleClassName={
-      selectedPanel === "logo"
-        ? "text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]"
-        : ""
-    }
-  >
-    <div className="text-[12px] text-neutral-300 mb-2">
-      Manage logos and 3D text. Upload or generate, then place.
-    </div>
-
-    <div className="grid grid-cols-2 gap-2 mb-4">
-      {[0, 1, 2, 3].map((i) => {
-        const src = logoSlots[i] || "";
-        const list = portraits[format] || [];
-        const onCanvas = list.find((p) => p.url === src);
-        const isActive = !!(onCanvas && selectedPortraitId === onCanvas.id);
-
-        return (
-          <div
-            key={i}
-            className={`border rounded-lg p-2 transition-colors ${
-              isActive
-                ? "border-indigo-500 bg-indigo-900/10"
-                : "border-neutral-700 bg-neutral-900/50"
-            }`}
-          >
-            <div className="h-20 rounded overflow-hidden border border-neutral-700 bg-neutral-900 grid place-items-center relative">
-              {src ? (
-                <img
-                  src={src}
-                  className="w-full h-full object-contain bg-[length:10px_10px] bg-[url('https://t3.ftcdn.net/jpg/02/03/90/58/360_F_203905816_kpsw9G2a6e02a0a256a5061695669046.jpg')]"
-                  draggable={false}
-                  alt=""
-                />
-              ) : (
-                <div className="text-[11px] text-neutral-500">Empty {i + 1}</div>
-              )}
-              {isActive && (
-                <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-green-500 shadow-[0_0_5px_#22c55e]" />
-              )}
-            </div>
-
-            <div className="mt-2 grid grid-cols-3 gap-1">
-              <button
-                type="button"
-                className="text-[10px] px-1 py-1.5 rounded-md bg-neutral-800 border border-neutral-600 hover:bg-neutral-700 text-neutral-300 truncate"
-                onClick={() => {
-                  const input = document.createElement("input");
-                  input.type = "file";
-                  input.accept = "image/*";
-                  input.onchange = (e: any) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    const r = new FileReader();
-                    r.onload = () => {
-                      const next = [...logoSlots];
-                      next[i] = String(r.result);
-
-                      setLogoSlots(next);
-                      try {
-                        localStorage.setItem("nf:logoSlots", JSON.stringify(next));
-                      } catch {}
-
-                      setSelectedPanel("logo");
-                      setTimeout(() => {
-                        document
-                          .getElementById("logo-panel")
-                          ?.scrollIntoView({ behavior: "smooth", block: "start" });
-                      }, 0);
-                    };
-                    r.readAsDataURL(file);
-                  };
-                  input.click();
-                }}
-              >
-                {src ? "Rep" : "Up"}
-              </button>
-
-              <button
-                type="button"
-                disabled={!src}
-                className="text-[10px] px-1 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 truncate"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (!src) return;
-
-                  const id = `logo_${Date.now()}_${Math.random()
-                    .toString(36)
-                    .slice(2, 7)}`;
-
-                  addPortrait(format, {
-                    id,
-                    url: src,
-                    x: 50,
-                    y: 50,
-                    scale: 1.0,
-                    locked: false,
-                    shadowBlur: 0,
-                    shadowAlpha: 0.5,
-                    cleanup: DEFAULT_CLEANUP,
-                  });
-
-                  setSelectedPortraitId(id);
-                  setMoveTarget("portrait");
-                  setSelectedPanel("logo");
-                  window.setTimeout(scrollToArtboard, 120);
-                }}
-              >
-                Place
-              </button>
-
-              <button
-                type="button"
-                disabled={!src}
-                className="text-[10px] px-1 py-1.5 rounded-md bg-neutral-800 border border-neutral-600 hover:bg-neutral-700 text-neutral-300 disabled:opacity-50 truncate"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-
-                  const next = [...logoSlots];
-                  next[i] = "";
-                  setLogoSlots(next);
-                  try {
-                    localStorage.setItem("nf:logoSlots", JSON.stringify(next));
-                  } catch {}
-
-                  if (onCanvas?.id) {
-                    removePortrait(format, onCanvas.id);
-                    if (selectedPortraitId === onCanvas.id) {
-                      setSelectedPortraitId(null);
-                    }
-                  }
-                }}
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-
-   {(() => {
-      const store = useFlyerState.getState();
-      const list = store.portraits?.[format] || [];
-      const sel = list.find((p: any) => p.id === selectedPortraitId);
-
-      if (!sel || !String(sel.id || "").startsWith("logo_")) return null;
-
-      const shadowBlur = Number((sel as any).shadowBlur ?? 0);
-      const shadowAlpha = Number((sel as any).shadowAlpha ?? 0.5);
-      const locked = !!sel.locked;
-
-      const update = (patch: any) => {
-        const s = useFlyerState.getState();
-        s.updatePortrait(format, sel.id, patch);
-        s.setSelectedPortraitId(sel.id);
-        s.setSelectedPanel("logo");
-        s.setMoveTarget("logo");
-      };
-
-      return (
-        <div
-          className="mt-4 pt-4 border-t border-white/10"
-          data-portrait-area="true"
-          onMouseDownCapture={(e) => e.stopPropagation()}
-          onPointerDownCapture={(e) => e.stopPropagation()}
-        >
-          <div className="text-[12px] font-bold text-indigo-300 mb-3 flex items-center gap-2">
-            <span>✨ 3D / Logo Controls</span>
-          </div>
-
-          <div className="space-y-4 mb-6">
-            <SliderRow
-              label="Scale"
-              value={Number(sel.scale ?? 1)}
-              min={0.2}
-              max={3}
-              step={0.05}
-              onChange={(v) => update({ scale: v })}
-            />
-
-            <SliderRow
-              label="Opacity"
-              value={Number((sel as any).opacity ?? 1)}
-              min={0}
-              max={1}
-              step={0.05}
-              onChange={(v) => update({ opacity: v })}
-            />
-
-            <SliderRow
-              label="Tint"
-              value={Number((sel as any).tint ?? 0)}
-              min={-180}
-              max={180}
-              step={5}
-              onChange={(v) => update({ tint: v })}
-            />
-
-            <SliderRow
-              label="Drop Shadow"
-              value={shadowBlur}
-              min={0}
-              max={100}
-              step={1}
-              onChange={(v) => update({ shadowBlur: v })}
-            />
-
-            {shadowBlur > 0 && (
-              <SliderRow
-                label="Shadow Opacity"
-                value={shadowAlpha}
-                min={0}
-                max={1}
-                step={0.05}
-                onChange={(v) => update({ shadowAlpha: v })}
-              />
-            )}
-          </div>
-
-          <div className="bg-black/20 p-3 rounded-lg border border-white/5">
-            <div className="text-[11px] font-semibold text-neutral-400 mb-3 uppercase tracking-wider">
-              Cutout Refinement
-            </div>
-
-            <div className="space-y-3">
-              <SliderRow
-                label="Shrink Edge"
-                value={cleanupParams.shrinkPx}
-                min={0}
-                max={10}
-                step={0.5}
-                onChange={(v) => setCleanupAndRun({ ...cleanupParams, shrinkPx: v })}
-              />
-              <SliderRow
-                label="Feather"
-                value={cleanupParams.featherPx}
-                min={0}
-                max={10}
-                step={0.5}
-                onChange={(v) => setCleanupAndRun({ ...cleanupParams, featherPx: v })}
-              />
-              <SliderRow
-                label="Decontaminate"
-                value={cleanupParams.decontaminate}
-                min={0}
-                max={1}
-                step={0.05}
-                onChange={(v) => setCleanupAndRun({ ...cleanupParams, decontaminate: v })}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 mt-4">
-            <button
-              type="button"
-              onClick={() => nudgePortraitLayer(sel.id, "up")}
-              className="py-2 rounded bg-neutral-800 border border-neutral-600 text-xs text-neutral-300 hover:bg-neutral-700"
-            >
-              Layer Up
-            </button>
-            <button
-              type="button"
-              onClick={() => nudgePortraitLayer(sel.id, "down")}
-              className="py-2 rounded bg-neutral-800 border border-neutral-600 text-xs text-neutral-300 hover:bg-neutral-700"
-            >
-              Layer Down
-            </button>
-          </div>
-
-          <div className="flex gap-2 mt-4">
-            <button
-              type="button"
-              onClick={() => update({ locked: !locked })}
-              className="flex-1 py-2 rounded bg-neutral-800 border border-neutral-600 text-xs text-neutral-300 hover:bg-neutral-700"
-            >
-              {locked ? "Unlock Position" : "Lock Position"}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                const s = useFlyerState.getState();
-                s.removePortrait(format, sel.id);
-                s.setSelectedPortraitId(null);
-                s.setDragging?.(null);
-                s.setSelectedPanel("logo");
-                s.setMoveTarget("logo");
-              }}
-              className="flex-1 py-2 rounded bg-red-900/20 border border-red-900/40 text-xs text-red-400 hover:bg-red-900/30"
-            >
-              Delete
-            </button>
-          </div>
-        </div>
-      );
-    })()}
-
-  </Collapsible>
-</div>
-)}
 
 {/* UI: PROJECT PORTABLE SAVE (BEGIN) */}
 <div className={creatorStepPanelClass("finish")}>
@@ -26488,7 +26348,7 @@ style={{ top: STICKY_TOP }}
               onClick={() => openCreatorWorkflowTarget("background", "assets")}
               className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900"
             >
-              Open Background
+              Open Scene Builder
             </button>
             {!isStarterPlan && (
               <button
@@ -26496,7 +26356,7 @@ style={{ top: STICKY_TOP }}
                 onClick={() => openCreatorWorkflowTarget("ai_background", "assets", { targetId: "ai-background-panel" })}
                 className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900"
               >
-                Open AI Background
+                Open AI Scene
               </button>
             )}
           </div>
@@ -26539,6 +26399,28 @@ style={{ top: STICKY_TOP }}
             >
               Venue
             </button>
+            <button
+              type="button"
+              onClick={() => openCreatorWorkflowTarget("logo", "design", { targetId: "logo-panel" })}
+              className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900 sm:col-span-2"
+            >
+              Logo / 3D
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setUiMode("design");
+                setMobileControlsOpen(true);
+                setMobileControlsTab("design");
+                setSelectedPanel(null);
+                setTimeout(() => {
+                  document.querySelector('[data-tour="cinematic"]')?.scrollIntoView({ behavior: "smooth", block: "center" });
+                }, 150);
+              }}
+              className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900 sm:col-span-2"
+            >
+              Cinematic Text
+            </button>
           </div>
         </div>
 
@@ -26560,13 +26442,6 @@ style={{ top: STICKY_TOP }}
             </button>
             <button
               type="button"
-              onClick={() => openCreatorWorkflowTarget("logo", "assets")}
-              className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900"
-            >
-              Logo / 3D
-            </button>
-            <button
-              type="button"
               onClick={() => openCreatorWorkflowTarget("portrait", "assets")}
               className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900"
             >
@@ -26585,7 +26460,7 @@ style={{ top: STICKY_TOP }}
                 onClick={() => openCreatorWorkflowTarget("magic_blend", "assets", { targetId: "magic-blend-panel" })}
                 className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900 sm:col-span-2"
               >
-                Magic Blend
+                Portrait Blend
               </button>
             )}
           </div>
@@ -26669,10 +26544,10 @@ style={{ top: STICKY_TOP }}
 
       <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-neutral-200 max-h-[70vh] overflow-y-auto">
         <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-          <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">Flow 1: Cinematic 3D Quick Build</div>
+          <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">Flow 1: Cinematic Text Quick Build</div>
           <ol className="list-decimal pl-5 space-y-1 text-neutral-300">
             <li>Open Template.</li>
-            <li>Open Cinematic 3D and generate.</li>
+            <li>Open Cinematic Text and generate.</li>
             <li>Change headline/details text.</li>
             <li>Export.</li>
           </ol>
@@ -26684,7 +26559,7 @@ style={{ top: STICKY_TOP }}
             <li>Open Template.</li>
             <li>Generate a new background.</li>
             <li>Add subject.</li>
-            <li>Magic Blend subject with background.</li>
+            <li>Use Portrait Blend to fuse subject with scene.</li>
             <li>Add text and graphics.</li>
             <li>Export.</li>
           </ol>
