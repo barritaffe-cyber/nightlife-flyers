@@ -111,7 +111,6 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
     // rAF throttle to smooth slider-driven updates
     const updatePortraitRaf = React.useRef<(id: string, patch: any) => void | undefined>(undefined);
     const updateEmojiRaf = React.useRef<(id: string, patch: any) => void | undefined>(undefined);
-    const [helpOpen, setHelpOpen] = React.useState(false);
     const [librarySectionsOpen, setLibrarySectionsOpen] = React.useState(() => ({
       emoji: false,
       uploads: false,
@@ -308,20 +307,6 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
         }),
       []
     );
-
-    React.useEffect(() => {
-      if (!helpOpen) return;
-      const prev = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      const onKey = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') setHelpOpen(false);
-      };
-      window.addEventListener('keydown', onKey);
-      return () => {
-        document.body.style.overflow = prev;
-        window.removeEventListener('keydown', onKey);
-      };
-    }, [helpOpen]);
 
     const emojiList = Array.isArray(emojis)
       ? emojis
@@ -1075,7 +1060,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
           className="relative rounded-xl transition"
         >
           <Collapsible
-            title="Library"
+            title="Graphics & FX"
             storageKey="p:icons"
             isOpen={selectedPanel === 'icons'}
             onToggle={() => {
@@ -1093,21 +1078,13 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                 ? 'text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]'
                 : ''
             }
-            right={
-              <button
-                type="button"
-                onClick={() => setHelpOpen(true)}
-                aria-label="Library help"
-                title="How Library works"
-                className="h-6 w-6 border border-cyan-400/70 text-cyan-300 text-[11px] font-bold hover:bg-cyan-400/10"
-              >
-                ?
-              </button>
-            }
           >
+            <div className="mb-3 text-[12px] leading-5 text-neutral-400">
+              Add graphics, separators, textures, light leaks, or uploaded logos.
+            </div>
             {showEmojiLibrary && (
               <LibrarySection
-                title="Emoji Library"
+                title="Emoji"
                 open={librarySectionsOpen.emoji || !!selectedEmoji}
                 onToggle={() => toggleLibrarySection('emoji')}
               >
@@ -1151,7 +1128,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
             />
 
             <LibrarySection
-              title="Uploads"
+              title="Uploaded Graphics"
               open={librarySectionsOpen.uploads}
               onToggle={() => toggleLibrarySection('uploads')}
             >
@@ -1558,7 +1535,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
 
             {graphicStickers.length > 0 && (
               <LibrarySection
-                title="Graphics"
+                title="Sticker Graphics"
                 open={librarySectionsOpen.graphics || !!selectedGraphicStickerAsset}
                 onToggle={() => toggleLibrarySection('graphics')}
               >
@@ -1726,45 +1703,6 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
           </Collapsible>
         </div>
 
-        {helpOpen && (
-          <div className="fixed inset-0 z-[5100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="w-full max-w-xl rounded-2xl border border-cyan-400/30 bg-[#0a0d12] shadow-[0_30px_80px_rgba(0,0,0,.6)] overflow-hidden">
-              <div className="px-5 py-4 border-b border-white/10 bg-neutral-950/90">
-                <div className="text-sm uppercase tracking-[0.2em] text-cyan-300">Library Guide</div>
-                <div className="mt-1 text-lg font-semibold text-white">Place assets fast and keep layout stable.</div>
-              </div>
-
-              <div className="p-5 space-y-2.5 text-sm text-neutral-200">
-                <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-                  <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">1. Add Assets</div>
-                  <div className="text-neutral-300">Use stickers, separators, textures, and flares to build the scene.</div>
-                </div>
-
-                <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-                  <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">2. Adjust</div>
-                  <div className="text-neutral-300">Fine-tune position, scale, opacity, rotation, tint, and labels here.</div>
-                </div>
-
-                <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-                  <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">3. Lock Layout</div>
-                  <div className="text-neutral-300">
-                    Lock placed items once they are set so they do not move by accident.
-                  </div>
-                </div>
-              </div>
-
-              <div className="px-5 py-4 border-t border-white/10 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setHelpOpen(false)}
-                  className="border border-white/15 bg-white/[0.08] px-4 py-2 text-sm font-semibold text-white hover:bg-white/[0.12]"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   }

@@ -2,7 +2,25 @@
 /* eslint-disable @next/next/no-img-element */
 
 import * as React from 'react';
-import { Collapsible, Chip, Stepper } from './controls';
+import {
+  Collapsible,
+  Chip,
+  Stepper,
+  editorEmptyStateBodyClass,
+  editorEmptyStateClass,
+  editorEmptyStateTitleClass,
+  editorHelperTextClass,
+  editorItemCardActiveClass,
+  editorItemCardClass,
+  editorPanelActiveClass,
+  editorPanelTitleActiveClass,
+  editorPrimaryButtonClass,
+  editorSectionCardClass,
+  editorSectionEyebrowClass,
+  editorSectionMetaClass,
+  editorSectionTitleClass,
+  editorThumbClass,
+} from './controls';
 
 type Props = {
   presetBackgrounds?: ReadonlyArray<{
@@ -175,19 +193,19 @@ function BackgroundPanels({
           }
           panelClassName={
             selectedPanel === 'background'
-              ? 'ring-1 ring-inset ring-[#00FFF0]/70'
+              ? editorPanelActiveClass
               : undefined
           }
           titleClassName={
             selectedPanel === 'background'
-              ? 'text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]'
+              ? editorPanelTitleActiveClass
               : ''
           }
           right={
             <div className="flex items-center gap-2 text-[11px]">
               {allowUploads && (
                 <Chip small onClick={triggerUpload}>
-                  Upload
+                  Upload Scene
                 </Chip>
               )}
               {(bgUploadUrl || bgUrl) && (
@@ -220,6 +238,10 @@ function BackgroundPanels({
             </div>
           }
         >
+          <div className={`mb-3 ${editorHelperTextClass}`}>
+            Use this when you already have a scene or want to upload one. Anything you choose here lands directly on the canvas.
+          </div>
+
           <input
             ref={bgRightRef}
             type="file"
@@ -269,8 +291,9 @@ function BackgroundPanels({
           />
 
           {presetBackgrounds.length > 0 && (
-            <div className="mb-3 border-b border-neutral-800 pb-3">
-              <div className="mb-2 text-[12px] font-bold text-neutral-200">{presetBackgroundLabel}</div>
+            <div className="mb-3 border-b border-white/10 pb-3">
+              <div className={editorSectionEyebrowClass}>{presetBackgroundLabel}</div>
+              <div className={editorSectionMetaClass}>Use a ready-made scene and keep moving.</div>
               <div className="grid grid-cols-2 gap-2">
                 {presetBackgrounds.map((background) => {
                   const isActive = currentBackgroundSrc === background.src;
@@ -278,15 +301,10 @@ function BackgroundPanels({
                     <button
                       key={background.id}
                       type="button"
-                      className={
-                        "overflow-hidden rounded-lg border text-left transition " +
-                        (isActive
-                          ? "border-cyan-400/70 bg-cyan-500/10"
-                          : "border-neutral-800 bg-neutral-900/60 hover:border-neutral-600 hover:bg-neutral-900")
-                      }
+                      className={`${isActive ? editorItemCardActiveClass : editorItemCardClass} overflow-hidden text-left`}
                       onClick={() => onPresetBackgroundSelect?.(background.src)}
                     >
-                      <div className="aspect-square overflow-hidden bg-black">
+                      <div className={`aspect-square ${editorThumbClass} bg-black`}>
                         <img
                           src={background.src}
                           alt={background.name}
@@ -294,7 +312,7 @@ function BackgroundPanels({
                           draggable={false}
                         />
                       </div>
-                      <div className="px-2 py-2 text-[11px] font-medium text-neutral-200">
+                      <div className="px-1 py-2 text-[11px] font-medium text-neutral-200">
                         {background.name}
                       </div>
                     </button>
@@ -306,7 +324,7 @@ function BackgroundPanels({
 
           {bgUploadUrl || bgUrl ? (
             <div className="space-y-2">
-              <div className="aspect-square w-full overflow-hidden rounded-lg border border-neutral-700 bg-neutral-900/60 relative">
+              <div className={`aspect-square w-full relative ${editorThumbClass}`}>
                 <img
                   ref={previewRef}
                   src={bgUploadUrl || bgUrl!}
@@ -344,7 +362,7 @@ function BackgroundPanels({
                 </Chip>
               </div>
 
-              <div className="text-[11px] text-neutral-400">
+              <div className={editorHelperTextClass}>
                 Tip: In <b>Move</b> → <b>background</b> mode, drag to pan and
                 <span className="inline-block px-1 mx-1 rounded bg-neutral-800/70 border border-neutral-700">
                   Ctrl
@@ -370,9 +388,12 @@ function BackgroundPanels({
                     </Chip>
                   </div>
 
-                  <div className="mt-3 rounded-lg border border-neutral-800 bg-neutral-950/40 p-2">
-                    <div className="text-[11px] text-neutral-300 mb-2">
-                      Need a subject for this background? Generate one from your AI presets.
+                  <div className={`${editorSectionCardClass} mt-3`}>
+                    <div className={editorSectionTitleClass}>
+                      AI Subject
+                    </div>
+                    <div className={`${editorHelperTextClass} mb-3`}>
+                      Use this when your scene is already set and you need a subject placed over it.
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-[11px] mb-2">
                       <label className="space-y-1">
@@ -461,11 +482,16 @@ function BackgroundPanels({
                         ))}
                       </select>
                     </label>
-                  </div>
+                    </div>
                     <div className="flex items-center gap-2 text-[11px]">
-                      <Chip small deferHeavy onClick={onGenerateSubject} disabled={isGeneratingSubject}>
-                        {isGeneratingSubject ? "Generating…" : "Generate subject"}
-                      </Chip>
+                      <button
+                        type="button"
+                        className={`w-full ${editorPrimaryButtonClass}`}
+                        onClick={onGenerateSubject}
+                        disabled={isGeneratingSubject}
+                      >
+                        {isGeneratingSubject ? "Generating…" : "Generate Subject"}
+                      </button>
                       {hasSubject && <span className="text-neutral-500">Subject already on canvas</span>}
                     </div>
                     {subjectError && (
@@ -479,7 +505,9 @@ function BackgroundPanels({
 
             </div>
           ) : (
-            <div className="text-[12px] text-neutral-300">
+            <div className={editorEmptyStateClass}>
+              <div className={editorEmptyStateTitleClass}>No scene on the canvas yet</div>
+              <div className={editorEmptyStateBodyClass}>
               {allowUploads ? (
                 <>
                   No background yet. Upload one
@@ -490,11 +518,12 @@ function BackgroundPanels({
                   Pick one of the DJ backgrounds above to load the canvas.
                 </>
               )}
+              </div>
               {allowUploads && (
-                <div className="mt-2">
-                  <Chip small deferHeavy onClick={triggerUpload}>
-                    Upload background
-                  </Chip>
+                <div className="mt-3">
+                  <button type="button" className={`w-full ${editorPrimaryButtonClass}`} onClick={triggerUpload}>
+                    Upload Scene
+                  </button>
                 </div>
               )}
             </div>
@@ -514,12 +543,12 @@ function BackgroundPanels({
           isOpen={selectedPanel === 'background' || selectedPanel === 'bgfx'}
           panelClassName={
             selectedPanel === 'background' || selectedPanel === 'bgfx'
-              ? 'ring-1 ring-inset ring-[#00FFF0]/70'
+              ? editorPanelActiveClass
               : undefined
           }
           titleClassName={
             selectedPanel === 'bgfx'
-              ? 'text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]'
+              ? editorPanelTitleActiveClass
               : ''
           }
           onToggle={() =>
@@ -541,6 +570,10 @@ function BackgroundPanels({
             </Chip>
           }
         >
+          <div className={`mb-3 ${editorHelperTextClass}`}>
+            Use this after your scene is already in place. These controls change the mood without replacing the background.
+          </div>
+
           <div className="grid grid-cols-3 gap-3">
             <Stepper label="Scale" value={bgScale} setValue={setBgScale} min={0.5} max={5} step={0.1} digits={2} />
             <Stepper label="Blur (px)" value={bgBlur} setValue={setBgBlur} min={0} max={20} step={0.5} digits={1} />

@@ -2,7 +2,18 @@
 /* eslint-disable @next/next/no-img-element */
 
 import * as React from 'react';
-import { Collapsible } from './controls';
+import {
+  Collapsible,
+  editorEmptyStateBodyClass,
+  editorHelperTextClass,
+  editorPanelActiveClass,
+  editorPanelTitleActiveClass,
+  editorPrimaryButtonClass,
+  editorSectionCardClass,
+  editorSectionEyebrowClass,
+  editorSecondaryButtonClass,
+  editorThumbClass,
+} from './controls';
 import BackgroundVersionReview from './BackgroundVersionReview';
 
 type BlendStyle = 'club' | 'tropical' | 'jazz_bar' | 'outdoor_summer';
@@ -80,21 +91,6 @@ function MagicBlendPanel({
   onUseGeneratedBackground,
 }: Props) {
   const [optionsOpen, setOptionsOpen] = React.useState(false);
-  const [helpOpen, setHelpOpen] = React.useState(false);
-
-  React.useEffect(() => {
-    if (!helpOpen) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setHelpOpen(false);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [helpOpen]);
 
   return (
     <div className="mt-3" id="magic-blend-panel" data-tour="magic-blend">
@@ -108,24 +104,13 @@ function MagicBlendPanel({
           onToggle={onToggle}
           panelClassName={
             selectedPanel === 'magic_blend'
-              ? 'ring-1 ring-inset ring-[#00FFF0]/70'
+              ? editorPanelActiveClass
               : undefined
           }
-          titleClassName={selectedPanel === 'magic_blend' ? 'text-amber-400' : ''}
-          right={
-            <button
-              type="button"
-              onClick={() => setHelpOpen(true)}
-              aria-label="Portrait Blend help"
-              title="How Portrait Blend works"
-              className="h-6 w-6 border border-cyan-400/70 text-cyan-300 text-[11px] font-bold hover:bg-cyan-400/10"
-            >
-              ?
-            </button>
-          }
+          titleClassName={selectedPanel === 'magic_blend' ? editorPanelTitleActiveClass : ''}
         >
-          <div className="text-[11px] text-neutral-400 mb-4 leading-relaxed">
-            Select a cinematic <b>Style</b>, upload your assets, and let AI fuse them into a unified photo.
+          <div className={`${editorHelperTextClass} mb-4`}>
+            Fuse the portrait and scene into one finished image.
           </div>
           <div className="mb-4 rounded-lg border border-amber-400/30 bg-amber-500/5 px-3 py-2 text-[10px] text-amber-200/90">
             If Portrait Blend is blocked for sensitive content, try a different subject/background, crop tighter, or use less revealing imagery.
@@ -146,10 +131,11 @@ function MagicBlendPanel({
             </div>
           )}
 
-          <div className="mb-4">
-            <label className="text-[10px] uppercase font-bold tracking-widest text-neutral-500 mb-2 block">
-              Cinematic Style
-            </label>
+          <div className={`${editorSectionCardClass} mb-4`}>
+            <div className={editorSectionEyebrowClass}>Cinematic Style</div>
+            <div className={`${editorEmptyStateBodyClass} mb-3 mt-1`}>
+              Pick the visual lane before you blend.
+            </div>
             <div className="grid grid-cols-3 gap-2">
               {([
                 { key: 'club', label: 'Club' },
@@ -177,10 +163,11 @@ function MagicBlendPanel({
             </div>
           </div>
 
-          <div className="mb-4">
-            <label className="text-[10px] uppercase font-bold tracking-widest text-neutral-500 mb-2 block">
-              Background Priority
-            </label>
+          <div className={`${editorSectionCardClass} mb-4`}>
+            <div className={editorSectionEyebrowClass}>Background Priority</div>
+            <div className={`${editorEmptyStateBodyClass} mb-3 mt-1`}>
+              Choose whether the blend should respect the uploaded scene or the current canvas.
+            </div>
             <div className="grid grid-cols-2 gap-2">
               {([
                 { key: 'upload', label: 'Uploaded BG' },
@@ -211,7 +198,7 @@ function MagicBlendPanel({
               <label className="text-[9px] uppercase font-bold tracking-widest text-neutral-500 ml-1">
                 Subject
               </label>
-              <label className="block aspect-[3/4] rounded-lg border border-dashed border-neutral-700 bg-neutral-900/30 hover:bg-neutral-800 hover:border-neutral-500 transition-all cursor-pointer overflow-hidden relative group">
+              <label className={`block aspect-[3/4] ${editorThumbClass} border-dashed hover:bg-neutral-800 hover:border-neutral-500 transition-all cursor-pointer relative group`}>
                 {isCuttingOut ? (
                   <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm text-neutral-300">
                     <div className="w-5 h-5 border-2 border-white/10 border-t-amber-500 rounded-full animate-spin mb-2" />
@@ -227,7 +214,7 @@ function MagicBlendPanel({
                     </div>
                   </>
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-neutral-600 group-hover:text-neutral-400 transition-colors">
+                  <div className={`flex h-full flex-col items-center justify-center transition-colors group-hover:text-neutral-400 ${blendSubject ? "" : "text-neutral-600"}`}>
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="24"
@@ -260,7 +247,7 @@ function MagicBlendPanel({
               <label className="text-[9px] uppercase font-bold tracking-widest text-neutral-500 ml-1">
                 Environment
               </label>
-              <label className="block aspect-[3/4] rounded-lg border border-dashed border-neutral-700 bg-neutral-900/30 hover:bg-neutral-800 hover:border-neutral-500 transition-all cursor-pointer overflow-hidden relative group">
+              <label className={`block aspect-[3/4] ${editorThumbClass} border-dashed hover:bg-neutral-800 hover:border-neutral-500 transition-all cursor-pointer relative group`}>
                 {blendBackground ? (
                   <>
                     <img src={blendBackground} className="w-full h-full object-cover" alt="Background" />
@@ -304,7 +291,7 @@ function MagicBlendPanel({
               type="button"
               onClick={pushCanvasBgToBlend}
               disabled={isCapturingBackground}
-              className="w-full h-9 flex items-center justify-center gap-2 rounded-md border border-neutral-700 bg-neutral-800/30 hover:bg-amber-500/10 hover:border-amber-500/30 hover:text-amber-400 text-neutral-400 transition-all text-[10px] font-bold uppercase tracking-wider group"
+              className={`${editorSecondaryButtonClass} flex h-9 w-full items-center justify-center gap-2 text-[10px] uppercase tracking-wider group`}
               title="Capture the current background from your canvas"
             >
               <svg
@@ -330,11 +317,7 @@ function MagicBlendPanel({
             <button
               onClick={() => setOptionsOpen(true)}
               disabled={isBlending || isCuttingOut || !blendSubject}
-              className={`w-full py-3 rounded-lg font-bold text-xs uppercase tracking-wider shadow-lg transition-all flex items-center justify-center gap-2 ${
-                isBlending
-                  ? 'bg-neutral-800 text-neutral-500 cursor-not-allowed border border-neutral-700'
-                  : 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-amber-900/20 hover:shadow-amber-900/40'
-              }`}
+              className={`w-full ${editorPrimaryButtonClass} flex items-center justify-center gap-2 py-3 text-xs`}
             >
               {isBlending ? (
                 <>
@@ -357,7 +340,7 @@ function MagicBlendPanel({
                     <path d="m5 12 7-7 7 7" />
                     <path d="M12 19V5" />
                   </svg>
-                  Generate Blend
+                  Generate Portrait Blend
                 </>
               )}
             </button>
@@ -369,7 +352,7 @@ function MagicBlendPanel({
         <div className="fixed inset-0 z-[2100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-md rounded-2xl border border-white/10 bg-neutral-950 p-4 shadow-2xl">
             <div className="text-sm font-semibold text-white mb-1">Blend Options</div>
-            <div className="text-[11px] text-neutral-400 mb-4">
+            <div className={`${editorHelperTextClass} mb-4`}>
               Set quick directives before blending. These guide the AI without changing your assets.
             </div>
 
@@ -472,14 +455,14 @@ function MagicBlendPanel({
             <div className="mt-4 flex items-center justify-end gap-2">
               <button
                 type="button"
-                className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
+                className={editorSecondaryButtonClass}
                 onClick={() => setOptionsOpen(false)}
               >
                 Cancel
               </button>
               <button
                 type="button"
-                className="rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-lg hover:from-amber-400 hover:to-orange-500"
+                className={editorPrimaryButtonClass}
                 onClick={() => {
                   setOptionsOpen(false);
                   handleMagicBlend();
@@ -493,43 +476,6 @@ function MagicBlendPanel({
         </div>
       )}
 
-      {helpOpen && (
-        <div className="fixed inset-0 z-[5100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-xl rounded-2xl border border-cyan-400/30 bg-[#0a0d12] shadow-[0_30px_80px_rgba(0,0,0,.6)] overflow-hidden">
-            <div className="px-5 py-4 border-b border-white/10 bg-gradient-to-r from-cyan-500/20 to-fuchsia-500/10">
-              <div className="text-sm uppercase tracking-[0.2em] text-cyan-300">Portrait Blend Guide</div>
-              <div className="mt-1 text-lg font-semibold text-white">Blend subject + scene in seconds.</div>
-            </div>
-
-            <div className="p-5 space-y-3 text-sm text-neutral-200">
-              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-                <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">1. Pick Style</div>
-                <div className="text-neutral-300">Choose a cinematic style and background priority.</div>
-              </div>
-
-              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-                <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">2. Add Assets</div>
-                <div className="text-neutral-300">Upload a portrait and background, or capture your current canvas background.</div>
-              </div>
-
-              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-                <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">3. Blend</div>
-                <div className="text-neutral-300">Click Generate Blend, then use Blend Options only if you need finer control.</div>
-              </div>
-            </div>
-
-            <div className="px-5 py-4 border-t border-white/10 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setHelpOpen(false)}
-                className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-sm"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

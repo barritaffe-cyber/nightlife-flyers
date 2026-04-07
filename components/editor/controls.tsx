@@ -15,6 +15,33 @@ const controlRangeClass = 'nf-range min-w-0 flex-1 h-2 appearance-none bg-transp
 
 const panelClass =
   'panel min-w-0 p-4 rounded-xl border border-white/5 bg-neutral-900/80 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.35)] space-y-3';
+export const editorPanelActiveClass =
+  'ring-1 ring-inset ring-cyan-300/55 shadow-[0_0_0_1px_rgba(34,211,238,0.12)]';
+export const editorPanelTitleActiveClass =
+  'text-cyan-200 drop-shadow-[0_0_10px_rgba(34,211,238,0.24)]';
+export const editorHelperTextClass = 'text-[11px] leading-5 text-neutral-400';
+export const editorSectionCardClass =
+  'rounded-xl border border-white/10 bg-white/[0.03] p-3 sm:p-4';
+export const editorSectionEyebrowClass =
+  'text-[10px] uppercase tracking-[0.16em] text-neutral-500';
+export const editorSectionTitleClass = 'mt-1 text-sm font-medium text-white';
+export const editorSectionMetaClass = 'text-[10px] text-neutral-500';
+export const editorPrimaryButtonClass =
+  'rounded-lg border border-white/15 bg-white px-3 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50';
+export const editorSecondaryButtonClass =
+  'rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2 text-[11px] font-medium text-white transition hover:bg-white/[0.1] disabled:cursor-not-allowed disabled:opacity-50';
+export const editorAdvancedToggleClass =
+  'w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-left text-[11px] font-medium text-white transition hover:bg-white/[0.06]';
+export const editorEmptyStateClass =
+  'rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-4 text-center';
+export const editorEmptyStateTitleClass = 'text-[12px] font-medium text-white';
+export const editorEmptyStateBodyClass = 'mt-1 text-[11px] leading-5 text-neutral-400';
+export const editorItemCardClass =
+  'rounded-xl border border-neutral-700 bg-neutral-900/50 p-2 transition-colors';
+export const editorItemCardActiveClass =
+  'rounded-xl border border-cyan-300/55 bg-cyan-400/10 p-2 shadow-[0_0_0_1px_rgba(34,211,238,0.12)] transition-colors';
+export const editorThumbClass =
+  'rounded-lg border border-white/10 bg-neutral-900/70 overflow-hidden';
  
  export type StepperProps = {
    label?: string;

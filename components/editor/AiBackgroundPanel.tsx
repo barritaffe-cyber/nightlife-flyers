@@ -2,7 +2,21 @@
 /* eslint-disable @next/next/no-img-element */
 
  import * as React from 'react';
- import { Chip, Stepper, Collapsible } from './controls';
+ import {
+  Chip,
+  Stepper,
+  Collapsible,
+  editorAdvancedToggleClass,
+  editorEmptyStateClass,
+  editorHelperTextClass,
+  editorPanelActiveClass,
+  editorPrimaryButtonClass,
+  editorSecondaryButtonClass,
+  editorSectionCardClass,
+  editorSectionEyebrowClass,
+  editorSectionMetaClass,
+  editorSectionTitleClass,
+} from './controls';
  import BackgroundVersionReview from './BackgroundVersionReview';
 
 type GenStyle = 'urban' | 'neon' | 'vintage' | 'tropical';
@@ -239,7 +253,6 @@ function AiBackgroundPanel({
   const onToggle = isControlled
     ? () => setSelectedPanel?.(selectedPanel === 'ai_background' ? null : 'ai_background')
     : undefined;
-  const [helpOpen, setHelpOpen] = React.useState(false);
   const [briefEvent, setBriefEvent] = React.useState<string>('');
   const [briefMood, setBriefMood] = React.useState<string>('');
   const [briefColors, setBriefColors] = React.useState<ColorPaletteMood | ''>('');
@@ -248,6 +261,9 @@ function AiBackgroundPanel({
   const [briefMustInclude, setBriefMustInclude] = React.useState<string>('');
   const [briefError, setBriefError] = React.useState<string>('');
   const [showAdvanced, setShowAdvanced] = React.useState(false);
+  const [showAutoLayoutTools, setShowAutoLayoutTools] = React.useState(
+    () => !!autoLayoutReferenceUrl
+  );
 
   const subjectNeedsPeople = React.useMemo(
     () =>
@@ -359,18 +375,10 @@ function AiBackgroundPanel({
   ]);
 
   React.useEffect(() => {
-    if (!helpOpen) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setHelpOpen(false);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [helpOpen]);
+    if (autoLayoutReferenceUrl || autoLayoutError || autoLayoutLoading) {
+      setShowAutoLayoutTools(true);
+    }
+  }, [autoLayoutError, autoLayoutLoading, autoLayoutReferenceUrl]);
 
   return (
     <>
@@ -381,21 +389,14 @@ function AiBackgroundPanel({
         isOpen={isOpen}
         onToggle={onToggle}
         panelClassName={
-          isOpen ? "ring-1 ring-inset ring-[#00FFF0]/70" : undefined
-        }
-        right={
-          <button
-            type="button"
-            onClick={() => setHelpOpen(true)}
-            aria-label="AI Scene help"
-            title="How AI Scene works"
-            className="h-6 w-6 border border-cyan-400/70 text-cyan-300 text-[11px] font-bold hover:bg-cyan-400/10"
-          >
-            ?
-          </button>
+          isOpen ? editorPanelActiveClass : undefined
         }
       >
         <div className="space-y-4">
+         <div className={editorHelperTextClass}>
+           Generate a fresh nightlife scene from a short brief.
+         </div>
+
          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
            {(['urban', 'neon', 'tropical', 'vintage'] as GenStyle[]).map((s) => (
              <Chip key={s} active={s === genStyle} onClick={() => setGenStyle(s)}>
@@ -404,79 +405,96 @@ function AiBackgroundPanel({
            ))}
          </div>
 
-         <div className="rounded-xl border border-white/10 bg-[#0f1117] p-3 sm:p-4 space-y-3">
+         <div className={`${editorSectionCardClass} space-y-3`}>
            <div className="flex items-center justify-between gap-2">
-             <div className="text-[12px] uppercase tracking-[0.12em] text-cyan-300">Creator Auto Layout</div>
-             <div className="text-[10px] text-neutral-400">Background-aware typography</div>
-           </div>
-
-           <div className="text-[11px] text-neutral-300">
-             Upload a background image, analyze it, and apply a template-style layout automatically. If you already typed
-             headline, details, venue, or subtag text, those values are used as copy hints.
-           </div>
-
-           <div className="space-y-2">
-             <label className="block text-[11px] text-neutral-300">
-               Background reference
-               <input
-                 type="file"
-                 accept="image/*"
-                 onChange={(e) => {
-                   const file = e.target.files?.[0];
-                   if (!file) return;
-                   onAutoLayoutReferenceUpload(file);
-                   e.currentTarget.value = "";
-                 }}
-                 className="mt-1 block w-full rounded border border-neutral-700 bg-[#17171b] px-2 py-1.5 text-[12px] text-white file:mr-2 file:rounded file:border-0 file:bg-cyan-700 file:px-2 file:py-1 file:text-white"
-               />
-             </label>
-
-             {autoLayoutReferenceUrl && (
-               <div className="rounded-lg border border-white/10 bg-black/20 p-2">
-                 <div className="mb-2 overflow-hidden rounded border border-white/10 bg-black/30">
-                   <img
-                     src={autoLayoutReferenceUrl}
-                     alt="Auto layout background reference"
-                     className="h-32 w-full object-cover"
-                   />
-                 </div>
-                 <button
-                   type="button"
-                   onClick={onClearAutoLayoutReference}
-                   className="rounded border border-white/10 bg-white/5 px-2 py-1 text-[10px] text-white/80 hover:bg-white/10"
-                 >
-                   Clear reference
-                 </button>
-               </div>
-             )}
-           </div>
-
-           {!creatorAutoLayoutEnabled && (
-             <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-100">
-               Creator Auto Layout is available on Creator and Studio subscriptions.
+             <div>
+               <div className={editorSectionEyebrowClass}>Exact Scene Match</div>
+               <div className={editorSectionTitleClass}>Already have the background?</div>
              </div>
-           )}
+             <div className={editorSectionMetaClass}>Optional</div>
+           </div>
+
+           <div className={editorHelperTextClass}>
+             Already have the final background? Match the layout around it instead.
+           </div>
 
            <button
              type="button"
-             onClick={onAutoLayoutFromBackground}
-             disabled={!creatorAutoLayoutEnabled || !autoLayoutReferenceUrl || autoLayoutLoading}
-             className="w-full px-3 py-2.5 rounded bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed"
+             onClick={() => setShowAutoLayoutTools((value) => !value)}
+             className={`w-full ${editorSecondaryButtonClass}`}
            >
-             {autoLayoutLoading ? "Analyzing Background..." : "Analyze Uploaded Background"}
+             {showAutoLayoutTools ? "Hide Scene Match" : "Use My Scene Instead"}
            </button>
 
-           <div className="text-[10px] text-neutral-500">
-             Upload the exact background you want to use. Best results come from images with one strong focal area and some clean negative space.
-           </div>
+           {showAutoLayoutTools && (
+             <div className="space-y-3 border-t border-white/10 pt-3">
+               <div className={editorSectionMetaClass}>
+                 Upload the exact scene you want to keep. Best results have one strong focal area and clear space for text.
+               </div>
 
-           {autoLayoutError && <div className="text-[11px] text-amber-300">{autoLayoutError}</div>}
+               <div className="space-y-2">
+                 <label className="block text-[11px] text-neutral-300">
+                   Background reference
+                   <input
+                     type="file"
+                     accept="image/*"
+                     onChange={(e) => {
+                       const file = e.target.files?.[0];
+                       if (!file) return;
+                       onAutoLayoutReferenceUpload(file);
+                       e.currentTarget.value = "";
+                     }}
+                     className="mt-1 block w-full rounded border border-neutral-700 bg-[#17171b] px-2 py-1.5 text-[12px] text-white file:mr-2 file:rounded file:border-0 file:bg-cyan-700 file:px-2 file:py-1 file:text-white"
+                   />
+                 </label>
+
+                 {autoLayoutReferenceUrl && (
+                   <div className="rounded-lg border border-white/10 bg-black/20 p-2">
+                     <div className="mb-2 overflow-hidden rounded border border-white/10 bg-black/30">
+                       <img
+                         src={autoLayoutReferenceUrl}
+                         alt="Auto layout background reference"
+                         className="h-32 w-full object-cover"
+                       />
+                     </div>
+                     <button
+                       type="button"
+                       onClick={onClearAutoLayoutReference}
+                       className="rounded border border-white/10 bg-white/5 px-2 py-1 text-[10px] text-white/80 hover:bg-white/10"
+                     >
+                       Clear reference
+                     </button>
+                   </div>
+                 )}
+               </div>
+
+               {!creatorAutoLayoutEnabled && (
+                 <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-100">
+                   Creator Auto Layout is available on Creator and Studio subscriptions.
+                 </div>
+               )}
+
+               <button
+                 type="button"
+                 onClick={onAutoLayoutFromBackground}
+                 disabled={!creatorAutoLayoutEnabled || !autoLayoutReferenceUrl || autoLayoutLoading}
+                 className={`w-full ${editorPrimaryButtonClass}`}
+               >
+                 {autoLayoutLoading ? "Analyzing Scene..." : "Analyze + Apply Layout"}
+               </button>
+
+               {autoLayoutError && <div className="text-[11px] text-amber-300">{autoLayoutError}</div>}
+             </div>
+           )}
          </div>
 
-         <div className="rounded-xl border border-white/10 bg-[#0f1117] p-3 sm:p-4 space-y-3">
+         <div className={`${editorSectionCardClass} space-y-3`}>
            <div className="flex items-center justify-between gap-2">
-             <div className="text-[12px] uppercase tracking-[0.12em] text-cyan-300">Idea Brief</div>
-             <div className="text-[10px] text-neutral-400">Required before generate</div>
+             <div>
+               <div className={editorSectionEyebrowClass}>Idea Brief</div>
+               <div className={editorSectionTitleClass}>Set the vibe before you generate.</div>
+             </div>
+             <div className={editorSectionMetaClass}>Required before generate</div>
            </div>
 
            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -593,7 +611,7 @@ function AiBackgroundPanel({
              type="button"
              onClick={handleGenerate}
              disabled={genLoading || !briefReady}
-             className="w-full px-3 py-2.5 rounded bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+             className={`w-full ${editorPrimaryButtonClass}`}
            >
              {genLoading ? (
                <span className="inline-flex items-center gap-2">
@@ -601,7 +619,7 @@ function AiBackgroundPanel({
                  Creating Magic…
                </span>
              ) : (
-               'Generate Background'
+               'Generate Scene'
              )}
            </button>
 
@@ -612,7 +630,7 @@ function AiBackgroundPanel({
            <button
              type="button"
              onClick={() => setShowAdvanced((v) => !v)}
-             className="w-full px-3 py-2 text-left text-[12px] text-neutral-200 hover:bg-white/[0.03] rounded-xl"
+             className={editorAdvancedToggleClass}
            >
              {showAdvanced ? 'Hide Advanced Controls' : 'Show Advanced Controls'}
            </button>
@@ -871,16 +889,16 @@ function AiBackgroundPanel({
          </div>
 
          {isPlaceholder && (
-           <div className="text-[11px] p-2 rounded border border-amber-500/40 bg-amber-900/20">
-             <div className="font-semibold text-amber-300">Using placeholder background</div>
-             <div className="text-amber-200/90 mt-1">
+           <div className={editorEmptyStateClass}>
+             <div className="text-[12px] font-semibold text-amber-300">Using placeholder background</div>
+             <div className="mt-1 text-[11px] leading-5 text-amber-200/90">
                Provider error{genError ? `: ${genError}` : ''}. You can keep designing and retry generation anytime.
              </div>
              <div className="mt-2 flex gap-2">
                <button
                  type="button"
                  onClick={handleGenerate}
-                 className="px-2 py-1 rounded bg-neutral-900/70 border border-neutral-700 hover:bg-neutral-800"
+                 className={editorPrimaryButtonClass}
                >
                  Retry
                </button>
@@ -889,7 +907,7 @@ function AiBackgroundPanel({
                  onClick={() => {
                    setGenProvider('nano');
                  }}
-                 className="px-2 py-1 rounded bg-neutral-900/70 border border-neutral-700 hover:bg-neutral-800"
+                 className={editorSecondaryButtonClass}
                >
                  Switch to Nano
                </button>
@@ -912,7 +930,7 @@ function AiBackgroundPanel({
 
          {genCandidates.length > 0 && (
            <div className="space-y-2">
-             <div className="text-[11px] text-neutral-400">Select a background</div>
+             <div className={editorHelperTextClass}>Select a background</div>
              <div className="grid grid-cols-2 gap-2">
                {genCandidates.map((src, i) => (
                  <button
@@ -932,59 +950,6 @@ function AiBackgroundPanel({
          {genError && <div className="text-xs text-red-400 break-words">{genError}</div>}
         </div>
       </Collapsible>
-
-      {helpOpen && (
-        <div className="fixed inset-0 z-[5100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-2xl rounded-2xl border border-cyan-400/30 bg-[#0a0d12] shadow-[0_30px_80px_rgba(0,0,0,.6)] overflow-hidden">
-            <div className="px-5 py-4 border-b border-white/10 bg-gradient-to-r from-cyan-500/20 to-fuchsia-500/10">
-              <div className="text-sm uppercase tracking-[0.2em] text-cyan-300">AI Scene Guide</div>
-              <div className="mt-1 text-lg font-semibold text-white">Current flow: brief-first, then generate.</div>
-            </div>
-
-            <div className="p-5 space-y-4 text-sm text-neutral-200 max-h-[70vh] overflow-y-auto">
-              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-                <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">Step 1: Pick A Style Direction</div>
-                <div className="text-neutral-300">
-                  Start with Urban, Neon, Tropical, or Vintage. This sets the overall visual lane.
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-                <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">Step 2: Complete The Idea Brief (Required)</div>
-                <div className="text-neutral-300">
-                  Fill Event, Mood, Color Palette Mood, and Subject. If Subject includes people, choose Subject Gender (male/female). Generate stays disabled until these are set.
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-                <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">Step 3: Add Optional Direction + Generate</div>
-                <ul className="list-disc pl-5 space-y-1 text-neutral-300">
-                  <li>Use Extra Direction and Must Include only for small constraints.</li>
-                  <li>Subject choice auto-sets People mode (DJ/Crowd/Performer = on).</li>
-                  <li>Use Batch 1 or 2, then click a candidate thumbnail to apply.</li>
-                </ul>
-              </div>
-
-              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-                <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">Step 4: Use Advanced Only If Needed</div>
-                <div className="text-neutral-300">
-                  Advanced Controls holds provider, size, diversity, clarity, presets, and deeper subject profile tuning.
-                </div>
-              </div>
-            </div>
-
-            <div className="px-5 py-4 border-t border-white/10 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setHelpOpen(false)}
-                className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-sm"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
    );
  }

@@ -31,7 +31,25 @@ import { supabaseBrowser } from "../lib/supabase/client";
 import * as Slider from "@radix-ui/react-slider";
 import type { CleanupParams } from "../lib/cleanupCutoutUrl";
 import { removeGreenScreen } from "./chromaKey";
-import { Collapsible, Chip, Stepper, ColorDot, SliderRow, InlineSliderInput } from "../components/editor/controls";
+import {
+  Collapsible,
+  Chip,
+  Stepper,
+  ColorDot,
+  SliderRow,
+  InlineSliderInput,
+  editorHelperTextClass,
+  editorItemCardActiveClass,
+  editorItemCardClass,
+  editorPanelActiveClass,
+  editorPanelTitleActiveClass,
+  editorPrimaryButtonClass,
+  editorSectionCardClass,
+  editorSectionEyebrowClass,
+  editorSectionTitleClass,
+  editorSecondaryButtonClass,
+  editorThumbClass,
+} from "../components/editor/controls";
 import { FontPicker } from "../components/editor/FontPicker";
 import DjBrandingPanel from "../components/editor/DjBrandingPanel";
 import {
@@ -7256,6 +7274,7 @@ export default function Page() {
         originalPortrait: originalPortraitVersion,
         updatedAt: Date.now(),
       });
+      transitionCueRef.current?.("portrait_blend");
       if (typeof window !== "undefined" && window.innerWidth < 1024) {
         window.setTimeout(scrollToArtboard, 160);
       }
@@ -7996,6 +8015,62 @@ const ALIGN_MAP = {
  
   const isDragging = moveTarget !== null;
  
+function getCanvasSelectionHome(panelOrTarget: string | null) {
+  if (!panelOrTarget) return null;
+
+  switch (panelOrTarget) {
+    case "headline":
+      return { panel: "headline", tab: "design" as const };
+    case "headline2":
+    case "head2":
+      return { panel: "head2", tab: "design" as const };
+    case "details":
+      return { panel: "details", tab: "design" as const };
+    case "details2":
+      return { panel: "details2", tab: "design" as const };
+    case "venue":
+      return { panel: "venue", tab: "design" as const };
+    case "subtag":
+      return { panel: "subtag", tab: "design" as const };
+    case "logo":
+      return { panel: "logo", tab: "design" as const };
+    case "cinema":
+      return { panel: "cinema", tab: "design" as const };
+    case "template":
+      return { panel: "template", tab: "design" as const };
+    case "template_backgrounds":
+      return { panel: "template_backgrounds", tab: "design" as const };
+    case "background":
+    case "bgfx":
+      return { panel: "background", tab: "assets" as const };
+    case "ai_background":
+      return { panel: "ai_background", tab: "assets" as const };
+    case "magic_blend":
+      return { panel: "magic_blend", tab: "assets" as const };
+    case "portrait":
+      return { panel: "portrait", tab: "assets" as const };
+    case "icon":
+    case "icons":
+      return { panel: "icons", tab: "assets" as const };
+    case "dj_branding":
+      return { panel: "dj_branding", tab: "assets" as const };
+    default:
+      return null;
+  }
+}
+
+function focusCanvasSelectionHome(panelOrTarget: string | null) {
+  const next = getCanvasSelectionHome(panelOrTarget);
+  if (!next) return;
+
+  setUiMode("design");
+  if (isMobileView) {
+    setMobileControlsOpen(true);
+    setMobileControlsTab((current) => (current === next.tab ? current : next.tab));
+  }
+  setSelectedPanel(next.panel);
+}
+
 
 useEffect(() => {
   const store = useFlyerState.getState();
@@ -8005,24 +8080,7 @@ useEffect(() => {
 
   if (!moveTarget) return;
 
-  const map: Record<string, string> = {
-    headline: "headline",
-    headline2: "head2",
-    details: "details",
-    details2: "details2",
-    venue: "venue",
-    subtag: "subtag",
-    background: "background",
-
-    // ✅ icon mode should open the Library panel (NOT portrait)
-    icon: "icons",
-  };
-
-  const next = map[String(moveTarget)];
-  if (next) {
-    // IMPORTANT: use STORE setter, not local setSelectedPanel
-    useFlyerState.getState().setSelectedPanel(next);
-  }
+  focusCanvasSelectionHome(String(moveTarget));
 }, [moveTarget]);
 
 
@@ -8317,6 +8375,8 @@ const [tourRect, setTourRect] = useState<{ top: number; left: number; width: num
 const [tourTip, setTourTip] = useState<{ top: number; left: number; centered?: boolean } | null>(null);
 const [mobileControlsOpen, setMobileControlsOpen] = React.useState(true);
 const [mobileControlsTab, setMobileControlsTab] = React.useState<"design" | "assets">("design");
+const smartWorkflowAdvanceRef = React.useRef<null | (() => void)>(null);
+const transitionCueRef = React.useRef<null | ((source: "template" | "background" | "portrait" | "ai_scene" | "portrait_blend") => void)>(null);
 const [isMobileView, setIsMobileView] = React.useState(
   typeof window !== "undefined" && window.innerWidth < 1024
 );
@@ -8876,6 +8936,7 @@ const onRightBgFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     setBgScale(1.3);        // slight “fill” zoom
     setBgPosX(50);          // center
     setBgPosY(50);          // center
+    transitionCueRef.current?.("background");
   };
   r.readAsDataURL(f);
   e.currentTarget.value = ''; // allow re-selecting same file later
@@ -8885,13 +8946,19 @@ const onRightBgFile = (e: React.ChangeEvent<HTMLInputElement>) => {
 // Quick actions for right-panel controls
 const clearBackground = () => { setBgUploadUrl(null); setBgUrl(null); };
 const fitBackground   = () => { setBgFitMode(true); setBgScale(1.0); setBgPosX(50); setBgPosY(50); };
-const applyStartupBackground = React.useCallback((src: string) => {
+const applyStartupBackground = React.useCallback((src: string, opts?: { advanceWorkflow?: boolean }) => {
   setBgUploadUrl(null);
   setBgUrl(src);
   setBgFitMode(false);
   setBgScale(1.0);
   setBgPosX(50);
   setBgPosY(50);
+  transitionCueRef.current?.("background");
+  if (opts?.advanceWorkflow) {
+    window.setTimeout(() => {
+      smartWorkflowAdvanceRef.current?.();
+    }, 120);
+  }
 }, []);
 /* ===== RIGHT-PANEL BG UPLOAD HELPERS (END) ===== */
 
@@ -10814,6 +10881,9 @@ const [bgBlur, setBgBlur] = useState(0);
       setPortraitUrl(null);
       useFlyerState.getState().setSelectedPortraitId(null);
     }
+    transitionCueRef.current?.(
+      sharedGeneratedBackground.source === "magic_blend" ? "portrait_blend" : "ai_scene"
+    );
   }, [applyBackgroundVersionToCanvas, sharedGeneratedBackground]);
 
   const applyGeneratedCandidate = React.useCallback(
@@ -10826,6 +10896,7 @@ const [bgBlur, setBgBlur] = useState(0);
         fitMode: false,
       });
       applyBackgroundVersionToCanvas(nextGenerated);
+      transitionCueRef.current?.("ai_scene");
       setSharedGeneratedBackground((prev) => ({
         source: "ai_background",
         sourceFormat: format,
@@ -12762,11 +12833,12 @@ const generateBackground = async (opts: GenOpts = {}) => {
       posY: 50,
       rotate: 0,
       fitMode: false,
-    });
-    applyBackgroundVersionToCanvas(generatedVersion, requestedFormat);
-    setSharedGeneratedBackground({
-      source: "ai_background",
-      sourceFormat: requestedFormat,
+      });
+      applyBackgroundVersionToCanvas(generatedVersion, requestedFormat);
+      transitionCueRef.current?.("ai_scene");
+      setSharedGeneratedBackground({
+        source: "ai_background",
+        sourceFormat: requestedFormat,
       original: originalBackgroundVersion,
       generated: generatedVersion,
       originalPortrait: captureCurrentPortraitVersion(),
@@ -15955,12 +16027,10 @@ const portraitCanvas = React.useMemo(() => {
       store.setSelectedPortraitId(pid);
     }
 
-    if ((store as any).selectedPanel !== panel) {
-      store.setSelectedPanel(panel);
-    }
     if ((store as any).moveTarget !== target) {
       store.setMoveTarget(target);
     }
+    focusCanvasSelectionHome(panel);
   };
 
   const canDrag = (item: any) => {
@@ -17955,7 +18025,7 @@ const applyTemplate = React.useCallback<
 // =========================================================
 // Apply button handler (shared with Choose-a-Vibe)
 const applyTemplateFromGallery = React.useCallback(
-  (tpl: TemplateSpec, opts?: { targetFormat?: Format }) => {
+  (tpl: TemplateSpec, opts?: { targetFormat?: Format; advanceWorkflow?: boolean }) => {
     if (isStarterPlan && !STARTER_TEMPLATE_IDS.has(tpl.id)) {
       alert(`Starter includes ${STARTER_TEMPLATE_COUNT} editable templates. Upgrade or use a pass to unlock the full template library.`);
       return;
@@ -17992,6 +18062,14 @@ const applyTemplateFromGallery = React.useCallback(
     setTimeout(() => {
       suppressCloseRef.current = false;
     }, 0);
+
+    transitionCueRef.current?.("template");
+
+    if (opts?.advanceWorkflow) {
+      window.setTimeout(() => {
+        smartWorkflowAdvanceRef.current?.();
+      }, 120);
+    }
   },
   [applyTemplate, format, isStarterPlan]
 );
@@ -18066,6 +18144,10 @@ const handleAutoLayoutFromBackground = React.useCallback(async () => {
     );
 
     window.setTimeout(scrollToArtboard, 180);
+    transitionCueRef.current?.("ai_scene");
+    window.setTimeout(() => {
+      smartWorkflowAdvanceRef.current?.();
+    }, 180);
   } catch (err: any) {
     setAutoLayoutError(err?.message || "Auto Layout failed.");
   } finally {
@@ -19013,6 +19095,15 @@ const creatorHasCopy = [
     String(venue || "").trim().toUpperCase() !== "VENUE",
   String(subtag || "").trim() !== "",
 ].some(Boolean);
+const headlineMissing =
+  String(headline || "").trim().toUpperCase() === "" ||
+  String(headline || "").trim().toUpperCase() === "HEADLINE";
+const detailsMissing =
+  String(details || "").trim().toUpperCase() === "" ||
+  String(details || "").trim().toUpperCase() === "EVENT DETAILS";
+const venueMissing =
+  String(venue || "").trim().toUpperCase() === "" ||
+  String(venue || "").trim().toUpperCase() === "VENUE";
 const creatorPortraitCount = ((portraits?.[format] || []) as any[]).filter(
   (p: any) => !p?.isBrandFace
 ).length;
@@ -19021,19 +19112,13 @@ const creatorLogoCount = logoUrl ? 1 : 0;
 const creatorAssetCount = creatorPortraitCount + creatorEmojiCount + creatorLogoCount;
 const creatorHasAssets = creatorAssetCount > 0;
 const creatorHasSubject = creatorPortraitCount > 0 || !!portraitUrl || !!blendSubject;
-const creatorCanUseMagicBlend = creatorHasScene && creatorHasSubject;
-const creatorUsingTemplateBase = !!templateId;
-const creatorWorkflowRecommended = !creatorHasScene
-  ? "scene"
-  : !creatorHasCopy
-  ? "copy"
-  : !creatorHasAssets
-  ? "assets"
-  : uiMode === "finish"
-  ? "finish"
-  : creatorUsingTemplateBase
-  ? "copy"
-  : "finish";
+const [creatorFlowStep, setCreatorFlowStep] = React.useState<"scene" | "copy" | "assets" | "finish" | null>(null);
+const creatorFlowCurrentStep =
+  uiMode === "finish"
+    ? "finish"
+    : !creatorHasScene
+    ? "scene"
+    : creatorFlowStep ?? (creatorHasScene ? "copy" : "scene");
 const creatorWorkflowMeta = {
   scene: {
     label: "Scene",
@@ -19048,8 +19133,8 @@ const creatorWorkflowMeta = {
     count: creatorHasCopy ? "Ready" : "Needed",
   },
   assets: {
-    label: "Assets",
-    summary: creatorHasAssets ? "Visual accents are on the flyer." : "Add logo, portraits, icons, or effects.",
+    label: "Visuals",
+    summary: creatorHasAssets ? "Portraits, graphics, or effects are in place." : "Add portraits, graphics, or scene effects.",
     ready: creatorHasAssets,
     count: creatorHasAssets ? `${creatorAssetCount} live` : "Optional",
   },
@@ -19081,11 +19166,11 @@ const creatorWorkflowCurrent =
       selectedPanel === "cinema" ||
       selectedPanel === "magic_blend"
     ? "assets"
-    : creatorWorkflowRecommended;
+    : creatorFlowCurrentStep;
 const creatorStepPanelClass = (step: "scene" | "copy" | "assets" | "finish") =>
   !isDjStartupMode &&
   creatorWorkflowCurrent !== step &&
-  creatorWorkflowRecommended !== step
+  creatorFlowCurrentStep !== step
     ? "opacity-45 transition-opacity"
     : "transition-opacity";
 
@@ -19111,24 +19196,210 @@ const openCreatorWorkflowTarget = React.useCallback(
   },
   [setSelectedPanel]
 );
-const openCreatorWorkflowStep = React.useCallback(
+
+const getSmartWorkflowTarget = React.useCallback(
   (step: "scene" | "copy" | "assets" | "finish") => {
     if (step === "scene") {
-      openCreatorWorkflowTarget("background", "assets");
-      return;
+      return creatorHasScene
+        ? {
+            label: "Scene Builder",
+            panel: "background",
+            tab: "assets" as const,
+            uiMode: "design" as const,
+            targetId: "background-panel",
+          }
+        : {
+            label: "Template Gallery",
+            panel: "template",
+            tab: "design" as const,
+            uiMode: "design" as const,
+            targetId: "template-panel",
+          };
     }
+
     if (step === "copy") {
-      openCreatorWorkflowTarget("headline", "design");
-      return;
+      if (headlineMissing) {
+        return {
+          label: "Headline",
+          panel: "headline",
+          tab: "design" as const,
+          uiMode: "design" as const,
+          targetId: "headline-panel",
+        };
+      }
+      if (detailsMissing) {
+        return {
+          label: "Details",
+          panel: "details",
+          tab: "design" as const,
+          uiMode: "design" as const,
+          targetId: "details-panel",
+        };
+      }
+      if (venueMissing) {
+        return {
+          label: "Venue",
+          panel: "venue",
+          tab: "design" as const,
+          uiMode: "design" as const,
+          targetId: "venue-panel",
+        };
+      }
+      return {
+        label: "Headline",
+        panel: "headline",
+        tab: "design" as const,
+        uiMode: "design" as const,
+        targetId: "headline-panel",
+      };
     }
+
     if (step === "assets") {
-      openCreatorWorkflowTarget("icons", "assets");
-      return;
+      if (!creatorHasSubject) {
+        return {
+          label: "Portraits",
+          panel: "portrait",
+          tab: "assets" as const,
+          uiMode: "design" as const,
+          targetId: "portrait-panel",
+        };
+      }
+      return {
+        label: "Graphics & FX",
+        panel: "icons",
+        tab: "assets" as const,
+        uiMode: "design" as const,
+        targetId: "icons-panel",
+      };
     }
-    openCreatorWorkflowTarget("mastergrade", "assets", { uiMode: "finish" });
+
+    return {
+      label: "Export",
+      panel: "mastergrade",
+      tab: "assets" as const,
+      uiMode: "finish" as const,
+      targetId: "mastergrade-panel",
+    };
   },
-  [openCreatorWorkflowTarget]
+  [creatorHasScene, creatorHasSubject, detailsMissing, headlineMissing, venueMissing]
 );
+const openCreatorWorkflowStep = React.useCallback(
+  (step: "scene" | "copy" | "assets" | "finish") => {
+    setCreatorFlowStep(step);
+    const target = getSmartWorkflowTarget(step);
+    openCreatorWorkflowTarget(target.panel, target.tab, {
+      uiMode: target.uiMode,
+      targetId: target.targetId,
+    });
+  },
+  [getSmartWorkflowTarget, openCreatorWorkflowTarget]
+);
+const creatorWorkflowRecommendedTarget = React.useMemo(
+  () => getSmartWorkflowTarget(creatorFlowCurrentStep),
+  [creatorFlowCurrentStep, getSmartWorkflowTarget]
+);
+const creatorWorkflowStepNumber =
+  creatorFlowCurrentStep === "scene"
+    ? 1
+    : creatorFlowCurrentStep === "copy"
+    ? 2
+    : creatorFlowCurrentStep === "assets"
+    ? 3
+    : 4;
+const creatorWorkflowGuide = React.useMemo(() => {
+  if (creatorFlowCurrentStep === "scene") {
+    return {
+      title: "Choose your starting scene",
+      buttonLabel: creatorWorkflowCurrent === "scene" && creatorHasScene ? "Next" : `Open ${creatorWorkflowRecommendedTarget.label}`,
+      mobileButtonLabel: creatorWorkflowCurrent === "scene" && creatorHasScene ? "Next" : "Scene",
+      hint: "After choosing your scene, hit Next.",
+    };
+  }
+
+  if (creatorFlowCurrentStep === "copy") {
+    return {
+      title: "Edit flyer text",
+      buttonLabel:
+        creatorWorkflowCurrent === "copy"
+          ? "Next"
+          : `Open ${creatorWorkflowRecommendedTarget.label}`,
+      mobileButtonLabel: creatorWorkflowCurrent === "copy" ? "Next" : "Text",
+      hint: "After adding all your text, hit Next.",
+    };
+  }
+
+  if (creatorFlowCurrentStep === "assets") {
+    return creatorHasSubject
+      ? {
+          title: "Add graphics and effects",
+          buttonLabel:
+            creatorWorkflowCurrent === "assets"
+              ? "Next"
+              : `Open ${creatorWorkflowRecommendedTarget.label}`,
+          mobileButtonLabel: creatorWorkflowCurrent === "assets" ? "Next" : "Graphics",
+          hint: "After finishing this section, hit Next.",
+        }
+      : {
+          title: "Place the main portrait",
+          buttonLabel:
+            creatorWorkflowCurrent === "assets"
+              ? "Next"
+              : `Open ${creatorWorkflowRecommendedTarget.label}`,
+          mobileButtonLabel: creatorWorkflowCurrent === "assets" ? "Next" : "Portraits",
+          hint: "After placing the subject, hit Next.",
+        };
+  }
+
+  return {
+    title: "Ready to publish",
+    buttonLabel: uiMode === "finish" ? "Publish" : "Open Finish",
+    mobileButtonLabel: uiMode === "finish" ? "Publish" : "Finish",
+    hint: "After checking the final look, publish the flyer.",
+  };
+}, [
+  creatorHasAssets,
+  creatorHasSubject,
+  creatorFlowCurrentStep,
+  creatorWorkflowCurrent,
+  creatorWorkflowRecommendedTarget.label,
+  creatorHasScene,
+  uiMode,
+]);
+transitionCueRef.current = null;
+const advanceCreatorWorkflow = React.useCallback(() => {
+  const order: Array<"scene" | "copy" | "assets" | "finish"> = ["scene", "copy", "assets", "finish"];
+  const currentIndex = order.indexOf(creatorFlowCurrentStep);
+  const nextStep = order[Math.min(currentIndex + 1, order.length - 1)];
+  setCreatorFlowStep(nextStep);
+  openCreatorWorkflowStep(nextStep);
+}, [creatorFlowCurrentStep, openCreatorWorkflowStep]);
+smartWorkflowAdvanceRef.current = null;
+const creatorFlowAutoOpenRef = React.useRef(false);
+React.useEffect(() => {
+  if (creatorFlowAutoOpenRef.current) return;
+  if (!hydrated || showStartupTemplates || showOnboard || tourStep != null) return;
+  if (isDjStartupMode || uiMode !== "design" || selectedPanel) return;
+
+  const initialStep: "scene" | "copy" = creatorHasScene ? "copy" : "scene";
+  setCreatorFlowStep(initialStep);
+  const target = getSmartWorkflowTarget(initialStep);
+  openCreatorWorkflowTarget(target.panel, target.tab, {
+    uiMode: target.uiMode,
+    targetId: target.targetId,
+  });
+  creatorFlowAutoOpenRef.current = true;
+}, [
+  creatorHasScene,
+  getSmartWorkflowTarget,
+  hydrated,
+  isDjStartupMode,
+  openCreatorWorkflowTarget,
+  selectedPanel,
+  showOnboard,
+  showStartupTemplates,
+  tourStep,
+  uiMode,
+]);
 const currentMobileAction = React.useMemo(() => {
   if (uiMode === "finish" || selectedPanel === "mastergrade" || exportModalOpen) {
     return {
@@ -19219,7 +19490,7 @@ const currentMobileAction = React.useMemo(() => {
 
   if (selectedPanel === "cinema") {
     return {
-      label: "Assets",
+      label: "Cinematic Text",
       panel: "cinema",
       tab: "assets" as const,
       uiMode: "design" as const,
@@ -19229,11 +19500,21 @@ const currentMobileAction = React.useMemo(() => {
 
   if (selectedPanel === "icons" || selectedPanel === "portrait" || selectedPanel === "dj_branding") {
     return {
-      label: "Assets",
-      panel: selectedPanel === "dj_branding" ? "dj_branding" : "icons",
+      label:
+        selectedPanel === "portrait"
+          ? "Portraits"
+          : selectedPanel === "icons"
+          ? "Graphics & FX"
+          : "DJ Branding",
+      panel: selectedPanel,
       tab: "assets" as const,
       uiMode: "design" as const,
-      targetId: "library-panel",
+      targetId:
+        selectedPanel === "portrait"
+          ? "portrait-panel"
+          : selectedPanel === "icons"
+          ? "icons-panel"
+          : undefined,
     };
   }
 
@@ -19267,11 +19548,11 @@ const currentMobileAction = React.useMemo(() => {
 
   if (creatorWorkflowCurrent === "assets") {
     return {
-      label: "Assets",
-      panel: "icons",
+      label: creatorHasSubject ? "Graphics & FX" : "Portraits",
+      panel: creatorHasSubject ? "icons" : "portrait",
       tab: "assets" as const,
       uiMode: "design" as const,
-      targetId: "library-panel",
+      targetId: creatorHasSubject ? "icons-panel" : "portrait-panel",
     };
   }
 
@@ -19282,38 +19563,109 @@ const currentMobileAction = React.useMemo(() => {
     uiMode: "design" as const,
     targetId: "template-panel",
   };
-}, [creatorWorkflowCurrent, exportModalOpen, mobileControlsTab, selectedPanel, uiMode]);
-const jumpToCurrentMobileAction = React.useCallback(() => {
-  openCreatorWorkflowTarget(currentMobileAction.panel, currentMobileAction.tab, {
-    uiMode: currentMobileAction.uiMode,
-    targetId: currentMobileAction.targetId,
-  });
-}, [currentMobileAction, openCreatorWorkflowTarget]);
-const mobileCurrentActionBar =
+}, [creatorHasSubject, creatorWorkflowCurrent, exportModalOpen, mobileControlsTab, selectedPanel, uiMode]);
+const mobileVisibleCreatorPanels = React.useMemo(() => {
+  if (!isMobileView || isDjStartupMode) return null;
+
+  const design = new Set<string>();
+  const assets = new Set<string>();
+  const focusPanel = selectedPanel ?? creatorWorkflowRecommendedTarget.panel ?? null;
+  const copyPanels = new Set(["headline", "head2", "details", "details2", "venue", "subtag"]);
+
+  if (
+    creatorWorkflowCurrent === "scene" ||
+    focusPanel === "template" ||
+    focusPanel === "template_backgrounds"
+  ) {
+    design.add("template");
+    design.add("template_backgrounds");
+  }
+
+  if (focusPanel && copyPanels.has(focusPanel)) {
+    design.add(focusPanel);
+  } else if (creatorWorkflowCurrent === "copy" && creatorWorkflowRecommendedTarget.tab === "design") {
+    design.add(creatorWorkflowRecommendedTarget.panel ?? "headline");
+  }
+
+  if (focusPanel === "logo") design.add("logo");
+
+  if (
+    creatorWorkflowCurrent === "scene" ||
+    focusPanel === "background" ||
+    focusPanel === "bgfx"
+  ) {
+    assets.add("background");
+  }
+  if (focusPanel === "ai_background") assets.add("ai_background");
+  if (focusPanel === "magic_blend") assets.add("magic_blend");
+  if (focusPanel === "portrait" || (!creatorHasSubject && creatorWorkflowCurrent === "assets")) {
+    assets.add("portrait");
+  }
+  if (focusPanel === "icons" || (creatorHasSubject && creatorWorkflowCurrent === "assets")) {
+    assets.add("icons");
+  }
+  if (focusPanel === "dj_branding") assets.add("dj_branding");
+
+  return { design, assets };
+}, [
+  creatorHasSubject,
+  creatorWorkflowCurrent,
+  creatorWorkflowRecommendedTarget.panel,
+  creatorWorkflowRecommendedTarget.tab,
+  isDjStartupMode,
+  isMobileView,
+  selectedPanel,
+]);
+const mobilePanelClass = React.useCallback(
+  (tab: "design" | "assets", panel: string | string[]) => {
+    if (!mobileVisibleCreatorPanels) return "";
+    const visibleSet = tab === "design" ? mobileVisibleCreatorPanels.design : mobileVisibleCreatorPanels.assets;
+    const keys = Array.isArray(panel) ? panel : [panel];
+    return keys.some((key) => visibleSet.has(key)) ? "" : "hidden";
+  },
+  [mobileVisibleCreatorPanels]
+);
+const mobileCreatorProgressStrip =
   !isMobileView || isDjStartupMode ? null : (
-    <div
-      className="sticky z-[36] px-3 pb-2 lg:hidden"
-      style={{ top: "calc(env(safe-area-inset-top, 0px) + 6px)" }}
-    >
-      <div className="flex items-center justify-between gap-3 border border-cyan-400/20 bg-neutral-950/92 px-3 py-2 shadow-[0_14px_28px_rgba(0,0,0,0.32)] backdrop-blur">
+    <div className="w-full max-w-[320px] overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/72 px-3 py-2 shadow-[0_14px_34px_rgba(0,0,0,0.32)] ring-1 ring-white/10 backdrop-blur-2xl sm:max-w-[340px]">
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
-            Current Action
+            Creator Flow · Step {creatorWorkflowStepNumber} / 4
           </div>
-          <div className="truncate text-[12px] font-semibold text-white">
-            Editing: {currentMobileAction.label}
+          <div className="mt-1 truncate text-[11px] font-semibold text-white">
+            {creatorWorkflowGuide.title}
+          </div>
+          <div className="mt-1 text-[10px] leading-4 text-neutral-400">
+            {creatorWorkflowGuide.hint}
           </div>
         </div>
         <button
           type="button"
-          onClick={jumpToCurrentMobileAction}
-          className="shrink-0 border border-cyan-400/35 bg-cyan-500/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-100 transition hover:bg-cyan-500/20"
+          onClick={handleCreatorWorkflowPrimaryAction}
+          className="shrink-0 border border-cyan-400/35 bg-cyan-500/10 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-100 transition hover:bg-cyan-500/20"
         >
-          Jump
+          {creatorWorkflowGuide.mobileButtonLabel}
         </button>
+      </div>
+      <div className="mt-1 text-[10px] uppercase tracking-[0.12em] text-neutral-500">
+        Editing: {currentMobileAction.label}
       </div>
     </div>
   );
+const handleCreatorWorkflowPrimaryAction = React.useCallback(() => {
+  const isOnCurrentStep =
+    creatorFlowCurrentStep === "finish"
+      ? uiMode === "finish"
+      : creatorWorkflowCurrent === creatorFlowCurrentStep;
+
+  if (isOnCurrentStep) {
+    advanceCreatorWorkflow();
+    return;
+  }
+
+  openCreatorWorkflowStep(creatorFlowCurrentStep);
+}, [advanceCreatorWorkflow, creatorFlowCurrentStep, creatorWorkflowCurrent, openCreatorWorkflowStep, uiMode]);
 const openWorkflowHelp = React.useCallback(() => {
   setWorkflowHelpOpen(true);
 }, []);
@@ -22166,14 +22518,13 @@ className={clsx(
 style={{ top: STICKY_TOP }}
 >               
   {uiMode === "design" && mobileControlsOpen && mobileControlsTabs}
-  {mobileCurrentActionBar}
 
   
   <div className={uiMode === "design" ? "space-y-3" : "hidden"}>
 {/* UI: STARTER TEMPLATES (BEGIN) */}
 
 {!isDjStartupMode && (
-  <div className="mb-3" id="template-panel" data-tour="templates">
+  <div className={clsx("mb-3", mobilePanelClass("design", "template"))} id="template-panel" data-tour="templates">
     <div
       className={
         clsx(
@@ -22199,7 +22550,7 @@ style={{ top: STICKY_TOP }}
           }, 0);
         }}
         onApply={(t) => {
-          applyTemplateFromGallery(t);
+          applyTemplateFromGallery(t, { advanceWorkflow: true });
           window.setTimeout(scrollToArtboard, 180);
         }}
       />
@@ -22210,7 +22561,7 @@ style={{ top: STICKY_TOP }}
 {/* UI: STARTER TEMPLATES (END) */}
 
 {!isDjStartupMode && (
-  <div className="mb-3" id="template-backgrounds-panel">
+  <div className={clsx("mb-3", mobilePanelClass("design", "template_backgrounds"))} id="template-backgrounds-panel">
     <div className={creatorStepPanelClass("scene")}>
       <BackgroundGalleryPanel
         items={DJ_STARTUP_BACKGROUNDS}
@@ -22219,7 +22570,7 @@ style={{ top: STICKY_TOP }}
           setSelectedPanel(selectedPanel === "template_backgrounds" ? null : "template_backgrounds");
         }}
         onApply={(src) => {
-          applyStartupBackground(src);
+          applyStartupBackground(src, { advanceWorkflow: true });
           window.setTimeout(scrollToArtboard, 180);
         }}
       />
@@ -22231,7 +22582,7 @@ style={{ top: STICKY_TOP }}
 
 {/* === PATCH: Align Headline 2 Center (scoped to rootRef) === */}
 {/* ALIGNMENT CONTROLS */}
-<div className="mt-2 w-full flex flex-col items-center">
+<div className={clsx("mt-2 w-full flex flex-col items-center", isMobileView && !moveTarget && "hidden")}>
 
   {/* ALIGNMENT BUTTON ROW */}
 <div className="flex justify-center gap-2 w-full mt-4">
@@ -22606,9 +22957,12 @@ style={{ top: STICKY_TOP }}
 {showDjTextEditing && (
 <>
 {/* UI: CINEMATIC HEADLINE (BEGIN) */}
-<div className="relative rounded-xl transition" data-tour="cinematic">
+<div className={clsx("relative rounded-xl transition", mobilePanelClass("design", ["headline", "head2", "details", "details2", "venue", "subtag"]))} data-tour="cinematic">
   <div className="p-3">
     <div className="text-[12px] font-semibold text-neutral-200 text-center">Cinematic Text</div>
+    <div className="mt-2 text-[11px] text-neutral-400 text-center">
+      Use this when you want a stylized headline. It generates cinematic text from the built-in looks.
+    </div>
     <button
       type="button"
       disabled={isStarterPlan}
@@ -22636,7 +22990,8 @@ style={{ top: STICKY_TOP }}
   ref={logoPanelRef}
   className={clsx(
     "relative rounded-xl transition",
-    creatorStepPanelClass(isDjStartupMode ? "assets" : "copy")
+    creatorStepPanelClass(isDjStartupMode ? "assets" : "copy"),
+    mobilePanelClass("design", "logo")
   )}
 >
   <Collapsible
@@ -22657,16 +23012,14 @@ style={{ top: STICKY_TOP }}
       }
     }}
     panelClassName={
-      selectedPanel === "logo" ? "ring-1 ring-inset ring-[#00FFF0]/70" : undefined
+      selectedPanel === "logo" ? editorPanelActiveClass : undefined
     }
     titleClassName={
-      selectedPanel === "logo"
-        ? "text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]"
-        : ""
+      selectedPanel === "logo" ? editorPanelTitleActiveClass : ""
     }
   >
-    <div className="text-[12px] text-neutral-300 mb-2">
-      Manage logos and 3D text. Upload or generate, then place.
+    <div className={`mb-2 ${editorHelperTextClass}`}>
+      Use this when you want branded graphics or rendered 3D text on the flyer. Upload first, then place it on canvas.
     </div>
 
     {/* --- SLOTS GRID --- */}
@@ -22680,14 +23033,10 @@ style={{ top: STICKY_TOP }}
         return (
           <div
             key={i}
-            className={`border rounded-lg p-2 transition-colors ${
-              isActive
-                ? "border-indigo-500 bg-indigo-900/10"
-                : "border-neutral-700 bg-neutral-900/50"
-            }`}
+            className={isActive ? editorItemCardActiveClass : editorItemCardClass}
           >
             {/* Thumbnail */}
-            <div className="h-20 rounded overflow-hidden border border-neutral-700 bg-neutral-900 grid place-items-center relative">
+            <div className={`h-20 grid place-items-center relative ${editorThumbClass}`}>
               {src ? (
                 <img
                   src={src}
@@ -22708,7 +23057,7 @@ style={{ top: STICKY_TOP }}
               {/* Upload */}
               <button
                 type="button"
-                className="text-[10px] px-1 py-1.5 rounded-md bg-neutral-800 border border-neutral-600 hover:bg-neutral-700 text-neutral-300 truncate"
+                className={`${editorSecondaryButtonClass} truncate px-1 py-1.5 text-[10px]`}
                 onClick={() => {
                   const input = document.createElement("input");
                   input.type = "file";
@@ -22739,14 +23088,14 @@ style={{ top: STICKY_TOP }}
                   input.click();
                 }}
               >
-                {src ? "Rep" : "Up"}
+                {src ? "Replace" : "Upload Logo"}
               </button>
 
               {/* Place */}
               <button
                 type="button"
                 disabled={!src}
-                className="text-[10px] px-1 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 truncate"
+                className={`${editorPrimaryButtonClass} truncate px-1 py-1.5 text-[10px]`}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -22778,14 +23127,14 @@ style={{ top: STICKY_TOP }}
                   window.setTimeout(scrollToArtboard, 120);
                 }}
               >
-                Place
+                Place Logo
               </button>
 
               {/* Clear */}
               <button
                 type="button"
                 disabled={!src}
-                className="text-[10px] px-1 py-1.5 rounded-md bg-neutral-800 border border-neutral-600 hover:bg-neutral-700 text-neutral-300 disabled:opacity-50 truncate"
+                className={`${editorSecondaryButtonClass} truncate px-1 py-1.5 text-[10px]`}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -22844,8 +23193,9 @@ style={{ top: STICKY_TOP }}
       onMouseDownCapture={(e) => e.stopPropagation()}
       onPointerDownCapture={(e) => e.stopPropagation()}
     >
-      <div className="text-[12px] font-bold text-indigo-300 mb-3 flex items-center gap-2">
-        <span>✨ 3D / Logo Controls</span>
+      <div className={editorSectionEyebrowClass}>Logo Controls</div>
+      <div className={`${editorHelperTextClass} mb-3`}>
+        Refine the selected logo or 3D asset while it stays live on the canvas.
       </div>
 
       {/* 1. SCALE & SHADOW */}
@@ -22989,7 +23339,7 @@ style={{ top: STICKY_TOP }}
 )}
 {/* UI: LOGO — MIRROR OF PORTRAIT LOGIC (END) */}
 
-{!isDjStartupMode && (
+{!isDjStartupMode && !isMobileView && (
   <div className={clsx("px-1 pt-1 text-[10px] uppercase tracking-[0.16em] text-neutral-500", creatorStepPanelClass("copy"))}>
     Primary Copy
   </div>
@@ -22997,7 +23347,7 @@ style={{ top: STICKY_TOP }}
 
 {/* UI: HEADLINE (BEGIN) */}
 <div
-  className={clsx("relative rounded-xl transition", creatorStepPanelClass("copy"))}
+  className={clsx("relative rounded-xl transition", creatorStepPanelClass("copy"), mobilePanelClass("design", "headline"))}
   data-tour="headline"
   id="headline-panel"
 >
@@ -23160,7 +23510,7 @@ style={{ top: STICKY_TOP }}
 
 {/* UI: HEADLINE 2 (BEGIN) */}
 <div
-  className={clsx("relative rounded-xl transition", creatorStepPanelClass("copy"))}
+  className={clsx("relative rounded-xl transition", creatorStepPanelClass("copy"), mobilePanelClass("design", "head2"))}
 >
   <Collapsible
     title="Sub Headline"
@@ -23351,7 +23701,8 @@ style={{ top: STICKY_TOP }}
 
 {/* UI: DETAILS (BEGIN) */}
 <div
-  className={clsx("relative rounded-xl transition", creatorStepPanelClass("copy"))}
+  id="details-panel"
+  className={clsx("relative rounded-xl transition", creatorStepPanelClass("copy"), mobilePanelClass("design", "details"))}
 >
   <Collapsible
     title="Details"
@@ -23433,7 +23784,7 @@ style={{ top: STICKY_TOP }}
 </div>
 {/* UI: DETAILS (END) */}
 
-{!isDjStartupMode && (
+{!isDjStartupMode && !isMobileView && (
   <div className={clsx("px-1 pt-1 text-[10px] uppercase tracking-[0.16em] text-neutral-500", creatorStepPanelClass("copy"))}>
     Supporting Copy
   </div>
@@ -23443,7 +23794,7 @@ style={{ top: STICKY_TOP }}
 
 {/* UI: DETAILS 2 (BEGIN) */}
 <div
-  className={clsx("relative rounded-xl transition", creatorStepPanelClass("copy"))}
+  className={clsx("relative rounded-xl transition", creatorStepPanelClass("copy"), mobilePanelClass("design", "details2"))}
 >
   <Collapsible
     title="More Details"
@@ -23541,7 +23892,8 @@ style={{ top: STICKY_TOP }}
 
 {/* UI: VENUE (BEGIN) */}
 <div
-  className={clsx("relative rounded-xl transition", creatorStepPanelClass("copy"))}
+  id="venue-panel"
+  className={clsx("relative rounded-xl transition", creatorStepPanelClass("copy"), mobilePanelClass("design", "venue"))}
 >
   <Collapsible
     title="Venue"
@@ -23623,7 +23975,7 @@ style={{ top: STICKY_TOP }}
 
 {/* UI: SUBTAG (BEGIN) */}
 <div
-  className={clsx("relative rounded-xl transition", creatorStepPanelClass("copy"))}
+  className={clsx("relative rounded-xl transition", creatorStepPanelClass("copy"), mobilePanelClass("design", "subtag"))}
 >
   <Collapsible
     title="Subtag"
@@ -24373,27 +24725,29 @@ style={{ top: STICKY_TOP }}
 
   {activeTextControls && floatingEditorVisible && (
     <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 flex justify-center px-3 z-[1200]" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
-      <div
-        className="w-full max-w-[320px] overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl sm:max-w-[340px]"
-        ref={floatingTextRef}
-        data-floating-controls="text"
-        onPointerDownCapture={(e) => {
-          floatFocusLockRef.current = true;
-          e.stopPropagation();
-        }}
-        onTouchStartCapture={(e) => {
-          floatFocusLockRef.current = true;
-          e.stopPropagation();
-        }}
-        onTouchMoveCapture={(e) => {
-          floatFocusLockRef.current = true;
-          e.stopPropagation();
-        }}
-        onWheelCapture={(e) => {
-          floatFocusLockRef.current = true;
-          e.stopPropagation();
-        }}
-      >
+      <div className="w-full max-w-[320px] space-y-2 sm:max-w-[340px]">
+        {mobileCreatorProgressStrip}
+        <div
+          className="overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl"
+          ref={floatingTextRef}
+          data-floating-controls="text"
+          onPointerDownCapture={(e) => {
+            floatFocusLockRef.current = true;
+            e.stopPropagation();
+          }}
+          onTouchStartCapture={(e) => {
+            floatFocusLockRef.current = true;
+            e.stopPropagation();
+          }}
+          onTouchMoveCapture={(e) => {
+            floatFocusLockRef.current = true;
+            e.stopPropagation();
+          }}
+          onWheelCapture={(e) => {
+            floatFocusLockRef.current = true;
+            e.stopPropagation();
+          }}
+        >
         <div className="flex min-w-0 items-center gap-2 text-[11px] font-semibold text-white">
           <span className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</span>
           <span className="text-neutral-300">•</span>
@@ -24503,29 +24857,32 @@ style={{ top: STICKY_TOP }}
             </button>
           </div>
         </div>
+        </div>
       </div>
     </div>
   )}
 
   {activeAssetControls && floatingAssetVisible && (
     <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 flex justify-center px-3 z-[1200]" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
-      <div
-        className="w-full max-w-[320px] overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl sm:max-w-[340px]"
-        ref={floatingAssetRef}
-        data-floating-controls="asset"
-        onPointerDownCapture={(e) => {
-          floatFocusLockRef.current = true;
-          e.stopPropagation();
-        }}
-        onTouchStartCapture={(e) => {
-          floatFocusLockRef.current = true;
-          e.stopPropagation();
-        }}
-        onTouchMoveCapture={(e) => {
-          floatFocusLockRef.current = true;
-          e.stopPropagation();
-        }}
-      >
+      <div className="w-full max-w-[320px] space-y-2 sm:max-w-[340px]">
+        {mobileCreatorProgressStrip}
+        <div
+          className="overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl"
+          ref={floatingAssetRef}
+          data-floating-controls="asset"
+          onPointerDownCapture={(e) => {
+            floatFocusLockRef.current = true;
+            e.stopPropagation();
+          }}
+          onTouchStartCapture={(e) => {
+            floatFocusLockRef.current = true;
+            e.stopPropagation();
+          }}
+          onTouchMoveCapture={(e) => {
+            floatFocusLockRef.current = true;
+            e.stopPropagation();
+          }}
+        >
         <div className="flex min-w-0 items-center gap-2 text-[11px] font-semibold text-white">
           <span className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</span>
           <span className="text-neutral-300">•</span>
@@ -24851,29 +25208,32 @@ style={{ top: STICKY_TOP }}
             </button>
           </div>
         )}
+        </div>
       </div>
     </div>
   )}
 
   {floatingLightingVisible && (
     <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 z-[1200] flex justify-center px-3" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
-      <div
-        className="w-full max-w-[320px] max-h-[72vh] overflow-y-auto rounded-2xl border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl sm:max-w-[340px]"
-        ref={floatingLightingRef}
-        data-floating-controls="lighting"
-        onPointerDownCapture={(e) => {
-          floatFocusLockRef.current = true;
-          e.stopPropagation();
-        }}
-        onTouchStartCapture={(e) => {
-          floatFocusLockRef.current = true;
-          e.stopPropagation();
-        }}
-        onTouchMoveCapture={(e) => {
-          floatFocusLockRef.current = true;
-          e.stopPropagation();
-        }}
-      >
+      <div className="w-full max-w-[320px] space-y-2 sm:max-w-[340px]">
+        {mobileCreatorProgressStrip}
+        <div
+          className="max-h-[72vh] overflow-y-auto rounded-2xl border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl"
+          ref={floatingLightingRef}
+          data-floating-controls="lighting"
+          onPointerDownCapture={(e) => {
+            floatFocusLockRef.current = true;
+            e.stopPropagation();
+          }}
+          onTouchStartCapture={(e) => {
+            floatFocusLockRef.current = true;
+            e.stopPropagation();
+          }}
+          onTouchMoveCapture={(e) => {
+            floatFocusLockRef.current = true;
+            e.stopPropagation();
+          }}
+        >
         <div className="flex min-w-0 items-center gap-2 text-[11px] font-semibold text-white">
           <span className="text-[10px] uppercase tracking-wider text-neutral-400">Lighting</span>
           <span className="text-neutral-300">•</span>
@@ -25027,29 +25387,32 @@ style={{ top: STICKY_TOP }}
         >
           {mobileLightingSlide < 2 ? "Next" : "Next To Design"}
         </button>
+        </div>
       </div>
     </div>
   )}
 
   {activeBgControls && floatingBgVisible && (
     <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 flex justify-center px-3 z-[1200]" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
-      <div
-        className="w-full max-w-[340px] rounded-2xl border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl"
-        ref={floatingBgRef}
-        data-floating-controls="bg"
-        onPointerDownCapture={(e) => {
-          floatFocusLockRef.current = true;
-          e.stopPropagation();
-        }}
-        onTouchStartCapture={(e) => {
-          floatFocusLockRef.current = true;
-          e.stopPropagation();
-        }}
-        onTouchMoveCapture={(e) => {
-          floatFocusLockRef.current = true;
-          e.stopPropagation();
-        }}
-      >
+      <div className="w-full max-w-[340px] space-y-2">
+        {mobileCreatorProgressStrip}
+        <div
+          className="rounded-2xl border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl"
+          ref={floatingBgRef}
+          data-floating-controls="bg"
+          onPointerDownCapture={(e) => {
+            floatFocusLockRef.current = true;
+            e.stopPropagation();
+          }}
+          onTouchStartCapture={(e) => {
+            floatFocusLockRef.current = true;
+            e.stopPropagation();
+          }}
+          onTouchMoveCapture={(e) => {
+            floatFocusLockRef.current = true;
+            e.stopPropagation();
+          }}
+        >
         <div className="flex min-w-0 items-center gap-2 text-[11px] font-semibold text-white">
           <span className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</span>
           <span className="text-neutral-300">•</span>
@@ -25114,6 +25477,7 @@ style={{ top: STICKY_TOP }}
           >
             {activeBgControls.locked ? "Unlock Background" : "Lock Background"}
           </button>
+        </div>
         </div>
       </div>
     </div>
@@ -25189,116 +25553,105 @@ className={clsx(
 style={{ top: STICKY_TOP }}
 >               
   {uiMode === "design" && mobileControlsOpen && mobileControlsTabs}
-  {mobileCurrentActionBar}
 
-{isStarterPlan ? (
-  <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-[12px] text-amber-100">
-    DJ/Artist Branding is available on subscriptions and on-demand passes.
-  </div>
-) : (
-  <DjBrandingPanel
-    selectedPanel={selectedPanel}
-    setSelectedPanel={setSelectedPanel}
-    requestedWorkflowStep={djWorkflowJump}
-    onWorkflowStepChange={setDjActiveWorkflowStep}
-    hasBackground={!!(bgUploadUrl || bgUrl || blendBackground)}
-    kit={djBrandKit}
-    brandProfiles={djBrandCollection.kits.map((kit) => ({ id: kit.id, label: kit.label }))}
-    activeBrandId={djBrandCollection.activeId}
-    studioEnabled={isStudioPlan}
-    onKitChange={persistDjBrandKit}
-    onSelectBrandProfile={selectDjBrandProfile}
-    onCreateBrandProfile={createDjBrandProfile}
-    onDuplicateBrandProfile={duplicateDjBrandProfile}
-	    onDeleteBrandProfile={deleteDjBrandProfile}
-	    onSaveCurrentBrand={saveCurrentAsDjBrand}
-	    onRenameBrandProfile={renameDjBrandProfile}
-	    onApplyMyBrand={() => applyDjBrandKit(djBrandKit)}
-	    onCaptureCurrentFace={captureCurrentFaceToKit}
-    mainFaceOnCanvas={!!mainFaceOnCanvas}
-    mainFaceLocked={!!mainFaceOnCanvas?.locked}
-    mainFaceScale={Number(mainFaceOnCanvas?.scale ?? 0.85)}
-    mainFaceOpacity={Number(mainFaceOnCanvas?.opacity ?? 1)}
-    mainFaceLightingEnabled={mainFaceLighting.enabled}
-    mainFaceLightingAutoMatch={mainFaceLighting.autoMatch}
-    mainFaceLightingAnalyzed={mainFaceLighting.analyzed}
-    mainFaceLightingSide={mainFaceLighting.lightSide}
-    mainFaceLightingColor={mainFaceLighting.highlightColor}
-    mainFaceLightingAmbient={mainFaceLighting.ambient}
-    mainFaceLightingKey={mainFaceLighting.keyLight}
-    mainFaceLightingFill={mainFaceLighting.fillLight}
-    mainFaceLightingRim={mainFaceLighting.rimLight}
-    mainFaceLightingShadow={mainFaceLighting.shadowDepth}
-    mainFaceLightingWarmth={mainFaceLighting.warmth}
-    mainFaceLightingContrast={mainFaceLighting.contrast}
-    mainFaceFilterPreset={mainFaceFilterPreset}
-    mainFaceFilterStrength={mainFaceFilterStrength}
-    onMainFaceLockToggle={toggleMainFaceLock}
-    onMainFaceScaleChange={setMainFaceScale}
-    onMainFaceOpacityChange={setMainFaceOpacity}
-    onAnalyzeMainFaceLighting={() => {
-      void autoAnalyzeMainFaceLighting();
-    }}
-    onResetMainFaceLighting={resetMainFaceLighting}
-    onMainFaceLightingToggle={() =>
-      updateMainFaceLighting({ enabled: !mainFaceLighting.enabled })
-    }
-    onMainFaceLightingAutoMatchToggle={() =>
-      updateMainFaceLighting({ autoMatch: !mainFaceLighting.autoMatch })
-    }
-    onMainFaceLightingChange={updateMainFaceLighting}
-    onMainFaceFilterPresetChange={(preset) => updateMainFaceFilter({ preset })}
-    onMainFaceFilterStrengthChange={(value) => updateMainFaceFilter({ strength: value })}
-    onUseBrandLogo={(idx) => {
-      const src = djBrandKit.logos?.[idx];
-      if (!src) return;
-      setLogoUrl(src);
-      setLogoScale(1);
-      setMoveMode(true);
-      setDragging('logo');
-	    }}
-	    onUseBrandFace={placeSavedMainFace}
-    onRemoveMainFace={removeMainFaceFromCanvas}
-	    currentPortraitUrl={portraitUrl}
-	    headlineFonts={HEADLINE_FONTS_LOCAL}
-    bodyFonts={BODY_FONTS_LOCAL}
-  />
-)}
+<div className={mobilePanelClass("assets", "dj_branding")}>
+  {isStarterPlan ? (
+    <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-[12px] text-amber-100">
+      DJ/Artist Branding is available on subscriptions and on-demand passes.
+    </div>
+  ) : (
+    <DjBrandingPanel
+      selectedPanel={selectedPanel}
+      setSelectedPanel={setSelectedPanel}
+      requestedWorkflowStep={djWorkflowJump}
+      onWorkflowStepChange={setDjActiveWorkflowStep}
+      hasBackground={!!(bgUploadUrl || bgUrl || blendBackground)}
+      kit={djBrandKit}
+      brandProfiles={djBrandCollection.kits.map((kit) => ({ id: kit.id, label: kit.label }))}
+      activeBrandId={djBrandCollection.activeId}
+      studioEnabled={isStudioPlan}
+      onKitChange={persistDjBrandKit}
+      onSelectBrandProfile={selectDjBrandProfile}
+      onCreateBrandProfile={createDjBrandProfile}
+      onDuplicateBrandProfile={duplicateDjBrandProfile}
+      onDeleteBrandProfile={deleteDjBrandProfile}
+      onSaveCurrentBrand={saveCurrentAsDjBrand}
+      onRenameBrandProfile={renameDjBrandProfile}
+      onApplyMyBrand={() => applyDjBrandKit(djBrandKit)}
+      onCaptureCurrentFace={captureCurrentFaceToKit}
+      mainFaceOnCanvas={!!mainFaceOnCanvas}
+      mainFaceLocked={!!mainFaceOnCanvas?.locked}
+      mainFaceScale={Number(mainFaceOnCanvas?.scale ?? 0.85)}
+      mainFaceOpacity={Number(mainFaceOnCanvas?.opacity ?? 1)}
+      mainFaceLightingEnabled={mainFaceLighting.enabled}
+      mainFaceLightingAutoMatch={mainFaceLighting.autoMatch}
+      mainFaceLightingAnalyzed={mainFaceLighting.analyzed}
+      mainFaceLightingSide={mainFaceLighting.lightSide}
+      mainFaceLightingColor={mainFaceLighting.highlightColor}
+      mainFaceLightingAmbient={mainFaceLighting.ambient}
+      mainFaceLightingKey={mainFaceLighting.keyLight}
+      mainFaceLightingFill={mainFaceLighting.fillLight}
+      mainFaceLightingRim={mainFaceLighting.rimLight}
+      mainFaceLightingShadow={mainFaceLighting.shadowDepth}
+      mainFaceLightingWarmth={mainFaceLighting.warmth}
+      mainFaceLightingContrast={mainFaceLighting.contrast}
+      mainFaceFilterPreset={mainFaceFilterPreset}
+      mainFaceFilterStrength={mainFaceFilterStrength}
+      onMainFaceLockToggle={toggleMainFaceLock}
+      onMainFaceScaleChange={setMainFaceScale}
+      onMainFaceOpacityChange={setMainFaceOpacity}
+      onAnalyzeMainFaceLighting={() => {
+        void autoAnalyzeMainFaceLighting();
+      }}
+      onResetMainFaceLighting={resetMainFaceLighting}
+      onMainFaceLightingToggle={() =>
+        updateMainFaceLighting({ enabled: !mainFaceLighting.enabled })
+      }
+      onMainFaceLightingAutoMatchToggle={() =>
+        updateMainFaceLighting({ autoMatch: !mainFaceLighting.autoMatch })
+      }
+      onMainFaceLightingChange={updateMainFaceLighting}
+      onMainFaceFilterPresetChange={(preset) => updateMainFaceFilter({ preset })}
+      onMainFaceFilterStrengthChange={(value) => updateMainFaceFilter({ strength: value })}
+      onUseBrandLogo={(idx) => {
+        const src = djBrandKit.logos?.[idx];
+        if (!src) return;
+        setLogoUrl(src);
+        setLogoScale(1);
+        setMoveMode(true);
+        setDragging("logo");
+      }}
+      onUseBrandFace={placeSavedMainFace}
+      onRemoveMainFace={removeMainFaceFromCanvas}
+      currentPortraitUrl={portraitUrl}
+      headlineFonts={HEADLINE_FONTS_LOCAL}
+      bodyFonts={BODY_FONTS_LOCAL}
+    />
+  )}
+</div>
 
-{!isDjStartupMode && (
+{!isDjStartupMode && !isMobileView && (
   <Collapsible
     title="Creator Workflow"
     storageKey="p:creator-workflow"
     defaultOpen
-    right={
-      <button
-        type="button"
-        onClick={openWorkflowHelp}
-        onPointerUp={openWorkflowHelp}
-        aria-label="Open creator workflow guide"
-        title="Open creator workflow guide"
-        className="h-6 px-2 border border-white/10 bg-white/[0.03] text-neutral-200 text-[10px] font-semibold uppercase tracking-[0.14em] hover:bg-white/[0.06]"
-      >
-        Guide
-      </button>
-    }
   >
     <div className="space-y-2.5">
-      <div className="border border-white/10 bg-white/[0.03] px-3 py-3">
-        <div className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">Recommended Now</div>
-        <div className="mt-1 text-sm font-medium text-white">
-          {creatorWorkflowMeta[creatorWorkflowRecommended].label}
-        </div>
-        <div className="mt-1 text-[11px] text-neutral-400">
-          {creatorWorkflowMeta[creatorWorkflowRecommended].summary}
+      <div className={editorSectionCardClass}>
+        <div className={editorSectionEyebrowClass}>Creator Flow</div>
+        <div className={editorSectionTitleClass}>
+          Step {creatorWorkflowStepNumber} of 4 · {creatorWorkflowGuide.title}
         </div>
         <button
           type="button"
-          onClick={() => openCreatorWorkflowStep(creatorWorkflowRecommended)}
-          className="mt-2 w-full border border-white/15 bg-white/[0.08] px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-white/[0.12]"
+          onClick={handleCreatorWorkflowPrimaryAction}
+          className={`mt-2 w-full text-left ${editorPrimaryButtonClass}`}
         >
-          Open {creatorWorkflowMeta[creatorWorkflowRecommended].label}
+          {creatorWorkflowGuide.buttonLabel}
         </button>
+        <div className={`${editorHelperTextClass} mt-2`}>
+          {creatorWorkflowGuide.hint}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
@@ -25310,7 +25663,7 @@ style={{ top: STICKY_TOP }}
         ] as const).map(([key, index]) => {
           const meta = creatorWorkflowMeta[key];
           const isCurrent = creatorWorkflowCurrent === key;
-          const isRecommended = creatorWorkflowRecommended === key;
+          const isGuided = creatorFlowCurrentStep === key;
           return (
             <button
               key={key}
@@ -25318,7 +25671,7 @@ style={{ top: STICKY_TOP }}
               onClick={() => openCreatorWorkflowStep(key)}
               className={clsx(
                 "border px-3 py-2.5 text-left transition",
-                isCurrent || isRecommended
+                isCurrent || isGuided
                   ? "border-white/15 bg-white/[0.06]"
                   : "border-white/10 bg-white/[0.03] hover:bg-white/[0.05]"
               )}
@@ -25333,7 +25686,7 @@ style={{ top: STICKY_TOP }}
                       isCurrent ? "text-white" : meta.ready ? "text-emerald-300" : "text-neutral-500"
                     )}
                   >
-                    {isCurrent ? "Open" : meta.ready ? "Ready" : isRecommended ? "Next" : meta.count}
+                    {isCurrent ? "Open" : meta.ready ? "Ready" : isGuided ? "Next" : meta.count}
                   </div>
                 </div>
               </div>
@@ -25350,18 +25703,18 @@ style={{ top: STICKY_TOP }}
   <div
     id="ai-background-panel"
     data-tour="background"
-    className={creatorStepPanelClass("scene")}
+    className={clsx(creatorStepPanelClass("scene"), mobilePanelClass("assets", "ai_background"))}
   >
   {isStarterPlan ? (
-    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-white/85">
-      <div className="text-sm font-semibold text-white">AI Scene</div>
-      <div className="mt-2 text-xs text-white/65">
+    <div className={`${editorSectionCardClass} text-white/85`}>
+      <div className={editorSectionTitleClass}>AI Scene</div>
+      <div className={editorHelperTextClass}>
         Paid users get AI generation. Starter mode lets you browse templates and edit layouts before upgrading.
       </div>
       <a
         href="/pricing"
         onClick={(event) => void handleStudioNavigation(event, "/pricing")}
-        className="mt-4 inline-flex rounded-lg border border-fuchsia-400/30 bg-fuchsia-500/15 px-3 py-2 text-xs text-white hover:bg-fuchsia-500/25"
+        className={`mt-4 inline-flex ${editorSecondaryButtonClass}`}
       >
         Unlock AI tools
       </a>
@@ -25450,27 +25803,27 @@ style={{ top: STICKY_TOP }}
 
 {/* UI: MAGIC BLEND PANEL (BEGIN) */}
 {!isDjStartupMode && (isStarterPlan ? (
-  <div className={creatorStepPanelClass("assets")}>
+  <div className={clsx(creatorStepPanelClass("assets"), mobilePanelClass("assets", "magic_blend"))}>
     <div
       id="magic-blend-panel"
       data-tour="magic-blend"
-      className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-white/85"
+      className={`${editorSectionCardClass} text-white/85`}
     >
-    <div className="text-sm font-semibold text-white">Portrait Blend</div>
-    <div className="mt-2 text-xs text-white/65">
+    <div className={editorSectionTitleClass}>Portrait Blend</div>
+    <div className={editorHelperTextClass}>
       Paid users can blend subjects and scenes here.
     </div>
     <a
       href="/pricing"
       onClick={(event) => void handleStudioNavigation(event, "/pricing")}
-      className="mt-4 inline-flex rounded-lg border border-fuchsia-400/30 bg-fuchsia-500/15 px-3 py-2 text-xs text-white hover:bg-fuchsia-500/25"
+      className={`mt-4 inline-flex ${editorSecondaryButtonClass}`}
     >
       Unlock Portrait Blend
     </a>
     </div>
   </div>
 ) : (
-  <div className={creatorStepPanelClass("assets")}>
+  <div className={clsx(creatorStepPanelClass("assets"), mobilePanelClass("assets", "magic_blend"))}>
     <MagicBlendPanel
       selectedPanel={selectedPanel}
       onToggle={() =>
@@ -25519,7 +25872,7 @@ style={{ top: STICKY_TOP }}
   </div>
 ))}
 {/* UI: MAGIC BLEND PANEL (END) */}
-<div className={creatorStepPanelClass("scene")}>
+<div className={clsx(creatorStepPanelClass("scene"), mobilePanelClass("assets", "background"))}>
   <BackgroundPanels
     presetBackgrounds={isDjStartupMode ? DJ_STARTUP_BACKGROUNDS : []}
     presetBackgroundLabel="DJ Backgrounds"
@@ -25583,7 +25936,7 @@ style={{ top: STICKY_TOP }}
 
 
 {/* UI: LIBRARY (BEGIN) */}
-<div className={creatorStepPanelClass("assets")}>
+<div id="icons-panel" className={clsx(creatorStepPanelClass("assets"), mobilePanelClass("assets", "icons"))}>
   <LibraryPanel
     format={format}
     selectedEmojiId={selectedEmojiId}
@@ -25610,7 +25963,8 @@ style={{ top: STICKY_TOP }}
   {/* UI: PORTRAITS — COMBINED SLOTS (BEGIN) */}
   {!isStarterPlan && !isDjStartupMode && (
   <div
-    className={clsx("relative rounded-xl transition", creatorStepPanelClass("assets"))}
+    id="portrait-panel"
+    className={clsx("relative rounded-xl transition", creatorStepPanelClass("assets"), mobilePanelClass("assets", "portrait"))}
 >
   <Collapsible
     title="Portraits"
@@ -25633,23 +25987,25 @@ style={{ top: STICKY_TOP }}
     }
     panelClassName={
       selectedPanel === "portrait"
-        ? "ring-1 ring-inset ring-[#00FFF0]/70"
+        ? editorPanelActiveClass
         : undefined
     }
     titleClassName={
-      selectedPanel === "portrait"
-        ? "text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]"
-        : ""
+      selectedPanel === "portrait" ? editorPanelTitleActiveClass : ""
     }
   >
+    <div className={`mb-3 ${editorHelperTextClass}`}>
+      Use this when you want to place a cutout subject on the flyer. Upload a portrait, place it on canvas, then refine it below.
+    </div>
+
     {/* Header Controls */}
     <div className="mb-2 flex items-center justify-end gap-2 text-[11px]">
-      <span>Legacy overlay</span>
+      <span>Portrait frame</span>
       <Chip
         small
         active={enablePortraitOverlay}
         onClick={() => setEnablePortraitOverlay((v: boolean) => !v)}
-        title="Show/Hide the old portrait overlay frame"
+        title="Show or hide the portrait frame overlay"
       >
         {enablePortraitOverlay ? "On" : "Off"}
       </Chip>
@@ -25672,14 +26028,14 @@ style={{ top: STICKY_TOP }}
         return (
           <div
             key={i}
-            className={`border rounded-lg p-2 transition-colors ${
+            className={
               onCanvas && selectedPortraitId === onCanvas.id
-                ? "border-indigo-500 bg-indigo-900/10"
-                : "border-neutral-700 bg-neutral-900/50"
-            }`}
+                ? editorItemCardActiveClass
+                : editorItemCardClass
+            }
           >
             {/* Thumbnail Area */}
-            <div className="h-24 rounded overflow-hidden border border-neutral-700 bg-neutral-900 grid place-items-center relative">
+            <div className={`h-24 grid place-items-center relative ${editorThumbClass}`}>
               {/* 🔥 LOADING OVERLAY */}
               {isProcessing ? (
                 <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/80">
@@ -25709,11 +26065,11 @@ style={{ top: STICKY_TOP }}
             </div>
 
             {/* Row 1: Main Actions */}
-            <div className="mt-2 grid grid-cols-3 gap-1">
+            <div className="mt-2 grid grid-cols-2 gap-1 sm:grid-cols-3">
               {/* ✅ FIXED UPLOAD BUTTON */}
               <button
                 type="button"
-                className="text-[10px] px-1 py-1.5 rounded-md bg-neutral-800 border border-neutral-600 hover:bg-neutral-700 text-neutral-300 truncate"
+                className={`${editorSecondaryButtonClass} px-1.5 py-1.5 text-[10px] leading-tight`}
                 title={src ? "Replace image" : "Upload new image"}
                 disabled={isProcessing}
                 onClick={() => {
@@ -25753,13 +26109,13 @@ style={{ top: STICKY_TOP }}
                   input.click();
                 }}
               >
-                {src ? "Rep" : "Up"}
+                {src ? "Replace" : "Upload Portrait"}
               </button>
 
               {/* Place */}
               <button
                 type="button"
-                className="text-[10px] px-1 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 truncate"
+                className={`col-span-2 px-1.5 py-1.5 text-[10px] leading-tight sm:col-span-1 ${editorPrimaryButtonClass}`}
                 disabled={!src || isProcessing}
                 title="Add to canvas"
                 onClick={(e) => {
@@ -25794,22 +26150,23 @@ style={{ top: STICKY_TOP }}
                   };
 
                   if (useFlyerState.getState().addPortrait) {
-                    useFlyerState.getState().addPortrait(format, newPortrait);
+                  useFlyerState.getState().addPortrait(format, newPortrait);
                   }
 
                   useFlyerState.getState().setSelectedPortraitId(id);
                   useFlyerState.getState().setSelectedPanel("portrait");
                   useFlyerState.getState().setMoveTarget("portrait");
+                  transitionCueRef.current?.("portrait");
                   window.setTimeout(scrollToArtboard, 120);
                 }}
               >
-                Place
+                Place Portrait
               </button>
 
               {/* Clear */}
               <button
                 type="button"
-                className="text-[10px] px-1 py-1.5 rounded-md bg-neutral-800 border border-neutral-600 hover:bg-neutral-700 text-neutral-300 disabled:opacity-50 truncate"
+                className={`${editorSecondaryButtonClass} px-1.5 py-1.5 text-[10px] leading-tight`}
                 disabled={!src || isProcessing}
                 title="Clear slot & remove from canvas"
                 onClick={() => {
@@ -25842,7 +26199,7 @@ style={{ top: STICKY_TOP }}
 
             {/* Row 2: Canvas Controls */}
             {onCanvas && !isProcessing && (
-              <div className="mt-1 grid grid-cols-2 gap-1 pt-1 border-t border-white/5">
+              <div className="mt-1 grid grid-cols-1 gap-1 pt-1 border-t border-white/5 sm:grid-cols-2">
                 <button
                   type="button"
                   onClick={() => {
@@ -25851,7 +26208,7 @@ style={{ top: STICKY_TOP }}
                       .updatePortrait(format, onCanvas.id, { locked: !onCanvas.locked });
                     useFlyerState.getState().setSelectedPortraitId(onCanvas.id);
                   }}
-                  className={`text-[10px] py-1 rounded-md border flex items-center justify-center gap-1 ${
+                  className={`text-[10px] py-1.5 rounded-md border flex items-center justify-center gap-1 ${
                     onCanvas.locked
                       ? "bg-indigo-900/40 border-indigo-500/50 text-indigo-300"
                       : "bg-neutral-800 border-neutral-600 text-neutral-400 hover:text-white"
@@ -25864,7 +26221,7 @@ style={{ top: STICKY_TOP }}
                 <button
                   type="button"
                   onClick={() => useFlyerState.getState().removePortrait(format, onCanvas.id)}
-                  className="text-[10px] py-1 rounded-md bg-red-900/20 border border-red-900/30 text-red-400 hover:bg-red-900/40 hover:text-red-300"
+                  className="text-[10px] py-1.5 rounded-md bg-red-900/20 border border-red-900/30 text-red-400 hover:bg-red-900/40 hover:text-red-300"
                   title="Remove from canvas"
                 >
                   Remove
@@ -25877,7 +26234,7 @@ style={{ top: STICKY_TOP }}
               !isStarterPlan && (
               <button
                 type="button"
-                className="mt-2 w-full text-[10px] py-2 rounded-md bg-neutral-800/80 border border-neutral-600/80 text-neutral-200 font-medium tracking-[0.12em] uppercase whitespace-nowrap hover:bg-neutral-700/80 hover:border-neutral-400/80 transition-colors"
+                className={`mt-2 w-full ${editorSecondaryButtonClass} px-2 py-2 text-[10px] leading-tight tracking-[0.08em] sm:whitespace-nowrap sm:tracking-[0.12em]`}
                 onClick={async () => {
                   const cutoutSrc = src.startsWith("blob:")
                     ? await blobUrlToDataUrl(src)
@@ -25888,7 +26245,7 @@ style={{ top: STICKY_TOP }}
                   useFlyerState.getState().setSelectedPanel("magic_blend");
                 }}
               >
-                Merge Portrait
+                {isMobileView ? "Send To Blend" : "Send To Portrait Blend"}
               </button>
               )
             )}
@@ -26304,7 +26661,7 @@ style={{ top: STICKY_TOP }}
             <div className="text-sm uppercase tracking-[0.2em] text-cyan-300">Workflow</div>
             <div className="mt-1 text-lg font-semibold text-white">Build a flyer with a clear sequence.</div>
             <div className="mt-2 text-sm text-neutral-400">
-              Recommended now: <span className="text-white">{creatorWorkflowMeta[creatorWorkflowRecommended].label}</span>
+              Guided step: <span className="text-white">{creatorWorkflowMeta[creatorFlowCurrentStep].label}</span>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:min-w-[260px]">
@@ -26438,7 +26795,7 @@ style={{ top: STICKY_TOP }}
               onClick={() => openCreatorWorkflowTarget("icons", "assets")}
               className="w-full border border-white/15 bg-white/[0.06] px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-white transition hover:bg-white/[0.09]"
             >
-              Open Library
+              Open Graphics & FX
             </button>
             <button
               type="button"

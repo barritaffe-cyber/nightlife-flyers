@@ -1062,7 +1062,7 @@ export default function DjBrandingPanel({
 
         {vaultOpen && (
         <section className={djSectionClass}>
-          <div className="text-[11px] uppercase tracking-wide text-neutral-400">Saved Assets</div>
+          <div className="text-[11px] uppercase tracking-wide text-neutral-400">Saved Brand Items</div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {logoList.map((src, idx) => (
               <div
