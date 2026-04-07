@@ -19625,6 +19625,19 @@ const mobilePanelClass = React.useCallback(
   },
   [mobileVisibleCreatorPanels]
 );
+const handleCreatorWorkflowPrimaryAction = React.useCallback(() => {
+  const isOnCurrentStep =
+    creatorFlowCurrentStep === "finish"
+      ? uiMode === "finish"
+      : creatorWorkflowCurrent === creatorFlowCurrentStep;
+
+  if (isOnCurrentStep) {
+    advanceCreatorWorkflow();
+    return;
+  }
+
+  openCreatorWorkflowStep(creatorFlowCurrentStep);
+}, [advanceCreatorWorkflow, creatorFlowCurrentStep, creatorWorkflowCurrent, openCreatorWorkflowStep, uiMode]);
 const mobileCreatorProgressStrip =
   !isMobileView || isDjStartupMode ? null : (
     <div className="w-full max-w-[320px] overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/72 px-3 py-2 shadow-[0_14px_34px_rgba(0,0,0,0.32)] ring-1 ring-white/10 backdrop-blur-2xl sm:max-w-[340px]">
@@ -19664,19 +19677,6 @@ const mobileCreatorProgressStrip =
       </div>
     </div>
   );
-const handleCreatorWorkflowPrimaryAction = React.useCallback(() => {
-  const isOnCurrentStep =
-    creatorFlowCurrentStep === "finish"
-      ? uiMode === "finish"
-      : creatorWorkflowCurrent === creatorFlowCurrentStep;
-
-  if (isOnCurrentStep) {
-    advanceCreatorWorkflow();
-    return;
-  }
-
-  openCreatorWorkflowStep(creatorFlowCurrentStep);
-}, [advanceCreatorWorkflow, creatorFlowCurrentStep, creatorWorkflowCurrent, openCreatorWorkflowStep, uiMode]);
 const openWorkflowHelp = React.useCallback(() => {
   setWorkflowHelpOpen(true);
 }, []);
