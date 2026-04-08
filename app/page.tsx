@@ -20469,12 +20469,12 @@ const mobileControlsTabs = (
   </div>
 );
 
-const openTextFloatFromCanvas = React.useCallback(() => {
+function openTextFloatFromCanvas() {
   if (!isMobileView) return;
   setFloatingEditorVisible(true);
   setFloatingAssetVisible(false);
   setFloatingBgVisible(false);
-}, [isMobileView]);
+}
 
 React.useEffect(() => {
   if (!activeTextControls) {
