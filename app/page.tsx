@@ -20621,21 +20621,30 @@ React.useEffect(() => {
     if (hasCanvasDrag) return true;
     return false;
   };
+  const releaseFloatFocus = () => {
+    const active = document.activeElement as HTMLElement | null;
+    if (active?.closest?.('[data-floating-controls]')) {
+      active.blur?.();
+    }
+    floatFocusLockRef.current = false;
+  };
   const onAppScroll = (ev?: Event) => {
     if (shouldSkipBecauseDragging()) return;
-    if (eventWithinAnyFloat(ev)) return;
-    if (activeElementWithinAnyFloat()) return;
+    releaseFloatFocus();
     hideFloats();
-    floatFocusLockRef.current = false;
   };
   const onUserMove = (ev?: Event) => {
     if (shouldSkipBecauseDragging()) return;
-    if (eventWithinAnyFloat(ev)) return;
+    if (eventWithinAnyFloat(ev) && (ev?.type === "touchstart" || ev?.type === "pointerdown")) {
+      return;
+    }
+    releaseFloatFocus();
     hideFloats();
-    floatFocusLockRef.current = false;
   };
   document.addEventListener("scroll", onAppScroll as any, { passive: true, capture: true });
   window.addEventListener("scroll", onAppScroll as any, { passive: true });
+  window.addEventListener("touchstart", onUserMove as any, { passive: true });
+  window.addEventListener("pointerdown", onUserMove as any, { passive: true });
   window.addEventListener("touchmove", onUserMove as any, { passive: true });
   window.addEventListener("wheel", onUserMove as any, { passive: true });
   const release = () => {
@@ -20648,6 +20657,8 @@ React.useEffect(() => {
   return () => {
     document.removeEventListener("scroll", onAppScroll as any, { capture: true } as any);
     window.removeEventListener("scroll", onAppScroll as any);
+    window.removeEventListener("touchstart", onUserMove as any);
+    window.removeEventListener("pointerdown", onUserMove as any);
     window.removeEventListener("touchmove", onUserMove as any);
     window.removeEventListener("wheel", onUserMove as any);
     window.removeEventListener("pointerup", release);
