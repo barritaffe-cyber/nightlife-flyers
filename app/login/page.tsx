@@ -131,8 +131,7 @@ function LoginPageInner() {
           setMsg("Enter your account email first.");
           return;
         }
-        const resetRedirect = new URL("/login", siteUrl);
-        resetRedirect.searchParams.set("mode", "reset");
+        const resetRedirect = new URL("/auth/reset", siteUrl);
         if (next) resetRedirect.searchParams.set("next", next);
         if (plan) resetRedirect.searchParams.set("plan", plan);
         if (offer) resetRedirect.searchParams.set("offer", offer);
