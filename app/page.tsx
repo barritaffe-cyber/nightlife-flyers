@@ -3399,7 +3399,7 @@ return (
     width: size.w,
     height: size.h,
     background: `linear-gradient(180deg, ${palette.bgFrom}, ${palette.bgTo})`,
-    touchAction: isMobileView ? "pan-y" : "none",
+    touchAction: isMobileView ? (isLiveDragging ? "none" : "pan-y") : "none",
     isolation: "isolate",
     contain: "layout paint",
     backfaceVisibility: "hidden",
@@ -4128,7 +4128,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     transformOrigin: '50% 50%',
     
     transition: 'none',
-    willChange: "left, top"
+    willChange: "left, top",
+    touchAction: "none",
   }}
 >
   <h1
@@ -4309,7 +4310,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     
     // 🔥 Disable transition for instant moves
     transition: 'none',
-    willChange: "left, top"
+    willChange: "left, top",
+    touchAction: "none",
   }}
 >
   <div
@@ -4464,7 +4466,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     
     // 🔥 Disable transition for instant moves
     transition: 'none',
-    willChange: "left, top"
+    willChange: "left, top",
+    touchAction: "none",
   }}
 >
   <div
@@ -4613,7 +4616,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     
     // 🔥 Disable transition for instant moves
     transition: 'none',
-    willChange: "left, top"
+    willChange: "left, top",
+    touchAction: "none",
   }}
 >
     <div
@@ -4761,7 +4765,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     
     // 🔥 Disable transition for instant moves
     transition: 'none',
-    willChange: "left, top"
+    willChange: "left, top",
+    touchAction: "none",
   }}
 >
   <div
@@ -4909,7 +4914,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     
     // 🔥 Disable transition for instant moves
     transition: 'none',
-    willChange: "left, top"
+    willChange: "left, top",
+    touchAction: "none",
   }}
 >
     <div
@@ -20473,6 +20479,24 @@ React.useEffect(() => {
   window.addEventListener("resize", update);
   return () => window.removeEventListener("resize", update);
 }, []);
+
+React.useEffect(() => {
+  if (!isMobileView || !isLiveDragging) return;
+  const prevBodyOverflow = document.body.style.overflow;
+  const prevHtmlOverflow = document.documentElement.style.overflow;
+  const prevBodyTouchAction = document.body.style.touchAction;
+  const prevHtmlTouchAction = document.documentElement.style.touchAction;
+  document.body.style.overflow = "hidden";
+  document.documentElement.style.overflow = "hidden";
+  document.body.style.touchAction = "none";
+  document.documentElement.style.touchAction = "none";
+  return () => {
+    document.body.style.overflow = prevBodyOverflow;
+    document.documentElement.style.overflow = prevHtmlOverflow;
+    document.body.style.touchAction = prevBodyTouchAction;
+    document.documentElement.style.touchAction = prevHtmlTouchAction;
+  };
+}, [isLiveDragging, isMobileView]);
 
 React.useEffect(() => {
   // Open when asset controls exist; close when they disappear
