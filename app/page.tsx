@@ -19572,14 +19572,8 @@ const mobileVisibleCreatorPanels = React.useMemo(() => {
   const focusPanel = selectedPanel ?? creatorWorkflowRecommendedTarget.panel ?? null;
   const copyPanels = new Set(["headline", "head2", "details", "details2", "venue", "subtag"]);
 
-  if (
-    creatorWorkflowCurrent === "scene" ||
-    focusPanel === "template" ||
-    focusPanel === "template_backgrounds"
-  ) {
-    design.add("template");
-    design.add("template_backgrounds");
-  }
+  design.add("template");
+  design.add("template_backgrounds");
 
   if (focusPanel && copyPanels.has(focusPanel)) {
     design.add(focusPanel);
