@@ -223,6 +223,16 @@ function resolveNestedPowerTranzResponse(payload: Record<string, unknown>): Reco
   return null;
 }
 
+function isIntermediateThreeDSResponse(payload: Record<string, unknown>) {
+  const code = resolveCallbackCode(payload);
+  if (code && ["HP0", "3D0", "3D1"].includes(code)) {
+    return true;
+  }
+
+  const message = resolvePaymentString(payload, "ResponseMessage", "responseMessage");
+  return message === "3D-Secure complete";
+}
+
 function hasCompletionSignal(payload: Record<string, unknown>) {
   const callbackCode = resolveCallbackCode(payload);
   return Boolean(
@@ -369,7 +379,7 @@ export async function POST(req: Request) {
     const nestedResponse = isPlainObject(body) ? resolveNestedPowerTranzResponse(body) : null;
     let paymentPayload: Record<string, unknown>;
 
-    if (nestedResponse) {
+    if (nestedResponse && !isIntermediateThreeDSResponse(nestedResponse)) {
       paymentPayload = nestedResponse;
     } else {
       let payment;
