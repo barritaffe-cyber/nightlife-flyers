@@ -70,7 +70,10 @@ function AuthResetPageInner() {
             throw new Error("The password reset session could not be established.");
           }
         } else {
-          throw new Error("The password reset link is missing recovery details.");
+          const session = await waitForRecoverySession(supabase, 20);
+          if (!session) {
+            throw new Error("The password reset link is invalid or has expired.");
+          }
         }
 
         redirectToResetForm();
