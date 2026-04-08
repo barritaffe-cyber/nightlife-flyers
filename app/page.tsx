@@ -4019,7 +4019,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     e.stopPropagation();
     // ✅ Re-enabled: Select target and open specific panel
     useFlyerState.getState().setMoveTarget("headline");
-    useFlyerState.getState().setSelectedPanel("headline"); 
+    useFlyerState.getState().setSelectedPanel("headline");
+    openTextFloatFromCanvas();
   }}
 
   // 2. DRAG START
@@ -4213,7 +4214,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
   onClick={(e) => {
     e.stopPropagation();
     useFlyerState.getState().setMoveTarget("headline2");
-    useFlyerState.getState().setSelectedPanel("head2"); 
+    useFlyerState.getState().setSelectedPanel("head2");
+    openTextFloatFromCanvas();
   }}
 
   // 2. DRAG START
@@ -4369,7 +4371,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
   onClick={(e) => {
     e.stopPropagation();
     useFlyerState.getState().setMoveTarget("details");
-    useFlyerState.getState().setSelectedPanel("details"); 
+    useFlyerState.getState().setSelectedPanel("details");
+    openTextFloatFromCanvas();
   }}
 
   // 2. DRAG START
@@ -4520,7 +4523,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
   onClick={(e) => {
     e.stopPropagation();
     useFlyerState.getState().setMoveTarget("details2");
-    useFlyerState.getState().setSelectedPanel("details2"); 
+    useFlyerState.getState().setSelectedPanel("details2");
+    openTextFloatFromCanvas();
   }}
 
   // 2. DRAG START
@@ -4668,7 +4672,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
   onClick={(e) => {
     e.stopPropagation();
     useFlyerState.getState().setMoveTarget("venue");
-    useFlyerState.getState().setSelectedPanel("venue"); 
+    useFlyerState.getState().setSelectedPanel("venue");
+    openTextFloatFromCanvas();
   }}
 
   // 2. DRAG START
@@ -4818,7 +4823,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
  onClick={(e) => {
     e.stopPropagation();
     useFlyerState.getState().setMoveTarget("subtag");
-    useFlyerState.getState().setSelectedPanel("subtag"); 
+    useFlyerState.getState().setSelectedPanel("subtag");
+    openTextFloatFromCanvas();
   }}
 
   // 2. DRAG START
@@ -20463,11 +20469,15 @@ const mobileControlsTabs = (
   </div>
 );
 
+const openTextFloatFromCanvas = React.useCallback(() => {
+  if (!isMobileView) return;
+  setFloatingEditorVisible(true);
+  setFloatingAssetVisible(false);
+  setFloatingBgVisible(false);
+}, [isMobileView]);
+
 React.useEffect(() => {
-  if (activeTextControls) {
-    setFloatingEditorVisible(true);
-    setFloatingAssetVisible(false);
-  } else {
+  if (!activeTextControls) {
     setFloatingEditorVisible(false);
   }
 }, [activeTextControls]);
