@@ -19997,6 +19997,7 @@ const activeAssetControls = React.useMemo(() => {
     return {
       label: "Emoji",
       idLabel: `${sel.id}`,
+      showPosition: false,
       posX: sel.x ?? 0,
       posY: sel.y ?? 0,
       scale: sel.scale ?? 1,
@@ -20075,6 +20076,7 @@ const activeAssetControls = React.useMemo(() => {
       return {
         label: formatUiLabelCaps(assetLabel),
         idLabel: `${sel.id}`,
+        showPosition: !(sel.isFlare || sel.isSticker),
         posX: sel.x ?? 0,
         posY: sel.y ?? 0,
         scale: sel.scale ?? 1,
@@ -24925,7 +24927,7 @@ style={{ top: STICKY_TOP }}
             </div>
           )}
         </div>
-        {activeAssetControls.onPosX && activeAssetControls.onPosY && (
+        {activeAssetControls.showPosition !== false && activeAssetControls.onPosX && activeAssetControls.onPosY && (
           <div className="mt-2 grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
             <div>
               <InlineSliderInput
