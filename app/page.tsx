@@ -4020,7 +4020,11 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     // ✅ Re-enabled: Select target and open specific panel
     useFlyerState.getState().setMoveTarget("headline");
     useFlyerState.getState().setSelectedPanel("headline");
-    openTextFloatFromCanvas();
+    if (isMobileView) {
+      setFloatingEditorVisible(true);
+      setFloatingAssetVisible(false);
+      setFloatingBgVisible(false);
+    }
   }}
 
   // 2. DRAG START
@@ -4215,7 +4219,11 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     e.stopPropagation();
     useFlyerState.getState().setMoveTarget("headline2");
     useFlyerState.getState().setSelectedPanel("head2");
-    openTextFloatFromCanvas();
+    if (isMobileView) {
+      setFloatingEditorVisible(true);
+      setFloatingAssetVisible(false);
+      setFloatingBgVisible(false);
+    }
   }}
 
   // 2. DRAG START
@@ -4372,7 +4380,11 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     e.stopPropagation();
     useFlyerState.getState().setMoveTarget("details");
     useFlyerState.getState().setSelectedPanel("details");
-    openTextFloatFromCanvas();
+    if (isMobileView) {
+      setFloatingEditorVisible(true);
+      setFloatingAssetVisible(false);
+      setFloatingBgVisible(false);
+    }
   }}
 
   // 2. DRAG START
@@ -4524,7 +4536,11 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     e.stopPropagation();
     useFlyerState.getState().setMoveTarget("details2");
     useFlyerState.getState().setSelectedPanel("details2");
-    openTextFloatFromCanvas();
+    if (isMobileView) {
+      setFloatingEditorVisible(true);
+      setFloatingAssetVisible(false);
+      setFloatingBgVisible(false);
+    }
   }}
 
   // 2. DRAG START
@@ -4673,7 +4689,11 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     e.stopPropagation();
     useFlyerState.getState().setMoveTarget("venue");
     useFlyerState.getState().setSelectedPanel("venue");
-    openTextFloatFromCanvas();
+    if (isMobileView) {
+      setFloatingEditorVisible(true);
+      setFloatingAssetVisible(false);
+      setFloatingBgVisible(false);
+    }
   }}
 
   // 2. DRAG START
@@ -4824,7 +4844,11 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     e.stopPropagation();
     useFlyerState.getState().setMoveTarget("subtag");
     useFlyerState.getState().setSelectedPanel("subtag");
-    openTextFloatFromCanvas();
+    if (isMobileView) {
+      setFloatingEditorVisible(true);
+      setFloatingAssetVisible(false);
+      setFloatingBgVisible(false);
+    }
   }}
 
   // 2. DRAG START
@@ -20468,13 +20492,6 @@ const mobileControlsTabs = (
     </div>
   </div>
 );
-
-function openTextFloatFromCanvas() {
-  if (!isMobileView) return;
-  setFloatingEditorVisible(true);
-  setFloatingAssetVisible(false);
-  setFloatingBgVisible(false);
-}
 
 React.useEffect(() => {
   if (!activeTextControls) {
