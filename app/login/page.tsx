@@ -26,9 +26,87 @@ function LoginPageInner() {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://nightlife-flyers.com";
 
   React.useEffect(() => {
-    if (requestedMode === "reset") {
-      setMode("reset");
-    }
+    let active = true;
+    const supabase = supabaseBrowser();
+
+    const applyResetMode = () => {
+      if (active) {
+        setMode("reset");
+      }
+    };
+
+    const cleanupRecoveryUrl = () => {
+      if (typeof window === "undefined") return;
+      const url = new URL(window.location.href);
+      const hashParams = new URLSearchParams(url.hash.replace(/^#/, ""));
+      const hashKeysToDelete = ["access_token", "refresh_token", "expires_at", "expires_in", "token_type", "type"];
+      for (const key of ["code", "token_hash", "type"]) {
+        url.searchParams.delete(key);
+      }
+      for (const key of hashKeysToDelete) {
+        hashParams.delete(key);
+      }
+      url.hash = hashParams.toString() ? `#${hashParams.toString()}` : "";
+      window.history.replaceState({}, document.title, url.toString());
+    };
+
+    const bootstrapRecovery = async () => {
+      if (requestedMode === "reset") {
+        applyResetMode();
+      }
+      if (typeof window === "undefined") return;
+
+      const url = new URL(window.location.href);
+      const hashParams = new URLSearchParams(url.hash.replace(/^#/, ""));
+      const recoveryType = url.searchParams.get("type") || hashParams.get("type");
+      const tokenHash = url.searchParams.get("token_hash") || hashParams.get("token_hash");
+      const code = url.searchParams.get("code");
+
+      let recovered = false;
+
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) {
+          if (active) setMsg(error.message);
+          return;
+        }
+        recovered = true;
+      } else if (recoveryType === "recovery" && tokenHash) {
+        const { error } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: "recovery",
+        });
+        if (error) {
+          if (active) setMsg(error.message);
+          return;
+        }
+        recovered = true;
+      }
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (recovered || (session && recoveryType === "recovery")) {
+        applyResetMode();
+        cleanupRecoveryUrl();
+      }
+    };
+
+    void bootstrapRecovery();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        applyResetMode();
+      }
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, [requestedMode]);
 
   const intentCopy =
