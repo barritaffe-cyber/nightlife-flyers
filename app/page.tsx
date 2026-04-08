@@ -2480,6 +2480,7 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
 
   mobileDragEnabled?: boolean;
   onMobileDragEnd?: () => void;
+  onOpenTextFloat?: () => void;
   portraitCanvas?: React.ReactNode;
   emojiCanvas?: React.ReactNode;
   flareCanvas?: React.ReactNode;
@@ -2538,6 +2539,7 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
     isMobileView,
     mobileDragEnabled = false,
     onMobileDragEnd,
+    onOpenTextFloat,
     portraitCanvas,
     emojiCanvas,
     flareCanvas,
@@ -4020,11 +4022,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     // ✅ Re-enabled: Select target and open specific panel
     useFlyerState.getState().setMoveTarget("headline");
     useFlyerState.getState().setSelectedPanel("headline");
-    if (isMobileView) {
-      setFloatingEditorVisible(true);
-      setFloatingAssetVisible(false);
-      setFloatingBgVisible(false);
-    }
+    onOpenTextFloat?.();
   }}
 
   // 2. DRAG START
@@ -4219,11 +4217,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     e.stopPropagation();
     useFlyerState.getState().setMoveTarget("headline2");
     useFlyerState.getState().setSelectedPanel("head2");
-    if (isMobileView) {
-      setFloatingEditorVisible(true);
-      setFloatingAssetVisible(false);
-      setFloatingBgVisible(false);
-    }
+    onOpenTextFloat?.();
   }}
 
   // 2. DRAG START
@@ -4380,11 +4374,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     e.stopPropagation();
     useFlyerState.getState().setMoveTarget("details");
     useFlyerState.getState().setSelectedPanel("details");
-    if (isMobileView) {
-      setFloatingEditorVisible(true);
-      setFloatingAssetVisible(false);
-      setFloatingBgVisible(false);
-    }
+    onOpenTextFloat?.();
   }}
 
   // 2. DRAG START
@@ -4536,11 +4526,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     e.stopPropagation();
     useFlyerState.getState().setMoveTarget("details2");
     useFlyerState.getState().setSelectedPanel("details2");
-    if (isMobileView) {
-      setFloatingEditorVisible(true);
-      setFloatingAssetVisible(false);
-      setFloatingBgVisible(false);
-    }
+    onOpenTextFloat?.();
   }}
 
   // 2. DRAG START
@@ -4689,11 +4675,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     e.stopPropagation();
     useFlyerState.getState().setMoveTarget("venue");
     useFlyerState.getState().setSelectedPanel("venue");
-    if (isMobileView) {
-      setFloatingEditorVisible(true);
-      setFloatingAssetVisible(false);
-      setFloatingBgVisible(false);
-    }
+    onOpenTextFloat?.();
   }}
 
   // 2. DRAG START
@@ -4844,11 +4826,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     e.stopPropagation();
     useFlyerState.getState().setMoveTarget("subtag");
     useFlyerState.getState().setSelectedPanel("subtag");
-    if (isMobileView) {
-      setFloatingEditorVisible(true);
-      setFloatingAssetVisible(false);
-      setFloatingBgVisible(false);
-    }
+    onOpenTextFloat?.();
   }}
 
   // 2. DRAG START
@@ -24755,6 +24733,12 @@ style={{ top: STICKY_TOP }}
             isMobileView={isMobileView}
             mobileDragEnabled={mobileDragEnabled}
             onMobileDragEnd={handleMobileDragEnd}
+            onOpenTextFloat={() => {
+              if (!isMobileView) return;
+              setFloatingEditorVisible(true);
+              setFloatingAssetVisible(false);
+              setFloatingBgVisible(false);
+            }}
             portraitCanvas={portraitCanvas}
             emojiCanvas={emojiCanvas}
             flareCanvas={flareCanvas}
