@@ -11656,7 +11656,7 @@ const mobileFloatSticky = isMobileView && format === "story";
   );
   const visibleTemplateGallery = isStarterPlan ? starterTemplateGallery : TEMPLATE_GALLERY;
   const isDjStartupMode = startupStudioMode === "dj";
-  const currentStudioModeLabel = isDjStartupMode ? "DJ / Artist" : "Creator";
+  const currentStudioModeLabel = isDjStartupMode ? "DJ - ARTIST" : "CREATOR";
   const isDjCompositionStage = false;
   const showDjTextEditing = true;
   const visibleSocialMediaStickers = SOCIAL_MEDIA_STICKERS;
@@ -20451,9 +20451,14 @@ const mobileControlsTabs = (
       >
         Start Tour
       </button>
-      <span className="shrink-0 border border-white/10 bg-white/[0.03] px-2 py-[3px] text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-300">
-        {currentStudioModeLabel}
-      </span>
+      <Link
+        href="/pricing"
+        onClick={(event) => void handleStudioNavigation(event, "/pricing")}
+        className="px-2 py-[3px] text-[9px] font-semibold uppercase tracking-[0.12em] border border-cyan-400/70 text-cyan-100 bg-cyan-500/15 hover:bg-cyan-500/25 shrink-0 whitespace-nowrap"
+        aria-label="View Pricing"
+      >
+        Pricing
+      </Link>
     </div>
   </div>
 );
@@ -21921,14 +21926,23 @@ return (
               >
                 Undo
               </button>
-              <span className="hidden shrink-0 border border-white/10 bg-white/[0.03] px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-300 lg:inline-flex">
-                {currentStudioModeLabel}
-              </span>
             </div>
 
 {/* === FORMAT TOGGLE & VIEW SETTINGS === */}
           <div className="justify-self-stretch lg:justify-self-center">
-            <div className="flex w-full items-center justify-center lg:justify-start gap-2 overflow-x-auto text-[12px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="relative">
+              <div className="pointer-events-none absolute inset-x-0 top-1/2 flex -translate-y-[62%] items-center justify-center">
+                <span
+                  className="select-none whitespace-nowrap text-[34px] font-black italic uppercase leading-none tracking-[0.02em] sm:text-[60px] sm:tracking-[-0.01em] lg:text-[84px] lg:tracking-[-0.02em]"
+                  style={{
+                    color: isDjStartupMode ? "rgba(0, 229, 255, 0.16)" : "rgba(255, 255, 255, 0.14)",
+                    textShadow: isDjStartupMode ? "0 0 18px rgba(0, 229, 255, 0.06)" : "none",
+                  }}
+                >
+                  {currentStudioModeLabel}
+                </span>
+              </div>
+            <div className="relative z-10 flex w-full items-center justify-center lg:justify-start gap-2 overflow-x-auto text-[12px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <Chip
                 small
                 className="shrink-0 whitespace-nowrap"
@@ -22050,6 +22064,7 @@ return (
                   Next: Finish
                 </Chip>
               )}
+            </div>
             </div>
           </div>
 
