@@ -18,7 +18,7 @@ function buildLoginResetHref(searchParams: URLSearchParams) {
   return nextUrl.toString();
 }
 
-export default function AuthResetPage() {
+function AuthResetPageInner() {
   const searchParams = useSearchParams();
   const [message, setMessage] = React.useState("Preparing secure password reset...");
 
@@ -79,5 +79,24 @@ export default function AuthResetPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AuthResetPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="min-h-screen bg-neutral-950 text-white">
+          <div className="flex min-h-screen items-center justify-center p-6">
+            <div className="w-full max-w-md rounded-2xl border border-white/10 bg-neutral-900 p-6">
+              <h1 className="mb-2 text-xl font-semibold">Password Reset</h1>
+              <p className="text-sm text-neutral-400">Preparing secure password reset...</p>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <AuthResetPageInner />
+    </React.Suspense>
   );
 }
