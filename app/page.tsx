@@ -3399,7 +3399,7 @@ return (
     width: size.w,
     height: size.h,
     background: `linear-gradient(180deg, ${palette.bgFrom}, ${palette.bgTo})`,
-    touchAction: isMobileView ? (isLiveDragging ? "none" : "pan-y") : "none",
+    touchAction: isMobileView ? (dragging ? "none" : "pan-y") : "none",
     isolation: "isolate",
     contain: "layout paint",
     backfaceVisibility: "hidden",
