@@ -18,6 +18,19 @@ function buildLoginResetHref(searchParams: URLSearchParams) {
   return nextUrl.toString();
 }
 
+async function waitForRecoverySession(supabase: ReturnType<typeof supabaseBrowser>, attempts = 12) {
+  for (let index = 0; index < attempts; index += 1) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (session) {
+      return session;
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 200));
+  }
+  return null;
+}
+
 function AuthResetPageInner() {
   const searchParams = useSearchParams();
   const [message, setMessage] = React.useState("Preparing secure password reset...");
@@ -25,6 +38,9 @@ function AuthResetPageInner() {
   React.useEffect(() => {
     let active = true;
     const supabase = supabaseBrowser();
+    const redirectToResetForm = () => {
+      window.location.replace(buildLoginResetHref(searchParams));
+    };
 
     const run = async () => {
       try {
@@ -33,6 +49,7 @@ function AuthResetPageInner() {
         const recoveryType = url.searchParams.get("type") || hashParams.get("type");
         const tokenHash = url.searchParams.get("token_hash") || hashParams.get("token_hash");
         const code = url.searchParams.get("code");
+        const hasRecoveryTokens = Boolean(hashParams.get("access_token") || hashParams.get("refresh_token"));
 
         if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(code);
@@ -47,11 +64,16 @@ function AuthResetPageInner() {
           if (error) {
             throw error;
           }
+        } else if (recoveryType === "recovery" && hasRecoveryTokens) {
+          const session = await waitForRecoverySession(supabase);
+          if (!session) {
+            throw new Error("The password reset session could not be established.");
+          }
         } else {
           throw new Error("The password reset link is missing recovery details.");
         }
 
-        window.location.replace(buildLoginResetHref(searchParams));
+        redirectToResetForm();
       } catch (error) {
         const text =
           error instanceof Error && error.message.trim()
@@ -65,8 +87,18 @@ function AuthResetPageInner() {
 
     void run();
 
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (!active) return;
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
+        redirectToResetForm();
+      }
+    });
+
     return () => {
       active = false;
+      subscription.unsubscribe();
     };
   }, [searchParams]);
 
