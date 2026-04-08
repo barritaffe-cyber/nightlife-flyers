@@ -19,9 +19,11 @@ export default function PublicSiteFooter() {
 
   return (
     <footer className="border-t border-white/10 bg-black/20">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 text-xs text-white/65 sm:px-6">
-        <PaymentMarks compact />
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 text-center text-xs text-white/65 sm:px-6 sm:text-left">
+        <div className="flex justify-center sm:justify-start">
+          <PaymentMarks compact />
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-3 sm:justify-start">
           <Link href="/pricing" className="transition hover:text-white">
             Pricing
           </Link>

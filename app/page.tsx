@@ -21931,7 +21931,7 @@ return (
 {/* === FORMAT TOGGLE & VIEW SETTINGS === */}
           <div className="justify-self-stretch lg:justify-self-center">
             <div className="relative">
-              <div className="pointer-events-none absolute inset-x-0 top-1/2 flex -translate-y-[46%] items-center justify-center">
+              <div className="pointer-events-none absolute inset-x-0 top-1/2 flex -translate-y-[46%] items-center justify-center lg:-translate-y-[52%]">
                 <span
                   className={clsx(
                     "select-none whitespace-nowrap font-black italic uppercase leading-none tracking-[0.02em] sm:tracking-[-0.01em] lg:tracking-[-0.02em]",
