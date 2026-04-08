@@ -1836,7 +1836,7 @@ const NIGHTLIFE_SUBJECT_TOKENS = {
     "gold-black": "gold and black palette, high contrast, luxury accents",
   },
   fashionBoost:
-    "runway-ready, high fashion detail, couture craftsmanship, premium tailoring, realistic fabric weave, visible texture and seams, true-to-life lighting reflections",
+    "after-hours luxury nightlife fashion, Miami VIP energy, bottle-service polish, statement accessories, body-conscious fit, realistic fabric drape, visible texture and seams, glossy highlights, never corporate or officewear",
   attireColor: {
     black: "black attire, glossy black accents",
     white: "white attire, clean monochrome",
@@ -1983,27 +1983,27 @@ const NIGHTLIFE_BACKGROUND_ENERGY: Record<GenEnergy, string> = {
 
 const NIGHTLIFE_ATTIRE_BY_GENDER = {
   man: {
-    streetwear: "nightclub streetwear, fitted designer tee or open silk shirt under bomber/leather jacket, tailored trousers, premium sneakers or boots, chain accessories, styled nightlife fit",
-    "club-glam": "club-glam menswear, fitted satin or mesh shirt, tailored pants, statement jewelry, polished boots or loafers, upscale nightlife styling",
-    luxury: "luxury nightlife look, tailored blazer with open-collar silk shirt, premium trousers, designer loafers, upscale accessories, couture-quality finishing",
-    festival: "festival nightclub menswear, bold textures, layered accessories, expressive styling, statement jewelry, premium materials",
-    "all-white": "all-white nightlife look, crisp tailored separates, premium monochrome fabrics, polished footwear, clean editorial finish",
+    streetwear: "luxury nightclub streetwear, fitted designer tee or open resort shirt, stacked trousers, bomber or leather jacket, premium sneakers or Chelsea boots, chain accessories, styled Miami nightlife fit",
+    "club-glam": "club-glam menswear, open black satin or mesh shirt, fitted trousers, Cuban chain, rings, polished boots or loafers, upscale after-hours nightlife styling",
+    luxury: "luxury nightlife menswear, open-collar silk shirt, fitted tailored trousers, statement watch and jewelry, designer loafers, high-end club host styling, no office jacket",
+    festival: "festival nightclub menswear, bold textures, layered jewelry, expressive styling, premium boots or sneakers, performance-night wardrobe",
+    "all-white": "all-white nightlife look, crisp resort-club separates, open-collar shirt, fitted trousers, polished footwear, white-party Miami styling",
     cyberpunk: "cyberpunk nightlife menswear, structured techwear layers, glossy synthetic fabrics, neon edge accents, futuristic accessories",
   },
   woman: {
-    streetwear: "fashion-forward nightclub streetwear, cropped leather jacket or structured blazer, sleek bodysuit or fitted top, statement heels or boots, layered jewelry, premium styling",
-    "club-glam": "club-glam womenswear, mini dress or corset top with tailored bottoms, sequins/metallic mesh/satin accents, bold jewelry, strappy heels, upscale nightlife polish",
-    luxury: "luxury nightlife womenswear, silk or satin dress with structured tailoring, premium metallic hardware, statement jewelry, elegant heels, couture editorial finish",
-    festival: "festival nightclub glam, expressive textures, sequins or fringe accents, layered accessories, sparkling nightlife energy, premium fit",
-    "all-white": "all-white nightlife luxury look, satin/blazer tailoring, clean monochrome textures, refined jewelry, editorial finish",
+    streetwear: "fashion-forward nightclub streetwear, cropped moto or leather jacket, sleek bodysuit or fitted top, mini skirt or fitted pants, statement heels or boots, layered jewelry, premium nightlife styling",
+    "club-glam": "club-glam womenswear, bodycon mini dress or corset top with matching skirt or fitted bottoms, sequins, metallic mesh or satin accents, bold jewelry, strappy heels, upscale nightlife polish",
+    luxury: "luxury nightlife womenswear, satin mini or sleek evening dress, cutout or draped partywear silhouette, premium metallic hardware, statement jewelry, elegant heels, Miami VIP styling",
+    festival: "festival nightclub glam, expressive textures, sequins, fringe or sparkle accents, layered accessories, sparkling nightlife energy, premium fit",
+    "all-white": "all-white nightlife luxury look, white-party satin or fitted two-piece styling, monochrome textures, refined jewelry, Miami nightlife finish",
     cyberpunk: "cyberpunk nightlife womenswear, glossy techwear layers, neon accents, futuristic accessories, high-fashion club styling",
   },
   any: {
-    streetwear: "nightclub streetwear, tailored layered fit, premium textures, designer accents, fashion-forward club styling",
-    "club-glam": "club-glam nightlife attire, metallic/satin/mesh accents, tailored silhouette, statement accessories, premium nightlife polish",
-    luxury: "luxury nightlife outfit, tailored silhouette, premium materials, couture-level finishing, upscale club styling",
-    festival: "festival nightlife styling, expressive textures, layered accessories, sparkle accents, premium fit",
-    "all-white": "all-white nightlife attire, clean monochrome styling, premium fabrics, polished editorial finish",
+    streetwear: "nightclub streetwear, fitted layered look, premium textures, designer accents, fashion-forward club styling, no office pieces",
+    "club-glam": "club-glam nightlife attire, metallic, satin or mesh accents, fitted silhouette, statement accessories, premium nightlife polish",
+    luxury: "luxury nightlife outfit, body-conscious or fitted silhouette, premium materials, upscale club styling, after-hours VIP fashion",
+    festival: "festival nightlife styling, expressive textures, layered accessories, sparkle accents, premium fit, performance-night energy",
+    "all-white": "all-white nightlife attire, white-party styling, premium fabrics, polished after-hours finish",
     cyberpunk: "cyberpunk nightlife attire, structured techwear, glossy materials, neon accents, futuristic fashion styling",
   },
 } as const;
@@ -2017,17 +2017,17 @@ const getAttirePrompt = (gender: GenGender, attire: GenAttire) => {
 
 const NIGHTLIFE_ATTIRE_NEGATIVES: Record<GenAttire, string> = {
   streetwear:
-    "office wear, business suit and tie, gym clothes, sweatpants, plain basic t-shirt and jeans, sloppy casual fit",
+    "office wear, business suit and tie, banker look, interview outfit, business-casual blazer, gym clothes, sweatpants, plain basic t-shirt and jeans, sloppy casual fit",
   "club-glam":
-    "office wear, business formal, conservative daytime clothing, baggy hoodie, tracksuit, plain t-shirt and jeans, underdressed casual outfit",
+    "office wear, business formal, office blazer, conservative daytime clothing, church outfit, baggy hoodie, tracksuit, plain t-shirt and jeans, underdressed casual outfit",
   luxury:
-    "office boardroom look, business suit and tie, cheap casual basics, gym wear, sloppy fit, plain hoodie",
+    "office boardroom look, business suit and tie, office blazer, wedding guest outfit, cheap casual basics, gym wear, sloppy fit, plain hoodie",
   festival:
-    "office wear, bland casual basics, plain t-shirt and jeans, gym wear, costume-party outfit, cartoon cosplay",
+    "office wear, bland casual basics, plain t-shirt and jeans, gym wear, costume-party outfit, cartoon cosplay, office-casual look",
   "all-white":
-    "off-white dingy basics, gym wear, office uniform, plain undershirt look, sloppy casual fit",
+    "off-white dingy basics, gym wear, office uniform, clinic uniform, plain undershirt look, sloppy casual fit",
   cyberpunk:
-    "office wear, normal casual basics, plain t-shirt and jeans, bland styling without techwear details",
+    "office wear, normal casual basics, plain t-shirt and jeans, bland styling without techwear details, business-casual outfit",
 };
 
 const SUBJECT_MATCHERS = [
@@ -12946,13 +12946,13 @@ const generateSubjectForBackground = async () => {
     const subjectPrompt = [
       genderPrompt,
       ethnicityPrompt,
-      "all subjects are adults (21+), nightlife / club environment, fashion-forward, editorial photography",
+      "all subjects are adults (21+), nightlife / club environment, Miami after-hours energy, bottle-service polish, fashion-forward club photography",
       NIGHTLIFE_SUBJECT_TOKENS.energy[genEnergy],
       posePrompt,
       NIGHTLIFE_SUBJECT_TOKENS.shot[genShot],
       isVeniceSubject
-        ? "adult subject, 21+, nightlife styling, fashion-forward, avoid corporate look unless requested"
-        : "adult subject, 21+, tasteful fashion, premium nightlife styling",
+        ? "adult subject, 21+, nightlife styling, premium partywear, avoid corporate look unless requested"
+        : "adult subject, 21+, upscale nightlife wardrobe, after-hours styling, premium partywear, never corporate or office fashion",
       attirePrompt,
       NIGHTLIFE_SUBJECT_TOKENS.attireColor[genAttireColor],
       NIGHTLIFE_SUBJECT_TOKENS.colorway[genColorway],
@@ -12997,9 +12997,9 @@ const generateSubjectForBackground = async () => {
 
     const shot = shotSpec[genShot];
     const nightlifeBoost =
-      "high-energy nightlife vibe, candid club photo feel, moody neon lighting, cinematic contrast, gritty texture, low-light flash, fashion-forward styling";
+      "high-energy nightlife vibe, candid club photo feel, Miami VIP atmosphere, moody neon lighting, cinematic contrast, gritty texture, low-light flash, luxury partywear styling";
     const corporateNegatives =
-      "corporate headshot, business attire, office setting, stock photo, brochure look, sterile lighting, clean studio backdrop";
+      "corporate headshot, business attire, office setting, stock photo, brochure look, sterile lighting, clean studio backdrop, office blazer, business-casual outfit, interview styling, banker wardrobe";
 
     const framingSafety =
       "framing safety: include full head and hairline with extra headroom, avoid edge cropping";
@@ -13009,14 +13009,14 @@ const generateSubjectForBackground = async () => {
       "clean studio background, no props, no text, no logos",
       isVeniceSubject
         ? "tasteful nightlife styling, no explicit nudity, no explicit sexual content"
-        : "fully clothed, non-suggestive attire, no lingerie, no swimwear, no nudity, no implied nudity",
+        : "fully dressed upscale nightlife outfit, fitted partywear, no nudity, no lingerie-only styling, no swimwear, no implied nudity",
       subjectPrompt,
       safeHumanPrompt,
       !isVeniceSubject ? nightlifeBoost : "",
       shot.camera,
       framingSafety,
       "extra headroom: leave margin above hair, full hair and forehead visible",
-      "shot on Sony A7R IV, 85mm prime lens, f/2, 1/160s, ISO 400, studio strobe key, RAW photo, subtle film grain, unretouched editorial look",
+      "shot on Sony A7R IV, 85mm prime lens, f/2, 1/160s, ISO 400, flash-lit nightlife portrait, RAW photo, subtle film grain, unretouched party-photo realism",
       "no background scene, isolate subject only",
       "high detail, cinematic nightlife styling",
       "sharp focus, crisp facial detail, no motion blur, no gaussian blur, no soft focus",
