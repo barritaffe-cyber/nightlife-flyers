@@ -21933,7 +21933,7 @@ return (
             <div className="relative">
               <div className="pointer-events-none absolute inset-x-0 top-1/2 flex -translate-y-[62%] items-center justify-center">
                 <span
-                  className="select-none whitespace-nowrap text-[34px] font-black italic uppercase leading-none tracking-[0.02em] sm:text-[60px] sm:tracking-[-0.01em] lg:text-[84px] lg:tracking-[-0.02em]"
+                  className="select-none whitespace-nowrap text-[40px] font-black italic uppercase leading-none tracking-[0.02em] sm:text-[60px] sm:tracking-[-0.01em] lg:text-[84px] lg:tracking-[-0.02em]"
                   style={{
                     color: isDjStartupMode ? "rgba(0, 229, 255, 0.16)" : "rgba(255, 255, 255, 0.14)",
                     textShadow: isDjStartupMode ? "0 0 18px rgba(0, 229, 255, 0.06)" : "none",
