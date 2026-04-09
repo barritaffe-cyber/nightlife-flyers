@@ -267,6 +267,9 @@ function buildSalePayload(
     transactionIdentifier,
     orderIdentifier,
     payload: {
+      BillingAddress: {
+        EmailAddress: customerEmail,
+      },
       CurrencyCode: getPowerTranzCurrencyCode(),
       ExtendedData: extendedData,
       OrderIdentifier: orderIdentifier,
@@ -432,6 +435,7 @@ export async function createProviderCheckout(
       pageName: hostedPage.PAGENAME,
       currencyCode: payload.CurrencyCode,
       totalAmount: payload.TotalAmount,
+      hasBillingEmail: Boolean(payload.BillingAddress?.EmailAddress),
       merchantResponseUrl,
       recurring: selection.kind === "plan",
     });

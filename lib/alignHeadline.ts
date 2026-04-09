@@ -20,5 +20,4 @@ export function alignHeadline(headRef: React.RefObject<HTMLDivElement | null>) {
   headlineEl.style.top = `${centerY}%`;
   headlineEl.style.transformOrigin = "center center";
 
-  console.log(`🧭 Headline vertically aligned to ${centerY.toFixed(2)}%`);
 }

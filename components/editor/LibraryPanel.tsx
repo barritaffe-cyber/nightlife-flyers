@@ -3,7 +3,18 @@
 
 import * as React from 'react';
 import { useFlyerState, type Format } from '../../app/state/flyerState';
-import { Collapsible, ColorDot, InlineSliderInput, SliderRow } from './controls';
+import {
+  Collapsible,
+  ColorDot,
+  InlineSliderInput,
+  SliderRow,
+  editorEmptyStateClass,
+  editorUploadActionClass,
+  editorUploadClearClass,
+  editorUploadHolderClass,
+  editorUploadPlaceClass,
+  editorUploadPreviewClass,
+} from './controls';
 import {
   type TextSeparatorGraphic,
   buildSeparatorSvgDataUrl,
@@ -316,7 +327,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
     const selectedEmoji = emojiList.find((e: any) => e.id === selectedEmojiId) || null;
 
     const portraitList = Array.isArray((portraits as any)?.[format]) ? portraits[format] : [];
-    const stickerAssets = portraitList.filter((p: any) => !!p?.isSticker && !p?.isFlare);
+    const stickerAssets = portraitList.filter((p: any) => !!p?.isSticker);
     const separatorAssets = stickerAssets.filter((p: any) => !!(p as any)?.isSeparator);
     const shapeAssets = stickerAssets.filter((p: any) => !!(p as any)?.isShapeGraphic);
     const graphicAssets = stickerAssets.filter(
@@ -345,7 +356,6 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
     const selectedGraphic =
       selectedPortrait &&
       !!(selectedPortrait as any)?.isSticker &&
-      !(selectedPortrait as any)?.isFlare &&
       !(selectedPortrait as any)?.isSeparator &&
       !(selectedPortrait as any)?.isShapeGraphic
         ? selectedPortrait
@@ -1135,53 +1145,91 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
               <div className="text-[12px] text-neutral-300 mb-2">
                 Upload up to 4 icons or logos, then place the ones you want on canvas.
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {IS_iconSlots.map((src, i) => (
-                  <div
-                    key={i}
-                    className="rounded-lg border border-neutral-700 bg-neutral-900/50 overflow-hidden"
-                  >
-                    <div className="aspect-square w-full bg-[linear-gradient(45deg,#222_25%,#000_25%,#000_50%,#222_50%,#222_75%,#000_75%,#000)] bg-[length:16px_16px] grid place-items-center">
-                      {src ? (
-                        <img
-                          src={src}
-                          alt={`icon slot ${i + 1}`}
-                          className="w-full h-full object-contain"
-                          draggable={false}
-                        />
-                      ) : (
-                        <div className="text-[11px] text-neutral-400">Empty</div>
-                      )}
-                    </div>
-                    <div className="p-2 grid grid-cols-3 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => IS_triggerIconSlotUpload(i)}
-                        className="truncate rounded px-2 py-1 text-[11px] bg-neutral-900/70 border border-neutral-700 hover:bg-neutral-800"
-                        title="Upload into this slot"
+                  (() => {
+                    const onCanvas =
+                      src
+                        ? portraitList.find((p: any) => p.url === src && (!!p?.isSticker || !!p?.isFlare))
+                        : null;
+                    const isSelected = !!(onCanvas && selectedPortraitId === onCanvas.id);
+
+                    return (
+                      <div
+                        key={i}
+                        className={[
+                          editorUploadHolderClass,
+                          isSelected ? "border-cyan-300/55 shadow-[0_0_0_1px_rgba(34,211,238,0.12)]" : "",
+                        ].join(" ").trim()}
                       >
-                        Upload
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => IS_placeIconFromSlot(i)}
-                        className="truncate rounded px-2 py-1 text-[11px] bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
-                        disabled={!src}
-                        title="Place on canvas"
-                      >
-                        Place
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => IS_clearIconSlot(i)}
-                        className="truncate rounded px-2 py-1 text-[11px] bg-neutral-900/70 border border-neutral-700 hover:bg-neutral-800 disabled:opacity-50"
-                        disabled={!src}
-                        title="Clear slot"
-                      >
-                        Clear
-                      </button>
-                    </div>
-                  </div>
+                        <div className="text-[12px] font-medium text-white">
+                          Graphic {i + 1}
+                        </div>
+
+                        <button
+                          type="button"
+                          className={`aspect-square w-full grid place-items-center relative ${editorUploadPreviewClass} ${
+                            onCanvas ? "cursor-pointer hover:border-cyan-300/45" : "cursor-default"
+                          }`}
+                          disabled={!onCanvas}
+                          onClick={() => {
+                            if (!onCanvas) return;
+                            setSelectedPortraitId(onCanvas.id);
+                            setSelectedPanel('icons');
+                            setMoveTarget('icon');
+                            window.setTimeout(() => {
+                              document
+                                .getElementById('icons-panel')
+                                ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }, 80);
+                          }}
+                          title={onCanvas ? 'Select graphic and jump to controls' : undefined}
+                        >
+                          {src ? (
+                            <img
+                              src={src}
+                              alt={`icon slot ${i + 1}`}
+                              className="w-full h-full object-contain bg-white/5"
+                              draggable={false}
+                            />
+                          ) : (
+                            <div className={editorEmptyStateClass}>
+                              <div className="text-[11px] leading-6 text-neutral-400">Upload an icon or logo.</div>
+                            </div>
+                          )}
+                        </button>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => IS_triggerIconSlotUpload(i)}
+                            className={`${editorUploadActionClass} whitespace-normal text-center`}
+                            title="Upload into this slot"
+                          >
+                            {src ? 'Replace' : 'Upload'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => IS_placeIconFromSlot(i)}
+                            className={`${editorUploadPlaceClass} whitespace-normal text-center`}
+                            disabled={!src}
+                            title="Place on canvas"
+                          >
+                            Place
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => IS_clearIconSlot(i)}
+                          className={`${editorUploadClearClass} w-full whitespace-normal text-center`}
+                          disabled={!src}
+                          title="Clear slot"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    );
+                  })()
                 ))}
               </div>
             </LibrarySection>

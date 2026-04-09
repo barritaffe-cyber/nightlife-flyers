@@ -33,7 +33,7 @@ export const editorSecondaryButtonClass =
 export const editorAdvancedToggleClass =
   'w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-left text-[11px] font-medium text-white transition hover:bg-white/[0.06]';
 export const editorEmptyStateClass =
-  'rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-4 text-center';
+  'rounded-xl bg-white/[0.02] px-4 py-4 text-center';
 export const editorEmptyStateTitleClass = 'text-[12px] font-medium text-white';
 export const editorEmptyStateBodyClass = 'mt-1 text-[11px] leading-5 text-neutral-400';
 export const editorItemCardClass =
@@ -42,6 +42,16 @@ export const editorItemCardActiveClass =
   'rounded-xl border border-cyan-300/55 bg-cyan-400/10 p-2 shadow-[0_0_0_1px_rgba(34,211,238,0.12)] transition-colors';
 export const editorThumbClass =
   'rounded-lg border border-white/10 bg-neutral-900/70 overflow-hidden';
+export const editorUploadHolderClass =
+  'border border-neutral-700 bg-neutral-950/60 p-3 space-y-3';
+export const editorUploadPreviewClass =
+  'h-32 w-full grid place-items-center border border-neutral-700 bg-neutral-950 overflow-hidden';
+export const editorUploadActionClass =
+  'min-h-[40px] flex items-center justify-center border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-[11px] font-medium text-neutral-200 text-center transition hover:bg-neutral-900 disabled:cursor-not-allowed disabled:opacity-50';
+export const editorUploadPlaceClass =
+  'min-h-[40px] flex items-center justify-center border border-cyan-400/70 bg-cyan-500/10 px-3 py-2 text-[11px] font-semibold text-cyan-100 text-center transition hover:bg-cyan-500/16 disabled:cursor-not-allowed disabled:opacity-50';
+export const editorUploadClearClass =
+  'min-h-[40px] flex items-center justify-center border border-neutral-700 bg-transparent px-3 py-2 text-[11px] font-medium text-neutral-300 text-center transition hover:bg-neutral-900/60 disabled:cursor-not-allowed disabled:opacity-50';
  
  export type StepperProps = {
    label?: string;

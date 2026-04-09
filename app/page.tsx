@@ -52,6 +52,11 @@ import {
   editorSectionTitleClass,
   editorSecondaryButtonClass,
   editorThumbClass,
+  editorUploadActionClass,
+  editorUploadClearClass,
+  editorUploadHolderClass,
+  editorUploadPlaceClass,
+  editorUploadPreviewClass,
 } from "../components/editor/controls";
 import { FontPicker } from "../components/editor/FontPicker";
 import DjBrandingPanel from "../components/editor/DjBrandingPanel";
@@ -11805,9 +11810,7 @@ const mobileFloatSticky = isMobileView && format === "story";
             method: "POST",
             headers: { Authorization: `Bearer ${token}` },
           });
-        } catch (bootstrapError) {
-          console.warn("profile-bootstrap request failed", bootstrapError);
-        }
+        } catch {}
 
         const res = await fetch("/api/auth/status", {
           headers: { Authorization: `Bearer ${token}` },
@@ -11834,8 +11837,7 @@ const mobileFloatSticky = isMobileView && format === "story";
         }
 
         return { token, json, status: nextStatus };
-      } catch (error) {
-        console.warn("refreshAccessSnapshot failed", error);
+      } catch {
         return null;
       }
     },
@@ -11892,6 +11894,8 @@ const mobileFloatSticky = isMobileView && format === "story";
             Math.floor((MOBILE_EXPORT_MAX_DIM / Math.max(canvasSize.w, canvasSize.h)) * 100) / 100
           )
         )
+      : exportType === "jpg"
+      ? clampDesktopJpgExportScale(exportScale, canvasSize.w, canvasSize.h)
       : exportScale;
     let usedScale = exportScale;
     let width = canvasSize.w * exportScale;
@@ -11918,6 +11922,8 @@ const mobileFloatSticky = isMobileView && format === "story";
             .concat(safeScale > 2 ? [2] : [])
             .concat(safeScale > 1 ? [1] : [])
             .filter((v, i, a) => a.indexOf(v) === i)
+        : exportType === "jpg" && safeScale !== exportScale
+        ? [safeScale]
         : [exportScale];
 
       let dataUrl = '';
@@ -11939,9 +11945,11 @@ const mobileFloatSticky = isMobileView && format === "story";
             height = canvasSize.h * scale;
             sizeBytes = dataUrlBytes(dataUrl);
             if (!mustRetry || !needsRetry()) {
-              if (isMobileExport && scale !== exportScale) {
+              if (scale !== exportScale && (isMobileExport || exportType === "jpg")) {
                 setExportError(
-                  `Export succeeded at ${scale}x for stability on mobile.`
+                  isMobileExport
+                    ? `Export succeeded at ${scale}x for stability on mobile.`
+                    : `JPG export used ${scale}x for stability.`
                 );
               }
               attempt = maxAttempts + 1;
@@ -15165,6 +15173,25 @@ function extractCssUrls(input: string): string[] {
 const EXPORT_TRANSPARENT_PIXEL =
   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 const MOBILE_EXPORT_MAX_DIM = 8192;
+const DESKTOP_JPG_EXPORT_MAX_DIM = 3200;
+const DESKTOP_JPG_EXPORT_MAX_PIXELS = 9_000_000;
+
+function clampDesktopJpgExportScale(
+  requestedScale: number,
+  width: number,
+  height: number
+) {
+  const baseMaxDim = Math.max(width, height, 1);
+  const safeByDim = DESKTOP_JPG_EXPORT_MAX_DIM / baseMaxDim;
+  const safeByPixels = Math.sqrt(
+    DESKTOP_JPG_EXPORT_MAX_PIXELS / Math.max(width * height, 1)
+  );
+  const safeScale = Math.max(
+    1,
+    Math.min(requestedScale, safeByDim, safeByPixels)
+  );
+  return Math.floor(safeScale * 100) / 100;
+}
 
 function splitCssListPreservingFunctions(input: string): string[] {
   const out: string[] = [];
@@ -15726,14 +15753,6 @@ async function renderExportDataUrl(
           restoreInlineBg = inlineBg.restore;
           missingBgInline = inlineBg.missing;
           const missingAll = [...missingInline, ...missingBgInline];
-          if (missingAll.length > 0) {
-            const short = missingAll.slice(0, 3).map((u) => {
-              try { return new URL(u).host; } catch { return u; }
-            });
-            console.warn(
-              `Export fallback used transparent placeholders for missing images: ${short.join(", ")}`
-            );
-          }
         }
         await waitForImages(exportRoot);
         await waitForBackgroundImages(exportRoot);
@@ -15805,7 +15824,7 @@ async function renderExportDataUrl(
           });
         };
 
-        const needsWarmup = !!(bgUploadUrl || bgUrl || logoUrl);
+        const needsWarmup = format !== 'jpg' && !!(bgUploadUrl || bgUrl || logoUrl);
         if (!needsWarmup) return await capture();
 
         await capture(); // warm-up pass
@@ -17683,23 +17702,6 @@ const applyTemplate = React.useCallback<
     const resolvedBgUrl = variantBgUrl || tpl.preview || "";
     const incomingScale =
       typeof variant.bgScale === "number" ? variant.bgScale : 1.0;
-    if (tpl.id === "latin_street_tropical") {
-      console.log(
-        "[applyTemplate] id=",
-        tpl.id,
-        "format=",
-        fmt,
-        "bgScale=",
-        incomingScale,
-        "raw=",
-        (tpl.formats?.[fmt] as any)?.bgScale ?? null,
-        "square=",
-        (tpl.formats?.square as any)?.bgScale ?? null,
-        "preview=",
-        tpl.preview
-      );
-    }
-
     // ensure bg scale is available synchronously for any effects
     templateBgScaleRef.current = incomingScale;
     setBgScale(incomingScale);
@@ -22144,15 +22146,10 @@ return (
                 <Chip
                   small
                   className="shrink-0 whitespace-nowrap"
-                  deferHeavy
                   onClick={() => {
-                    setUiMode("finish");
-                    setSelectedPanel("mastergrade");
-                    setMobileControlsTab("design");
-                    requestAnimationFrame(() => {
-                      document
-                        .getElementById("mastergrade-panel")
-                        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    openCreatorWorkflowTarget("mastergrade", "assets", {
+                      uiMode: "finish",
+                      targetId: "mastergrade-panel",
                     });
                   }}
                 >
@@ -23105,7 +23102,7 @@ style={{ top: STICKY_TOP }}
     </div>
 
     {/* --- SLOTS GRID --- */}
-    <div className="grid grid-cols-2 gap-2 mb-4">
+    <div className="grid grid-cols-1 gap-3 mb-4 sm:grid-cols-2">
       {[0, 1, 2, 3].map((i) => {
         const src = logoSlots[i] || "";
         const list = portraits[format] || [];
@@ -23115,31 +23112,54 @@ style={{ top: STICKY_TOP }}
         return (
           <div
             key={i}
-            className={isActive ? editorItemCardActiveClass : editorItemCardClass}
+            className={clsx(
+              `${editorUploadHolderClass}`,
+              isActive ? "border-cyan-300/55 shadow-[0_0_0_1px_rgba(34,211,238,0.12)]" : ""
+            )}
           >
-            {/* Thumbnail */}
-            <div className={`h-20 grid place-items-center relative ${editorThumbClass}`}>
+            <div className="text-[12px] font-medium text-white">
+              Logo {i + 1}
+            </div>
+
+            <button
+              type="button"
+              className={clsx(
+                `${editorUploadPreviewClass} relative`,
+                onCanvas ? "cursor-pointer hover:border-cyan-300/45" : "cursor-default"
+              )}
+              disabled={!onCanvas}
+              onClick={() => {
+                if (!onCanvas) return;
+                setSelectedPortraitId(onCanvas.id);
+                setMoveTarget("logo");
+                setSelectedPanel("logo");
+                window.setTimeout(() => {
+                  document
+                    .getElementById("logo-selected-controls")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }, 80);
+              }}
+              title={onCanvas ? "Select logo and jump to controls" : undefined}
+            >
               {src ? (
                 <img
                   src={src}
-                  className="w-full h-full object-contain bg-[length:10px_10px] bg-[url('https://t3.ftcdn.net/jpg/02/03/90/58/360_F_203905816_kpsw9G2a6e02a0a256a5061695669046.jpg')]"
+                  className="w-full h-full object-contain bg-white/5"
                   draggable={false}
                   alt=""
                 />
               ) : (
-                <div className="text-[11px] text-neutral-500">Empty {i + 1}</div>
+                <div className={editorEmptyStateClass}>
+                  <div className="text-[11px] leading-6 text-neutral-400">Upload a logo or rendered text.</div>
+                </div>
               )}
-              {isActive && (
-                <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-green-500 shadow-[0_0_5px_#22c55e]" />
-              )}
-            </div>
+            </button>
 
-            {/* Action Buttons */}
-            <div className="mt-2 grid grid-cols-3 gap-1">
+            <div className="grid grid-cols-2 gap-2">
               {/* Upload */}
               <button
                 type="button"
-                className={`${editorSecondaryButtonClass} truncate px-1 py-1.5 text-[10px]`}
+                className={`${editorUploadActionClass} whitespace-normal text-center`}
                 onClick={() => {
                   const input = document.createElement("input");
                   input.type = "file";
@@ -23170,14 +23190,14 @@ style={{ top: STICKY_TOP }}
                   input.click();
                 }}
               >
-                {src ? "Replace" : "Upload Logo"}
+                {src ? "Replace" : "Upload"}
               </button>
 
               {/* Place */}
               <button
                 type="button"
                 disabled={!src}
-                className={`${editorPrimaryButtonClass} truncate px-1 py-1.5 text-[10px]`}
+                className={`${editorUploadPlaceClass} whitespace-normal text-center`}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -23200,46 +23220,46 @@ style={{ top: STICKY_TOP }}
                     cleanup: DEFAULT_CLEANUP,
                   });
 
-                  // ✅ selection + move target should be portrait (same system as everything else)
+                  // ✅ keep the logo control route active
                   setSelectedPortraitId(id);
-                  setMoveTarget("portrait");
+                  setMoveTarget("logo");
 
                   // ✅ keep panel open
                   setSelectedPanel("logo");
                   window.setTimeout(scrollToArtboard, 120);
                 }}
               >
-                Place Logo
-              </button>
-
-              {/* Clear */}
-              <button
-                type="button"
-                disabled={!src}
-                className={`${editorSecondaryButtonClass} truncate px-1 py-1.5 text-[10px]`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-
-                  const next = [...logoSlots];
-                  next[i] = "";
-                  setLogoSlots(next);
-                  try {
-                    localStorage.setItem("nf:logoSlots", JSON.stringify(next));
-                  } catch {}
-
-                  // (optional) if the cleared slot was on-canvas, remove that instance too
-                  if (onCanvas?.id) {
-                    removePortrait(format, onCanvas.id);
-                    if (selectedPortraitId === onCanvas.id) {
-                      setSelectedPortraitId(null);
-                    }
-                  }
-                }}
-              >
-                Clear
+                Place
               </button>
             </div>
+
+            {/* Clear */}
+            <button
+              type="button"
+              disabled={!src}
+              className={`${editorUploadClearClass} w-full whitespace-normal text-center`}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const next = [...logoSlots];
+                next[i] = "";
+                setLogoSlots(next);
+                try {
+                  localStorage.setItem("nf:logoSlots", JSON.stringify(next));
+                } catch {}
+
+                // (optional) if the cleared slot was on-canvas, remove that instance too
+                if (onCanvas?.id) {
+                  removePortrait(format, onCanvas.id);
+                  if (selectedPortraitId === onCanvas.id) {
+                    setSelectedPortraitId(null);
+                  }
+                }
+              }}
+            >
+              Clear
+            </button>
           </div>
         );
       })}
@@ -23270,6 +23290,7 @@ style={{ top: STICKY_TOP }}
 
   return (
     <div
+      id="logo-selected-controls"
       className="mt-4 pt-4 border-t border-white/10"
       data-portrait-area="true"
       onMouseDownCapture={(e) => e.stopPropagation()}
@@ -26080,33 +26101,27 @@ style={{ top: STICKY_TOP }}
       selectedPanel === "portrait" ? editorPanelTitleActiveClass : ""
     }
   >
-    <div className={`mb-3 ${editorHelperTextClass}`}>
-      Use this when you want to place a cutout subject on the flyer. Upload a portrait, place it on canvas, then refine it below.
-    </div>
-
-    {/* Header Controls */}
     <div className="mb-3 flex items-center justify-between gap-3">
       <div>
         <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-300">Portrait Library</div>
-        <div className="mt-1 text-[12px] text-white/85">
-          Upload cutouts here, then place the one you want on the canvas.
+        <div className="mt-1 text-[11px] text-neutral-400">
+          Upload a cutout, then place it on canvas.
         </div>
       </div>
-      <div className="flex items-center gap-2 text-[11px]">
-      <span>Portrait frame</span>
-      <Chip
-        small
-        active={enablePortraitOverlay}
-        onClick={() => setEnablePortraitOverlay((v: boolean) => !v)}
-        title="Show or hide the portrait frame overlay"
-      >
-        {enablePortraitOverlay ? "On" : "Off"}
-      </Chip>
+      <div className="flex items-center gap-2 text-[11px] text-neutral-300">
+        <Chip
+          small
+          active={enablePortraitOverlay}
+          onClick={() => setEnablePortraitOverlay((v: boolean) => !v)}
+          title="Show or hide the portrait frame overlay"
+        >
+          {enablePortraitOverlay ? "On" : "Off"}
+        </Chip>
       </div>
     </div>
 
     {/* Slots Grid */}
-    <div className="grid grid-cols-1 gap-3">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {[0, 1, 2, 3].map((i) => {
         const src = portraitSlots[i] || "";
 
@@ -26123,45 +26138,21 @@ style={{ top: STICKY_TOP }}
           <div
             key={i}
             className={clsx(
-              "rounded-xl border p-3 space-y-3",
+              `${editorUploadHolderClass}`,
               onCanvas && selectedPortraitId === onCanvas.id
-                ? "border-cyan-300/55 bg-cyan-400/10 shadow-[0_0_0_1px_rgba(34,211,238,0.12)]"
-                : "border-white/10 bg-white/[0.03]"
+                ? "border-cyan-300/55 shadow-[0_0_0_1px_rgba(34,211,238,0.12)]"
+                : ""
             )}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="text-[12px] font-medium text-white">Portrait Slot {i + 1}</div>
-                <div className="mt-1 text-[11px] text-neutral-400">
-                  {src ? "Ready to place" : "Empty slot"}
-                </div>
-              </div>
-              <div className="shrink-0">
-                {isProcessing ? (
-                  <span className="rounded-full border border-indigo-400/40 bg-indigo-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-indigo-200">
-                    Processing
-                  </span>
-                ) : onCanvas && selectedPortraitId === onCanvas.id ? (
-                  <span className="rounded-full border border-emerald-400/35 bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-200">
-                    Selected
-                  </span>
-                ) : onCanvas ? (
-                  <span className="rounded-full border border-cyan-400/35 bg-cyan-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-200">
-                    Placed
-                  </span>
-                ) : (
-                  <span className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-1 text-[10px] font-semibold text-neutral-400">
-                    Library
-                  </span>
-                )}
-              </div>
+            <div className="text-[12px] font-medium text-white">
+              Portrait {i + 1}
             </div>
 
             {/* Thumbnail Area */}
             <button
               type="button"
               className={clsx(
-                `h-28 w-full grid place-items-center relative ${editorThumbClass}`,
+                `${editorUploadPreviewClass} relative`,
                 onCanvas && !isProcessing ? "cursor-pointer hover:border-cyan-300/45" : "cursor-default"
               )}
               disabled={!onCanvas || isProcessing}
@@ -26194,23 +26185,17 @@ style={{ top: STICKY_TOP }}
                   draggable={false}
                 />
               ) : (
-                <div className="grid h-full w-full place-items-center rounded-lg border border-dashed border-white/10 bg-white/[0.02] px-4 py-4 text-center">
-                  <div>
-                    <div className="text-[12px] font-medium text-white">No Portrait Yet</div>
-                    <div className="mt-1 text-[11px] leading-5 text-neutral-400">Upload a cutout portrait to use this slot.</div>
-                  </div>
+                <div className={editorEmptyStateClass}>
+                  <div className="text-[11px] leading-6 text-neutral-400">Upload a cutout portrait.</div>
                 </div>
               )}
             </button>
 
-            {/* Row 1: Main Actions */}
-            <div
-              className={isMobileView ? "flex flex-col gap-2" : "grid grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,1fr)] gap-2"}
-            >
+            <div className="grid grid-cols-2 gap-2">
               {/* ✅ FIXED UPLOAD BUTTON */}
               <button
                 type="button"
-                className="min-h-[42px] rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2 text-[11px] font-medium leading-tight text-white transition hover:bg-white/[0.1] disabled:cursor-not-allowed disabled:opacity-50 whitespace-normal text-center"
+                className={`${editorUploadActionClass} whitespace-normal text-center`}
                 title={src ? "Replace image" : "Upload new image"}
                 disabled={isProcessing}
                 onClick={() => {
@@ -26250,13 +26235,13 @@ style={{ top: STICKY_TOP }}
                   input.click();
                 }}
               >
-                {src ? "Replace" : "Upload Portrait"}
+                {src ? "Replace" : "Upload"}
               </button>
 
               {/* Place */}
               <button
                 type="button"
-                className="min-h-[42px] rounded-lg border border-white/15 bg-white px-3 py-2 text-[11px] font-semibold leading-tight text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50 whitespace-normal text-center"
+                className={`${editorUploadPlaceClass} whitespace-normal text-center`}
                 disabled={!src || isProcessing}
                 title="Add to canvas"
                 onClick={(e) => {
@@ -26301,42 +26286,42 @@ style={{ top: STICKY_TOP }}
                   window.setTimeout(scrollToArtboard, 120);
                 }}
               >
-                Place Portrait
-              </button>
-
-              {/* Clear */}
-              <button
-                type="button"
-                className="min-h-[42px] rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2 text-[11px] font-medium leading-tight text-white transition hover:bg-white/[0.1] disabled:cursor-not-allowed disabled:opacity-50 whitespace-normal text-center"
-                disabled={!src || isProcessing}
-                title="Clear slot & remove from canvas"
-                onClick={() => {
-                  const urlToRemove = portraitSlots[i];
-                  if (urlToRemove) {
-                    const currentList = portraits[format] || [];
-                    const targets = currentList.filter((p) => p.url === urlToRemove);
-                    targets.forEach((p) => useFlyerState.getState().removePortrait(format, p.id));
-                    if (targets.some((p) => p.id === selectedPortraitId)) {
-                      useFlyerState.getState().setSelectedPortraitId(null);
-                      useFlyerState.getState().setDragging(null);
-                    }
-                  }
-                  setPortraitSlots((prev) => {
-                    const next = [...prev];
-                    next[i] = "";
-                    try {
-                      localStorage.setItem("nf:portraitSlots", JSON.stringify(next));
-                    } catch {}
-                    return next;
-                  });
-                  persistPortraitSlotSources(
-                    portraitSlotSources.map((v, idx) => (idx === i ? "" : v))
-                  );
-                }}
-              >
-                Clear
+                Place
               </button>
             </div>
+
+            {/* Clear */}
+            <button
+              type="button"
+              className={`${editorUploadClearClass} w-full whitespace-normal text-center`}
+              disabled={!src || isProcessing}
+              title="Clear slot & remove from canvas"
+              onClick={() => {
+                const urlToRemove = portraitSlots[i];
+                if (urlToRemove) {
+                  const currentList = portraits[format] || [];
+                  const targets = currentList.filter((p) => p.url === urlToRemove);
+                  targets.forEach((p) => useFlyerState.getState().removePortrait(format, p.id));
+                  if (targets.some((p) => p.id === selectedPortraitId)) {
+                    useFlyerState.getState().setSelectedPortraitId(null);
+                    useFlyerState.getState().setDragging(null);
+                  }
+                }
+                setPortraitSlots((prev) => {
+                  const next = [...prev];
+                  next[i] = "";
+                  try {
+                    localStorage.setItem("nf:portraitSlots", JSON.stringify(next));
+                  } catch {}
+                  return next;
+                });
+                persistPortraitSlotSources(
+                  portraitSlotSources.map((v, idx) => (idx === i ? "" : v))
+                );
+              }}
+            >
+              Clear
+            </button>
 
           </div>
         );
@@ -26470,33 +26455,22 @@ style={{ top: STICKY_TOP }}
               />
             </div>
 
-            {/* BUTTONS: LOCK & DELETE */}
+            {/* BUTTONS: LAYER UP / DOWN */}
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() =>
-                  useFlyerState.getState().updatePortrait(format, sel.id, {
-                    locked: !locked,
-                  })
-                }
-                className={`flex items-center justify-center gap-2 px-3 py-2 rounded text-[11px] border transition-colors ${
-                  locked
-                    ? "bg-indigo-900/30 border-indigo-500/50 text-indigo-300"
-                    : "bg-neutral-800 border-neutral-600 text-neutral-300 hover:bg-neutral-700"
-                }`}
+                onClick={() => nudgePortraitLayer(sel.id, "up")}
+                className="flex items-center justify-center gap-2 px-3 py-2 rounded text-[11px] border transition-colors bg-neutral-800 border-neutral-600 text-neutral-300 hover:bg-neutral-700"
               >
-                <span>{locked ? "🔒 Locked" : "🔓 Lock"}</span>
+                <span>Layer Up</span>
               </button>
 
               <button
                 type="button"
-                onClick={() => {
-                  useFlyerState.getState().removePortrait(format, sel.id);
-                  useFlyerState.getState().setSelectedPortraitId(null);
-                }}
-                className="flex items-center justify-center gap-2 px-3 py-2 rounded text-[11px] bg-red-900/20 border border-red-900/30 text-red-400 hover:bg-red-900/30 hover:text-red-300 transition-colors"
+                onClick={() => nudgePortraitLayer(sel.id, "down")}
+                className="flex items-center justify-center gap-2 px-3 py-2 rounded text-[11px] border transition-colors bg-neutral-800 border-neutral-600 text-neutral-300 hover:bg-neutral-700"
               >
-                <span>🗑️ Delete</span>
+                <span>Layer Down</span>
               </button>
             </div>
           </div>

@@ -2,7 +2,17 @@
 /* eslint-disable @next/next/no-img-element */
 
 import * as React from 'react';
-import { Chip, Collapsible, InlineSliderInput } from './controls';
+import {
+  Chip,
+  Collapsible,
+  InlineSliderInput,
+  editorEmptyStateClass,
+  editorUploadActionClass,
+  editorUploadClearClass,
+  editorUploadHolderClass,
+  editorUploadPlaceClass,
+  editorUploadPreviewClass,
+} from './controls';
 import { FontPicker } from './FontPicker';
 import { removeBackgroundLocal } from '../../lib/removeBgLocal';
 import type { PortraitLighting } from '../../app/state/flyerState';
@@ -474,24 +484,22 @@ export default function DjBrandingPanel({
           {workflowStep === 'mainface' && (
             <>
           <div className={djSubCardClass}>
-            <div className="flex items-center justify-between gap-2">
-              <div className="text-[10px] uppercase tracking-wide text-neutral-400">Main Face</div>
-              {hasSavedMainFace ? (
-                <div className="text-[10px] text-emerald-300">Saved</div>
-              ) : (
-                <div className="text-[10px] text-neutral-500">Not saved</div>
-              )}
-            </div>
-            <div className="h-24 border border-neutral-700 bg-neutral-950 grid place-items-center overflow-hidden">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-300">Main Face</div>
+            <div className={editorUploadPreviewClass}>
               {faceBusy ? (
                 <div className="flex flex-col items-center gap-2 text-[10px] text-cyan-300">
                   <div className="h-5 w-5 rounded-full border-2 border-cyan-400 border-t-transparent animate-spin" />
                   <span>Removing background...</span>
                 </div>
               ) : displayFace ? (
-                <img src={displayFace} alt="" className="h-full w-full object-contain" draggable={false} />
+                <img src={displayFace} alt="" className="h-full w-full object-contain bg-white" draggable={false} />
               ) : (
-                <span className="text-[10px] text-neutral-500">Upload a portrait to start</span>
+                <div className="grid h-full w-full place-items-center px-4 py-4 text-center">
+                  <div>
+                    <div className="text-[12px] font-black uppercase tracking-[0.08em] text-neutral-700">No Main Face</div>
+                    <div className="mt-1 text-[11px] leading-5 text-neutral-500">Upload a cutout portrait to save it to this brand.</div>
+                  </div>
+                </div>
               )}
             </div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -523,29 +531,39 @@ export default function DjBrandingPanel({
                 {mainFacePrimaryAction.label}
               </button>
             )}
-            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
-              <Chip small className="!w-full !rounded-none" onClick={() => faceInput.current?.click()} disabled={faceBusy}>
-                {savedFace ? 'Replace' : 'Upload'}
-              </Chip>
-              <Chip small className="!w-full !rounded-none" onClick={onUseBrandFace} disabled={!kit.primaryPortrait || faceBusy}>
-                {mainFaceOnCanvas ? 'Use Again' : 'Place On Canvas'}
-              </Chip>
-              <Chip
-                small
-                className="!w-full !rounded-none"
-                onClick={() => {
-                  setFaceError(null);
-                  if (mainFaceOnCanvas) {
-                    onRemoveMainFace();
-                    return;
-                  }
-                  onKitChange({ ...kit, primaryPortrait: null });
-                }}
-                disabled={(!kit.primaryPortrait && !mainFaceOnCanvas) || faceBusy}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                className={`${editorUploadActionClass} whitespace-normal text-center`}
+                onClick={() => faceInput.current?.click()}
+                disabled={faceBusy}
               >
-                {mainFaceOnCanvas ? 'Remove' : 'Clear'}
-              </Chip>
+                {savedFace ? 'Replace' : 'Upload'}
+              </button>
+              <button
+                type="button"
+                className={`${editorUploadPlaceClass} whitespace-normal text-center`}
+                onClick={onUseBrandFace}
+                disabled={!kit.primaryPortrait || faceBusy}
+              >
+                Place
+              </button>
             </div>
+            <button
+              type="button"
+              className={`${editorUploadClearClass} w-full whitespace-normal text-center`}
+              onClick={() => {
+                setFaceError(null);
+                if (mainFaceOnCanvas) {
+                  onRemoveMainFace();
+                  return;
+                }
+                onKitChange({ ...kit, primaryPortrait: null });
+              }}
+              disabled={(!kit.primaryPortrait && !mainFaceOnCanvas) || faceBusy}
+            >
+              {mainFaceOnCanvas ? 'Remove' : 'Clear'}
+            </button>
             {faceError && <div className="text-[11px] text-rose-300">{faceError}</div>}
             <div className="text-[10px] text-neutral-500">Background removal runs automatically on upload.</div>
           </div>
@@ -1067,21 +1085,27 @@ export default function DjBrandingPanel({
             {logoList.map((src, idx) => (
               <div
                 key={`kit-logo-${idx}`}
-                className={djSubCardClass}
+                className={editorUploadHolderClass}
               >
-                <div className="text-[10px] uppercase tracking-wide text-neutral-400">Logo {idx + 1}</div>
-                <div className="h-20 border border-neutral-700 bg-neutral-950 grid place-items-center overflow-hidden">
+                <div className="text-[12px] font-medium text-white">Logo {idx + 1}</div>
+                <div className={editorUploadPreviewClass}>
                   {src ? (
-                    <img src={src} alt="" className="h-full w-full object-contain" draggable={false} />
+                    <img src={src} alt="" className="h-full w-full object-contain bg-white/5" draggable={false} />
                   ) : (
-                    <span className="text-[10px] text-neutral-500">Empty</span>
+                    <div className={editorEmptyStateClass}>
+                      <div className="text-[11px] leading-6 text-neutral-400">Upload a saved brand logo.</div>
+                    </div>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                  <Chip small onClick={() => logoInputs.current[idx]?.click()}>Upload</Chip>
-                  <Chip small onClick={() => onUseBrandLogo(idx)} disabled={!src}>Use</Chip>
-                  <Chip small onClick={() => setLogoAt(idx, '')} disabled={!src}>Clear</Chip>
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" className={editorUploadActionClass} onClick={() => logoInputs.current[idx]?.click()}>
+                    Upload
+                  </button>
+                  <button type="button" className={editorUploadPlaceClass} onClick={() => onUseBrandLogo(idx)} disabled={!src}>
+                    Place
+                  </button>
                 </div>
+                <button type="button" className={`${editorUploadClearClass} w-full`} onClick={() => setLogoAt(idx, '')} disabled={!src}>Clear</button>
                 <input
                   ref={(el) => {
                     logoInputs.current[idx] = el;
@@ -1098,23 +1122,33 @@ export default function DjBrandingPanel({
             ))}
           </div>
 
-          <div className={djSubCardClass}>
-            <div className="text-[10px] uppercase tracking-wide text-neutral-400">Saved Main Face</div>
-            <div className="h-24 border border-neutral-700 bg-neutral-950 grid place-items-center overflow-hidden">
+          <div className={editorUploadHolderClass}>
+            <div className="text-[12px] font-medium text-white">Saved Main Face</div>
+            <div className={editorUploadPreviewClass}>
               {savedFace ? (
-                <img src={savedFace} alt="" className="h-full w-full object-contain" draggable={false} />
+                <img src={savedFace} alt="" className="h-full w-full object-contain bg-white/5" draggable={false} />
               ) : (
-                <span className="text-[10px] text-neutral-500">No saved Main Face yet</span>
+                <div className={editorEmptyStateClass}>
+                  <div className="text-[11px] leading-6 text-neutral-400">Capture or upload a saved main face.</div>
+                </div>
               )}
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              <Chip small onClick={onCaptureCurrentFace} disabled={!currentPortraitUrl}>
-                Capture Current Face
-              </Chip>
-              <Chip small onClick={onUseBrandFace} disabled={!kit.primaryPortrait}>
-                Use Saved Face
-              </Chip>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" className={editorUploadActionClass} onClick={onCaptureCurrentFace} disabled={!currentPortraitUrl}>
+                Upload
+              </button>
+              <button type="button" className={editorUploadPlaceClass} onClick={onUseBrandFace} disabled={!kit.primaryPortrait}>
+                Place
+              </button>
             </div>
+            <button
+              type="button"
+              className={`${editorUploadClearClass} w-full`}
+              onClick={() => onKitChange({ ...kit, primaryPortrait: null })}
+              disabled={!kit.primaryPortrait}
+            >
+              Clear
+            </button>
             <div className="text-[10px] text-neutral-500">
               This is the Main Face stored in the active brand and used by Apply Active Brand.
               {savedFace

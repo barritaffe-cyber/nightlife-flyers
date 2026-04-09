@@ -469,17 +469,6 @@ setSelectedEmojiId: (id: string | null) => set({ selectedEmojiId: id }),
  */
 setSelectedPanel: (panel: string | null) =>
   set((state: any) => {
-    // 🧨 LOG ONLY WHEN SOMETHING TRIES TO CLOSE THE PANEL
-    if (panel === null) {
-      console.log("🧨 PANEL CLOSE requested", {
-        from: state.selectedPanel,
-        moveTarget: state.moveTarget,
-        selectedPortraitId: state.selectedPortraitId,
-        selectedEmojiId: state.selectedEmojiId,
-        stack: new Error("panel close stack").stack,
-      });
-    }
-
     const next: any = { selectedPanel: panel };
 
     // ✅ If switching away from emoji panel, unlock by clearing selection
@@ -783,10 +772,6 @@ setSessionValue: (fmt, key, value) =>
 
     if (key === "bgPosX" || key === "bgPosY" || key === "bgScale") {
       if (typeof value !== "number" || !Number.isFinite(value)) {
-        console.warn(
-          `⚠️ Blocked corrupt data for ${fmt}.${String(key)}:`,
-          value
-        );
         safeValue = key === "bgScale" ? 1 : 50;
       }
     }
