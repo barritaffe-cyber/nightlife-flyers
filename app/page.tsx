@@ -8,7 +8,7 @@ import StartupTemplates, { type StartupBuildPayload, type StartupSelectPayload }
 import * as htmlToImage from 'html-to-image';
 import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import Link from 'next/link';
-import { createPortal } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import { useShallow } from "zustand/react/shallow";
 import { TEMPLATE_GALLERY } from '../lib/templates';
 import type { TemplateSpec } from '../lib/templates';
@@ -7877,6 +7877,14 @@ const selectedPortraitLighting = React.useMemo(
   () => normalizeMainFaceLighting((selectedPortrait as any)?.lighting),
   [selectedPortrait]
 );
+const selectedPortraitFilterPreset = React.useMemo(
+  () => normalizeMainFaceFilterPreset((selectedPortrait as any)?.filterPreset),
+  [selectedPortrait]
+);
+const selectedPortraitFilterStrength = React.useMemo(
+  () => clamp01(Number((selectedPortrait as any)?.filterStrength ?? 0.85)),
+  [selectedPortrait]
+);
 
 React.useEffect(() => {
   setPortraitLightingAdvancedOpen(false);
@@ -11628,6 +11636,28 @@ const mobileFloatSticky = isMobileView && format === "story";
       lighting: { ...DEFAULT_MAIN_FACE_LIGHTING },
     });
   }, [format, selectedPortrait, selectedPortraitIsAsset, updatePortrait]);
+
+  const updateSelectedPortraitFilter = React.useCallback(
+    (patch: { preset?: MainFaceFilterPreset; strength?: number }) => {
+      if (!selectedPortrait?.id || selectedPortraitIsAsset) return;
+      updatePortrait(format, selectedPortrait.id, {
+        ...(patch.preset ? { filterPreset: normalizeMainFaceFilterPreset(patch.preset) } : {}),
+        ...(typeof patch.strength === "number"
+          ? { filterStrength: clamp01(Number(patch.strength)) }
+          : {}),
+      });
+    },
+    [format, selectedPortrait, selectedPortraitIsAsset, updatePortrait]
+  );
+
+  const updateSelectedPortraitFilterRaf = useRafThrottle(
+    React.useCallback(
+      (patch: { preset?: MainFaceFilterPreset; strength?: number }) => {
+        updateSelectedPortraitFilter(patch);
+      },
+      [updateSelectedPortraitFilter]
+    )
+  );
 
   const autoAnalyzeSelectedPortraitLighting = React.useCallback(async () => {
     if (!selectedPortrait?.id || selectedPortraitIsAsset) {
@@ -16193,35 +16223,44 @@ const portraitCanvas = React.useMemo(() => {
     const shapeHeight = Math.max(12, Math.round(160 * shapeScale));
     const portraitLighting = normalizeMainFaceLighting((p as any).lighting);
     const showSubjectLighting = !isShapeGraphic && !isPortraitAsset && portraitLighting.enabled;
-    const mainFaceFilterPreset = isBrandFace
-      ? normalizeMainFaceFilterPreset((p as any).mainFaceFilterPreset)
-      : "none";
-    const mainFaceFilterStrength = clamp01(Number((p as any).mainFaceFilterStrength ?? 0.85));
+    const portraitFilterPreset =
+      !isShapeGraphic && !isPortraitAsset
+        ? isBrandFace
+          ? normalizeMainFaceFilterPreset((p as any).mainFaceFilterPreset)
+          : normalizeMainFaceFilterPreset((p as any).filterPreset)
+        : "none";
+    const portraitFilterStrength = clamp01(
+      Number(
+        isBrandFace
+          ? (p as any).mainFaceFilterStrength ?? 0.85
+          : (p as any).filterStrength ?? 0.85
+      )
+    );
     const mergeCssFilters = (...parts: Array<string | null | undefined>) =>
       parts.filter((part) => !!part && part !== "none").join(" ") || "none";
-    const showPosterOverlay = isBrandFace && mainFaceFilterPreset === "poster";
-    const showPopOverlay = isBrandFace && mainFaceFilterPreset === "pop";
+    const showPosterOverlay = portraitFilterPreset === "poster";
+    const showPopOverlay = portraitFilterPreset === "pop";
     const mainFaceToneFilter =
-      !isBrandFace || mainFaceFilterPreset === "none"
+      portraitFilterPreset === "none"
         ? ""
-        : mainFaceFilterPreset === "mono"
-        ? `grayscale(${(0.72 + mainFaceFilterStrength * 0.28).toFixed(3)}) contrast(${(1.08 + mainFaceFilterStrength * 0.52).toFixed(3)}) brightness(${(0.98 + mainFaceFilterStrength * 0.06).toFixed(3)})`
-        : mainFaceFilterPreset === "contrast"
-        ? `contrast(${(1.12 + mainFaceFilterStrength * 0.88).toFixed(3)}) saturate(${(1.04 + mainFaceFilterStrength * 0.28).toFixed(3)}) brightness(${(1 - mainFaceFilterStrength * 0.06).toFixed(3)})`
-        : mainFaceFilterPreset === "halftone"
-        ? `grayscale(1) contrast(${(1.35 + mainFaceFilterStrength * 1.4).toFixed(3)}) brightness(${(0.96 + mainFaceFilterStrength * 0.08).toFixed(3)})`
-        : mainFaceFilterPreset === "poster"
-        ? `grayscale(${(0.42 + mainFaceFilterStrength * 0.46).toFixed(3)}) contrast(${(1.18 + mainFaceFilterStrength * 0.72).toFixed(3)}) brightness(${(1.02 - mainFaceFilterStrength * 0.08).toFixed(3)}) saturate(${(0.9 - mainFaceFilterStrength * 0.38).toFixed(3)})`
-        : `grayscale(${(0.58 + mainFaceFilterStrength * 0.34).toFixed(3)}) contrast(${(1.32 + mainFaceFilterStrength * 0.86).toFixed(3)}) brightness(${(1.01 - mainFaceFilterStrength * 0.05).toFixed(3)}) saturate(${(0.72 - mainFaceFilterStrength * 0.34).toFixed(3)})`;
-    const posterOverlayFilter = `url(#mainface-posterize) contrast(${(1.04 + mainFaceFilterStrength * 0.24).toFixed(3)}) saturate(${(1.08 + mainFaceFilterStrength * 0.22).toFixed(3)})`;
-    const posterOverlayOpacity = 0.72 + mainFaceFilterStrength * 0.28;
-    const popOverlayFilter = `contrast(${(1.9 + mainFaceFilterStrength * 1.4).toFixed(3)}) saturate(${(0.3 + mainFaceFilterStrength * 0.18).toFixed(3)}) brightness(${(1.02 + mainFaceFilterStrength * 0.04).toFixed(3)}) blur(${(0.3 + mainFaceFilterStrength * 0.9).toFixed(2)}px)`;
-    const popShadowFilter = `contrast(${(2.4 + mainFaceFilterStrength * 1.6).toFixed(3)}) brightness(${(0.52 + mainFaceFilterStrength * 0.08).toFixed(3)}) saturate(0.12)`;
-    const popHighlightFilter = `contrast(${(1.7 + mainFaceFilterStrength * 1.1).toFixed(3)}) brightness(${(1.18 + mainFaceFilterStrength * 0.16).toFixed(3)}) saturate(${(0.22 + mainFaceFilterStrength * 0.12).toFixed(3)})`;
-    const popOverlayOpacity = 0.9 + mainFaceFilterStrength * 0.08;
-    const popShadowOpacity = 0.54 + mainFaceFilterStrength * 0.18;
-    const popHighlightOpacity = 0.42 + mainFaceFilterStrength * 0.16;
-    const halftoneDotSize = Math.max(4, Math.round(12 - mainFaceFilterStrength * 5));
+        : portraitFilterPreset === "mono"
+        ? `grayscale(${(0.72 + portraitFilterStrength * 0.28).toFixed(3)}) contrast(${(1.08 + portraitFilterStrength * 0.52).toFixed(3)}) brightness(${(0.98 + portraitFilterStrength * 0.06).toFixed(3)})`
+        : portraitFilterPreset === "contrast"
+        ? `contrast(${(1.12 + portraitFilterStrength * 0.88).toFixed(3)}) saturate(${(1.04 + portraitFilterStrength * 0.28).toFixed(3)}) brightness(${(1 - portraitFilterStrength * 0.06).toFixed(3)})`
+        : portraitFilterPreset === "halftone"
+        ? `grayscale(1) contrast(${(1.35 + portraitFilterStrength * 1.4).toFixed(3)}) brightness(${(0.96 + portraitFilterStrength * 0.08).toFixed(3)})`
+        : portraitFilterPreset === "poster"
+        ? `grayscale(${(0.42 + portraitFilterStrength * 0.46).toFixed(3)}) contrast(${(1.18 + portraitFilterStrength * 0.72).toFixed(3)}) brightness(${(1.02 - portraitFilterStrength * 0.08).toFixed(3)}) saturate(${(0.9 - portraitFilterStrength * 0.38).toFixed(3)})`
+        : `grayscale(${(0.58 + portraitFilterStrength * 0.34).toFixed(3)}) contrast(${(1.32 + portraitFilterStrength * 0.86).toFixed(3)}) brightness(${(1.01 - portraitFilterStrength * 0.05).toFixed(3)}) saturate(${(0.72 - portraitFilterStrength * 0.34).toFixed(3)})`;
+    const posterOverlayFilter = `url(#mainface-posterize) contrast(${(1.04 + portraitFilterStrength * 0.24).toFixed(3)}) saturate(${(1.08 + portraitFilterStrength * 0.22).toFixed(3)})`;
+    const posterOverlayOpacity = 0.72 + portraitFilterStrength * 0.28;
+    const popOverlayFilter = `contrast(${(1.9 + portraitFilterStrength * 1.4).toFixed(3)}) saturate(${(0.3 + portraitFilterStrength * 0.18).toFixed(3)}) brightness(${(1.02 + portraitFilterStrength * 0.04).toFixed(3)}) blur(${(0.3 + portraitFilterStrength * 0.9).toFixed(2)}px)`;
+    const popShadowFilter = `contrast(${(2.4 + portraitFilterStrength * 1.6).toFixed(3)}) brightness(${(0.52 + portraitFilterStrength * 0.08).toFixed(3)}) saturate(0.12)`;
+    const popHighlightFilter = `contrast(${(1.7 + portraitFilterStrength * 1.1).toFixed(3)}) brightness(${(1.18 + portraitFilterStrength * 0.16).toFixed(3)}) saturate(${(0.22 + portraitFilterStrength * 0.12).toFixed(3)})`;
+    const popOverlayOpacity = 0.9 + portraitFilterStrength * 0.08;
+    const popShadowOpacity = 0.54 + portraitFilterStrength * 0.18;
+    const popHighlightOpacity = 0.42 + portraitFilterStrength * 0.16;
+    const halftoneDotSize = Math.max(4, Math.round(12 - portraitFilterStrength * 5));
     const halftoneMask =
       "radial-gradient(circle at center, rgba(0,0,0,0.98) 0 34%, rgba(0,0,0,0) 43%)";
     const lightColor = hexToRgb(portraitLighting.highlightColor);
@@ -16517,7 +16556,7 @@ const portraitCanvas = React.useMemo(() => {
                   />
                 </>
               )}
-              {isBrandFace && mainFaceFilterPreset === "halftone" && (
+              {portraitFilterPreset === "halftone" && (
                 <>
                   <img
                     src={p.url}
@@ -19641,12 +19680,7 @@ const mobileVisibleCreatorPanels = React.useMemo(() => {
 
   design.add("template");
   design.add("template_backgrounds");
-
-  if (focusPanel && copyPanels.has(focusPanel)) {
-    design.add(focusPanel);
-  } else if (creatorWorkflowCurrent === "copy" && creatorWorkflowRecommendedTarget.tab === "design") {
-    design.add(creatorWorkflowRecommendedTarget.panel ?? "headline");
-  }
+  copyPanels.forEach((panel) => design.add(panel));
 
   if (focusPanel === "logo") design.add("logo");
 
@@ -19700,7 +19734,9 @@ const handleCreatorWorkflowPrimaryAction = React.useCallback(() => {
   openCreatorWorkflowStep(creatorFlowCurrentStep);
 }, [advanceCreatorWorkflow, creatorFlowCurrentStep, creatorWorkflowCurrent, openCreatorWorkflowStep, uiMode]);
 const openWorkflowHelp = React.useCallback(() => {
-  setWorkflowHelpOpen(true);
+  flushSync(() => {
+    setWorkflowHelpOpen(true);
+  });
 }, []);
 const switchWorkflowStudioMode = React.useCallback(
   (next: "creator" | "dj") => {
@@ -22108,7 +22144,6 @@ return (
                 type="button"
                 data-mobile-float-lock="true"
                 onClick={openWorkflowHelp}
-                onPointerUp={openWorkflowHelp}
                 className={clsx(
                   "shrink-0 whitespace-nowrap border px-2 py-[3px] text-[11px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400",
                   workflowHelpOpen
@@ -24364,17 +24399,15 @@ style={{ top: STICKY_TOP }}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            runTransitionAfterNextPaint(() => {
-              setExp(mode.set.exp);
-              setContrast(mode.set.con);
-              setSaturation(mode.set.sat);
-              setWarmth(mode.set.warm);
-              setTint(mode.set.tint);
-              setGrain(mode.set.grain);
-              setGamma(mode.set.gamma);
-              setFilmGrade(mode.set.film);
-              setVibrance(mode.set.vib);
-            });
+            setExp(mode.set.exp);
+            setContrast(mode.set.con);
+            setSaturation(mode.set.sat);
+            setWarmth(mode.set.warm);
+            setTint(mode.set.tint);
+            setGrain(mode.set.grain);
+            setGamma(mode.set.gamma);
+            setFilmGrade(mode.set.film);
+            setVibrance(mode.set.vib);
           }}
         >
           {mode.label}
@@ -26581,6 +26614,42 @@ style={{ top: STICKY_TOP }}
                 </Chip>
               ))}
             </div>
+
+            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+              {([
+                ["none", "Clean"],
+                ["mono", "Mono"],
+                ["contrast", "Punch"],
+                ["halftone", "Halftone"],
+                ["poster", "Poster"],
+                ["pop", "Pop"],
+              ] as const).map(([preset, label]) => (
+                <Chip
+                  key={preset}
+                  small
+                  className="!w-full !rounded-none"
+                  active={selectedPortraitFilterPreset === preset}
+                  onClick={() => updateSelectedPortraitFilter({ preset })}
+                  disabled={!selectedPortraitLighting.enabled}
+                >
+                  {label}
+                </Chip>
+              ))}
+            </div>
+
+            <InlineSliderInput
+              label="Filter Strength"
+              value={selectedPortraitFilterStrength}
+              min={0}
+              max={1}
+              step={0.01}
+              onChange={(next) => updateSelectedPortraitFilterRaf({ strength: next })}
+              displayScale={100}
+              precision={0}
+              suffix="%"
+              rangeClassName="flex-1 accent-fuchsia-400"
+              disabled={!selectedPortraitLighting.enabled || selectedPortraitFilterPreset === "none"}
+            />
           </div>
 
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
@@ -26702,6 +26771,12 @@ style={{ top: STICKY_TOP }}
           title="Project"
           storageKey="p:designs"
           defaultOpen={false}
+          isOpen={selectedPanel === "project"}
+          onToggle={() =>
+            useFlyerState
+              .getState()
+              .setSelectedPanel(selectedPanel === "project" ? null : "project")
+          }
           right={
             <button
               type="button"
@@ -26800,7 +26875,7 @@ style={{ top: STICKY_TOP }}
 {/* UI: PROJECT PORTABLE SAVE (END) */}
 
 {workflowHelpOpen && (!isDjStartupMode ? (
-  <div className="fixed inset-0 z-[5100] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+  <div className="fixed inset-0 z-[5100] flex items-center justify-center bg-black/88 p-4">
     <div className="w-full max-w-4xl overflow-hidden border border-cyan-400/30 bg-[#0a0d12] shadow-[0_30px_80px_rgba(0,0,0,.6)]">
       <div className="border-b border-white/10 bg-neutral-950/90 px-5 py-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -27019,7 +27094,7 @@ style={{ top: STICKY_TOP }}
     </div>
   </div>
 ) : (
-  <div className="fixed inset-0 z-[5100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+  <div className="fixed inset-0 z-[5100] bg-black/88 flex items-center justify-center p-4">
     <div className="w-full max-w-3xl overflow-hidden border border-cyan-400/30 bg-[#0a0d12] shadow-[0_30px_80px_rgba(0,0,0,.6)]">
       <div className="border-b border-white/10 bg-neutral-950/90 px-5 py-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
