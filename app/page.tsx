@@ -41,6 +41,9 @@ import {
   editorHelperTextClass,
   editorItemCardActiveClass,
   editorItemCardClass,
+  editorEmptyStateBodyClass,
+  editorEmptyStateClass,
+  editorEmptyStateTitleClass,
   editorPanelActiveClass,
   editorPanelTitleActiveClass,
   editorPrimaryButtonClass,
@@ -16085,6 +16088,14 @@ const portraitCanvas = React.useMemo(() => {
       store.setMoveTarget(target);
     }
     focusCanvasSelectionHome(panel);
+
+    if (!isBrandFace && !isLogo && !isFlare && !isSticker) {
+      window.setTimeout(() => {
+        document
+          .getElementById("portrait-selected-controls")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 80);
+    }
   };
 
   const canDrag = (item: any) => {
@@ -26074,7 +26085,14 @@ style={{ top: STICKY_TOP }}
     </div>
 
     {/* Header Controls */}
-    <div className="mb-2 flex items-center justify-end gap-2 text-[11px]">
+    <div className="mb-3 flex items-center justify-between gap-3">
+      <div>
+        <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-300">Portrait Library</div>
+        <div className="mt-1 text-[12px] text-white/85">
+          Upload cutouts here, then place the one you want on the canvas.
+        </div>
+      </div>
+      <div className="flex items-center gap-2 text-[11px]">
       <span>Portrait frame</span>
       <Chip
         small
@@ -26084,10 +26102,11 @@ style={{ top: STICKY_TOP }}
       >
         {enablePortraitOverlay ? "On" : "Off"}
       </Chip>
+      </div>
     </div>
 
     {/* Slots Grid */}
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+    <div className="grid grid-cols-1 gap-3">
       {[0, 1, 2, 3].map((i) => {
         const src = portraitSlots[i] || "";
 
@@ -26103,14 +26122,62 @@ style={{ top: STICKY_TOP }}
         return (
           <div
             key={i}
-            className={
+            className={clsx(
+              "rounded-xl border p-3 space-y-3",
               onCanvas && selectedPortraitId === onCanvas.id
-                ? editorItemCardActiveClass
-                : editorItemCardClass
-            }
+                ? "border-cyan-300/55 bg-cyan-400/10 shadow-[0_0_0_1px_rgba(34,211,238,0.12)]"
+                : "border-white/10 bg-white/[0.03]"
+            )}
           >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-[12px] font-medium text-white">Portrait Slot {i + 1}</div>
+                <div className="mt-1 text-[11px] text-neutral-400">
+                  {src ? "Ready to place" : "Empty slot"}
+                </div>
+              </div>
+              <div className="shrink-0">
+                {isProcessing ? (
+                  <span className="rounded-full border border-indigo-400/40 bg-indigo-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-indigo-200">
+                    Processing
+                  </span>
+                ) : onCanvas && selectedPortraitId === onCanvas.id ? (
+                  <span className="rounded-full border border-emerald-400/35 bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-200">
+                    Selected
+                  </span>
+                ) : onCanvas ? (
+                  <span className="rounded-full border border-cyan-400/35 bg-cyan-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-200">
+                    Placed
+                  </span>
+                ) : (
+                  <span className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-1 text-[10px] font-semibold text-neutral-400">
+                    Library
+                  </span>
+                )}
+              </div>
+            </div>
+
             {/* Thumbnail Area */}
-            <div className={`h-24 grid place-items-center relative ${editorThumbClass}`}>
+            <button
+              type="button"
+              className={clsx(
+                `h-28 w-full grid place-items-center relative ${editorThumbClass}`,
+                onCanvas && !isProcessing ? "cursor-pointer hover:border-cyan-300/45" : "cursor-default"
+              )}
+              disabled={!onCanvas || isProcessing}
+              onClick={() => {
+                if (!onCanvas) return;
+                useFlyerState.getState().setSelectedPortraitId(onCanvas.id);
+                useFlyerState.getState().setSelectedPanel("portrait");
+                useFlyerState.getState().setMoveTarget("portrait");
+                window.setTimeout(() => {
+                  document
+                    .getElementById("portrait-selected-controls")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }, 80);
+              }}
+              title={onCanvas ? "Select portrait and jump to controls" : undefined}
+            >
               {/* 🔥 LOADING OVERLAY */}
               {isProcessing ? (
                 <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/80">
@@ -26127,24 +26194,23 @@ style={{ top: STICKY_TOP }}
                   draggable={false}
                 />
               ) : (
-                <div className="text-[11px] text-neutral-500">Empty slot {i + 1}</div>
+                <div className="grid h-full w-full place-items-center rounded-lg border border-dashed border-white/10 bg-white/[0.02] px-4 py-4 text-center">
+                  <div>
+                    <div className="text-[12px] font-medium text-white">No Portrait Yet</div>
+                    <div className="mt-1 text-[11px] leading-5 text-neutral-400">Upload a cutout portrait to use this slot.</div>
+                  </div>
+                </div>
               )}
-
-              {/* Active Indicator Badge (Hide if processing) */}
-              {onCanvas && !isProcessing && (
-                <div
-                  className="absolute top-1 right-1 w-2 h-2 rounded-full bg-green-500 shadow-[0_0_5px_#22c55e]"
-                  title="Active on canvas"
-                />
-              )}
-            </div>
+            </button>
 
             {/* Row 1: Main Actions */}
-            <div className="mt-2 grid grid-cols-2 gap-1 sm:grid-cols-3">
+            <div
+              className={isMobileView ? "flex flex-col gap-2" : "grid grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,1fr)] gap-2"}
+            >
               {/* ✅ FIXED UPLOAD BUTTON */}
               <button
                 type="button"
-                className={`${editorSecondaryButtonClass} min-h-[40px] px-2 py-1.5 text-[10px] leading-tight`}
+                className="min-h-[42px] rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2 text-[11px] font-medium leading-tight text-white transition hover:bg-white/[0.1] disabled:cursor-not-allowed disabled:opacity-50 whitespace-normal text-center"
                 title={src ? "Replace image" : "Upload new image"}
                 disabled={isProcessing}
                 onClick={() => {
@@ -26190,7 +26256,7 @@ style={{ top: STICKY_TOP }}
               {/* Place */}
               <button
                 type="button"
-                className={`col-span-2 min-h-[40px] px-2 py-1.5 text-[10px] leading-tight sm:col-span-1 ${editorPrimaryButtonClass}`}
+                className="min-h-[42px] rounded-lg border border-white/15 bg-white px-3 py-2 text-[11px] font-semibold leading-tight text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50 whitespace-normal text-center"
                 disabled={!src || isProcessing}
                 title="Add to canvas"
                 onClick={(e) => {
@@ -26241,7 +26307,7 @@ style={{ top: STICKY_TOP }}
               {/* Clear */}
               <button
                 type="button"
-                className={`${editorSecondaryButtonClass} min-h-[40px] px-2 py-1.5 text-[10px] leading-tight`}
+                className="min-h-[42px] rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2 text-[11px] font-medium leading-tight text-white transition hover:bg-white/[0.1] disabled:cursor-not-allowed disabled:opacity-50 whitespace-normal text-center"
                 disabled={!src || isProcessing}
                 title="Clear slot & remove from canvas"
                 onClick={() => {
@@ -26272,61 +26338,93 @@ style={{ top: STICKY_TOP }}
               </button>
             </div>
 
-            {/* Row 2: Canvas Controls */}
-            {onCanvas && !isProcessing && (
-              <div className="mt-1 grid grid-cols-1 gap-1 pt-1 border-t border-white/5 sm:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    useFlyerState
-                      .getState()
-                      .updatePortrait(format, onCanvas.id, { locked: !onCanvas.locked });
-                    useFlyerState.getState().setSelectedPortraitId(onCanvas.id);
-                  }}
-                  className={`min-h-[38px] text-[10px] py-1.5 rounded-md border flex items-center justify-center gap-1 ${
-                    onCanvas.locked
-                      ? "bg-indigo-900/40 border-indigo-500/50 text-indigo-300"
-                      : "bg-neutral-800 border-neutral-600 text-neutral-400 hover:text-white"
-                  }`}
-                  title={onCanvas.locked ? "Unlock Position" : "Lock Position"}
-                >
-                  {onCanvas.locked ? "🔒 Locked" : "🔓 Lock"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => useFlyerState.getState().removePortrait(format, onCanvas.id)}
-                  className="min-h-[38px] text-[10px] py-1.5 rounded-md bg-red-900/20 border border-red-900/30 text-red-400 hover:bg-red-900/40 hover:text-red-300"
-                  title="Remove from canvas"
-                >
-                  Remove
-                </button>
-              </div>
-            )}
-
-            {/* Push to Merge Portrait (Magic Blend) */}
-            {src && !isProcessing && (
-              !isStarterPlan && (
-              <button
-                type="button"
-                className={`mt-2 w-full min-h-[40px] ${editorSecondaryButtonClass} px-2 py-2 text-[10px] leading-tight tracking-[0.08em] sm:whitespace-nowrap sm:tracking-[0.12em]`}
-                onClick={async () => {
-                  const cutoutSrc = src.startsWith("blob:")
-                    ? await blobUrlToDataUrl(src)
-                    : src;
-                  setBlendSubject(cutoutSrc);
-                  setBlendSubjectCutout(cutoutSrc);
-                  setSelectedPanel("magic_blend");
-                  useFlyerState.getState().setSelectedPanel("magic_blend");
-                }}
-              >
-                {isMobileView ? "Send To Blend" : "Send To Portrait Blend"}
-              </button>
-              )
-            )}
           </div>
         );
       })}
+    </div>
+
+    <div id="portrait-selected-controls" className="mt-3 rounded-xl border border-white/10 bg-black/25 p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-200">
+            Selected Portrait
+          </div>
+          <div className="mt-1 text-[11px] text-neutral-500">
+            {!selectedPortraitId
+              ? "Place and select a portrait on the canvas to adjust it here."
+              : selectedPortraitIsAsset
+              ? "The current selection is an asset, not a regular cutout portrait."
+              : "Refine the portrait that is currently selected on the canvas."}
+          </div>
+        </div>
+        {selectedPortraitId && !selectedPortraitIsAsset && selectedPortrait && (
+          <span className="rounded-full border border-cyan-400/35 bg-cyan-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-200">
+            Live
+          </span>
+        )}
+      </div>
+
+      {!selectedPortraitId ? (
+        <div className="mt-3 text-[12px] italic text-neutral-500">
+          Nothing selected yet.
+        </div>
+      ) : selectedPortraitIsAsset || !selectedPortrait ? (
+        <div className="mt-3 text-[12px] italic text-neutral-500">
+          Select a regular cutout portrait to edit transform and lighting.
+        </div>
+      ) : (
+        <div className="mt-3 space-y-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() =>
+                useFlyerState.getState().updatePortrait(format, selectedPortrait.id, {
+                  locked: !selectedPortrait.locked,
+                })
+              }
+              className={`min-h-[42px] rounded-lg border px-3 py-2 text-[11px] font-medium transition ${
+                selectedPortrait.locked
+                  ? "bg-indigo-900/40 border-indigo-500/50 text-indigo-300"
+                  : "bg-neutral-800 border-neutral-600 text-neutral-200 hover:bg-neutral-700"
+              }`}
+            >
+              {selectedPortrait.locked ? "Unlock Portrait" : "Lock Portrait"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                useFlyerState.getState().removePortrait(format, selectedPortrait.id);
+                useFlyerState.getState().setSelectedPortraitId(null);
+              }}
+              className="min-h-[42px] rounded-lg border border-red-900/30 bg-red-900/20 px-3 py-2 text-[11px] font-medium text-red-300 transition hover:bg-red-900/30"
+            >
+              Remove From Canvas
+            </button>
+          </div>
+
+          {!isStarterPlan && (
+            <button
+              type="button"
+              className={clsx(
+                "w-full min-h-[42px] rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2 text-[11px] font-medium leading-tight text-white transition hover:bg-white/[0.1] text-center",
+                isMobileView ? "whitespace-normal" : "whitespace-nowrap"
+              )}
+              onClick={async () => {
+                const cutoutSrc = selectedPortrait.url.startsWith("blob:")
+                  ? await blobUrlToDataUrl(selectedPortrait.url)
+                  : selectedPortrait.url;
+                setBlendSubject(cutoutSrc);
+                setBlendSubjectCutout(cutoutSrc);
+                setSelectedPanel("magic_blend");
+                useFlyerState.getState().setSelectedPanel("magic_blend");
+              }}
+            >
+              {isMobileView ? "Send Selected Portrait To Blend" : "Send Selected Portrait To Portrait Blend"}
+            </button>
+          )}
+        </div>
+      )}
     </div>
 
     {/* === TRANSFORM CONTROLS (Scale / Lock / Delete) === */}
