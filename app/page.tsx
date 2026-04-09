@@ -724,6 +724,20 @@ function clsx(...a: (string | false | null | undefined)[]) {
   return a.filter(Boolean).join(' ');
 }
 
+function runAfterNextPaint(fn: () => void) {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      fn();
+    });
+  });
+}
+
+function runTransitionAfterNextPaint(fn: () => void) {
+  runAfterNextPaint(() => {
+    React.startTransition(fn);
+  });
+}
+
 function buildPremiumTextShadow(strength: number = 1, glow: number = 0) {
   const s = Math.max(0, Number(strength) || 0);
   const g = Math.max(0, Number(glow) || 0);
@@ -1213,6 +1227,7 @@ const TemplateGalleryPanel = React.memo(({
   const deferredQ = React.useDeferredValue(q);
   const [tag, setTag] = React.useState<string>('All');
   const [visibleCount, setVisibleCount] = React.useState(INITIAL_VISIBLE_TEMPLATES);
+  const [pendingTemplateId, setPendingTemplateId] = React.useState<string | null>(null);
 
   const itemsWithTags = React.useMemo(
     () => items.map((t) => ({ ...t, normalizedTags: canonicalizeTemplateTags(t.tags) })),
@@ -1301,11 +1316,19 @@ const TemplateGalleryPanel = React.memo(({
               <button
                 type="button"
                 className="text-[12px] px-2 py-1 rounded-md border border-indigo-400/40 bg-indigo-600/20 hover:bg-indigo-600/30 focus-ring"
+                disabled={pendingTemplateId === t.id}
                 onClick={() => {
-                  onApply(t, { targetFormat: format });
+                  setPendingTemplateId(t.id);
+                  runAfterNextPaint(() => {
+                    try {
+                      onApply(t, { targetFormat: format });
+                    } finally {
+                      setPendingTemplateId(null);
+                    }
+                  });
                 }}
               >
-                Apply
+                {pendingTemplateId === t.id ? "Applying..." : "Apply"}
               </button>
             </div>
           </div>
@@ -1347,6 +1370,7 @@ const BackgroundGalleryPanel = React.memo(({
 }) => {
   const INITIAL_VISIBLE_BACKGROUNDS = 4;
   const [visibleCount, setVisibleCount] = React.useState(INITIAL_VISIBLE_BACKGROUNDS);
+  const [pendingBackgroundId, setPendingBackgroundId] = React.useState<string | null>(null);
   const visible = React.useMemo(
     () => items.slice(0, visibleCount),
     [items, visibleCount]
@@ -1381,9 +1405,19 @@ const BackgroundGalleryPanel = React.memo(({
               <button
                 type="button"
                 className="rounded-md border border-indigo-400/40 bg-indigo-600/20 px-2 py-1 text-[12px] hover:bg-indigo-600/30 focus-ring"
-                onClick={() => onApply(background.src)}
+                disabled={pendingBackgroundId === background.id}
+                onClick={() => {
+                  setPendingBackgroundId(background.id);
+                  runAfterNextPaint(() => {
+                    try {
+                      onApply(background.src);
+                    } finally {
+                      setPendingBackgroundId(null);
+                    }
+                  });
+                }}
               >
-                Apply
+                {pendingBackgroundId === background.id ? "Applying..." : "Apply"}
               </button>
             </div>
           </div>
@@ -11984,6 +12018,12 @@ const mobileFloatSticky = isMobileView && format === "story";
     }
   }, [artRef, canvasSize.h, canvasSize.w, exportScale, exportType, exportStatus, isStarterPlan]);
 
+  const triggerExportStart = React.useCallback(() => {
+    runAfterNextPaint(() => {
+      void handleExportStart();
+    });
+  }, [handleExportStart]);
+
   const buildResumeSnapshot = async () => {
     const historyJson = buildHistorySnapshot();
     const historyState = (() => {
@@ -21778,18 +21818,23 @@ return (
             <div className="flex justify-center gap-4">
               <button
                 onClick={() => {
-                  try {
-                    const saved = localStorage.getItem("nf:lastDesign");
-                    if (saved) importDesignJSON(saved);
-                    try { sessionStorage.removeItem("nf:resume"); } catch {}
-                    try { localStorage.removeItem("nf:resume"); } catch {}
-                    try { sessionStorage.removeItem(RESUME_META_KEY); } catch {}
-                    try { localStorage.removeItem(RESUME_META_KEY); } catch {}
-                    setHasSavedDesign(false);
-                  } catch {
-                    alert("Failed to load saved design.");
-                    setHasSavedDesign(false);
-                  }
+                  setLoadingStartup(true);
+                  runAfterNextPaint(() => {
+                    try {
+                      const saved = localStorage.getItem("nf:lastDesign");
+                      if (saved) importDesignJSON(saved);
+                      try { sessionStorage.removeItem("nf:resume"); } catch {}
+                      try { localStorage.removeItem("nf:resume"); } catch {}
+                      try { sessionStorage.removeItem(RESUME_META_KEY); } catch {}
+                      try { localStorage.removeItem(RESUME_META_KEY); } catch {}
+                      setHasSavedDesign(false);
+                    } catch {
+                      alert("Failed to load saved design.");
+                      setHasSavedDesign(false);
+                    } finally {
+                      setLoadingStartup(false);
+                    }
+                  });
                 }}
                 className="px-4 py-2 rounded bg-fuchsia-600 hover:bg-fuchsia-700 text-white"
               >
@@ -22127,7 +22172,7 @@ return (
                 <Chip
                   small
                   deferHeavy
-                  onClick={handleExportStart}
+                  onClick={triggerExportStart}
                   title="Preview and export"
                 >
                   <span className="whitespace-nowrap">
@@ -22409,7 +22454,7 @@ return (
               <button
                 type="button"
                 className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
-                onClick={handleExportStart}
+                onClick={triggerExportStart}
               >
                 Retry export
               </button>
@@ -22497,7 +22542,7 @@ return (
               <button
                 type="button"
                 className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
-                onClick={handleExportStart}
+                onClick={triggerExportStart}
               >
                 Re-render
               </button>
@@ -24222,6 +24267,7 @@ style={{ top: STICKY_TOP }}
     right={
   <Chip
     small
+    deferHeavy
     onClick={() => {
       setExp(1);
       setContrast(1.08);
@@ -24286,16 +24332,17 @@ style={{ top: STICKY_TOP }}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-
-            setExp(mode.set.exp);
-            setContrast(mode.set.con);
-            setSaturation(mode.set.sat);
-            setWarmth(mode.set.warm);
-            setTint(mode.set.tint);
-            setGrain(mode.set.grain);
-            setGamma(mode.set.gamma);
-            setFilmGrade(mode.set.film);
-            setVibrance(mode.set.vib);
+            runTransitionAfterNextPaint(() => {
+              setExp(mode.set.exp);
+              setContrast(mode.set.con);
+              setSaturation(mode.set.sat);
+              setWarmth(mode.set.warm);
+              setTint(mode.set.tint);
+              setGrain(mode.set.grain);
+              setGamma(mode.set.gamma);
+              setFilmGrade(mode.set.film);
+              setVibrance(mode.set.vib);
+            });
           }}
         >
           {mode.label}
