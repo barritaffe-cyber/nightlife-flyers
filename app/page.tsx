@@ -26087,7 +26087,7 @@ style={{ top: STICKY_TOP }}
     </div>
 
     {/* Slots Grid */}
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
       {[0, 1, 2, 3].map((i) => {
         const src = portraitSlots[i] || "";
 
@@ -26144,7 +26144,7 @@ style={{ top: STICKY_TOP }}
               {/* ✅ FIXED UPLOAD BUTTON */}
               <button
                 type="button"
-                className={`${editorSecondaryButtonClass} px-1.5 py-1.5 text-[10px] leading-tight`}
+                className={`${editorSecondaryButtonClass} min-h-[40px] px-2 py-1.5 text-[10px] leading-tight`}
                 title={src ? "Replace image" : "Upload new image"}
                 disabled={isProcessing}
                 onClick={() => {
@@ -26190,7 +26190,7 @@ style={{ top: STICKY_TOP }}
               {/* Place */}
               <button
                 type="button"
-                className={`col-span-2 px-1.5 py-1.5 text-[10px] leading-tight sm:col-span-1 ${editorPrimaryButtonClass}`}
+                className={`col-span-2 min-h-[40px] px-2 py-1.5 text-[10px] leading-tight sm:col-span-1 ${editorPrimaryButtonClass}`}
                 disabled={!src || isProcessing}
                 title="Add to canvas"
                 onClick={(e) => {
@@ -26241,7 +26241,7 @@ style={{ top: STICKY_TOP }}
               {/* Clear */}
               <button
                 type="button"
-                className={`${editorSecondaryButtonClass} px-1.5 py-1.5 text-[10px] leading-tight`}
+                className={`${editorSecondaryButtonClass} min-h-[40px] px-2 py-1.5 text-[10px] leading-tight`}
                 disabled={!src || isProcessing}
                 title="Clear slot & remove from canvas"
                 onClick={() => {
@@ -26283,7 +26283,7 @@ style={{ top: STICKY_TOP }}
                       .updatePortrait(format, onCanvas.id, { locked: !onCanvas.locked });
                     useFlyerState.getState().setSelectedPortraitId(onCanvas.id);
                   }}
-                  className={`text-[10px] py-1.5 rounded-md border flex items-center justify-center gap-1 ${
+                  className={`min-h-[38px] text-[10px] py-1.5 rounded-md border flex items-center justify-center gap-1 ${
                     onCanvas.locked
                       ? "bg-indigo-900/40 border-indigo-500/50 text-indigo-300"
                       : "bg-neutral-800 border-neutral-600 text-neutral-400 hover:text-white"
@@ -26296,7 +26296,7 @@ style={{ top: STICKY_TOP }}
                 <button
                   type="button"
                   onClick={() => useFlyerState.getState().removePortrait(format, onCanvas.id)}
-                  className="text-[10px] py-1.5 rounded-md bg-red-900/20 border border-red-900/30 text-red-400 hover:bg-red-900/40 hover:text-red-300"
+                  className="min-h-[38px] text-[10px] py-1.5 rounded-md bg-red-900/20 border border-red-900/30 text-red-400 hover:bg-red-900/40 hover:text-red-300"
                   title="Remove from canvas"
                 >
                   Remove
@@ -26309,7 +26309,7 @@ style={{ top: STICKY_TOP }}
               !isStarterPlan && (
               <button
                 type="button"
-                className={`mt-2 w-full ${editorSecondaryButtonClass} px-2 py-2 text-[10px] leading-tight tracking-[0.08em] sm:whitespace-nowrap sm:tracking-[0.12em]`}
+                className={`mt-2 w-full min-h-[40px] ${editorSecondaryButtonClass} px-2 py-2 text-[10px] leading-tight tracking-[0.08em] sm:whitespace-nowrap sm:tracking-[0.12em]`}
                 onClick={async () => {
                   const cutoutSrc = src.startsWith("blob:")
                     ? await blobUrlToDataUrl(src)
