@@ -43,6 +43,8 @@ export const FONT_FILE_MAP: Record<string, string> = {
   "Antone DEMO": "/fonts/antone-demo.ttf",
   "Antonio": "/fonts/Antonio.ttf",
   "Maglisto": "/fonts/Maglisto.ttf",
+  "Vartigo": "/fonts/Vartigo.ttf",
+  "Lacheyard Script": "/fonts/LacheyardScript_PERSONAL_USE_ONLY.otf",
   "Octin College Rg": "/fonts/Octin College Rg.ttf",
   "OpenScript": "/fonts/OpenScript.ttf"
 };

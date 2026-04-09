@@ -335,6 +335,20 @@ html, body {
   font-style: normal;
   font-display: swap;
 }
+@font-face {
+  font-family: "Vartigo";
+  src: url("/fonts/Vartigo.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Lacheyard Script";
+  src: url("/fonts/LacheyardScript_PERSONAL_USE_ONLY.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
 
 /* --- LEMON MILK (All requesting .ttf now) --- */
 @font-face {
