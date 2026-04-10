@@ -192,6 +192,8 @@ type Portrait = {
   lighting?: PortraitLighting;
   mainFaceFilterPreset?: MainFaceFilterPreset;
   mainFaceFilterStrength?: number;
+  filterPreset?: MainFaceFilterPreset;
+  filterStrength?: number;
 };
 
 //
