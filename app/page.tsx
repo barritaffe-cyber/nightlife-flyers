@@ -19280,6 +19280,16 @@ const creatorStepPanelClass = (step: "scene" | "copy" | "assets" | "finish") =>
     ? "opacity-45 transition-opacity"
     : "transition-opacity";
 
+const clearTransientCanvasFocus = React.useCallback(() => {
+  const store = useFlyerState.getState();
+  store.setMoveTarget(null);
+  setSelectedEmojiId(null);
+  setSelectedPortraitId(null);
+  setFloatingAssetVisible(false);
+  setFloatingBgVisible(false);
+  setFloatingEditorVisible(false);
+}, []);
+
 const openCreatorWorkflowTarget = React.useCallback(
   (
     panel: string | null,
@@ -19731,15 +19741,6 @@ const switchWorkflowStudioMode = React.useCallback(
   },
   [isStarterPlan, setSelectedPanel]
 );
-const clearTransientCanvasFocus = React.useCallback(() => {
-  const store = useFlyerState.getState();
-  store.setMoveTarget(null);
-  setSelectedEmojiId(null);
-  setSelectedPortraitId(null);
-  setFloatingAssetVisible(false);
-  setFloatingBgVisible(false);
-  setFloatingEditorVisible(false);
-}, []);
 const nudgeTextLayer = React.useCallback((key: TextLayerKey, dir: "up" | "down") => {
   const st = useFlyerState.getState();
   const panelKey = key === "headline2" ? "head2" : key;
