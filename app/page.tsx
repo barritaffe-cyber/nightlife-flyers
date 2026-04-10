@@ -19680,9 +19680,8 @@ const mobileVisibleCreatorPanels = React.useMemo(() => {
 
   design.add("template");
   design.add("template_backgrounds");
+  design.add("logo");
   copyPanels.forEach((panel) => design.add(panel));
-
-  if (focusPanel === "logo") design.add("logo");
 
   if (
     creatorWorkflowCurrent === "scene" ||
@@ -20504,7 +20503,24 @@ const mobileControlsTabs = (
     >
       <button
         type="button"
-        onClick={() => setMobileControlsTab("design")}
+        onClick={() => {
+          setMobileControlsOpen(true);
+          setMobileControlsTab("design");
+          if (
+            selectedPanel !== "template" &&
+            selectedPanel !== "template_backgrounds" &&
+            selectedPanel !== "logo" &&
+            selectedPanel !== "headline" &&
+            selectedPanel !== "head2" &&
+            selectedPanel !== "details" &&
+            selectedPanel !== "details2" &&
+            selectedPanel !== "venue" &&
+            selectedPanel !== "subtag" &&
+            selectedPanel !== "cinema"
+          ) {
+            setSelectedPanel("headline");
+          }
+        }}
         data-tour="mobile-text-tab"
         data-mobile-float-lock="true"
         className={`w-[62px] px-2 py-[3px] text-center text-[9px] font-semibold uppercase tracking-[0.12em] border shrink-0 whitespace-nowrap ${
@@ -20517,7 +20533,22 @@ const mobileControlsTabs = (
       </button>
       <button
         type="button"
-        onClick={() => setMobileControlsTab("assets")}
+        onClick={() => {
+          setMobileControlsOpen(true);
+          setMobileControlsTab("assets");
+          if (
+            selectedPanel !== "dj_branding" &&
+            selectedPanel !== "ai_background" &&
+            selectedPanel !== "magic_blend" &&
+            selectedPanel !== "background" &&
+            selectedPanel !== "bgfx" &&
+            selectedPanel !== "icons" &&
+            selectedPanel !== "portrait" &&
+            selectedPanel !== "project"
+          ) {
+            setSelectedPanel("background");
+          }
+        }}
         data-tour="mobile-design-tab"
         data-mobile-float-lock="true"
         className={`w-[62px] px-2 py-[3px] text-center text-[9px] font-semibold uppercase tracking-[0.12em] border shrink-0 whitespace-nowrap ${
