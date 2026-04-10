@@ -11742,7 +11742,13 @@ const mobileFloatSticky = isMobileView && format === "story";
   );
   const visibleTemplateGallery = isStarterPlan ? starterTemplateGallery : TEMPLATE_GALLERY;
   const isDjStartupMode = startupStudioMode === "dj";
-  const currentStudioModeLabel = isDjStartupMode ? "DJ - ARTIST" : "CREATOR";
+  const normalizedAccessPlan = String(accessPlan || "").trim().toLowerCase();
+  const currentPlanWordmark =
+    isStarterPlan
+      ? "STARTER"
+      : normalizedAccessPlan === "studio"
+      ? "STUDIO"
+      : "CREATOR";
   const isDjCompositionStage = false;
   const showDjTextEditing = true;
   const visibleSocialMediaStickers = SOCIAL_MEDIA_STICKERS;
@@ -22089,14 +22095,18 @@ return (
                 <span
                   className={clsx(
                     "select-none whitespace-nowrap font-black italic uppercase leading-none tracking-[0.02em] sm:tracking-[-0.01em] lg:tracking-[-0.02em]",
-                    isDjStartupMode ? "text-[69px] sm:text-[51px] lg:text-[73px]" : "text-[80px] sm:text-[60px] lg:text-[84px]"
+                    currentPlanWordmark === "STUDIO"
+                      ? "text-[72px] sm:text-[56px] lg:text-[78px]"
+                      : currentPlanWordmark === "STARTER"
+                      ? "text-[74px] sm:text-[58px] lg:text-[80px]"
+                      : "text-[80px] sm:text-[60px] lg:text-[84px]"
                   )}
                   style={{
                     color: isDjStartupMode ? "rgba(0, 229, 255, 0.16)" : "rgba(255, 255, 255, 0.14)",
                     textShadow: isDjStartupMode ? "0 0 18px rgba(0, 229, 255, 0.06)" : "none",
                   }}
                 >
-                  {currentStudioModeLabel}
+                  {currentPlanWordmark}
                 </span>
               </div>
             <div className="relative z-10 flex w-full items-center justify-center lg:justify-start gap-2 overflow-x-auto text-[12px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -25718,6 +25728,7 @@ style={{ top: STICKY_TOP }}
 >               
   {uiMode === "design" && mobileControlsOpen && mobileControlsTabs}
 
+{isDjStartupMode && (
 <div className={mobilePanelClass("assets", "dj_branding")}>
   {isStarterPlan ? (
     <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-[12px] text-amber-100">
@@ -25793,6 +25804,7 @@ style={{ top: STICKY_TOP }}
     />
   )}
 </div>
+)}
 
 {!isDjStartupMode && !isMobileView && (
   <Collapsible
