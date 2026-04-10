@@ -9627,6 +9627,7 @@ function placeExtractedLayer(src: string) {
     isSticker: false,
     isFlare: false,
     isExtracted: true,
+    tintMode: "colorize",
     shadowBlur: 22,
     shadowAlpha: 0.48,
     cleanup: defaults,
@@ -9638,6 +9639,7 @@ function placeExtractedLayer(src: string) {
   useFlyerState.getState().setSelectedPanel("extract_subject");
   useFlyerState.getState().setMoveTarget("portrait");
   transitionCueRef.current?.("portrait");
+  if (isMobileView) setMobileControlsOpen(false);
   window.setTimeout(scrollToArtboard, 120);
 }
 
@@ -16261,7 +16263,9 @@ const portraitCanvas = React.useMemo(() => {
         ? `drop-shadow(0 ${shadowOffset}px ${shadowBlur}px rgba(0,0,0,${shadowAlpha}))`
         : "none";
     const tintDeg = Number((p as any).tint ?? 0);
-    const tintMode = (p as any).tintMode ?? (isImageSticker ? "colorize" : "hue");
+    const tintMode =
+      (p as any).tintMode ??
+      (isImageSticker || !!(p as any).isExtracted ? "colorize" : "hue");
     const filterParts = [];
     if (shadowFilter !== "none") filterParts.push(shadowFilter);
     if (tintDeg !== 0) {
@@ -20294,6 +20298,7 @@ const activeAssetControls = React.useMemo(() => {
         opacity: sel.opacity ?? 1,
         showOpacity: false,
         tint: typeof (sel as any).tint === "number" ? (sel as any).tint : 0,
+        rotateFullWidth: true,
         shadowBlur: Number((sel as any).shadowBlur ?? 0),
         shadowStrength: Number((sel as any).shadowAlpha ?? 0.48),
         locked: !!sel.locked,
@@ -20301,7 +20306,10 @@ const activeAssetControls = React.useMemo(() => {
         onScale: (v: number) =>
           useFlyerState.getState().updatePortrait(format, sel.id, { scale: v }),
         onTint: (v: number) =>
-          useFlyerState.getState().updatePortrait(format, sel.id, { tint: v }),
+          useFlyerState.getState().updatePortrait(format, sel.id, {
+            tint: v,
+            tintMode: "colorize",
+          }),
         onShadowBlur: (v: number) =>
           useFlyerState.getState().updatePortrait(format, sel.id, { shadowBlur: v }),
         onShadowStrength: (v: number) =>
@@ -25562,7 +25570,7 @@ style={{ top: STICKY_TOP }}
             </div>
           )}
           {activeAssetControls.rotation != null && (
-            <div>
+            <div className={activeAssetControls.rotateFullWidth ? "min-[420px]:col-span-2" : ""}>
               <InlineSliderInput
                 label="Rotate"
                 min={-180}

@@ -487,8 +487,9 @@ export function InlineSliderInput({
             disabled={disabled}
             className={
               inputClassName ||
-              `w-[40px] min-w-0 ${controlInputClass} text-right font-semibold [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`
+              `w-[48px] min-w-0 ${controlInputClass} text-right font-semibold text-[16px] sm:text-[11px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`
             }
+            inputMode="decimal"
           />
           {suffix ? <span className="shrink-0 text-[8px] text-white font-semibold">{suffix}</span> : null}
         </div>
