@@ -19287,6 +19287,7 @@ const openCreatorWorkflowTarget = React.useCallback(
     options?: { uiMode?: "design" | "finish"; targetId?: string }
   ) => {
     setWorkflowHelpOpen(false);
+    clearTransientCanvasFocus();
     setUiMode(options?.uiMode ?? "design");
     setMobileControlsOpen(true);
     setMobileControlsTab(tab);
@@ -19300,7 +19301,7 @@ const openCreatorWorkflowTarget = React.useCallback(
       });
     }
   },
-  [setSelectedPanel]
+  [clearTransientCanvasFocus, setSelectedPanel]
 );
 
 const getSmartWorkflowTarget = React.useCallback(
@@ -19730,6 +19731,15 @@ const switchWorkflowStudioMode = React.useCallback(
   },
   [isStarterPlan, setSelectedPanel]
 );
+const clearTransientCanvasFocus = React.useCallback(() => {
+  const store = useFlyerState.getState();
+  store.setMoveTarget(null);
+  setSelectedEmojiId(null);
+  setSelectedPortraitId(null);
+  setFloatingAssetVisible(false);
+  setFloatingBgVisible(false);
+  setFloatingEditorVisible(false);
+}, []);
 const nudgeTextLayer = React.useCallback((key: TextLayerKey, dir: "up" | "down") => {
   const st = useFlyerState.getState();
   const panelKey = key === "headline2" ? "head2" : key;
@@ -25875,7 +25885,14 @@ style={{ top: STICKY_TOP }}
   ) : (
     <AiBackgroundPanel
       selectedPanel={selectedPanel}
-      setSelectedPanel={setSelectedPanel}
+      setSelectedPanel={(nextPanel) => {
+        if (nextPanel === "ai_background") {
+          clearTransientCanvasFocus();
+          setMobileControlsOpen(true);
+          setMobileControlsTab("assets");
+        }
+        setSelectedPanel(nextPanel);
+      }}
       creatorAutoLayoutEnabled={hasCreatorAutoLayoutAccess}
       autoLayoutReferenceUrl={autoLayoutReferenceUrl}
       autoLayoutLoading={autoLayoutLoading}
