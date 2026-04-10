@@ -196,6 +196,18 @@ function BackgroundPanels({
     });
   }, []);
 
+  React.useEffect(() => {
+    if (!extractMode) return;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, [extractMode]);
+
   const normalizePointerPoint = React.useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     const localX = event.clientX - rect.left;
@@ -278,6 +290,8 @@ function BackgroundPanels({
 
   const beginExtractionDraw = React.useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     if (!currentBackgroundSrc || extracting) return;
+    event.preventDefault();
+    event.stopPropagation();
     const startPoint = normalizePointerPoint(event);
     dragStartRef.current = [startPoint];
     setExtractPath([startPoint]);
@@ -291,6 +305,8 @@ function BackgroundPanels({
   const updateExtractionDraw = React.useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     const points = dragStartRef.current;
     if (!points) return;
+    event.preventDefault();
+    event.stopPropagation();
     const nextPoint = normalizePointerPoint(event);
     const lastPoint = points[points.length - 1];
     const distance = Math.hypot(nextPoint.x - lastPoint.x, nextPoint.y - lastPoint.y);
@@ -303,6 +319,8 @@ function BackgroundPanels({
   const endExtractionDraw = React.useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     const points = dragStartRef.current;
     if (!points) return;
+    event.preventDefault();
+    event.stopPropagation();
     dragStartRef.current = null;
     try {
       event.currentTarget.releasePointerCapture(event.pointerId);
@@ -784,6 +802,7 @@ function BackgroundPanels({
                         "absolute inset-0",
                         extractMode ? "cursor-crosshair" : extractZoom > 1 ? "cursor-grab" : "cursor-default"
                       )}
+                      style={{ touchAction: 'none' }}
                       onPointerDown={extractMode ? beginExtractionDraw : beginPreviewPan}
                       onPointerMove={extractMode ? updateExtractionDraw : updatePreviewPan}
                       onPointerUp={extractMode ? endExtractionDraw : endPreviewPan}
@@ -813,7 +832,7 @@ function BackgroundPanels({
                   </div>
                   <button
                     type="button"
-                    className={editorUploadClearClass}
+                    className={`${editorUploadClearClass} w-full`}
                     disabled={extractPath.length === 0 && !extractPreviewUrl}
                     onClick={() => {
                       setExtractMode(false);
