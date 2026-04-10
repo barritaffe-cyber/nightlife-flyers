@@ -7849,12 +7849,17 @@ const selectedPortrait = React.useMemo(() => {
   const list = portraits?.[format] || [];
   return list.find((p) => p.id === selectedPortraitId) || null;
 }, [portraits, format, selectedPortraitId]);
+const selectedPortraitIsExtracted = React.useMemo(
+  () => !!(selectedPortrait as any)?.isExtracted,
+  [selectedPortrait]
+);
 const selectedPortraitIsAsset = React.useMemo(() => {
   if (!selectedPortrait) return false;
   const id = String((selectedPortrait as any).id || "");
   return (
     !!(selectedPortrait as any).isFlare ||
     !!(selectedPortrait as any).isSticker ||
+    !!(selectedPortrait as any).isExtracted ||
     !!(selectedPortrait as any).isBrandFace ||
     id.startsWith("logo_")
   );
@@ -7867,6 +7872,7 @@ const activeBlendPortraitLayer = React.useMemo(() => {
       !!p?.url &&
       !p?.isFlare &&
       !p?.isSticker &&
+      !p?.isExtracted &&
       !p?.isBrandFace &&
       !p?.isLogo &&
       !id.startsWith("logo_")
@@ -8116,6 +8122,8 @@ function getCanvasSelectionHome(panelOrTarget: string | null) {
       return { panel: "ai_background", tab: "assets" as const };
     case "magic_blend":
       return { panel: "magic_blend", tab: "assets" as const };
+    case "extract_subject":
+      return { panel: "extract_subject", tab: "assets" as const };
     case "portrait":
       return { panel: "portrait", tab: "assets" as const };
     case "icon":
@@ -8149,8 +8157,13 @@ useEffect(() => {
 
   if (!moveTarget) return;
 
+  if (moveTarget === "portrait" && selectedPortraitIsExtracted) {
+    focusCanvasSelectionHome("extract_subject");
+    return;
+  }
+
   focusCanvasSelectionHome(String(moveTarget));
-}, [moveTarget]);
+}, [moveTarget, selectedPortraitIsExtracted]);
 
 
 
@@ -8469,8 +8482,8 @@ React.useEffect(() => {
     vv?.removeEventListener("scroll", update);
   };
 }, []);
-// Desktop-only background click-to-edit (Lovart-style) — kept behind flag to avoid regressions
-const ENABLE_DESKTOP_BG_CLICK_EDIT = true;
+// Old background edit prototype is disabled in favor of subject extraction in Scene Builder.
+const ENABLE_DESKTOP_BG_CLICK_EDIT = false;
 const ENABLE_CANVAS_BG_CLICK = false;
 const [bgEditPopover, setBgEditPopover] = React.useState<{
   open: boolean;
@@ -9586,6 +9599,46 @@ async function placePortraitFromSlot(i: number) {
   setPortraitLocked(false);
   setMoveMode(true);
   setDragging('portrait');
+}
+
+function placeExtractedLayer(src: string) {
+  if (!src) return;
+
+  const id = `extract_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const defaults = {
+    shrinkPx: 2,
+    featherPx: 2,
+    alphaBoost: 1.35,
+    decontaminate: 0.55,
+    alphaSmoothPx: 2,
+    edgeGamma: 1.1,
+    spillSuppress: 0.35,
+    alphaFill: 0.08,
+    edgeClamp: 0,
+  };
+
+  const newPortrait = {
+    id,
+    url: src,
+    x: 50,
+    y: 50,
+    scale: 0.85,
+    locked: false,
+    isSticker: false,
+    isFlare: false,
+    isExtracted: true,
+    shadowBlur: 22,
+    shadowAlpha: 0.48,
+    cleanup: defaults,
+    cleanupBaseUrl: src,
+  };
+
+  useFlyerState.getState().addPortrait?.(format, newPortrait);
+  useFlyerState.getState().setSelectedPortraitId(id);
+  useFlyerState.getState().setSelectedPanel("extract_subject");
+  useFlyerState.getState().setMoveTarget("portrait");
+  transitionCueRef.current?.("portrait");
+  window.setTimeout(scrollToArtboard, 120);
 }
 
 function clearPortraitSlot(i: number) {
@@ -16125,7 +16178,8 @@ const portraitCanvas = React.useMemo(() => {
     const isLogo = id.startsWith("logo_") || !!item?.isLogo;
     const isSticker = !!item?.isSticker;
     const isFlare = !!item?.isFlare && !isSticker;
-    return { isLogo, isFlare, isSticker };
+    const isExtracted = !!item?.isExtracted;
+    return { isLogo, isFlare, isSticker, isExtracted };
   };
 
   const selectItem = (pid: string) => {
@@ -16134,9 +16188,17 @@ const portraitCanvas = React.useMemo(() => {
     const sel = liveList.find((x: any) => x.id === pid);
     const isBrandFace = !!(sel as any)?.isBrandFace;
 
-    const { isLogo, isFlare, isSticker } = classify(sel);
+    const { isLogo, isFlare, isSticker, isExtracted } = classify(sel);
 
-    const panel = isBrandFace ? "dj_branding" : isLogo ? "logo" : isFlare || isSticker ? "icons" : "portrait";
+    const panel = isBrandFace
+      ? "dj_branding"
+      : isLogo
+      ? "logo"
+      : isFlare || isSticker
+      ? "icons"
+      : isExtracted
+      ? "extract_subject"
+      : "portrait";
     const target = isLogo ? "logo" : isFlare || isSticker ? "icon" : "portrait";
 
     const isSame = (store as any).selectedPortraitId === pid;
@@ -16149,7 +16211,13 @@ const portraitCanvas = React.useMemo(() => {
     }
     focusCanvasSelectionHome(panel);
 
-    if (!isBrandFace && !isLogo && !isFlare && !isSticker) {
+    if (isExtracted) {
+      window.setTimeout(() => {
+        document
+          .getElementById("extract-selected-controls")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 80);
+    } else if (!isBrandFace && !isLogo && !isFlare && !isSticker) {
       window.setTimeout(() => {
         document
           .getElementById("portrait-selected-controls")
@@ -16225,6 +16293,7 @@ const portraitCanvas = React.useMemo(() => {
     const isPortraitAsset =
       !!(p as any).isFlare ||
       !!(p as any).isSticker ||
+      !!(p as any).isExtracted ||
       !!(p as any).isLogo ||
       String((p as any).id || "").startsWith("logo_");
     const shapeScale = Math.max(0.01, Math.min(6, Number(p.scale ?? 1)));
@@ -20130,6 +20199,7 @@ const nudgePortraitLayer = React.useCallback(
 
     const isLogo = String(cur.id || "").startsWith("logo_") || !!(cur as any).isLogo;
     const isLibraryAsset = !!(cur as any).isFlare || !!(cur as any).isSticker;
+    const isExtracted = !!(cur as any).isExtracted;
     st.setSelectedPortraitId(id);
     if (isLibraryAsset) {
       st.setSelectedPanel("icons");
@@ -20137,6 +20207,9 @@ const nudgePortraitLayer = React.useCallback(
     } else if (isLogo) {
       st.setSelectedPanel("logo");
       st.setMoveTarget("logo");
+    } else if (isExtracted) {
+      st.setSelectedPanel("extract_subject");
+      st.setMoveTarget("portrait");
     } else {
       st.setSelectedPanel("portrait");
       st.setMoveTarget("portrait");
@@ -20991,33 +21064,6 @@ const runBgEdit = React.useCallback(async () => {
     }));
   }
 }, [bgUploadUrl, bgUrl, bgEditPopover.nx, bgEditPopover.ny, bgEditPopover.prompt, format, isMobileView]);
-
-// Trigger edit from the raw background preview (sidebar)
-const handleBgPanelClick = React.useCallback(
-  (p: {
-    nx: number;
-    ny: number;
-    iw: number;
-    ih: number;
-    clientX: number;
-    clientY: number;
-  }) => {
-    if (!ENABLE_DESKTOP_BG_CLICK_EDIT) return;
-    setBgEditPopover({
-      open: true,
-      x: p.clientX,
-      y: p.clientY,
-      nx: p.nx,
-      ny: p.ny,
-      iw: p.iw,
-      ih: p.ih,
-      prompt: "",
-      loading: false,
-      error: null,
-    });
-  },
-  []
-);
 
 /* ===== AUTOSAVE: SMART SAVE/LOAD (END) ===== */
 
@@ -26317,7 +26363,8 @@ style={{ top: STICKY_TOP }}
     genProvider={genProvider}
     setGenProvider={setGenProvider}
     showAiTools={!isStarterPlan}
-    onBackgroundPreviewClick={handleBgPanelClick}
+    enableExtractSubject={isStudioPlan}
+    onPlaceExtractedLayer={placeExtractedLayer}
   />
 </div>
 
@@ -26348,6 +26395,181 @@ style={{ top: STICKY_TOP }}
 </div>
 {/* UI: LIBRARY (END) */}
 
+  {isStudioPlan && !isDjStartupMode && (
+  <div
+    id="extract-subject-panel"
+    className={clsx("relative rounded-xl transition", creatorStepPanelClass("scene"), mobilePanelClass("assets", "background"))}
+>
+  <Collapsible
+    title="Selected Cutout"
+    storageKey="p:extract-subject-controls"
+    isOpen={selectedPanel === "extract_subject"}
+    onToggle={() =>
+      (() => {
+        const store = useFlyerState.getState();
+        const next = selectedPanel === "extract_subject" ? null : "extract_subject";
+        if (next === "extract_subject") {
+          store.setMoveTarget("portrait");
+        }
+        store.setSelectedPanel(next);
+      })()
+    }
+    panelClassName={
+      selectedPanel === "extract_subject"
+        ? editorPanelActiveClass
+        : undefined
+    }
+    titleClassName={
+      selectedPanel === "extract_subject" ? editorPanelTitleActiveClass : ""
+    }
+  >
+    <div id="extract-selected-controls" className="space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-200">
+            Selected Cutout
+          </div>
+          <div className="mt-1 text-[11px] text-neutral-500">
+            {!selectedPortraitId
+              ? "Select an extracted cutout on the canvas to adjust it here."
+              : !selectedPortraitIsExtracted
+              ? "This panel is only for extracted scene cutouts."
+              : "Adjust the selected extracted cutout without opening portrait tools."}
+          </div>
+        </div>
+        {selectedPortraitId && selectedPortraitIsExtracted && selectedPortrait ? (
+          <span className="rounded-full border border-cyan-400/35 bg-cyan-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-200">
+            Live
+          </span>
+        ) : null}
+      </div>
+
+      {!selectedPortraitId ? (
+        <div className="text-[12px] italic text-neutral-500">
+          Nothing selected yet.
+        </div>
+      ) : !selectedPortraitIsExtracted || !selectedPortrait ? (
+        <div className="text-[12px] italic text-neutral-500">
+          Select an extracted subject layer to edit it here.
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() =>
+                useFlyerState.getState().updatePortrait(format, selectedPortrait.id, {
+                  locked: !selectedPortrait.locked,
+                })
+              }
+              className={`min-h-[42px] rounded-lg border px-3 py-2 text-[11px] font-medium transition ${
+                selectedPortrait.locked
+                  ? "bg-indigo-900/40 border-indigo-500/50 text-indigo-300"
+                  : "bg-neutral-800 border-neutral-600 text-neutral-200 hover:bg-neutral-700"
+              }`}
+            >
+              {selectedPortrait.locked ? "Unlock Cutout" : "Lock Cutout"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                useFlyerState.getState().removePortrait(format, selectedPortrait.id);
+                useFlyerState.getState().setSelectedPortraitId(null);
+              }}
+              className="min-h-[42px] rounded-lg border border-red-900/30 bg-red-900/20 px-3 py-2 text-[11px] font-medium text-red-300 transition hover:bg-red-900/30"
+            >
+              Remove From Canvas
+            </button>
+          </div>
+
+          <div className="rounded-lg border border-neutral-700 bg-neutral-900/40 p-3">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs font-bold text-neutral-300">Transform</span>
+              <span className="text-[10px] text-neutral-500 font-mono">{selectedPortrait.id.slice(-4)}</span>
+            </div>
+
+            <div className="mb-3">
+              <InlineSliderInput
+                label="Scale"
+                value={selectedPortrait.scale ?? 1}
+                min={0.01}
+                max={4}
+                step={0.01}
+                displayScale={100}
+                precision={0}
+                suffix="%"
+                onChange={(next) =>
+                  useFlyerState.getState().updatePortrait(format, selectedPortrait.id, {
+                    scale: next,
+                  })
+                }
+                disabled={!!selectedPortrait.locked}
+                rangeClassName={`flex-1 h-1 rounded-lg appearance-none cursor-pointer ${
+                  selectedPortrait.locked ? "bg-neutral-800 accent-neutral-600" : "bg-neutral-700 accent-cyan-400"
+                }`}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => nudgePortraitLayer(selectedPortrait.id, "up")}
+                className="flex items-center justify-center gap-2 px-3 py-2 rounded text-[11px] border transition-colors bg-neutral-800 border-neutral-600 text-neutral-300 hover:bg-neutral-700"
+              >
+                <span>Layer Up</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => nudgePortraitLayer(selectedPortrait.id, "down")}
+                className="flex items-center justify-center gap-2 px-3 py-2 rounded text-[11px] border transition-colors bg-neutral-800 border-neutral-600 text-neutral-300 hover:bg-neutral-700"
+              >
+                <span>Layer Down</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-neutral-700 bg-neutral-900/40 p-3 space-y-2.5">
+            <div className="text-xs font-bold text-neutral-300">Drop Shadow</div>
+            <InlineSliderInput
+              label="Blur"
+              value={Number((selectedPortrait as any).shadowBlur ?? 0)}
+              min={0}
+              max={60}
+              step={1}
+              precision={0}
+              onChange={(next) =>
+                useFlyerState.getState().updatePortrait(format, selectedPortrait.id, {
+                  shadowBlur: next,
+                })
+              }
+              rangeClassName="flex-1 accent-cyan-400"
+            />
+            <InlineSliderInput
+              label="Strength"
+              value={Number((selectedPortrait as any).shadowAlpha ?? 0.48)}
+              min={0}
+              max={1}
+              step={0.01}
+              displayScale={100}
+              precision={0}
+              suffix="%"
+              onChange={(next) =>
+                useFlyerState.getState().updatePortrait(format, selectedPortrait.id, {
+                  shadowAlpha: next,
+                })
+              }
+              rangeClassName="flex-1 accent-cyan-400"
+            />
+          </div>
+        </>
+      )}
+    </div>
+  </Collapsible>
+  </div>
+  )}
+
 
   {/* UI: PORTRAITS — COMBINED SLOTS (BEGIN) */}
   {!isStarterPlan && !isDjStartupMode && (
@@ -26366,7 +26588,7 @@ style={{ top: STICKY_TOP }}
         if (next === "portrait") {
           const list = store.portraits?.[format] || [];
           const sel = list.find((p: any) => p.id === store.selectedPortraitId);
-          if (sel?.isFlare || sel?.isSticker) {
+          if (sel?.isFlare || sel?.isSticker || sel?.isExtracted) {
             store.setSelectedPortraitId(null);
           }
           store.setMoveTarget("portrait");

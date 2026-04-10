@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import * as React from 'react';
+import clsx from 'clsx';
 import {
   Collapsible,
   Chip,
@@ -20,7 +21,13 @@ import {
   editorSectionMetaClass,
   editorSectionTitleClass,
   editorThumbClass,
+  editorUploadActionClass,
+  editorUploadClearClass,
+  editorUploadHolderClass,
+  editorUploadPlaceClass,
+  editorUploadPreviewClass,
 } from './controls';
+import { removeBackgroundLocal } from '../../lib/removeBgLocal';
 
 type Props = {
   presetBackgrounds?: ReadonlyArray<{
@@ -82,14 +89,8 @@ type Props = {
   genProvider: 'auto' | 'nano' | 'openai' | 'venice';
   setGenProvider: (v: 'auto' | 'nano' | 'openai' | 'venice') => void;
   showAiTools?: boolean;
-  onBackgroundPreviewClick?: (p: {
-    nx: number;
-    ny: number;
-    iw: number;
-    ih: number;
-    clientX: number;
-    clientY: number;
-  }) => void;
+  enableExtractSubject?: boolean;
+  onPlaceExtractedLayer?: (src: string) => void;
 };
 
 function BackgroundPanels({
@@ -148,35 +149,203 @@ function BackgroundPanels({
   genProvider,
   setGenProvider,
   showAiTools = true,
-  onBackgroundPreviewClick,
+  enableExtractSubject = false,
+  onPlaceExtractedLayer,
 }: Props) {
-  const [previewDims, setPreviewDims] = React.useState<{ w: number; h: number }>({
-    w: 0,
-    h: 0,
-  });
+  const MAX_EXTRACT_SLOTS = 4;
+  const MIN_LASSO_POINTS = 6;
+  const MAX_EXTRACT_PAN = 0.35;
+  const EXTRACT_PADDING_RATIO = 0.14;
   const previewRef = React.useRef<HTMLImageElement | null>(null);
+  const selectionViewportRef = React.useRef<HTMLDivElement | null>(null);
   const currentBackgroundSrc = bgUploadUrl || bgUrl;
+  const [extractSlots, setExtractSlots] = React.useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem('nf:sceneExtractSlots');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return Array.from({ length: MAX_EXTRACT_SLOTS }, (_, i) => parsed?.[i] ?? '');
+      }
+    } catch {}
+    return Array(MAX_EXTRACT_SLOTS).fill('');
+  });
+  const [extractMode, setExtractMode] = React.useState(false);
+  const [extracting, setExtracting] = React.useState(false);
+  const [extractError, setExtractError] = React.useState<string | null>(null);
+  const [extractPreviewUrl, setExtractPreviewUrl] = React.useState<string | null>(null);
+  const [extractPath, setExtractPath] = React.useState<Array<{ x: number; y: number }>>([]);
+  const dragStartRef = React.useRef<Array<{ x: number; y: number }> | null>(null);
+  const panStartRef = React.useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
+  const [extractZoom, setExtractZoom] = React.useState(1);
+  const [extractPan, setExtractPan] = React.useState({ x: 0, y: 0 });
 
-  const handlePreviewClick = React.useCallback(
-    (e: React.MouseEvent<HTMLImageElement>) => {
-      if (!onBackgroundPreviewClick) return;
-      const img = e.currentTarget;
-      const rect = img.getBoundingClientRect();
-      const nx = (e.clientX - rect.left) / rect.width;
-      const ny = (e.clientY - rect.top) / rect.height;
-      const iw = img.naturalWidth || previewDims.w || 1;
-      const ih = img.naturalHeight || previewDims.h || 1;
-      onBackgroundPreviewClick({
-        nx: Math.max(0, Math.min(1, nx)),
-        ny: Math.max(0, Math.min(1, ny)),
-        iw,
-        ih,
-        clientX: e.clientX,
-        clientY: e.clientY,
-      });
-    },
-    [onBackgroundPreviewClick, previewDims.w, previewDims.h]
-  );
+  const persistExtractSlots = React.useCallback((next: string[]) => {
+    const normalized = Array.from({ length: MAX_EXTRACT_SLOTS }, (_, i) => next[i] ?? '');
+    setExtractSlots(normalized);
+    try {
+      localStorage.setItem('nf:sceneExtractSlots', JSON.stringify(normalized));
+    } catch {}
+  }, []);
+
+  const loadImage = React.useCallback((src: string) => {
+    return new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('Failed to load source image.'));
+      img.src = src;
+    });
+  }, []);
+
+  const normalizePointerPoint = React.useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const localX = event.clientX - rect.left;
+    const localY = event.clientY - rect.top;
+    const adjustedX =
+      (localX - rect.width / 2 - extractPan.x * rect.width) / extractZoom + rect.width / 2;
+    const adjustedY =
+      (localY - rect.height / 2 - extractPan.y * rect.height) / extractZoom + rect.height / 2;
+    return {
+      x: Math.max(0, Math.min(1, adjustedX / rect.width)),
+      y: Math.max(0, Math.min(1, adjustedY / rect.height)),
+    };
+  }, [extractPan.x, extractPan.y, extractZoom]);
+
+  const extractCropFromCurrentBackground = React.useCallback(async () => {
+    if (!currentBackgroundSrc || extractPath.length < MIN_LASSO_POINTS) return;
+    setExtracting(true);
+    setExtractError(null);
+    try {
+      const img = await loadImage(currentBackgroundSrc);
+      const iw = img.naturalWidth || img.width;
+      const ih = img.naturalHeight || img.height;
+      const xs = extractPath.map((point) => point.x);
+      const ys = extractPath.map((point) => point.y);
+      const rawMinX = Math.max(0, Math.min(...xs));
+      const rawMaxX = Math.min(1, Math.max(...xs));
+      const rawMinY = Math.max(0, Math.min(...ys));
+      const rawMaxY = Math.min(1, Math.max(...ys));
+      const padX = Math.max(0.04, (rawMaxX - rawMinX) * EXTRACT_PADDING_RATIO);
+      const padY = Math.max(0.04, (rawMaxY - rawMinY) * EXTRACT_PADDING_RATIO);
+      const minX = Math.max(0, rawMinX - padX);
+      const maxX = Math.min(1, rawMaxX + padX);
+      const minY = Math.max(0, rawMinY - padY);
+      const maxY = Math.min(1, rawMaxY + padY);
+      const cropX = Math.max(0, Math.floor(minX * iw));
+      const cropY = Math.max(0, Math.floor(minY * ih));
+      const cropW = Math.max(24, Math.floor((maxX - minX) * iw));
+      const cropH = Math.max(24, Math.floor((maxY - minY) * ih));
+      const canvas = document.createElement('canvas');
+      canvas.width = cropW;
+      canvas.height = cropH;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Could not create crop preview.');
+      ctx.clearRect(0, 0, cropW, cropH);
+      ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+      const cropUrl = canvas.toDataURL('image/png');
+      const removed = await removeBackgroundLocal(cropUrl);
+      setExtractPreviewUrl(removed);
+    } catch (err: any) {
+      setExtractPreviewUrl(null);
+      setExtractError(err?.message || 'Extraction failed.');
+    } finally {
+      setExtracting(false);
+    }
+  }, [currentBackgroundSrc, extractPath, loadImage]);
+
+  const createExtractedLayer = React.useCallback(() => {
+    if (!extractPreviewUrl) return;
+    const slotIndex = extractSlots.findIndex((slot) => !slot);
+    if (slotIndex === -1) {
+      setExtractError('Clear one of the 4 subject slots first.');
+      return;
+    }
+    const next = [...extractSlots];
+    next[slotIndex] = extractPreviewUrl;
+    persistExtractSlots(next);
+    onPlaceExtractedLayer?.(extractPreviewUrl);
+    setExtractMode(false);
+    setExtractPath([]);
+    setExtractPreviewUrl(null);
+    setExtractZoom(1);
+    setExtractPan({ x: 0, y: 0 });
+  }, [extractPreviewUrl, extractSlots, onPlaceExtractedLayer, persistExtractSlots]);
+
+  const clearExtractedLayer = React.useCallback((idx: number) => {
+    const next = [...extractSlots];
+    next[idx] = '';
+    persistExtractSlots(next);
+  }, [extractSlots, persistExtractSlots]);
+
+  const beginExtractionDraw = React.useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (!currentBackgroundSrc || extracting) return;
+    const startPoint = normalizePointerPoint(event);
+    dragStartRef.current = [startPoint];
+    setExtractPath([startPoint]);
+    setExtractPreviewUrl(null);
+    setExtractError(null);
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {}
+  }, [currentBackgroundSrc, extracting, normalizePointerPoint]);
+
+  const updateExtractionDraw = React.useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const points = dragStartRef.current;
+    if (!points) return;
+    const nextPoint = normalizePointerPoint(event);
+    const lastPoint = points[points.length - 1];
+    const distance = Math.hypot(nextPoint.x - lastPoint.x, nextPoint.y - lastPoint.y);
+    if (distance < 0.008) return;
+    const nextPoints = [...points, nextPoint];
+    dragStartRef.current = nextPoints;
+    setExtractPath(nextPoints);
+  }, [normalizePointerPoint]);
+
+  const endExtractionDraw = React.useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const points = dragStartRef.current;
+    if (!points) return;
+    dragStartRef.current = null;
+    try {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    } catch {}
+    setExtractMode(false);
+    setExtractPath(points.length >= MIN_LASSO_POINTS ? points : []);
+    if (points.length < MIN_LASSO_POINTS) {
+      setExtractError('Draw a fuller outline around the subject.');
+    }
+  }, []);
+
+  const beginPreviewPan = React.useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (extractMode || extractZoom <= 1) return;
+    panStartRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+      panX: extractPan.x,
+      panY: extractPan.y,
+    };
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {}
+  }, [extractMode, extractPan.x, extractPan.y, extractZoom]);
+
+  const updatePreviewPan = React.useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const start = panStartRef.current;
+    if (!start) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const dx = (event.clientX - start.x) / Math.max(1, rect.width);
+    const dy = (event.clientY - start.y) / Math.max(1, rect.height);
+    setExtractPan({
+      x: Math.max(-MAX_EXTRACT_PAN, Math.min(MAX_EXTRACT_PAN, start.panX + dx)),
+      y: Math.max(-MAX_EXTRACT_PAN, Math.min(MAX_EXTRACT_PAN, start.panY + dy)),
+    });
+  }, []);
+
+  const endPreviewPan = React.useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (!panStartRef.current) return;
+    panStartRef.current = null;
+    try {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    } catch {}
+  }, []);
 
   return (
     <div className="space-y-3">
@@ -331,13 +500,6 @@ function BackgroundPanels({
                   alt="Background preview"
                   className={`w-full h-full ${bgFitMode ? "object-contain" : "object-cover"}`}
                   draggable={false}
-                  onLoad={(e) =>
-                    setPreviewDims({
-                      w: e.currentTarget.naturalWidth,
-                      h: e.currentTarget.naturalHeight,
-                    })
-                  }
-                  onClick={handlePreviewClick}
                 />
               </div>
 
@@ -532,6 +694,205 @@ function BackgroundPanels({
           {genError && <div className="text-xs text-red-400 break-words mt-2">{genError}</div>}
         </Collapsible>
       </div>
+
+      {!allowUploads || !enableExtractSubject ? null : (
+        <div className="relative rounded-xl transition">
+          <Collapsible
+            title="Extract Subject"
+            storageKey="p:extract-subject"
+            defaultOpen={false}
+          >
+            <div className={`mb-3 ${editorHelperTextClass}`}>
+              Draw around a subject, let the cutout snap to the edges, preview it, then create a reusable layer.
+            </div>
+            {!currentBackgroundSrc ? (
+              <div className={editorEmptyStateClass}>
+                <div className={editorEmptyStateTitleClass}>No scene loaded</div>
+                <div className={editorEmptyStateBodyClass}>
+                  Load a scene first, then extract a subject from it.
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className={`${editorUploadHolderClass}`}>
+                  <div className="text-[12px] font-medium text-white">Selection</div>
+                  <div className="flex items-center gap-2">
+                      <div className="min-w-[48px] text-[11px] font-medium text-neutral-300">
+                        Zoom
+                      </div>
+                      <input
+                        type="range"
+                        min={1}
+                        max={3}
+                        step={0.05}
+                        value={extractZoom}
+                        onChange={(e) => setExtractZoom(Number(e.target.value))}
+                        className="w-full accent-cyan-400"
+                      />
+                      <button
+                        type="button"
+                        className="min-h-[32px] shrink-0 border border-neutral-700 bg-transparent px-2 py-1 text-[10px] font-medium text-neutral-300 transition hover:bg-neutral-900/60"
+                        onClick={() => {
+                          setExtractZoom(1);
+                          setExtractPan({ x: 0, y: 0 });
+                        }}
+                      >
+                        Reset View
+                      </button>
+                  </div>
+                  <div
+                    ref={selectionViewportRef}
+                    className={`${editorUploadPreviewClass} relative min-h-[260px] sm:min-h-[360px] overflow-hidden`}
+                  >
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        transform: `translate(${extractPan.x * 100}%, ${extractPan.y * 100}%) scale(${extractZoom})`,
+                        transformOrigin: 'center center',
+                      }}
+                    >
+                      <img
+                        ref={previewRef}
+                        src={currentBackgroundSrc}
+                        alt="Extraction source"
+                        className="h-full w-full object-contain bg-white/5"
+                        draggable={false}
+                      />
+                    <div
+                        className={clsx(
+                          "pointer-events-none absolute inset-0"
+                        )}
+                      />
+                      {extractPath.length > 1 ? (
+                        <svg
+                          className="pointer-events-none absolute inset-0 h-full w-full"
+                          viewBox="0 0 100 100"
+                          preserveAspectRatio="none"
+                        >
+                          <polygon
+                            points={extractPath.map((point) => `${point.x * 100},${point.y * 100}`).join(' ')}
+                            fill="rgba(34,211,238,0.16)"
+                            stroke="rgba(103,232,249,0.9)"
+                            strokeWidth="0.6"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      ) : null}
+                    </div>
+                    <div
+                      className={clsx(
+                        "absolute inset-0",
+                        extractMode ? "cursor-crosshair" : extractZoom > 1 ? "cursor-grab" : "cursor-default"
+                      )}
+                      onPointerDown={extractMode ? beginExtractionDraw : beginPreviewPan}
+                      onPointerMove={extractMode ? updateExtractionDraw : updatePreviewPan}
+                      onPointerUp={extractMode ? endExtractionDraw : endPreviewPan}
+                      onPointerCancel={extractMode ? endExtractionDraw : endPreviewPan}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      className={editorUploadActionClass}
+                      onClick={() => {
+                        setExtractMode(true);
+                        setExtractPreviewUrl(null);
+                        setExtractError(null);
+                      }}
+                    >
+                      Draw Around Subject
+                    </button>
+                    <button
+                      type="button"
+                      className={editorUploadPlaceClass}
+                      disabled={extractPath.length < MIN_LASSO_POINTS || extracting}
+                      onClick={() => void extractCropFromCurrentBackground()}
+                    >
+                      {extracting ? 'Previewing...' : 'Preview'}
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className={editorUploadClearClass}
+                    disabled={extractPath.length === 0 && !extractPreviewUrl}
+                    onClick={() => {
+                      setExtractMode(false);
+                      setExtractPath([]);
+                      setExtractPreviewUrl(null);
+                      setExtractError(null);
+                    }}
+                  >
+                    Refine Selection
+                  </button>
+                </div>
+
+                {extractPreviewUrl ? (
+                  <div className={`${editorUploadHolderClass}`}>
+                    <div className="text-[12px] font-medium text-white">Preview</div>
+                    <div className={`${editorUploadPreviewClass} h-32`}>
+                      <img
+                        src={extractPreviewUrl}
+                        alt="Extracted subject preview"
+                        className="h-full w-full object-contain bg-white/5"
+                        draggable={false}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className={editorPrimaryButtonClass}
+                      onClick={createExtractedLayer}
+                    >
+                      Create Layer
+                    </button>
+                  </div>
+                ) : null}
+
+                {extractError ? (
+                  <div className="text-xs text-red-400 break-words">{extractError}</div>
+                ) : null}
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {extractSlots.map((src, i) => (
+                    <div key={`extract-slot-${i}`} className={editorUploadHolderClass}>
+                      <div className="text-[12px] font-medium text-white">Layer {i + 1}</div>
+                      <div className={clsx(editorUploadPreviewClass, "h-28")}>
+                        {src ? (
+                          <img
+                            src={src}
+                            alt={`Extracted layer ${i + 1}`}
+                            className="h-full w-full object-contain bg-white/5"
+                            draggable={false}
+                          />
+                        ) : (
+                          <div className="text-[11px] leading-6 text-neutral-400">No layer stored.</div>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          className={editorUploadPlaceClass}
+                          disabled={!src}
+                          onClick={() => src && onPlaceExtractedLayer?.(src)}
+                        >
+                          Place
+                        </button>
+                        <button
+                          type="button"
+                          className={editorUploadClearClass}
+                          disabled={!src}
+                          onClick={() => clearExtractedLayer(i)}
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Collapsible>
+        </div>
+      )}
 
       <div
         className="relative rounded-xl transition"

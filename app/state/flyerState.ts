@@ -172,6 +172,7 @@ type Portrait = {
   labelSkew?: number;
   isSticker?: boolean;
   isFlare?: boolean;
+  isExtracted?: boolean;
   isBrandFace?: boolean;
   isShapeGraphic?: boolean;
   tint?: number;          // hue-rotate degrees for tinting overlays/flares
@@ -487,9 +488,12 @@ setSelectedPanel: (panel: string | null) =>
       const sel = list.find((x: any) => x?.id === pid);
       const isFlare = !!sel?.isFlare;
       const isSticker = !!sel?.isSticker;
+      const isExtracted = !!sel?.isExtracted;
 
       if ((isFlare || isSticker) && panel === "portrait") {
         next.selectedPanel = "icons";
+      } else if (isExtracted && panel === "portrait") {
+        next.selectedPanel = "extract_subject";
       }
     }
 
@@ -529,10 +533,14 @@ setFocus: (t: any, panel: any) =>
       const sel = list.find((x: any) => x?.id === pid);
       const isFlare = !!sel?.isFlare;
       const isSticker = !!sel?.isSticker;
+      const isExtracted = !!sel?.isExtracted;
 
       if (isFlare || isSticker) {
         next.moveTarget = "icon";
         next.selectedPanel = "icons";
+      } else if (isExtracted) {
+        next.moveTarget = "portrait";
+        next.selectedPanel = "extract_subject";
       }
     }
 
