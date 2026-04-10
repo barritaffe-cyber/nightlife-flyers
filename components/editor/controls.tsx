@@ -539,18 +539,54 @@ type ColorDotProps = {
   onChange: (hex: string) => void;
   title?: string;
   disabled?: boolean;
+  allowNone?: boolean;
+  noneTitle?: string;
 };
 
-export const ColorDot: React.FC<ColorDotProps> = ({ value, onChange, title, disabled }) => {
+function normalizeColorInputValue(value: string) {
+  const safe = String(value || "").trim().toLowerCase();
+  if (!safe || safe === "transparent" || safe === "none") return "#ffffff";
+  return safe;
+}
+
+export const ColorDot: React.FC<ColorDotProps> = ({
+  value,
+  onChange,
+  title,
+  disabled,
+  allowNone = false,
+  noneTitle,
+}) => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value);
   };
+  const isNone = String(value || "").trim().toLowerCase() === "transparent";
 
   return (
-    <span
-      className="inline-flex items-center"
-      style={{ position: 'relative', width: 16, height: 16 }}
-    >
+    <span className="inline-flex items-center gap-1">
+      {allowNone ? (
+        <button
+          type="button"
+          title={noneTitle || "No fill"}
+          aria-label={noneTitle || "No fill"}
+          disabled={disabled}
+          onClick={() => onChange("transparent")}
+          className={clsx(
+            "relative inline-flex h-4 w-4 items-center justify-center rounded-full border transition-colors",
+            disabled
+              ? "cursor-not-allowed opacity-50 border-white/20"
+              : isNone
+              ? "border-cyan-300/70 bg-cyan-400/10"
+              : "border-white/30 bg-transparent hover:border-white/50"
+          )}
+        >
+          <span className="absolute h-[1px] w-3 rotate-[-45deg] bg-white/80" />
+        </button>
+      ) : null}
+      <span
+        className="inline-flex items-center"
+        style={{ position: 'relative', width: 16, height: 16 }}
+      >
       <span
         title={title || 'Pick color'}
         style={{
@@ -559,7 +595,7 @@ export const ColorDot: React.FC<ColorDotProps> = ({ value, onChange, title, disa
           borderRadius: 999,
           border: '1px solid rgba(255,255,255,0.3)',
           boxShadow: '0 0 0 1px rgba(0,0,0,0.3) inset',
-          background: value || '#ffffff',
+          background: isNone ? 'transparent' : value || '#ffffff',
           cursor: disabled ? 'not-allowed' : 'pointer',
           display: 'inline-block',
         }}
@@ -567,7 +603,7 @@ export const ColorDot: React.FC<ColorDotProps> = ({ value, onChange, title, disa
       />
       <input
         type="color"
-        value={value}
+        value={normalizeColorInputValue(value)}
         onChange={handleChange}
         disabled={disabled}
         style={{
@@ -578,6 +614,7 @@ export const ColorDot: React.FC<ColorDotProps> = ({ value, onChange, title, disa
         }}
         aria-label={title || 'Pick color'}
       />
+      </span>
     </span>
   );
 };

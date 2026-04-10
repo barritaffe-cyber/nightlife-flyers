@@ -4023,22 +4023,23 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
         kerningFix,
 
         lineHeight: lineHeight,
-        lineStyle: textFx.gradient
-        
-          ? {
-              backgroundImage: `linear-gradient(180deg, ${textFx.gradFrom}, ${textFx.gradTo})`,
-              backgroundSize: '100% 100%',
-              backgroundRepeat: 'no-repeat',
-              WebkitBackgroundClip: 'text',
-              backgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              color: 'transparent',
-              WebkitTextStrokeWidth: textFx.strokeWidth
-                ? `${textFx.strokeWidth}px`
-                : undefined,
-              WebkitTextStrokeColor: textFx.strokeColor,
-            }
-          : undefined
+        lineStyle: {
+          WebkitTextStrokeWidth: textFx.strokeWidth
+            ? `${textFx.strokeWidth}px`
+            : undefined,
+          WebkitTextStrokeColor: textFx.strokeColor,
+          ...(textFx.gradient
+            ? {
+                backgroundImage: `linear-gradient(180deg, ${textFx.gradFrom}, ${textFx.gradTo})`,
+                backgroundSize: '100% 100%',
+                backgroundRepeat: 'no-repeat',
+                WebkitBackgroundClip: 'text',
+                backgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                color: 'transparent',
+              }
+            : {}),
+        }
       }
     )
   }
@@ -4219,23 +4220,25 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
         opticalMargin,
         kerningFix,
         lineHeight: lineHeight,
-        lineStyle: textFx.gradient
-          ? {
-              backgroundImage: `linear-gradient(180deg, ${textFx.gradFrom}, ${textFx.gradTo})`,
-              backgroundSize: '100% 100%',
-              backgroundRepeat: 'no-repeat',
-              WebkitBackgroundClip: 'text',
-              backgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              color: 'transparent',
-              display: 'block',
-              width: '100%',
-              WebkitTextStrokeWidth: textFx.strokeWidth
-                ? `${textFx.strokeWidth}px`
-                : undefined,
-              WebkitTextStrokeColor: textFx.strokeColor,
-            }
-          : undefined,
+        lineStyle: {
+          display: 'block',
+          width: '100%',
+          WebkitTextStrokeWidth: textFx.strokeWidth
+            ? `${textFx.strokeWidth}px`
+            : undefined,
+          WebkitTextStrokeColor: textFx.strokeColor,
+          ...(textFx.gradient
+            ? {
+                backgroundImage: `linear-gradient(180deg, ${textFx.gradFrom}, ${textFx.gradTo})`,
+                backgroundSize: '100% 100%',
+                backgroundRepeat: 'no-repeat',
+                WebkitBackgroundClip: 'text',
+                backgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                color: 'transparent',
+              }
+            : {}),
+        },
       }
     )}
   </h1>
@@ -4377,8 +4380,10 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
       maxWidth: '100%',
 
       // No internal transform here, handled by parent
-      WebkitTextStrokeWidth: 0,
-      WebkitTextStrokeColor: 'rgba(0,0,0,0.9)',
+      WebkitTextStrokeWidth: head2Fx.strokeWidth
+        ? `${head2Fx.strokeWidth}px`
+        : undefined,
+      WebkitTextStrokeColor: head2Fx.strokeColor,
 
       textShadow: head2Shadow
         ? buildPremiumTextShadow(
@@ -19785,7 +19790,41 @@ const textLayerZ = React.useMemo(
   }),
   [textBaseZ, textLayerOffset]
 );
-const activeTextControls = React.useMemo(() => {
+type ActiveTextControls = {
+  label: string;
+  text: string;
+  font: string;
+  fonts: string[];
+  size: number;
+  sizeMin: number;
+  sizeMax: number;
+  sizeStep: number;
+  lineHeight: number;
+  lineMin: number;
+  lineMax: number;
+  lineStep: number;
+  color?: string;
+  allowNoFill?: boolean;
+  strokeWidth?: number;
+  strokeColor?: string;
+  shadowStrength?: number;
+  onColor?: (v: string) => void;
+  onStrokeWidth?: (v: number) => void;
+  onStrokeColor?: (v: string) => void;
+  onShadowStrength?: (v: number) => void;
+  strokeEnabled?: boolean;
+  onToggleStroke?: () => void;
+  onText?: (v: string) => void;
+  onFont?: (v: string) => void;
+  onSize?: (v: number) => void;
+  onLine?: (v: number) => void;
+  rotation?: number;
+  onRotate?: (v: number) => void;
+  layerOffset?: number;
+  onLayerUp?: () => void;
+  onLayerDown?: () => void;
+};
+const activeTextControls = React.useMemo<ActiveTextControls | null>(() => {
   switch (activeTextTarget) {
     case "headline":
       return {
@@ -19802,7 +19841,20 @@ const activeTextControls = React.useMemo(() => {
         lineMax: 1.3,
         lineStep: 0.02,
         color: textFx?.color,
+        allowNoFill: true,
         onColor: (v: string) => setTextFx((p) => ({ ...p, color: v })),
+        strokeWidth: textFx.strokeWidth,
+        strokeColor: textFx.strokeColor,
+        shadowStrength: headShadowStrength,
+        onStrokeWidth: (v: number) => setTextFx((p) => ({ ...p, strokeWidth: v })),
+        onStrokeColor: (v: string) => setTextFx((p) => ({ ...p, strokeColor: v })),
+        onShadowStrength: (v: number) => setHeadShadowStrength(v),
+        strokeEnabled: textFx.strokeWidth > 0,
+        onToggleStroke: () =>
+          setTextFx((p) => ({
+            ...p,
+            strokeWidth: p.strokeWidth > 0 ? 0 : Math.max(1, p.strokeWidth || 1),
+          })),
         onText: (v: string) => setHeadline(v),
         onFont: (v: string) => {
           setHeadlineFamily(v);
@@ -19836,7 +19888,20 @@ const activeTextControls = React.useMemo(() => {
         lineMax: 1.6,
         lineStep: 0.05,
         color: head2Color,
+        allowNoFill: true,
         onColor: (v: string) => setHead2Color(v),
+        strokeWidth: head2Fx.strokeWidth,
+        strokeColor: head2Fx.strokeColor,
+        shadowStrength: head2ShadowStrength,
+        onStrokeWidth: (v: number) => setHead2Fx((p) => ({ ...p, strokeWidth: v })),
+        onStrokeColor: (v: string) => setHead2Fx((p) => ({ ...p, strokeColor: v })),
+        onShadowStrength: (v: number) => setHead2ShadowStrength(v),
+        strokeEnabled: head2Fx.strokeWidth > 0,
+        onToggleStroke: () =>
+          setHead2Fx((p) => ({
+            ...p,
+            strokeWidth: p.strokeWidth > 0 ? 0 : Math.max(1, p.strokeWidth || 1),
+          })),
         onText: (v: string) => setHead2(v),
         onFont: (v: string) => setHead2Family(v),
         onSize: (v: number) => setHead2SizePx(v),
@@ -19963,6 +20028,8 @@ const activeTextControls = React.useMemo(() => {
   headMaxPx,
   headRotate,
   setTextFx,
+  headShadowStrength,
+  textFx,
   setHeadlineFamily,
   setHeadSizeAuto,
   setHeadManualPx,
@@ -19972,6 +20039,8 @@ const activeTextControls = React.useMemo(() => {
   head2LineHeight,
   head2Color,
   head2Rotate,
+  head2ShadowStrength,
+  head2Fx,
   setHead2Color,
   setHead2Family,
   setHead2SizePx,
@@ -23652,20 +23721,61 @@ style={{ top: STICKY_TOP }}
         <Chip small active={textFx.bold} onClick={() => setTextFx((v) => ({ ...v, bold: !v.bold }))}>Bold</Chip>
         <Chip small active={textFx.italic} onClick={() => setTextFx((v) => ({ ...v, italic: !v.italic }))}>Italic</Chip>
         <Chip small active={headShadow} onClick={() => setHeadShadow(!headShadow)}>Shadow</Chip>
+        <Chip
+          small
+          active={textFx.strokeWidth > 0}
+          onClick={() =>
+            setTextFx((v) => ({ ...v, strokeWidth: v.strokeWidth > 0 ? 0 : Math.max(1, v.strokeWidth || 1) }))
+          }
+        >
+          Stroke
+        </Chip>
       </div>
 
-      <div className="flex items-center justify-between mt-2">
-        <span className="text-xs opacity-70">Shadow Strength</span>
-        <Stepper value={headShadowStrength} setValue={setHeadShadowStrength} min={0} max={5} step={0.1} />
+      <div className="mt-2 flex items-center gap-3">
+        <span className="w-[110px] shrink-0 text-xs opacity-70">Shadow Strength</span>
+        <Stepper
+          className="flex-1"
+          value={headShadowStrength}
+          setValue={setHeadShadowStrength}
+          min={0}
+          max={5}
+          step={0.1}
+          digits={1}
+        />
+      </div>
+
+      <div className="mt-2 flex items-center gap-3">
+        <span className="w-[110px] shrink-0 text-xs opacity-70">Stroke Width</span>
+        <Stepper
+          className="flex-1"
+          value={textFx.strokeWidth}
+          setValue={(n) => setTextFx((v) => ({ ...v, strokeWidth: n }))}
+          min={0}
+          max={8}
+          step={0.1}
+          digits={1}
+        />
       </div>
 
       <div className="flex items-end mt-2 flex-wrap w-full">
-        <div className="ml-auto flex flex-wrap items-center gap-2 justify-end text-[11px]">
+        <div className="ml-auto flex flex-wrap items-center gap-3 justify-end text-[11px]">
           <span className="opacity-80">Fill</span>
           <ColorDot
             value={textFx.color}
+            allowNone
+            noneTitle="No fill"
             onChange={(c) => {
               const next = { ...textFx, color: c };
+              setTextFx(next);
+              setSessionValue(format, "textFx", next);
+            }}
+          />
+          <span className="opacity-80">Stroke</span>
+          <ColorDot
+            value={textFx.strokeColor}
+            onChange={(c) => {
+              const next = { ...textFx, strokeColor: c };
               setTextFx(next);
               setSessionValue(format, "textFx", next);
             }}
@@ -23842,24 +23952,64 @@ style={{ top: STICKY_TOP }}
         <Chip small active={head2Fx.bold} onClick={() => setHead2Fx((v) => ({ ...v, bold: !v.bold }))}>Bold</Chip>
         <Chip small active={head2Fx.italic} onClick={() => setHead2Fx((v) => ({ ...v, italic: !v.italic }))}>Italic</Chip>
         <Chip small active={head2Shadow} onClick={() => setHead2Shadow(!head2Shadow)}>Shadow</Chip>
+        <Chip
+          small
+          active={head2Fx.strokeWidth > 0}
+          onClick={() =>
+            setHead2Fx((v) => ({ ...v, strokeWidth: v.strokeWidth > 0 ? 0 : Math.max(1, v.strokeWidth || 1) }))
+          }
+        >
+          Stroke
+        </Chip>
       </div>
 
-      {/* SHADOW STRENGTH */}
-      <div className="flex items-center justify-between mt-2">
-        <span className="text-xs opacity-70">Shadow Strength</span>
-        <Stepper value={head2ShadowStrength} setValue={setHead2ShadowStrength} min={0} max={5} step={0.1} />
+      <div className="mt-2 flex items-center gap-3">
+        <span className="w-[110px] shrink-0 text-xs opacity-70">Shadow Strength</span>
+        <Stepper
+          className="flex-1"
+          value={head2ShadowStrength}
+          setValue={setHead2ShadowStrength}
+          min={0}
+          max={5}
+          step={0.1}
+          digits={1}
+        />
       </div>
 
-      {/* COLOR */}
+      <div className="mt-2 flex items-center gap-3">
+        <span className="w-[110px] shrink-0 text-xs opacity-70">Stroke Width</span>
+        <Stepper
+          className="flex-1"
+          value={head2Fx.strokeWidth}
+          setValue={(n) => setHead2Fx((v) => ({ ...v, strokeWidth: n }))}
+          min={0}
+          max={8}
+          step={0.1}
+          digits={1}
+        />
+      </div>
+
       <div className="flex items-end mt-2 flex-wrap w-full">
-        <div className="ml-auto flex flex-wrap items-center gap-2 justify-end text-[11px]">
+        <div className="ml-auto flex flex-wrap items-center gap-3 justify-end text-[11px]">
           <span className="opacity-80">Fill</span>
           <ColorDot
             title="Fill color"
             value={head2Color}
+            allowNone
+            noneTitle="No fill"
             onChange={(c) => {
               setHead2Color(c);
               setSessionValue(format, "head2Color", c);
+            }}
+          />
+          <span className="opacity-80">Stroke</span>
+          <ColorDot
+            title="Stroke color"
+            value={head2Fx.strokeColor}
+            onChange={(c) => {
+              const next = { ...head2Fx, strokeColor: c };
+              setHead2Fx(next);
+              setSessionValue(format, "head2Fx", next);
             }}
           />
         </div>
@@ -24931,9 +25081,11 @@ style={{ top: STICKY_TOP }}
           <span className="min-w-0 truncate">{formatUiLabelCaps(activeTextControls.label === "Details 2" ? "More Details" : activeTextControls.label)}</span>
           {activeTextControls.color && (
             <div className="ml-auto flex items-center gap-1">
-              <span className="text-[10px] uppercase tracking-wider text-neutral-400">Color</span>
+              <span className="text-[10px] uppercase tracking-wider text-neutral-400">Fill</span>
               <ColorDot
                 value={activeTextControls.color}
+                allowNone={!!activeTextControls.allowNoFill}
+                noneTitle="No fill"
                 onChange={(v) => activeTextControls.onColor?.(v)}
               />
             </div>
@@ -24997,6 +25149,60 @@ style={{ top: STICKY_TOP }}
               rangeClassName="flex-1 accent-cyan-400"
             />
           </div>
+          {(activeTextControls.onShadowStrength || activeTextControls.onStrokeWidth) && (
+            <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
+              {activeTextControls.onShadowStrength && (
+                <div>
+                  <InlineSliderInput
+                    label="Shadow Strength"
+                    value={Number(activeTextControls.shadowStrength || 0)}
+                    min={0}
+                    max={5}
+                    step={0.1}
+                    precision={1}
+                    onChange={(next) => activeTextControls.onShadowStrength?.(next)}
+                    rangeClassName="flex-1 accent-violet-400"
+                  />
+                </div>
+              )}
+              {activeTextControls.onStrokeWidth && (
+                <div>
+                  <InlineSliderInput
+                    label="Stroke Width"
+                    value={Number(activeTextControls.strokeWidth || 0)}
+                    min={0}
+                    max={8}
+                    step={0.1}
+                    precision={1}
+                    onChange={(next) => activeTextControls.onStrokeWidth?.(next)}
+                    rangeClassName="flex-1 accent-amber-400"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+          {(activeTextControls.onToggleStroke || activeTextControls.onStrokeColor) && (
+            <div className="flex flex-wrap items-center gap-2">
+              {activeTextControls.onToggleStroke && (
+                <Chip
+                  small
+                  active={!!activeTextControls.strokeEnabled}
+                  onClick={() => activeTextControls.onToggleStroke?.()}
+                >
+                  Stroke
+                </Chip>
+              )}
+              {activeTextControls.onStrokeColor && (
+                <div className="ml-auto flex items-center gap-1">
+                  <span className="text-[10px] uppercase tracking-wider text-neutral-400">Stroke</span>
+                  <ColorDot
+                    value={String(activeTextControls.strokeColor || "#000000")}
+                    onChange={(v) => activeTextControls.onStrokeColor?.(v)}
+                  />
+                </div>
+              )}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
