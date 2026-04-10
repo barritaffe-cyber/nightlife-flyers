@@ -20284,9 +20284,7 @@ const activeAssetControls = React.useMemo(() => {
       return {
         label: "Cutout",
         idLabel: `${sel.id}`,
-        showPosition: true,
-        posX: sel.x ?? 0,
-        posY: sel.y ?? 0,
+        showPosition: false,
         scale: sel.scale ?? 1,
         showScale: true,
         scaleLabel: "Scale",
@@ -20295,14 +20293,19 @@ const activeAssetControls = React.useMemo(() => {
         scaleStep: 0.01,
         opacity: sel.opacity ?? 1,
         showOpacity: false,
+        tint: typeof (sel as any).tint === "number" ? (sel as any).tint : 0,
+        shadowBlur: Number((sel as any).shadowBlur ?? 0),
+        shadowStrength: Number((sel as any).shadowAlpha ?? 0.48),
         locked: !!sel.locked,
         rotation: sel.rotation ?? 0,
         onScale: (v: number) =>
           useFlyerState.getState().updatePortrait(format, sel.id, { scale: v }),
-        onPosX: (v: number) =>
-          useFlyerState.getState().updatePortrait(format, sel.id, { x: clamp100(v) }),
-        onPosY: (v: number) =>
-          useFlyerState.getState().updatePortrait(format, sel.id, { y: clamp100(v) }),
+        onTint: (v: number) =>
+          useFlyerState.getState().updatePortrait(format, sel.id, { tint: v }),
+        onShadowBlur: (v: number) =>
+          useFlyerState.getState().updatePortrait(format, sel.id, { shadowBlur: v }),
+        onShadowStrength: (v: number) =>
+          useFlyerState.getState().updatePortrait(format, sel.id, { shadowAlpha: v }),
         onRotate: (v: number) =>
           useFlyerState.getState().updatePortrait(format, sel.id, { rotation: v }),
         onToggleLock: () =>
@@ -25513,6 +25516,44 @@ style={{ top: STICKY_TOP }}
                 suffix="°"
                 onChange={(next) => activeAssetControls.onTint?.(next)}
                 rangeClassName="flex-1 accent-amber-400"
+                onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
+                onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
+                onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
+                disabled={activeAssetControls.locked}
+              />
+            </div>
+          )}
+          {activeAssetControls.shadowBlur != null && (
+            <div>
+              <InlineSliderInput
+                label="Shadow Blur"
+                min={0}
+                max={60}
+                step={1}
+                value={Number(activeAssetControls.shadowBlur || 0)}
+                precision={0}
+                onChange={(next) => activeAssetControls.onShadowBlur?.(next)}
+                rangeClassName="flex-1 accent-cyan-400"
+                onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
+                onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
+                onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
+                disabled={activeAssetControls.locked}
+              />
+            </div>
+          )}
+          {activeAssetControls.shadowStrength != null && (
+            <div>
+              <InlineSliderInput
+                label="Shadow Strength"
+                min={0}
+                max={1}
+                step={0.01}
+                value={Number(activeAssetControls.shadowStrength || 0)}
+                displayScale={100}
+                precision={0}
+                suffix="%"
+                onChange={(next) => activeAssetControls.onShadowStrength?.(next)}
+                rangeClassName="flex-1 accent-cyan-400"
                 onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
                 onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
                 onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
