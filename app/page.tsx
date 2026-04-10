@@ -19675,40 +19675,22 @@ const mobileVisibleCreatorPanels = React.useMemo(() => {
 
   const design = new Set<string>();
   const assets = new Set<string>();
-  const focusPanel = selectedPanel ?? creatorWorkflowRecommendedTarget.panel ?? null;
   const copyPanels = new Set(["headline", "head2", "details", "details2", "venue", "subtag"]);
 
   design.add("template");
   design.add("template_backgrounds");
   design.add("logo");
   copyPanels.forEach((panel) => design.add(panel));
-
-  if (
-    creatorWorkflowCurrent === "scene" ||
-    focusPanel === "background" ||
-    focusPanel === "bgfx"
-  ) {
-    assets.add("background");
-  }
-  if (focusPanel === "ai_background") assets.add("ai_background");
-  if (focusPanel === "magic_blend") assets.add("magic_blend");
-  if (focusPanel === "portrait" || (!creatorHasSubject && creatorWorkflowCurrent === "assets")) {
-    assets.add("portrait");
-  }
-  if (focusPanel === "icons" || (creatorHasSubject && creatorWorkflowCurrent === "assets")) {
-    assets.add("icons");
-  }
-  if (focusPanel === "dj_branding") assets.add("dj_branding");
+  assets.add("background");
+  assets.add("ai_background");
+  assets.add("magic_blend");
+  assets.add("icons");
+  assets.add("portrait");
 
   return { design, assets };
 }, [
-  creatorHasSubject,
-  creatorWorkflowCurrent,
-  creatorWorkflowRecommendedTarget.panel,
-  creatorWorkflowRecommendedTarget.tab,
   isDjStartupMode,
   isMobileView,
-  selectedPanel,
 ]);
 const mobilePanelClass = React.useCallback(
   (tab: "design" | "assets", panel: string | string[]) => {
