@@ -16212,11 +16212,15 @@ const portraitCanvas = React.useMemo(() => {
     focusCanvasSelectionHome(panel);
 
     if (isExtracted) {
-      window.setTimeout(() => {
-        document
-          .getElementById("extract-selected-controls")
-          ?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 80);
+      if (isMobileView) {
+        setFloatingAssetVisible(true);
+      } else {
+        window.setTimeout(() => {
+          document
+            .getElementById("extract-selected-controls")
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 80);
+      }
     } else if (!isBrandFace && !isLogo && !isFlare && !isSticker) {
       window.setTimeout(() => {
         document
@@ -20265,6 +20269,7 @@ const activeAssetControls = React.useMemo(() => {
     if (!sel) return null;
     const isBrandFace = !!(sel as any).isBrandFace;
     const isLogo = String(sel.id || "").startsWith("logo_") || !!(sel as any).isLogo;
+    const isExtracted = !!(sel as any).isExtracted;
     const isAsset = sel.isFlare || sel.isSticker || isLogo || isBrandFace;
     const isSeparator = !!(sel as any).isSeparator;
     const isShapeGraphic = !!(sel as any).isShapeGraphic;
@@ -20274,6 +20279,45 @@ const activeAssetControls = React.useMemo(() => {
     const assetLabel = isBrandFace
       ? "Main Face"
       : assetName || (sel.isFlare ? "Flare" : sel.isSticker ? "Graphic" : "3D Text");
+
+    if (isExtracted) {
+      return {
+        label: "Cutout",
+        idLabel: `${sel.id}`,
+        showPosition: true,
+        posX: sel.x ?? 0,
+        posY: sel.y ?? 0,
+        scale: sel.scale ?? 1,
+        showScale: true,
+        scaleLabel: "Scale",
+        scaleMin: 0.01,
+        scaleMax: 5,
+        scaleStep: 0.01,
+        opacity: sel.opacity ?? 1,
+        showOpacity: false,
+        locked: !!sel.locked,
+        rotation: sel.rotation ?? 0,
+        onScale: (v: number) =>
+          useFlyerState.getState().updatePortrait(format, sel.id, { scale: v }),
+        onPosX: (v: number) =>
+          useFlyerState.getState().updatePortrait(format, sel.id, { x: clamp100(v) }),
+        onPosY: (v: number) =>
+          useFlyerState.getState().updatePortrait(format, sel.id, { y: clamp100(v) }),
+        onRotate: (v: number) =>
+          useFlyerState.getState().updatePortrait(format, sel.id, { rotation: v }),
+        onToggleLock: () =>
+          useFlyerState.getState().updatePortrait(format, sel.id, {
+            locked: !sel.locked,
+          }),
+        onLayerUp: () => nudgePortraitLayer(sel.id, "up"),
+        onLayerDown: () => nudgePortraitLayer(sel.id, "down"),
+        deleteLabel: "Delete Cutout",
+        onDelete: () => {
+          removePortrait(format, sel.id);
+          useFlyerState.getState().setSelectedPortraitId(null);
+        },
+      };
+    }
 
     if (isAsset) {
       if (isBrandFace) {
