@@ -20975,16 +20975,17 @@ React.useEffect(() => {
     }
     floatFocusLockRef.current = false;
   };
+  const interactingWithinFloat = (ev?: Event) =>
+    eventWithinAnyFloat(ev) || activeElementWithinAnyFloat() || floatFocusLockRef.current;
   const onAppScroll = (ev?: Event) => {
     if (shouldSkipBecauseDragging()) return;
+    if (interactingWithinFloat(ev)) return;
     releaseFloatFocus();
     hideFloats();
   };
   const onUserMove = (ev?: Event) => {
     if (shouldSkipBecauseDragging()) return;
-    if (eventWithinAnyFloat(ev) && (ev?.type === "touchstart" || ev?.type === "pointerdown")) {
-      return;
-    }
+    if (interactingWithinFloat(ev)) return;
     releaseFloatFocus();
     hideFloats();
   };
