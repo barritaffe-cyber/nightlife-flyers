@@ -9627,7 +9627,7 @@ function placeExtractedLayer(src: string) {
     isSticker: false,
     isFlare: false,
     isExtracted: true,
-    tintMode: "colorize",
+    tintMode: "colorize" as const,
     shadowBlur: 22,
     shadowAlpha: 0.48,
     cleanup: defaults,
