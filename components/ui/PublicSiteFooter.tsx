@@ -4,7 +4,6 @@ import Link from "next/link";
 import {
   getPublicLegalName,
   getPublicMerchantAddress,
-  getPublicSupportEmail,
   getPublicSupportPhone,
   getPublicTransactionCurrency,
 } from "../../lib/publicIdentity";
@@ -12,7 +11,6 @@ import PaymentMarks from "./PaymentMarks";
 
 export default function PublicSiteFooter() {
   const legalName = getPublicLegalName();
-  const supportEmail = getPublicSupportEmail();
   const supportPhone = getPublicSupportPhone();
   const merchantAddress = getPublicMerchantAddress();
   const currency = getPublicTransactionCurrency();
@@ -27,6 +25,9 @@ export default function PublicSiteFooter() {
           <Link href="/pricing" className="transition hover:text-white">
             Pricing
           </Link>
+          <Link href="/contact" className="transition hover:text-white">
+            Contact
+          </Link>
           <Link href="/terms" className="transition hover:text-white">
             Terms
           </Link>
@@ -36,9 +37,9 @@ export default function PublicSiteFooter() {
           <Link href="/terms#billing-refunds" className="transition hover:text-white">
             Refunds & Cancellation
           </Link>
-          <a href={`mailto:${supportEmail}`} className="transition hover:text-white">
-            {supportEmail}
-          </a>
+          <Link href="/contact" className="transition hover:text-white">
+            Contact
+          </Link>
           {supportPhone ? <span>{supportPhone}</span> : null}
         </div>
         <div className="space-y-1 text-white/45">

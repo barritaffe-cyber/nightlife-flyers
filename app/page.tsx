@@ -22627,16 +22627,18 @@ return (
             Refunds & Cancellation
           </a>
           <a
-            href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Nightlife Flyers Bug Report")}`}
+            href="/contact?type=bug"
+            onClick={(event) => void handleStudioNavigation(event, "/contact?type=bug")}
             className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/85 hover:bg-white/10"
           >
             Report a Bug
           </a>
           <a
-            href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Nightlife Flyers Idea")}`}
+            href="/contact"
+            onClick={(event) => void handleStudioNavigation(event, "/contact")}
             className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/85 hover:bg-white/10"
           >
-            Suggest an Idea
+            Contact
           </a>
         </div>
         <div className="mt-3 text-[11px] text-white/45">

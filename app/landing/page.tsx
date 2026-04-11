@@ -7,7 +7,6 @@ import { ArrowRight } from "lucide-react";
 import PaymentMarks from "../../components/ui/PaymentMarks";
 import PublicSiteFooter from "../../components/ui/PublicSiteFooter";
 import {
-  getPublicSupportEmail,
   getPublicSupportPhone,
   getPublicTransactionCurrency,
 } from "../../lib/publicIdentity";
@@ -17,7 +16,6 @@ export default function LandingPage() {
   const [glow, setGlow] = React.useState(58);
 
   const glowAlpha = Math.min(0.6, 0.16 + glow / 180);
-  const supportEmail = getPublicSupportEmail();
   const supportPhone = getPublicSupportPhone();
   const currency = getPublicTransactionCurrency();
 
@@ -161,7 +159,7 @@ export default function LandingPage() {
               <div>Transaction currency: {currency}.</div>
               <div>Refunds, cancellation, privacy, and delivery terms are posted in Terms and Privacy.</div>
               <div>
-                Support: <a href={`mailto:${supportEmail}`} className="text-white underline underline-offset-4">{supportEmail}</a>
+                Support: <Link href="/contact" className="text-white underline underline-offset-4">Contact us</Link>
                 {supportPhone ? <span>{` · ${supportPhone}`}</span> : null}
               </div>
             </div>

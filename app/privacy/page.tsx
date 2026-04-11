@@ -12,24 +12,6 @@ export const metadata = {
 };
 
 const EFFECTIVE_DATE = "March 28, 2026";
-
-function getContactEmail() {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://nightlife-flyers.com";
-  const siteHost = siteUrl.replace(/^https?:\/\//, "").replace(/\/.*$/, "") || "nightlife-flyers.com";
-  const fromValue = process.env.EMAIL_FROM || "";
-  const emailMatch =
-    fromValue.match(/<([^>]+)>/) ||
-    fromValue.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-  const extracted = emailMatch?.[1] || emailMatch?.[0] || "";
-
-  if (extracted && !/^no-reply@/i.test(extracted)) {
-    return extracted;
-  }
-
-  return `support@${siteHost}`;
-}
-
-const CONTACT_EMAIL = getContactEmail();
 const LEGAL_NAME = getPublicLegalName();
 const MERCHANT_ADDRESS = getPublicMerchantAddress();
 const SUPPORT_PHONE = getPublicSupportPhone();
@@ -177,10 +159,10 @@ export default function PrivacyPage() {
           <section className="space-y-2">
             <h2 className="text-base font-semibold text-white">10. Contact</h2>
             <p>
-              For privacy questions or requests, contact{" "}
-              <a href={`mailto:${CONTACT_EMAIL}`} className="text-white underline underline-offset-4">
-                {CONTACT_EMAIL}
-              </a>
+              For privacy questions or requests, use our{" "}
+              <Link href="/contact" className="text-white underline underline-offset-4">
+                contact page
+              </Link>
               {SUPPORT_PHONE ? <span>{` or ${SUPPORT_PHONE}`}</span> : null}
               .
             </p>

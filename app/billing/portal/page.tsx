@@ -132,7 +132,9 @@ export default function BillingPortalPage() {
               View pricing
             </Link>
           )}
-          <div className="text-xs text-white/45 self-center">Support email: {supportEmail}</div>
+          <Link href="/contact" className="self-center text-xs text-white/45 underline underline-offset-4 hover:text-white">
+            Contact support
+          </Link>
         </div>
       </div>
     </main>

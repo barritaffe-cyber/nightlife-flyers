@@ -6,7 +6,6 @@ import { useSearchParams } from "next/navigation";
 import PaymentMarks from "../../../components/ui/PaymentMarks";
 import {
   getPublicMerchantAddress,
-  getPublicSupportEmail,
   getPublicSupportPhone,
   getPublicTransactionCurrency,
 } from "../../../lib/publicIdentity";
@@ -37,7 +36,6 @@ function BillingCheckoutInner() {
   const [msg, setMsg] = React.useState<string | null>(null);
   const [missing, setMissing] = React.useState<string[]>([]);
   const [checkoutHtml, setCheckoutHtml] = React.useState<string | null>(null);
-  const supportEmail = getPublicSupportEmail();
   const supportPhone = getPublicSupportPhone();
   const merchantAddress = getPublicMerchantAddress();
   const currency = getPublicTransactionCurrency();
@@ -183,10 +181,7 @@ function BillingCheckoutInner() {
             <div>Transaction currency: {currency}.</div>
             <div>Delivery: paid access is activated digitally after successful payment.</div>
             <div>
-              Support:{" "}
-              <a href={`mailto:${supportEmail}`} className="text-white underline underline-offset-4">
-                {supportEmail}
-              </a>
+              Support: <Link href="/contact" className="text-white underline underline-offset-4">Contact us</Link>
               {supportPhone ? <span>{` · ${supportPhone}`}</span> : null}
             </div>
             {merchantAddress ? <div className="sm:col-span-2">Merchant address: {merchantAddress}</div> : null}

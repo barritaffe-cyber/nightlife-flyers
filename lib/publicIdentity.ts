@@ -7,7 +7,7 @@ export function getPublicSiteHost() {
 }
 
 export function getPublicSupportEmail() {
-  return process.env.NEXT_PUBLIC_SUPPORT_EMAIL || `support@${getPublicSiteHost()}`;
+  return process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "level47.store@gmail.com";
 }
 
 export function getPublicLegalName() {

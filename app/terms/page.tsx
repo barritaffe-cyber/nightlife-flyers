@@ -12,22 +12,6 @@ export const metadata = {
 };
 
 const EFFECTIVE_DATE = "March 12, 2026";
-
-function getContactEmail() {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://nightlife-flyers.com";
-  const siteHost = siteUrl.replace(/^https?:\/\//, "").replace(/\/.*$/, "") || "nightlife-flyers.com";
-  const fromValue = process.env.EMAIL_FROM || "";
-  const emailMatch = fromValue.match(/<([^>]+)>/) || fromValue.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-  const extracted = emailMatch?.[1] || emailMatch?.[0] || "";
-
-  if (extracted && !/^no-reply@/i.test(extracted)) {
-    return extracted;
-  }
-
-  return `support@${siteHost}`;
-}
-
-const CONTACT_EMAIL = getContactEmail();
 const LEGAL_NAME = getPublicLegalName();
 const MERCHANT_ADDRESS = getPublicMerchantAddress();
 const SUPPORT_PHONE = getPublicSupportPhone();
@@ -231,10 +215,7 @@ export default function TermsPage() {
           <h2 className="text-base font-semibold text-white">Merchant and Purchase Information</h2>
           <p>Transaction currency: {TRANSACTION_CURRENCY}.</p>
           <p>
-            Customer service:{" "}
-            <a href={`mailto:${CONTACT_EMAIL}`} className="text-white underline underline-offset-4">
-              {CONTACT_EMAIL}
-            </a>
+            Customer service: <Link href="/contact" className="text-white underline underline-offset-4">Contact us</Link>
             {SUPPORT_PHONE ? <span>{` · ${SUPPORT_PHONE}`}</span> : null}
           </p>
           {MERCHANT_ADDRESS ? <p>Merchant address: {MERCHANT_ADDRESS}</p> : null}
@@ -257,10 +238,10 @@ export default function TermsPage() {
           <section className="space-y-2">
             <h2 className="text-base font-semibold text-white">18. Contact</h2>
             <p>
-              Questions about these Terms can be sent to{" "}
-              <a href={`mailto:${CONTACT_EMAIL}`} className="text-white underline underline-offset-4">
-                {CONTACT_EMAIL}
-              </a>
+              Questions about these Terms can be sent through our{" "}
+              <Link href="/contact" className="text-white underline underline-offset-4">
+                contact page
+              </Link>
               {SUPPORT_PHONE ? <span>{` or ${SUPPORT_PHONE}`}</span> : null}
               .
             </p>

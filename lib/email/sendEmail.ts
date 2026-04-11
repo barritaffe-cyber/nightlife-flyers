@@ -3,7 +3,12 @@ import { Resend } from "resend";
 const apiKey = process.env.RESEND_API_KEY || "";
 const fromEmail = process.env.EMAIL_FROM || "Nightlife Flyers <no-reply@nightlifeflyers.com>";
 
-export async function sendEmail(opts: { to: string; subject: string; html: string }) {
+export async function sendEmail(opts: {
+  to: string;
+  subject: string;
+  html: string;
+  replyTo?: string;
+}) {
   if (!apiKey) {
     console.warn("RESEND_API_KEY missing. Email not sent.", opts.subject);
     return { ok: false };
@@ -14,6 +19,7 @@ export async function sendEmail(opts: { to: string; subject: string; html: strin
     to: opts.to,
     subject: opts.subject,
     html: opts.html,
+    replyTo: opts.replyTo,
   });
   if (error) {
     console.error("Email send failed:", error);
