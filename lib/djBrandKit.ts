@@ -4,7 +4,7 @@ export type DJBrandMainFacePlacement = {
   x: number;
   y: number;
   scale: number;
-  filterPreset?: "none" | "mono" | "contrast" | "halftone" | "poster" | "pop";
+  filterPreset?: "none" | "mono" | "contrast" | "halftone" | "poster" | "pop" | "neo" | "comic";
   filterStrength?: number;
 };
 
@@ -128,7 +128,7 @@ function normalizeMainFacePlacement(v: unknown, fallback: DJBrandMainFacePlaceme
   if (!isObject(v)) return fallback;
   const rawPreset = asString(v.filterPreset, fallback.filterPreset ?? "none");
   const filterPreset =
-    rawPreset === "mono" || rawPreset === "contrast" || rawPreset === "halftone" || rawPreset === "poster" || rawPreset === "pop"
+    rawPreset === "mono" || rawPreset === "contrast" || rawPreset === "halftone" || rawPreset === "poster" || rawPreset === "pop" || rawPreset === "neo" || rawPreset === "comic"
       ? rawPreset
       : "none";
   return {

@@ -15,7 +15,7 @@ import {
 } from './controls';
 import { FontPicker } from './FontPicker';
 import { removeBackgroundLocal } from '../../lib/removeBgLocal';
-import type { PortraitLighting } from '../../app/state/flyerState';
+import type { MainFaceFilterPreset, PortraitLighting } from '../../app/state/flyerState';
 import {
   DJ_COLOR_PRESETS,
   DJ_FONT_PRESETS,
@@ -57,7 +57,7 @@ type Props = {
   mainFaceLightingShadow: number;
   mainFaceLightingWarmth: number;
   mainFaceLightingContrast: number;
-  mainFaceFilterPreset: "none" | "mono" | "contrast" | "halftone" | "poster" | "pop";
+  mainFaceFilterPreset: MainFaceFilterPreset;
   mainFaceFilterStrength: number;
   onMainFaceLockToggle: () => void;
   onMainFaceScaleChange: (value: number) => void;
@@ -67,7 +67,7 @@ type Props = {
   onMainFaceLightingToggle: () => void;
   onMainFaceLightingAutoMatchToggle: () => void;
   onMainFaceLightingChange: (patch: Partial<PortraitLighting>) => void;
-  onMainFaceFilterPresetChange: (preset: "none" | "mono" | "contrast" | "halftone" | "poster" | "pop") => void;
+  onMainFaceFilterPresetChange: (preset: MainFaceFilterPreset) => void;
   onMainFaceFilterStrengthChange: (value: number) => void;
   onUseBrandLogo: (index: number) => void;
   onUseBrandFace: () => void;
@@ -549,21 +549,33 @@ export default function DjBrandingPanel({
                 Place
               </button>
             </div>
-            <button
-              type="button"
-              className={`${editorUploadClearClass} w-full whitespace-normal text-center`}
-              onClick={() => {
-                setFaceError(null);
-                if (mainFaceOnCanvas) {
-                  onRemoveMainFace();
-                  return;
-                }
-                onKitChange({ ...kit, primaryPortrait: null });
-              }}
-              disabled={(!kit.primaryPortrait && !mainFaceOnCanvas) || faceBusy}
-            >
-              {mainFaceOnCanvas ? 'Remove' : 'Clear'}
-            </button>
+            <div className={`grid gap-2 ${mainFaceOnCanvas ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              <button
+                type="button"
+                className={`${editorUploadClearClass} w-full whitespace-normal text-center`}
+                onClick={() => {
+                  setFaceError(null);
+                  if (mainFaceOnCanvas) {
+                    onRemoveMainFace();
+                    return;
+                  }
+                  onKitChange({ ...kit, primaryPortrait: null });
+                }}
+                disabled={(!kit.primaryPortrait && !mainFaceOnCanvas) || faceBusy}
+              >
+                {mainFaceOnCanvas ? 'Remove' : 'Clear'}
+              </button>
+              {mainFaceOnCanvas && (
+                <button
+                  type="button"
+                  className={`${editorUploadPlaceClass} w-full whitespace-normal text-center`}
+                  onClick={onMainFaceLockToggle}
+                  disabled={faceBusy}
+                >
+                  {mainFaceLocked ? 'Unlock' : 'Lock'}
+                </button>
+              )}
+            </div>
             {faceError && <div className="text-[11px] text-rose-300">{faceError}</div>}
             <div className="text-[10px] text-neutral-500">Background removal runs automatically on upload.</div>
           </div>
@@ -571,9 +583,7 @@ export default function DjBrandingPanel({
           <div className="border border-neutral-700 bg-neutral-950/60 px-3 py-3 space-y-2.5">
             <div className="flex items-center justify-between gap-2">
               <div className="text-[10px] uppercase tracking-wide text-neutral-400">Canvas Main Face</div>
-              <Chip small className="!rounded-none" onClick={onMainFaceLockToggle} disabled={!mainFaceOnCanvas}>
-                {mainFaceLocked ? 'Unlock' : 'Lock'}
-              </Chip>
+              <div className="text-[10px] text-neutral-500">{mainFaceLocked ? 'Locked' : 'Unlocked'}</div>
             </div>
             <div>
               <InlineSliderInput
@@ -683,11 +693,15 @@ export default function DjBrandingPanel({
                     ? 'Mono'
                     : mainFaceFilterPreset === 'contrast'
                     ? 'Punch'
-                    : mainFaceFilterPreset === 'halftone'
-                    ? 'Halftone'
-                    : mainFaceFilterPreset === 'poster'
-                    ? 'Poster'
-                    : 'Pop'}
+                  : mainFaceFilterPreset === 'halftone'
+                  ? 'Halftone'
+                  : mainFaceFilterPreset === 'poster'
+                  ? 'Poster'
+                  : mainFaceFilterPreset === 'pop'
+                  ? 'Pop'
+                  : mainFaceFilterPreset === 'neo'
+                  ? 'Neo Red'
+                  : 'Comic Vector'}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-1.5">
@@ -698,6 +712,8 @@ export default function DjBrandingPanel({
                   ['halftone', 'Halftone'],
                   ['poster', 'Poster'],
                   ['pop', 'Pop'],
+                  ['neo', 'Neo Red'],
+                  ['comic', 'Comic Vector'],
                 ] as const).map(([preset, label]) => (
                   <Chip
                     key={preset}
@@ -833,7 +849,7 @@ export default function DjBrandingPanel({
                 <button
                   type="button"
                   onClick={() => setWorkflowStep('design')}
-                  className={djActionClass}
+                  className={djPrimaryActionClass}
                 >
                   Continue To Design
                 </button>

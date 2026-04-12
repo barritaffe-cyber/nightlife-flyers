@@ -149,7 +149,7 @@ export type PortraitLighting = {
   contrast?: number;
 };
 
-export type MainFaceFilterPreset = "none" | "mono" | "contrast" | "halftone" | "poster" | "pop";
+export type MainFaceFilterPreset = "none" | "mono" | "contrast" | "halftone" | "poster" | "pop" | "neo" | "comic";
 
 // PORTRAIT STRUCTURE
 type Portrait = {
