@@ -234,10 +234,10 @@ function normalizeMainFaceLighting(input?: PortraitLighting | null): Required<Po
   };
 }
 
-type MainFaceFilterPreset = "none" | "mono" | "contrast" | "halftone" | "poster" | "pop";
+type MainFaceFilterPreset = "none" | "mono" | "contrast" | "halftone" | "poster" | "pop" | "neo" | "comic";
 
 function normalizeMainFaceFilterPreset(input: unknown): MainFaceFilterPreset {
-  return input === "mono" || input === "contrast" || input === "halftone" || input === "poster" || input === "pop"
+  return input === "mono" || input === "contrast" || input === "halftone" || input === "poster" || input === "pop" || input === "neo" || input === "comic"
     ? input
     : "none";
 }
@@ -11812,9 +11812,7 @@ const mobileFloatSticky = isMobileView && format === "story";
   const isDjCompositionStage = false;
   const showDjTextEditing = true;
   const visibleSocialMediaStickers = SOCIAL_MEDIA_STICKERS;
-  const visibleNightlifeGraphics = isDjStartupMode
-    ? []
-    : isStudioPlan
+  const visibleNightlifeGraphics = isStudioPlan
     ? [...NIGHTLIFE_GRAPHICS, ...STUDIO_NIGHTLIFE_GRAPHICS]
     : NIGHTLIFE_GRAPHICS;
   const visibleGraphicStickers = isDjStartupMode
@@ -16328,6 +16326,8 @@ const portraitCanvas = React.useMemo(() => {
       parts.filter((part) => !!part && part !== "none").join(" ") || "none";
     const showPosterOverlay = portraitFilterPreset === "poster";
     const showPopOverlay = portraitFilterPreset === "pop";
+    const showNeoOverlay = portraitFilterPreset === "neo";
+    const showComicOverlay = portraitFilterPreset === "comic";
     const mainFaceToneFilter =
       portraitFilterPreset === "none"
         ? ""
@@ -16339,6 +16339,10 @@ const portraitCanvas = React.useMemo(() => {
         ? `grayscale(1) contrast(${(1.35 + portraitFilterStrength * 1.4).toFixed(3)}) brightness(${(0.96 + portraitFilterStrength * 0.08).toFixed(3)})`
         : portraitFilterPreset === "poster"
         ? `grayscale(${(0.42 + portraitFilterStrength * 0.46).toFixed(3)}) contrast(${(1.18 + portraitFilterStrength * 0.72).toFixed(3)}) brightness(${(1.02 - portraitFilterStrength * 0.08).toFixed(3)}) saturate(${(0.9 - portraitFilterStrength * 0.38).toFixed(3)})`
+        : portraitFilterPreset === "neo"
+        ? `grayscale(${(0.74 + portraitFilterStrength * 0.22).toFixed(3)}) contrast(${(1.42 + portraitFilterStrength * 0.92).toFixed(3)}) brightness(${(0.98 - portraitFilterStrength * 0.06).toFixed(3)}) saturate(${(0.56 - portraitFilterStrength * 0.2).toFixed(3)})`
+        : portraitFilterPreset === "comic"
+        ? `contrast(${(1.18 + portraitFilterStrength * 0.78).toFixed(3)}) brightness(${(1.03 - portraitFilterStrength * 0.02).toFixed(3)}) saturate(${(1.02 + portraitFilterStrength * 0.12).toFixed(3)})`
         : `grayscale(${(0.58 + portraitFilterStrength * 0.34).toFixed(3)}) contrast(${(1.32 + portraitFilterStrength * 0.86).toFixed(3)}) brightness(${(1.01 - portraitFilterStrength * 0.05).toFixed(3)}) saturate(${(0.72 - portraitFilterStrength * 0.34).toFixed(3)})`;
     const posterOverlayFilter = `url(#mainface-posterize) contrast(${(1.04 + portraitFilterStrength * 0.24).toFixed(3)}) saturate(${(1.08 + portraitFilterStrength * 0.22).toFixed(3)})`;
     const posterOverlayOpacity = 0.72 + portraitFilterStrength * 0.28;
@@ -16348,6 +16352,20 @@ const portraitCanvas = React.useMemo(() => {
     const popOverlayOpacity = 0.9 + portraitFilterStrength * 0.08;
     const popShadowOpacity = 0.54 + portraitFilterStrength * 0.18;
     const popHighlightOpacity = 0.42 + portraitFilterStrength * 0.16;
+    const neoOverlayFilter = `url(#mainface-neo-red) contrast(${(1.02 + portraitFilterStrength * 0.22).toFixed(3)}) saturate(${(1.08 + portraitFilterStrength * 0.2).toFixed(3)}) brightness(${(1 + portraitFilterStrength * 0.02).toFixed(3)})`;
+    const neoShadowFilter = `contrast(${(1.88 + portraitFilterStrength * 1.12).toFixed(3)}) brightness(${(0.46 + portraitFilterStrength * 0.08).toFixed(3)}) saturate(0.18)`;
+    const neoHighlightFilter = `sepia(${(0.22 + portraitFilterStrength * 0.26).toFixed(3)}) saturate(${(1.12 + portraitFilterStrength * 0.3).toFixed(3)}) brightness(${(1.08 + portraitFilterStrength * 0.12).toFixed(3)}) contrast(${(1.1 + portraitFilterStrength * 0.28).toFixed(3)})`;
+    const neoOverlayOpacity = 0.84 + portraitFilterStrength * 0.14;
+    const neoShadowOpacity = 0.48 + portraitFilterStrength * 0.18;
+    const neoHighlightOpacity = 0.24 + portraitFilterStrength * 0.18;
+    const comicOverlayFilter = `url(#mainface-comic-vector) contrast(${(1.06 + portraitFilterStrength * 0.18).toFixed(3)}) saturate(${(1.02 + portraitFilterStrength * 0.08).toFixed(3)}) brightness(${(1.01 + portraitFilterStrength * 0.03).toFixed(3)})`;
+    const comicShadowFilter = `contrast(${(2.18 + portraitFilterStrength * 1.08).toFixed(3)}) brightness(${(0.56 + portraitFilterStrength * 0.04).toFixed(3)}) saturate(0.06)`;
+    const comicHighlightFilter = `brightness(${(1.08 + portraitFilterStrength * 0.08).toFixed(3)}) contrast(${(1.08 + portraitFilterStrength * 0.18).toFixed(3)}) saturate(${(0.32 + portraitFilterStrength * 0.06).toFixed(3)})`;
+    const comicOutlineFilter = `drop-shadow(2px 0 0 rgba(8,10,18,0.97)) drop-shadow(-2px 0 0 rgba(8,10,18,0.97)) drop-shadow(0 2px 0 rgba(8,10,18,0.97)) drop-shadow(0 -2px 0 rgba(8,10,18,0.97)) drop-shadow(1px 1px 0 rgba(8,10,18,0.97)) drop-shadow(-1px -1px 0 rgba(8,10,18,0.97)) drop-shadow(1px -1px 0 rgba(8,10,18,0.97)) drop-shadow(-1px 1px 0 rgba(8,10,18,0.97))`;
+    const comicOverlayOpacity = 0.88 + portraitFilterStrength * 0.08;
+    const comicShadowOpacity = 0.28 + portraitFilterStrength * 0.12;
+    const comicHighlightOpacity = 0.08 + portraitFilterStrength * 0.08;
+    const comicOutlineOpacity = 0.62 + portraitFilterStrength * 0.18;
     const halftoneDotSize = Math.max(4, Math.round(12 - portraitFilterStrength * 5));
     const halftoneMask =
       "radial-gradient(circle at center, rgba(0,0,0,0.98) 0 34%, rgba(0,0,0,0) 43%)";
@@ -16644,6 +16662,153 @@ const portraitCanvas = React.useMemo(() => {
                   />
                 </>
               )}
+              {showNeoOverlay && (
+                <>
+                  <img
+                    src={p.url}
+                    crossOrigin="anonymous"
+                    alt=""
+                    draggable={false}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "block",
+                      width: "100%",
+                      height: "100%",
+                      objectFit: isShapeGraphic ? "fill" : "contain",
+                      pointerEvents: "none",
+                      userSelect: "none",
+                      opacity: neoOverlayOpacity,
+                      mixBlendMode: "normal",
+                      filter: mergeCssFilters(
+                        showSubjectLighting ? baseFilter : combinedFilter,
+                        neoOverlayFilter
+                      ),
+                    }}
+                  />
+                  <img
+                    src={p.url}
+                    crossOrigin="anonymous"
+                    alt=""
+                    draggable={false}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "block",
+                      width: "100%",
+                      height: "100%",
+                      objectFit: isShapeGraphic ? "fill" : "contain",
+                      pointerEvents: "none",
+                      userSelect: "none",
+                      opacity: neoShadowOpacity,
+                      mixBlendMode: "multiply",
+                      filter: mergeCssFilters(neoShadowFilter),
+                    }}
+                  />
+                  <img
+                    src={p.url}
+                    crossOrigin="anonymous"
+                    alt=""
+                    draggable={false}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "block",
+                      width: "100%",
+                      height: "100%",
+                      objectFit: isShapeGraphic ? "fill" : "contain",
+                      pointerEvents: "none",
+                      userSelect: "none",
+                      opacity: neoHighlightOpacity,
+                      mixBlendMode: "screen",
+                      filter: mergeCssFilters(neoHighlightFilter),
+                    }}
+                  />
+                </>
+              )}
+              {showComicOverlay && (
+                <>
+                  <img
+                    src={p.url}
+                    crossOrigin="anonymous"
+                    alt=""
+                    draggable={false}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "block",
+                      width: "100%",
+                      height: "100%",
+                      objectFit: isShapeGraphic ? "fill" : "contain",
+                      pointerEvents: "none",
+                      userSelect: "none",
+                      opacity: comicOutlineOpacity,
+                      mixBlendMode: "multiply",
+                      filter: mergeCssFilters(comicOutlineFilter),
+                    }}
+                  />
+                  <img
+                    src={p.url}
+                    crossOrigin="anonymous"
+                    alt=""
+                    draggable={false}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "block",
+                      width: "100%",
+                      height: "100%",
+                      objectFit: isShapeGraphic ? "fill" : "contain",
+                      pointerEvents: "none",
+                      userSelect: "none",
+                      opacity: comicOverlayOpacity,
+                      mixBlendMode: "normal",
+                      filter: mergeCssFilters(
+                        showSubjectLighting ? baseFilter : combinedFilter,
+                        comicOverlayFilter
+                      ),
+                    }}
+                  />
+                  <img
+                    src={p.url}
+                    crossOrigin="anonymous"
+                    alt=""
+                    draggable={false}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "block",
+                      width: "100%",
+                      height: "100%",
+                      objectFit: isShapeGraphic ? "fill" : "contain",
+                      pointerEvents: "none",
+                      userSelect: "none",
+                      opacity: comicShadowOpacity,
+                      mixBlendMode: "multiply",
+                      filter: mergeCssFilters(comicShadowFilter),
+                    }}
+                  />
+                  <img
+                    src={p.url}
+                    crossOrigin="anonymous"
+                    alt=""
+                    draggable={false}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "block",
+                      width: "100%",
+                      height: "100%",
+                      objectFit: isShapeGraphic ? "fill" : "contain",
+                      pointerEvents: "none",
+                      userSelect: "none",
+                      opacity: comicHighlightOpacity,
+                      mixBlendMode: "screen",
+                      filter: mergeCssFilters(comicHighlightFilter),
+                    }}
+                  />
+                </>
+              )}
               {portraitFilterPreset === "halftone" && (
                 <>
                   <img
@@ -16660,7 +16825,7 @@ const portraitCanvas = React.useMemo(() => {
                       objectFit: isShapeGraphic ? "fill" : "contain",
                       pointerEvents: "none",
                       userSelect: "none",
-                      opacity: 0.52 + mainFaceFilterStrength * 0.32,
+                      opacity: 0.52 + portraitFilterStrength * 0.32,
                       mixBlendMode: "multiply",
                       filter: mergeCssFilters(showSubjectLighting ? baseFilter : combinedFilter, mainFaceToneFilter),
                       maskImage: halftoneMask,
@@ -24831,6 +24996,27 @@ style={{ top: STICKY_TOP }}
         <feFuncB type="discrete" tableValues="0.290 0.125 0.157 0.663 0.820" />
       </feComponentTransfer>
     </filter>
+    <filter id="mainface-neo-red" colorInterpolationFilters="sRGB">
+      <feColorMatrix
+        in="SourceGraphic"
+        type="matrix"
+        values="0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0 0 0 1 0"
+        result="neoMono"
+      />
+      <feComponentTransfer in="neoMono">
+        <feFuncR type="discrete" tableValues="0.035 0.118 0.361 1.000 0.957" />
+        <feFuncG type="discrete" tableValues="0.035 0.114 0.086 0.227 0.925" />
+        <feFuncB type="discrete" tableValues="0.035 0.114 0.078 0.243 0.851" />
+      </feComponentTransfer>
+    </filter>
+    <filter id="mainface-comic-vector" colorInterpolationFilters="sRGB">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="0.7" result="comicSoft" />
+      <feComponentTransfer in="comicSoft">
+        <feFuncR type="discrete" tableValues="0.070 0.320 0.600 0.860 1.000" />
+        <feFuncG type="discrete" tableValues="0.080 0.340 0.620 0.880 1.000" />
+        <feFuncB type="discrete" tableValues="0.100 0.380 0.660 0.900 1.000" />
+      </feComponentTransfer>
+    </filter>
   </svg>
   {/* ✅ FILTERED CONTENT ONLY (everything BELOW the flare) */}
     <div
@@ -25828,6 +26014,8 @@ style={{ top: STICKY_TOP }}
                 ["halftone", "Halftone"],
                 ["poster", "Poster"],
                 ["pop", "Pop"],
+                ["neo", "Neo Red"],
+                ["comic", "Comic Vector"],
               ] as const).map(([preset, label]) => (
                 <button
                   key={preset}
@@ -27190,6 +27378,8 @@ style={{ top: STICKY_TOP }}
                 ["halftone", "Halftone"],
                 ["poster", "Poster"],
                 ["pop", "Pop"],
+                ["neo", "Neo Red"],
+                ["comic", "Comic Vector"],
               ] as const).map(([preset, label]) => (
                 <Chip
                   key={preset}
