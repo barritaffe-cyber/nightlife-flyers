@@ -26,7 +26,7 @@ import AuthGate from "../components/auth/AuthGate";
 import type { TemplateBase } from "../lib/templates";
 import type { MoveTarget } from "../app/state/flyerState";
 import { removeBackgroundLocal } from "../lib/removeBgLocal";
-import { cleanupCutoutUrl } from "../lib/cleanupCutoutUrl";
+import { cleanupCutoutUrl, PREMIUM_CUTOUT_CLEANUP } from "../lib/cleanupCutoutUrl";
 import { supabaseBrowser } from "../lib/supabase/client";
 import * as Slider from "@radix-ui/react-slider";
 import type { CleanupParams } from "../lib/cleanupCutoutUrl";
@@ -985,6 +985,7 @@ const DJ_STARTUP_BACKGROUNDS = [
   { id: "club10", src: "/DJ/club10.jpg", name: "Club 10" },
   { id: "club11", src: "/DJ/club11.jpg", name: "Club 11" },
   { id: "club12", src: "/DJ/club12.jpg", name: "Club 12" },
+  { id: "club13", src: "/DJ/club13.jpg", name: "Club 13" },
 ] as const;
 
 const GRAPHIC_STICKERS = [
@@ -7821,17 +7822,7 @@ const {
 
 type CleanupById = Record<string, CleanupParams>;
 
-const DEFAULT_CLEANUP: CleanupParams = {
-  shrinkPx: 2,
-  featherPx: 2,
-  alphaBoost: 1.35,
-  alphaSmoothPx: 2,
-  edgeGamma: 1.1,
-  decontaminate: 0.55,
-  spillSuppress: 0.35,
-  alphaFill: 0.08,
-  edgeClamp: 0,
-};
+const DEFAULT_CLEANUP: CleanupParams = { ...PREMIUM_CUTOUT_CLEANUP };
 
 
 const [cleanupById, setCleanupById] = useState<CleanupById>({});
@@ -9605,17 +9596,7 @@ function placeExtractedLayer(src: string) {
   if (!src) return;
 
   const id = `extract_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-  const defaults = {
-    shrinkPx: 2,
-    featherPx: 2,
-    alphaBoost: 1.35,
-    decontaminate: 0.55,
-    alphaSmoothPx: 2,
-    edgeGamma: 1.1,
-    spillSuppress: 0.35,
-    alphaFill: 0.08,
-    edgeClamp: 0,
-  };
+  const defaults = { ...PREMIUM_CUTOUT_CLEANUP };
 
   const newPortrait = {
     id,
@@ -27038,17 +27019,7 @@ style={{ top: STICKY_TOP }}
                   if (!src) return;
 
                   const id = `p_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-                  const defaults = {
-                    shrinkPx: 2,
-                    featherPx: 2,
-                    alphaBoost: 1.35,
-                    decontaminate: 0.55,
-                    alphaSmoothPx: 2,
-                    edgeGamma: 1.1,
-                    spillSuppress: 0.35,
-                    alphaFill: 0.08,
-                    edgeClamp: 0,
-                  };
+                  const defaults = { ...PREMIUM_CUTOUT_CLEANUP };
 
                   const newPortrait = {
                     id,

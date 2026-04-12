@@ -12,6 +12,18 @@ export type CleanupParams = {
   edgeClamp: number;
 };
 
+export const PREMIUM_CUTOUT_CLEANUP: CleanupParams = {
+  shrinkPx: 1,
+  featherPx: 1,
+  alphaBoost: 1.5,
+  decontaminate: 0.72,
+  alphaSmoothPx: 1,
+  edgeGamma: 0.94,
+  spillSuppress: 0.58,
+  alphaFill: 0.12,
+  edgeClamp: 0.14,
+};
+
 // Small helper: clamp
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
@@ -50,15 +62,20 @@ export async function cleanupCutoutUrl(
   const d = id.data;
 
   // --- PARAMS (clamped defaults) ---
-  const alphaBoost = clamp(params.alphaBoost ?? 1.0, 0.5, 3.0);
+  const alphaBoost = clamp(params.alphaBoost ?? PREMIUM_CUTOUT_CLEANUP.alphaBoost, 0.5, 3.0);
   const alphaSmoothPx = Math.round(clamp(params.alphaSmoothPx ?? 0, 0, 6));
   const shrinkPx = Math.round(clamp(params.shrinkPx ?? 0, 0, 12));
-  const alphaFill = clamp(params.alphaFill ?? 0, 0, 0.25);
+  const alphaFill = clamp(params.alphaFill ?? PREMIUM_CUTOUT_CLEANUP.alphaFill, 0, 0.25);
   const featherPx = Math.round(clamp(params.featherPx ?? 0, 0, 24));
-  const edgeGamma = clamp(params.edgeGamma ?? 1.0, 0.7, 1.5);
-  const edgeClamp = clamp(params.edgeClamp ?? 0, 0, 1);
-  const decon = clamp(params.decontaminate ?? 0, 0, 1);
-  const spillSuppress = clamp(params.spillSuppress ?? 0, 0, 1);
+  const edgeGamma = clamp(params.edgeGamma ?? PREMIUM_CUTOUT_CLEANUP.edgeGamma, 0.7, 1.5);
+  const edgeClamp = clamp(params.edgeClamp ?? PREMIUM_CUTOUT_CLEANUP.edgeClamp, 0, 1);
+  const decon = clamp(params.decontaminate ?? PREMIUM_CUTOUT_CLEANUP.decontaminate, 0, 1);
+  const spillSuppress = clamp(params.spillSuppress ?? PREMIUM_CUTOUT_CLEANUP.spillSuppress, 0, 1);
+  const snapStrength = clamp(
+    0.18 + edgeClamp * 0.9 + Math.max(0, alphaBoost - 1) * 0.14 + spillSuppress * 0.08,
+    0,
+    0.92
+  );
 
   // ------------------------------------------------------------
   // 1) Alpha boost (makes hair/edges more solid)
@@ -86,7 +103,15 @@ export async function cleanupCutoutUrl(
   }
 
   // ------------------------------------------------------------
-  // 4) Alpha fill — close near-opaque pinholes
+  // 4) Snap semi-transparent edge pixels to cleaner mask boundaries
+  // ------------------------------------------------------------
+  if (snapStrength > 0) {
+    despeckleAlpha(d, w, h);
+    snapAlphaEdges(d, w, h, snapStrength);
+  }
+
+  // ------------------------------------------------------------
+  // 5) Alpha fill — close near-opaque pinholes
   // ------------------------------------------------------------
   if (alphaFill > 0) {
     const t = 1 - alphaFill; 
@@ -100,7 +125,7 @@ export async function cleanupCutoutUrl(
   ctx.putImageData(id, 0, 0);
 
   // ------------------------------------------------------------
-  // 5) Feather (blur ONLY alpha edge via destination-in blur)
+  // 6) Feather (blur ONLY alpha edge via destination-in blur)
   // ------------------------------------------------------------
   if (featherPx > 0) {
     const mask = document.createElement("canvas");
@@ -116,13 +141,13 @@ export async function cleanupCutoutUrl(
     mctx.fillStyle = "white";
     mctx.fillRect(0, 0, w, h);
 
-    // blur mask
-    mctx.filter = `blur(${featherPx}px)`;
     const blurred = document.createElement("canvas");
     blurred.width = w;
     blurred.height = h;
-    blurred.getContext("2d")!.drawImage(mask, 0, 0);
-    mctx.filter = "none";
+    const bctx = blurred.getContext("2d")!;
+    bctx.filter = `blur(${featherPx}px)`;
+    bctx.drawImage(mask, 0, 0);
+    bctx.filter = "none";
 
     // apply mask
     ctx.globalCompositeOperation = "destination-in";
@@ -131,7 +156,7 @@ export async function cleanupCutoutUrl(
   }
 
   // ------------------------------------------------------------
-  // 6) Edge gamma + edge clamp
+  // 7) Edge gamma + edge clamp
   // ------------------------------------------------------------
   if (edgeGamma !== 1.0 || edgeClamp > 0) {
     const id3 = ctx.getImageData(0, 0, w, h);
@@ -152,7 +177,7 @@ export async function cleanupCutoutUrl(
   }
 
   // ------------------------------------------------------------
-  // 7) Decontaminate — pull edge RGB toward neutral
+  // 8) Decontaminate — pull edge RGB toward neutral
   // ------------------------------------------------------------
   if (decon > 0) {
     const id2 = ctx.getImageData(0, 0, w, h);
@@ -172,7 +197,7 @@ export async function cleanupCutoutUrl(
   }
 
   // ------------------------------------------------------------
-  // 8) Spill suppress — pull edge RGB toward nearest solid pixels
+  // 9) Spill suppress — pull edge RGB toward nearest solid pixels
   // ------------------------------------------------------------
   if (spillSuppress > 0) {
     const id4 = ctx.getImageData(0, 0, w, h);
@@ -307,6 +332,80 @@ function blurAlphaBox(data: Uint8ClampedArray, w: number, h: number, radius: num
         count++;
       }
       data[idxA(x, y)] = Math.round(sum / Math.max(1, count));
+    }
+  }
+}
+
+function despeckleAlpha(data: Uint8ClampedArray, w: number, h: number) {
+  const copy = new Uint8ClampedArray(data);
+  const idxA = (x: number, y: number) => (y * w + x) * 4 + 3;
+  const visibleCut = 28;
+  const solidCut = 214;
+
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const i = idxA(x, y);
+      const a = copy[i];
+      if (a === 0 || a === 255) continue;
+
+      let visible = 0;
+      let solid = 0;
+      for (let oy = -1; oy <= 1; oy++) {
+        for (let ox = -1; ox <= 1; ox++) {
+          if (ox === 0 && oy === 0) continue;
+          const na = copy[idxA(x + ox, y + oy)];
+          if (na >= visibleCut) visible++;
+          if (na >= solidCut) solid++;
+        }
+      }
+
+      if (a < visibleCut && visible <= 2) {
+        data[i] = 0;
+      } else if (a >= solidCut && solid >= 5) {
+        data[i] = 255;
+      }
+    }
+  }
+}
+
+function snapAlphaEdges(data: Uint8ClampedArray, w: number, h: number, amount: number) {
+  if (amount <= 0) return;
+
+  const copy = new Uint8ClampedArray(data);
+  const idxA = (x: number, y: number) => (y * w + x) * 4 + 3;
+
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const i = idxA(x, y);
+      const base = copy[i] / 255;
+      if (base <= 0.01 || base >= 0.99) continue;
+
+      let sum = 0;
+      let count = 0;
+      let solids = 0;
+      let empties = 0;
+      let maxDelta = 0;
+
+      for (let oy = -1; oy <= 1; oy++) {
+        for (let ox = -1; ox <= 1; ox++) {
+          const n = copy[idxA(x + ox, y + oy)] / 255;
+          sum += n;
+          count++;
+          if (n >= 0.92) solids++;
+          else if (n <= 0.08) empties++;
+          maxDelta = Math.max(maxDelta, Math.abs(n - base));
+        }
+      }
+
+      const mean = sum / Math.max(1, count);
+      const bias = Math.abs(solids - empties) / Math.max(1, count);
+      const target =
+        solids > empties ? 1 : empties > solids ? 0 : mean >= 0.5 ? 1 : 0;
+      const localAmount = clamp(amount * (0.58 + maxDelta * 1.25 + bias * 0.9), 0, 0.98);
+      const softened = base + (mean - base) * 0.18;
+      const snapped = softened + (target - softened) * localAmount;
+
+      data[i] = clamp(Math.round(snapped * 255), 0, 255);
     }
   }
 }

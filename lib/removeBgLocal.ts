@@ -1,5 +1,7 @@
 "use client";
 
+import { cleanupCutoutUrl, PREMIUM_CUTOUT_CLEANUP } from "./cleanupCutoutUrl";
+
 function dataUrlToBlob(dataUrl: string): Blob {
   const [head, b64] = dataUrl.split(",");
   const mime = head.match(/data:(.*?);base64/)?.[1] || "image/png";
@@ -85,18 +87,31 @@ async function removeBackgroundWithLocalModel(imageSrc: string): Promise<string>
   return await blobToDataUrl(blob);
 }
 
+async function refineCutoutOutput(output: string): Promise<string> {
+  const pngOutput = output.startsWith("data:image/png")
+    ? output
+    : await imageToPngDataUrl(output);
+
+  try {
+    return await cleanupCutoutUrl(pngOutput, PREMIUM_CUTOUT_CLEANUP);
+  } catch (err: any) {
+    console.warn("Cutout cleanup failed, using raw remove-bg output:", err?.message || err);
+    return pngOutput;
+  }
+}
+
 export async function removeBackgroundLocal(imageSrc: string): Promise<string> {
   try {
     // Primary path: remove.bg via server route.
     const output = await removeBackgroundViaApi(imageSrc);
-    return output.startsWith("data:image/png") ? output : await imageToPngDataUrl(output);
+    return await refineCutoutOutput(output);
   } catch (err: any) {
     console.warn("remove.bg path failed, falling back to local model:", err?.message || err);
   }
 
   try {
     const output = await removeBackgroundWithLocalModel(imageSrc);
-    return output.startsWith("data:image/png") ? output : await imageToPngDataUrl(output);
+    return await refineCutoutOutput(output);
   } catch (err: any) {
     console.error("Background removal failed:", err?.message || err);
     throw new Error("Background removal failed");
