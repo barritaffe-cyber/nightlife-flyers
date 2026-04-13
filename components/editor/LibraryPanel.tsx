@@ -62,6 +62,8 @@ type NightlifeGraphic = {
   id: string;
   label: string;
   paths: ReadonlyArray<string>;
+  strokeWidth?: number;
+  renderMode?: "stroke" | "fill";
 };
 
 type GraphicSticker = {
@@ -121,6 +123,8 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
   }) => {
     // rAF throttle to smooth slider-driven updates
     const updatePortraitRaf = React.useRef<(id: string, patch: any) => void | undefined>(undefined);
+    const updatePortraitGeometryRaf = React.useRef<(id: string, patch: any) => void | undefined>(undefined);
+    const updateSeparatorRaf = React.useRef<((id: string, kind: string, color: string, width: number, offset: number) => void) | undefined>(undefined);
     const updateEmojiRaf = React.useRef<(id: string, patch: any) => void | undefined>(undefined);
     const [librarySectionsOpen, setLibrarySectionsOpen] = React.useState(() => ({
       emoji: false,
@@ -160,6 +164,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
     const addEmoji = useFlyerState((s) => s.addEmoji);
     const updateEmoji = useFlyerState((s) => s.updateEmoji);
     const removeEmoji = useFlyerState((s) => s.removeEmoji);
+    const setIsLiveDragging = useFlyerState((s) => s.setIsLiveDragging);
     const ASSET_LAYER_STEP = 8;
     const ASSET_LAYER_MIN = -120;
     const ASSET_LAYER_MAX = 160;
@@ -201,6 +206,30 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
       },
       [format, nudgeAssetLayerOffset]
     );
+    const beginSliderDrag = React.useCallback(() => {
+      setIsLiveDragging(true);
+    }, [setIsLiveDragging]);
+    const endSliderDrag = React.useCallback(() => {
+      setIsLiveDragging(false);
+    }, [setIsLiveDragging]);
+    const sliderDragProps = React.useMemo(
+      () => ({
+        onPointerDown: beginSliderDrag,
+        onPointerUp: endSliderDrag,
+        onPointerCancel: endSliderDrag,
+      }),
+      [beginSliderDrag, endSliderDrag]
+    );
+    const deferLibraryPlacement = React.useCallback((work: () => void) => {
+      if (typeof window === "undefined") {
+        work();
+        return;
+      }
+
+      window.requestAnimationFrame(() => {
+        window.setTimeout(work, 0);
+      });
+    }, []);
 
     const getAssetName = (asset: any) => {
       if (!asset) return null;
@@ -289,6 +318,18 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
       };
 
       updatePortraitRaf.current = makeThrottle(smoothPortrait);
+      updatePortraitGeometryRaf.current = makeThrottle((id: string, patch: any) => {
+        updatePortrait(format, id, patch);
+      });
+      updateSeparatorRaf.current = makeThrottle(
+        (id: string, kind: string, color: string, width: number, offset: number) => {
+          updatePortrait(format, id, {
+            separatorWidth: width,
+            separatorOffset: offset,
+            url: buildSeparatorSvgDataUrl(kind, color, width, offset),
+          });
+        }
+      );
       updateEmojiRaf.current = makeThrottle(smoothEmoji);
     }, [format, updatePortrait, updateEmoji, makeThrottle]);
 
@@ -418,7 +459,9 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
 
           {(typeof (sel as any).svgTemplate === 'string' || isSeparator) && (
             <div className="flex items-center gap-2 text-[11px] text-neutral-300">
-              <span className="opacity-80">Icon Color</span>
+              <span className="opacity-80">
+                {isShapeGraphic ? "Shape Color" : isSeparator ? "Separator Color" : "Icon Color"}
+              </span>
               <ColorDot
                 value={(sel as any).iconColor || '#ffffff'}
                 onChange={(value) => {
@@ -495,6 +538,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                     />
                     <div>
                       <InlineSliderInput
+                        {...sliderDragProps}
                         label="Label Size"
                         value={Number((sel as any).labelSize ?? 9)}
                         min={7}
@@ -513,6 +557,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                     </div>
                     <div>
                       <InlineSliderInput
+                        {...sliderDragProps}
                         label="Label Y Offset"
                         value={Number((sel as any).labelOffsetY ?? 0)}
                         min={isShapeGraphic ? -60 : -30}
@@ -533,6 +578,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                       <>
                         <div>
                           <InlineSliderInput
+                            {...sliderDragProps}
                             label="Label Rotate"
                             value={Number((sel as any).labelRotate ?? 0)}
                             min={-180}
@@ -551,6 +597,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                         </div>
                         <div>
                           <InlineSliderInput
+                            {...sliderDragProps}
                             label="Label Skew"
                             value={Number((sel as any).labelSkew ?? 0)}
                             min={-60}
@@ -596,6 +643,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
           {!isShapeGraphic && (
             <div>
               <InlineSliderInput
+                {...sliderDragProps}
                 label="Scale"
                 value={sel.scale ?? 1}
                 min={0.01}
@@ -616,6 +664,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
           {isShapeGraphic && (
             <div>
               <InlineSliderInput
+                {...sliderDragProps}
                 label="Scale"
                 value={Number(sel.scale ?? 1)}
                 min={0.01}
@@ -635,6 +684,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
 
           <div>
             <InlineSliderInput
+              {...sliderDragProps}
               label="Opacity"
               value={(sel as any).opacity ?? 1}
               min={0}
@@ -654,6 +704,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
           {isShapeGraphic && (
             <div>
               <InlineSliderInput
+                {...sliderDragProps}
                 label="Length"
                 value={Number((sel as any).shapeLength ?? 160)}
                 min={48}
@@ -662,7 +713,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                 precision={0}
                 disabled={locked}
                 onChange={(nextLength) => {
-                  updatePortrait(format, sel.id, {
+                  updatePortraitGeometryRaf.current?.(sel.id, {
                     shapeLength: nextLength,
                   });
                 }}
@@ -674,6 +725,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
           {isShapeGraphic && (
             <div>
               <InlineSliderInput
+                {...sliderDragProps}
                 label="Skew"
                 value={Number((sel as any).shapeSkew ?? 0)}
                 min={-60}
@@ -683,7 +735,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                 suffix="°"
                 disabled={locked}
                 onChange={(nextSkew) => {
-                  updatePortrait(format, sel.id, {
+                  updatePortraitGeometryRaf.current?.(sel.id, {
                     shapeSkew: nextSkew,
                   });
                 }}
@@ -695,6 +747,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
           {isSeparator && (
             <div>
               <InlineSliderInput
+                {...sliderDragProps}
                 label="Length"
                 value={Number((sel as any).separatorWidth ?? 180)}
                 min={128}
@@ -703,15 +756,13 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                 precision={0}
                 disabled={locked}
                 onChange={(nextWidth) => {
-                  updatePortrait(format, sel.id, {
-                    separatorWidth: nextWidth,
-                    url: buildSeparatorSvgDataUrl(
-                      String((sel as any).separatorKind || ''),
-                      String((sel as any).iconColor || '#ffffff'),
-                      nextWidth,
-                      Number((sel as any).separatorOffset ?? 0)
-                    ),
-                  });
+                  updateSeparatorRaf.current?.(
+                    sel.id,
+                    String((sel as any).separatorKind || ''),
+                    String((sel as any).iconColor || '#ffffff'),
+                    nextWidth,
+                    Number((sel as any).separatorOffset ?? 0)
+                  );
                 }}
                 rangeClassName="flex-1 h-1 appearance-none cursor-pointer bg-neutral-700 accent-rose-500"
               />
@@ -721,6 +772,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
           {isSeparator && (
             <div>
               <InlineSliderInput
+                {...sliderDragProps}
                 label="Offset"
                 value={Number((sel as any).separatorOffset ?? 0)}
                 min={-360}
@@ -729,15 +781,13 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                 precision={0}
                 disabled={locked}
                 onChange={(nextOffset) => {
-                  updatePortrait(format, sel.id, {
-                    separatorOffset: nextOffset,
-                    url: buildSeparatorSvgDataUrl(
-                      String((sel as any).separatorKind || ''),
-                      String((sel as any).iconColor || '#ffffff'),
-                      Number((sel as any).separatorWidth ?? 180),
-                      nextOffset
-                    ),
-                  });
+                  updateSeparatorRaf.current?.(
+                    sel.id,
+                    String((sel as any).separatorKind || ''),
+                    String((sel as any).iconColor || '#ffffff'),
+                    Number((sel as any).separatorWidth ?? 180),
+                    nextOffset
+                  );
                 }}
                 rangeClassName="flex-1 h-1 appearance-none cursor-pointer bg-neutral-700 accent-cyan-500"
               />
@@ -746,6 +796,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
 
           <div>
             <InlineSliderInput
+              {...sliderDragProps}
               label="Rotation"
               value={Number((sel as any).rotation ?? 0)}
               min={-180}
@@ -764,6 +815,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
           {!isShapeGraphic && (
             <div>
               <InlineSliderInput
+                {...sliderDragProps}
                 label="Tint"
                 value={(sel as any).tint ?? 0}
                 min={-180}
@@ -823,7 +875,11 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
 
     const addVectorSticker = React.useCallback(
       (item: NightlifeGraphic) => {
-        const svgTemplate = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none" stroke="{{COLOR}}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">${item.paths
+        const svgTemplate = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" ${
+          item.renderMode === "fill"
+            ? `fill="{{COLOR}}" stroke="none"`
+            : `fill="none" stroke="{{COLOR}}" stroke-width="${item.strokeWidth ?? 6}" stroke-linecap="round" stroke-linejoin="round"`
+        }>${item.paths
           .map((d) => `<path d="${d}"/>`)
           .join('')}</svg>`;
         const svg = svgTemplate.replace('{{COLOR}}', '#ffffff');
@@ -832,25 +888,27 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
         const id = `sticker_${item.id}_${Date.now()}_${Math.random()
           .toString(36)
           .slice(2, 7)}`;
-        addPortrait(format, {
-          id,
-          url,
-          x: 50,
-          y: 50,
-          scale: 0.6,
-          locked: false,
-          svgTemplate,
-          iconColor: '#ffffff',
-          label: item.label,
-          showLabel: true,
-          isSticker: true,
-        } as any);
-        setSelectedPortraitId(id);
-        setSelectedPanel('icons');
-        setMoveTarget('icon');
-        onPlaceToCanvas?.();
+        deferLibraryPlacement(() => {
+          addPortrait(format, {
+            id,
+            url,
+            x: 50,
+            y: 50,
+            scale: 0.6,
+            locked: false,
+            svgTemplate,
+            iconColor: '#ffffff',
+            label: item.label,
+            showLabel: true,
+            isSticker: true,
+          } as any);
+          setSelectedPortraitId(id);
+          setSelectedPanel('icons');
+          setMoveTarget('icon');
+          onPlaceToCanvas?.();
+        });
       },
-      [addPortrait, format, onPlaceToCanvas, setMoveTarget, setSelectedPanel, setSelectedPortraitId]
+      [addPortrait, deferLibraryPlacement, format, onPlaceToCanvas, setMoveTarget, setSelectedPanel, setSelectedPortraitId]
     );
 
     const addShapeSticker = React.useCallback(
@@ -858,32 +916,34 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
         const iconColor = '#ffffff';
         const shapeLength = 160;
         const id = `shape_${shape.id}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-        addPortrait(format, {
-          id,
-          url: buildShapeSvgDataUrl(shape.id, iconColor),
-          x: 50,
-          y: 50,
-          scale: 0.65,
-          locked: false,
-          svgTemplate: buildShapeSvgMarkup(shape.id, '{{COLOR}}'),
-          iconColor,
-          label: shape.label,
-          showLabel: false,
-          labelSize: 14,
-          labelRotate: 0,
-          labelSkew: 0,
-          isShapeGraphic: true,
-          shapeKind: shape.id,
-          shapeLength,
-          shapeSkew: 0,
-          isSticker: true,
-        } as any);
-        setSelectedPortraitId(id);
-        setSelectedPanel('icons');
-        setMoveTarget('icon');
-        onPlaceToCanvas?.();
+        deferLibraryPlacement(() => {
+          addPortrait(format, {
+            id,
+            url: buildShapeSvgDataUrl(shape.id, iconColor),
+            x: 50,
+            y: 50,
+            scale: 0.65,
+            locked: false,
+            svgTemplate: buildShapeSvgMarkup(shape.id, '{{COLOR}}'),
+            iconColor,
+            label: shape.label,
+            showLabel: false,
+            labelSize: 14,
+            labelRotate: 0,
+            labelSkew: 0,
+            isShapeGraphic: true,
+            shapeKind: shape.id,
+            shapeLength,
+            shapeSkew: 0,
+            isSticker: true,
+          } as any);
+          setSelectedPortraitId(id);
+          setSelectedPanel('icons');
+          setMoveTarget('icon');
+          onPlaceToCanvas?.();
+        });
       },
-      [addPortrait, format, onPlaceToCanvas, setMoveTarget, setSelectedPanel, setSelectedPortraitId]
+      [addPortrait, deferLibraryPlacement, format, onPlaceToCanvas, setMoveTarget, setSelectedPanel, setSelectedPortraitId]
     );
 
     const renderLightControls = (sel: any, items: any[], title: string, deleteLabel: string) => {
@@ -964,6 +1024,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                     />
                     <div>
                       <InlineSliderInput
+                        {...sliderDragProps}
                         label="Label Size"
                         value={Number((sel as any).labelSize ?? 9)}
                         min={7}
@@ -978,6 +1039,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                     </div>
                     <div>
                       <InlineSliderInput
+                        {...sliderDragProps}
                         label="Label Y Offset"
                         value={Number((sel as any).labelOffsetY ?? 0)}
                         min={-30}
@@ -1298,6 +1360,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
 
                   <div className="mb-3">
                     <InlineSliderInput
+                      {...sliderDragProps}
                       label="Scale"
                       value={sel.scale ?? 1}
                       min={0.01}
@@ -1316,6 +1379,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
 
                   <div className="mb-3">
                     <InlineSliderInput
+                      {...sliderDragProps}
                       label="Opacity"
                       value={sel.opacity ?? 1}
                       min={0}
@@ -1334,6 +1398,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
 
                   <div className="mb-3">
                     <InlineSliderInput
+                      {...sliderDragProps}
                       label="Rotation"
                       value={sel.rotation ?? 0}
                       min={-180}
@@ -1351,6 +1416,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
 
                   <div className="mb-3">
                     <InlineSliderInput
+                      {...sliderDragProps}
                       label="Tint"
                       value={(sel as any).tint ?? 0}
                       min={-180}
@@ -1417,11 +1483,11 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                           width="22"
                           height="22"
                           viewBox="0 0 128 128"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth={6}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
+                          fill={item.renderMode === "fill" ? "currentColor" : "none"}
+                          stroke={item.renderMode === "fill" ? "none" : "currentColor"}
+                          strokeWidth={item.renderMode === "fill" ? undefined : item.strokeWidth ?? 6}
+                          strokeLinecap={item.renderMode === "fill" ? undefined : "round"}
+                          strokeLinejoin={item.renderMode === "fill" ? undefined : "round"}
                           className="text-neutral-200 group-hover:text-white transition-colors"
                         >
                           {item.paths.map((d) => (

@@ -411,12 +411,34 @@ export function InlineSliderInput({
   const formattedValue = formatNumericValue(safeValue * displayScale, inputDigits);
   const [draftValue, setDraftValue] = React.useState(formattedValue);
   const [isEditing, setIsEditing] = React.useState(false);
+  const [rangeValue, setRangeValue] = React.useState(safeValue);
+  const rangeFrameRef = React.useRef<number | null>(null);
+  const rangeTimeoutRef = React.useRef<number | null>(null);
+  const pendingRangeRef = React.useRef<number | null>(null);
+  const rangeDraggingRef = React.useRef(false);
 
   React.useEffect(() => {
     if (!isEditing) {
       setDraftValue(formattedValue);
     }
   }, [formattedValue, isEditing]);
+
+  React.useEffect(() => {
+    if (!rangeDraggingRef.current) {
+      setRangeValue(safeValue);
+    }
+  }, [safeValue]);
+
+  React.useEffect(() => {
+    return () => {
+      if (rangeFrameRef.current !== null && typeof window !== "undefined") {
+        window.cancelAnimationFrame(rangeFrameRef.current);
+      }
+      if (rangeTimeoutRef.current !== null && typeof window !== "undefined") {
+        window.clearTimeout(rangeTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const commitDraft = React.useCallback(
     (raw: string) => {
@@ -441,6 +463,74 @@ export function InlineSliderInput({
     setDraftValue(e.target.value);
   };
 
+  const flushRangeChange = React.useCallback(() => {
+    rangeFrameRef.current = null;
+    const next = pendingRangeRef.current;
+    pendingRangeRef.current = null;
+    if (next == null) return;
+    onChange(next);
+  }, [onChange]);
+
+  const handleRangeChange = React.useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const next = clamp(Number(e.target.value));
+      setRangeValue(next);
+      pendingRangeRef.current = next;
+      if (rangeFrameRef.current !== null || rangeTimeoutRef.current !== null) return;
+      if (typeof window === "undefined") {
+        flushRangeChange();
+        return;
+      }
+      rangeFrameRef.current = window.requestAnimationFrame(() => {
+        rangeFrameRef.current = null;
+        rangeTimeoutRef.current = window.setTimeout(() => {
+          rangeTimeoutRef.current = null;
+          flushRangeChange();
+        }, 0);
+      });
+    },
+    [clamp, flushRangeChange]
+  );
+
+  const flushPendingRangeSoon = React.useCallback(() => {
+    if (rangeFrameRef.current !== null && typeof window !== "undefined") {
+      window.cancelAnimationFrame(rangeFrameRef.current);
+      rangeFrameRef.current = null;
+    }
+    if (rangeTimeoutRef.current !== null && typeof window !== "undefined") {
+      window.clearTimeout(rangeTimeoutRef.current);
+      rangeTimeoutRef.current = null;
+    }
+    const next = pendingRangeRef.current;
+    pendingRangeRef.current = null;
+    if (next == null) return;
+    if (typeof window === "undefined") {
+      onChange(next);
+      return;
+    }
+    rangeTimeoutRef.current = window.setTimeout(() => {
+      rangeTimeoutRef.current = null;
+      onChange(next);
+    }, 0);
+  }, [onChange]);
+
+  const handleRangePointerDown = React.useCallback(() => {
+    rangeDraggingRef.current = true;
+    onPointerDown?.();
+  }, [onPointerDown]);
+
+  const handleRangePointerUp = React.useCallback(() => {
+    rangeDraggingRef.current = false;
+    flushPendingRangeSoon();
+    onPointerUp?.();
+  }, [flushPendingRangeSoon, onPointerUp]);
+
+  const handleRangePointerCancel = React.useCallback(() => {
+    rangeDraggingRef.current = false;
+    flushPendingRangeSoon();
+    onPointerCancel?.();
+  }, [flushPendingRangeSoon, onPointerCancel]);
+
   return (
     <div className="min-w-0 w-full">
       <div className={`mb-1 flex min-w-0 items-center justify-between ${controlLabelClass} ${labelClassName || ""}`}>
@@ -452,13 +542,13 @@ export function InlineSliderInput({
           min={min}
           max={max}
           step={step}
-          value={safeValue}
-          onChange={(e) => onChange(Number(e.target.value))}
+          value={rangeValue}
+          onChange={handleRangeChange}
           className={clsx("min-w-0 flex-1", rangeClassName || controlRangeClass)}
           style={{ touchAction: "none" }}
-          onPointerDown={onPointerDown}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerCancel}
+          onPointerDown={handleRangePointerDown}
+          onPointerUp={handleRangePointerUp}
+          onPointerCancel={handleRangePointerCancel}
           disabled={disabled}
         />
         <div className="ml-1 flex shrink-0 items-center justify-end gap-0.5 max-w-[64px]">

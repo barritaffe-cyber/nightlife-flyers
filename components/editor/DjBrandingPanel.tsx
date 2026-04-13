@@ -543,7 +543,11 @@ export default function DjBrandingPanel({
               <button
                 type="button"
                 className={`${editorUploadPlaceClass} whitespace-normal text-center`}
-                onClick={onUseBrandFace}
+                onClick={() => {
+                  window.setTimeout(() => {
+                    onUseBrandFace();
+                  }, 0);
+                }}
                 disabled={!kit.primaryPortrait || faceBusy}
               >
                 Place
@@ -569,7 +573,11 @@ export default function DjBrandingPanel({
                 <button
                   type="button"
                   className={`${editorUploadPlaceClass} w-full whitespace-normal text-center`}
-                  onClick={onMainFaceLockToggle}
+                  onClick={() => {
+                    window.setTimeout(() => {
+                      onMainFaceLockToggle();
+                    }, 0);
+                  }}
                   disabled={faceBusy}
                 >
                   {mainFaceLocked ? 'Unlock' : 'Lock'}
@@ -1117,7 +1125,16 @@ export default function DjBrandingPanel({
                   <button type="button" className={editorUploadActionClass} onClick={() => logoInputs.current[idx]?.click()}>
                     Upload
                   </button>
-                  <button type="button" className={editorUploadPlaceClass} onClick={() => onUseBrandLogo(idx)} disabled={!src}>
+                  <button
+                    type="button"
+                    className={editorUploadPlaceClass}
+                    onClick={() => {
+                      window.setTimeout(() => {
+                        onUseBrandLogo(idx);
+                      }, 0);
+                    }}
+                    disabled={!src}
+                  >
                     Place
                   </button>
                 </div>
@@ -1153,7 +1170,16 @@ export default function DjBrandingPanel({
               <button type="button" className={editorUploadActionClass} onClick={onCaptureCurrentFace} disabled={!currentPortraitUrl}>
                 Upload
               </button>
-              <button type="button" className={editorUploadPlaceClass} onClick={onUseBrandFace} disabled={!kit.primaryPortrait}>
+              <button
+                type="button"
+                className={editorUploadPlaceClass}
+                onClick={() => {
+                  window.setTimeout(() => {
+                    onUseBrandFace();
+                  }, 0);
+                }}
+                disabled={!kit.primaryPortrait}
+              >
                 Place
               </button>
             </div>
