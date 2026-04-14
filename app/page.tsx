@@ -4977,7 +4977,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     overflow: 'visible',
     zIndex: dragging === "subtag" ? 999 : subtagLayerZ,
     cursor: 'grab',
-    textAlign: 'center',
+    textAlign: subtagAlign,
     borderRadius: 8,
     
     // 🔥 Rotation moved to wrapper for consistency
@@ -5269,17 +5269,25 @@ async function compressBackgroundForStorage(value: string): Promise<string> {
 // ------------------------------------------------------------------
 function normalizeDesignJson(design: any, currentFormat: string) {
   const targetFmt = design.format || design.targetFormat || currentFormat;
+  const sessionState =
+    design?.session && typeof design.session === "object"
+      ? design.session[targetFmt] ?? {}
+      : {};
+  const merged = {
+    ...sessionState,
+    ...design,
+  };
   
   // Flatten text styles if nested differently in older versions
-  const headline = design.headline ?? design.text?.headline;
-  const head2 = design.head2 ?? design.text?.head2 ?? design.text?.headline2;
-  const details = design.details ?? design.text?.details;
-  const details2 = design.details2 ?? design.text?.details2;
-  const venue = design.venue ?? design.text?.venue;
-  const subtag = design.subtag ?? design.text?.subtag;
+  const headline = merged.headline ?? merged.text?.headline;
+  const head2 = merged.head2 ?? merged.text?.head2 ?? merged.text?.headline2;
+  const details = merged.details ?? merged.text?.details;
+  const details2 = merged.details2 ?? merged.text?.details2;
+  const venue = merged.venue ?? merged.text?.venue;
+  const subtag = merged.subtag ?? merged.text?.subtag;
   
   return {
-    ...design,
+    ...merged,
     format: targetFmt,
     headline,
     head2,
@@ -5287,8 +5295,8 @@ function normalizeDesignJson(design: any, currentFormat: string) {
     details2,
     venue,
     subtag,
-    portraits: design.portraits || design.portraitsByFormat || {},
-    emojis: design.emojis || design.emojisByFormat || {},
+    portraits: merged.portraits || merged.portraitsByFormat || {},
+    emojis: merged.emojis || merged.emojisByFormat || {},
   };
 }
 
@@ -11469,6 +11477,7 @@ React.useEffect(() => {
   const [exportProgressActive, setExportProgressActive] = useState(false);
   const [exportBlobUrl, setExportBlobUrl] = useState<string | null>(null);
   const [exportFilename, setExportFilename] = useState<string | null>(null);
+  const PRINT_EXPORT_SCALE = 6;
   const HISTORY_LIMIT = 10;
   const historyRef = React.useRef<{
     undo: string[];
@@ -11501,6 +11510,12 @@ React.useEffect(() => {
       vv?.removeEventListener("scroll", update);
     };
   }, []);
+
+  React.useEffect(() => {
+    if (exportType === "jpg" && exportScale > 4) {
+      setExportScale(4);
+    }
+  }, [exportScale, exportType]);
 
   const canvasSize = React.useMemo(
     () => (format === "square" ? { w: 540, h: 540 } : { w: 540, h: 960 }),
@@ -12029,13 +12044,31 @@ const mobileFloatSticky = isMobileView && format === "story";
       const mustRetry = !!(bgUrl || bgUploadUrl || logoUrl);
       const maxAttempts = mustRetry ? 3 : 1;
       const scaleAttempts = isMobileExport
-        ? [exportScale, safeScale]
-            .concat(safeScale > 2 ? [2] : [])
-            .concat(safeScale > 1 ? [1] : [])
-            .filter((v, i, a) => a.indexOf(v) === i)
-        : exportType === "jpg" && safeScale !== exportScale
-        ? [safeScale]
-        : [exportScale];
+        ? Array.from(
+            new Set(
+              [exportScale, safeScale, 4, 2, 1].filter(
+                (value) =>
+                  Number.isFinite(value) &&
+                  value >= 1 &&
+                  (value === exportScale || value <= safeScale)
+              )
+            )
+          )
+        : exportType === "jpg"
+        ? Array.from(
+            new Set(
+              [safeScale, 4, 2, 1].filter(
+                (value) => Number.isFinite(value) && value >= 1 && value <= safeScale
+              )
+            )
+          )
+        : Array.from(
+            new Set(
+              [exportScale, 4, 2].filter(
+                (value) => Number.isFinite(value) && value >= 1 && value <= exportScale
+              )
+            )
+          );
 
       let dataUrl = '';
       let sizeBytes = 0;
@@ -12056,11 +12089,13 @@ const mobileFloatSticky = isMobileView && format === "story";
             height = canvasSize.h * scale;
             sizeBytes = dataUrlBytes(dataUrl);
             if (!mustRetry || !needsRetry()) {
-              if (scale !== exportScale && (isMobileExport || exportType === "jpg")) {
+              if (scale !== exportScale) {
                 setExportError(
                   isMobileExport
                     ? `Export succeeded at ${scale}x for stability on mobile.`
-                    : `JPG export used ${scale}x for stability.`
+                    : exportType === "jpg"
+                    ? `JPG export used ${scale}x for stability.`
+                    : `PNG export used ${scale}x for stability.`
                 );
               }
               attempt = maxAttempts + 1;
@@ -12106,19 +12141,19 @@ const mobileFloatSticky = isMobileView && format === "story";
       }
 
       setExportDataUrl(dataUrl);
-      setExportMeta({
-        width,
-        height,
-        sizeBytes,
-        format: exportType,
-        scale: usedScale,
-      });
       const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
       const filename = `nightlife_export_${stamp}.${exportType}`;
       const blob = await dataUrlToBlobWithProgress(dataUrl, (p) => setExportProgress(p), 96, 100);
       const blobUrl = URL.createObjectURL(blob);
       setExportBlobUrl(blobUrl);
       setExportFilename(filename);
+      setExportMeta({
+        width,
+        height,
+        sizeBytes: blob.size,
+        format: exportType,
+        scale: usedScale,
+      });
       setExportProgress(100);
       setExportStatus('ready');
       finishExportProgress();
@@ -13696,11 +13731,29 @@ const buildEdgeAwareLassoMask = (
       if (typeof s.bodyUnderline === 'boolean') setBodyUnderline(s.bodyUnderline);
       if (typeof s.bodyTracking === 'number') setBodyTracking(s.bodyTracking);
 
+      // details 2
+      if (typeof s.details2 === 'string') setDetails2(s.details2);
+      if (typeof s.details2Family === 'string') setDetails2Family(s.details2Family);
+      if (typeof s.details2Color === 'string') setDetails2Color(s.details2Color);
+      if (typeof s.details2Size === 'number') setDetails2Size(s.details2Size);
+      if (typeof s.details2LineHeight === 'number') setDetails2LineHeight(s.details2LineHeight);
+      if (typeof s.details2LetterSpacing === 'number') setDetails2LetterSpacing(s.details2LetterSpacing);
+      if (typeof s.details2Align === 'string') setDetails2Align(s.details2Align as Align);
+      if (typeof s.details2Uppercase === 'boolean') setDetails2Uppercase(s.details2Uppercase);
+      if (typeof s.details2Bold === 'boolean') setDetails2Bold(s.details2Bold);
+      if (typeof s.details2Italic === 'boolean') setDetails2Italic(s.details2Italic);
+      if (typeof s.details2Underline === 'boolean') setDetails2Underline(s.details2Underline);
+
       // venue
       if (typeof s.venue === 'string') setVenue(s.venue);
       if (typeof s.venueFamily === 'string') setVenueFamily(s.venueFamily);
       if (typeof s.venueColor === 'string') setVenueColor(s.venueColor);
       if (typeof s.venueSize === 'number') setVenueSize(s.venueSize);
+      if (typeof s.venueAlign === 'string') setVenueAlign(s.venueAlign as Align);
+      if (typeof s.venueLineHeight === 'number') setVenueLineHeight(s.venueLineHeight);
+      if (typeof s.venueUppercase === 'boolean') setVenueUppercase(s.venueUppercase);
+      if (typeof s.venueBold === 'boolean') setVenueBold(s.venueBold);
+      if (typeof s.venueItalic === 'boolean') setVenueItalic(s.venueItalic);
 
       // subtag
       if (typeof s.subtagEnabled === 'boolean') setSubtagEnabled(format, s.subtagEnabled);
@@ -13713,6 +13766,7 @@ const buildEdgeAwareLassoMask = (
       if (typeof s.subtagBold === 'boolean') setSubtagBold(s.subtagBold);
       if (typeof s.subtagItalic === 'boolean') setSubtagItalic(s.subtagItalic);
       if (typeof s.subtagUnderline === 'boolean') setSubtagUnderline(s.subtagUnderline);
+      if (typeof s.subtagAlign === 'string') setSubtagAlign(s.subtagAlign as Align);
 
       if (typeof s.headRotate === 'number') setHeadRotate(s.headRotate);
       if (typeof s.head2Rotate === 'number') setHead2Rotate(s.head2Rotate);
@@ -15239,6 +15293,126 @@ function twoRaf(): Promise<void> {
   );
 }
 
+const EXPORT_DPI = 300;
+const PNG_SIGNATURE = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
+const CRC32_TABLE = (() => {
+  const table = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let bit = 0; bit < 8; bit++) {
+      c = (c & 1) !== 0 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    }
+    table[i] = c >>> 0;
+  }
+  return table;
+})();
+
+function readUint32BE(bytes: Uint8Array, offset: number) {
+  return (
+    ((bytes[offset] ?? 0) << 24) |
+    ((bytes[offset + 1] ?? 0) << 16) |
+    ((bytes[offset + 2] ?? 0) << 8) |
+    (bytes[offset + 3] ?? 0)
+  ) >>> 0;
+}
+
+function writeUint32BE(target: Uint8Array, offset: number, value: number) {
+  target[offset] = (value >>> 24) & 0xff;
+  target[offset + 1] = (value >>> 16) & 0xff;
+  target[offset + 2] = (value >>> 8) & 0xff;
+  target[offset + 3] = value & 0xff;
+}
+
+function concatByteArrays(parts: Uint8Array[]) {
+  const total = parts.reduce((sum, part) => sum + part.length, 0);
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const part of parts) {
+    out.set(part, offset);
+    offset += part.length;
+  }
+  return out;
+}
+
+function crc32(bytes: Uint8Array) {
+  let crc = 0xffffffff;
+  for (let i = 0; i < bytes.length; i++) {
+    crc = CRC32_TABLE[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function buildPngChunk(type: string, data: Uint8Array) {
+  const typeBytes = new TextEncoder().encode(type);
+  const lengthBytes = new Uint8Array(4);
+  writeUint32BE(lengthBytes, 0, data.length);
+  const crcInput = concatByteArrays([typeBytes, data]);
+  const crcBytes = new Uint8Array(4);
+  writeUint32BE(crcBytes, 0, crc32(crcInput));
+  return concatByteArrays([lengthBytes, typeBytes, data, crcBytes]);
+}
+
+function setPngResolutionDpi(bytes: Uint8Array, dpi: number) {
+  if (
+    bytes.length < PNG_SIGNATURE.length ||
+    !PNG_SIGNATURE.every((value, index) => bytes[index] === value)
+  ) {
+    return bytes;
+  }
+
+  const pixelsPerMeter = Math.max(1, Math.round(dpi / 0.0254));
+  const physData = new Uint8Array(9);
+  writeUint32BE(physData, 0, pixelsPerMeter);
+  writeUint32BE(physData, 4, pixelsPerMeter);
+  physData[8] = 1;
+  const physChunk = buildPngChunk("pHYs", physData);
+
+  let offset = PNG_SIGNATURE.length;
+  let insertOffset = -1;
+
+  while (offset + 8 <= bytes.length) {
+    const chunkLength = readUint32BE(bytes, offset);
+    const chunkTypeOffset = offset + 4;
+    const chunkDataOffset = offset + 8;
+    const chunkTotalLength = 12 + chunkLength;
+    if (chunkDataOffset + chunkLength + 4 > bytes.length) break;
+
+    const chunkType = String.fromCharCode(
+      bytes[chunkTypeOffset],
+      bytes[chunkTypeOffset + 1],
+      bytes[chunkTypeOffset + 2],
+      bytes[chunkTypeOffset + 3]
+    );
+
+    if (chunkType === "IHDR") {
+      insertOffset = offset + chunkTotalLength;
+    } else if (chunkType === "pHYs") {
+      return concatByteArrays([
+        bytes.slice(0, offset),
+        physChunk,
+        bytes.slice(offset + chunkTotalLength),
+      ]);
+    }
+
+    offset += chunkTotalLength;
+    if (chunkType === "IEND") break;
+  }
+
+  if (insertOffset < 0) return bytes;
+  return concatByteArrays([
+    bytes.slice(0, insertOffset),
+    physChunk,
+    bytes.slice(insertOffset),
+  ]);
+}
+
+function applyExportResolutionMetadata(bytes: Uint8Array, mime: string) {
+  if (mime === "image/png") {
+    return setPngResolutionDpi(bytes, EXPORT_DPI);
+  }
+  return bytes;
+}
+
 async function dataUrlToBlobWithProgress(
   dataUrl: string,
   onProgress?: (p: number) => void,
@@ -15252,7 +15426,7 @@ async function dataUrlToBlobWithProgress(
   const mime = mimeMatch ? mimeMatch[1] : "application/octet-stream";
   const total = b64.length;
   const sliceSize = 1024 * 1024; // 1MB base64 chunks
-  const chunks: BlobPart[] = [];
+  const chunks: Uint8Array[] = [];
 
   for (let offset = 0; offset < total; offset += sliceSize) {
     const slice = b64.slice(offset, offset + sliceSize);
@@ -15260,14 +15434,16 @@ async function dataUrlToBlobWithProgress(
     const len = bin.length;
     const bytes = new Uint8Array(len);
     for (let i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
-    chunks.push(bytes.buffer);
+    chunks.push(bytes);
     const pct = startPct + Math.round(((offset + slice.length) / total) * (endPct - startPct));
     onProgress?.(Math.min(endPct, pct));
     // Yield to keep UI responsive
     await new Promise((r) => setTimeout(r, 0));
   }
 
-  return new Blob(chunks, { type: mime });
+  const encodedBytes = concatByteArrays(chunks);
+  const outputBytes = applyExportResolutionMetadata(encodedBytes, mime);
+  return new Blob([outputBytes], { type: mime });
 }
 
 function extractCssUrls(input: string): string[] {
@@ -17456,6 +17632,24 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
 
 // === PROJECT PORTABLE SAVE/LOAD (MASTER FIX) ===
 
+  const buildPortableProjectState = (savedAt: string) => {
+    syncCurrentStateToSession();
+    const storeExport = useFlyerState.getState().exportDesign();
+    const activeFormat = storeExport.format;
+    const activeSession = storeExport.session?.[activeFormat] ?? {};
+
+    return {
+      ...storeExport,
+      ...activeSession,
+      version: "3.0",
+      savedAt,
+      format: activeFormat,
+      portraitSlots: normalizePortraitSlots(portraitSlots || []),
+      logoSlots: logoSlots || [],
+      icons: Array.isArray(activeSession.icons) ? activeSession.icons : iconList || [],
+    };
+  };
+
   // ✅ 1. SAVE FUNCTION
   const handleSaveProject = async () => {
     if (isStarterPlan) {
@@ -17464,109 +17658,7 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
     }
     try {
       const savedAt = new Date().toISOString();
-      // Capture ALL State
-      const rawData = {
-  version: "2.0",
-  savedAt,
-
-  // ✅ core
-  format,
-
-  // ✅ background
-  bgUrl,
-  bgUploadUrl,
-  bgPosX, // keep the real name
-  bgPosY,
-  bgScale,
-  bgBlur,
-
-  // ✅ text content
-  headline,
-  head2,
-  details,
-  details2,
-  venue,
-  subtag,
-
-  // ✅ font families (these are what you're missing on load)
-  headlineFamily,
-  head2Family,
-  detailsFamily,
-  details2Family,
-  venueFamily,
-  subtagFamily,
-
-  // ✅ fx
-  textFx: { ...textFx },
-  head2Fx: { ...head2Fx },
-
-  // ✅ positions / transforms
-  headX, headY, headRotate,
-  head2X, head2Y, head2Rotate,
-  detailsX, detailsY, detailsRotate,
-  details2X, details2Y, details2Rotate,
-  venueX, venueY, venueRotate,
-  subtagX, subtagY, subtagRotate,
-
-  // ✅ legacy single portrait (if you still use it anywhere)
-  portraitUrl,
-  portraitX, portraitY, portraitScale, portraitLocked,
-
-  // ✅ logo
-  logoUrl,
-  logoX, logoY, logoScale, logoRotate,
-
-  // ✅ typography params
-  lineHeight,
-  textColWidth,
-  headSizeAuto,
-  headManualPx,
-  headMaxPx,
-
-  head2SizePx,
-  head2LineHeight,
-  head2Align,
-  head2Alpha,
-  head2Color,
-
-  detailsLineHeight,
-  detailsAlign,
-  bodyColor,
-  bodySize,
-
-  details2Size,
-  details2LineHeight,
-  details2Align,
-  details2Color,
-
-  venueSize,
-  venueColor,
-  venueAlign,
-  venueLineHeight,
-
-  subtagSize,
-  subtagBgColor,
-  subtagTextColor,
-  subtagAlpha,
-
-  // ✅ arrays
-  icons: iconList || [],
-  portraitSlots: portraitSlots || [],
-  logoSlots: logoSlots || [],
-
-  // ✅ IMPORTANT: save the FULL toggle objects, not only the current format
-  subtagEnabled,        // Record<Format, boolean>
-  headline2Enabled,     // Record<Format, boolean>
-  details2Enabled,      // Record<Format, boolean>
-
-  // ✅ grading
-  hue, haze, grade, leak, vignette, bgFitMode, clarity, variety, palette, genStyle, genPrompt, genGender, genEthnicity,
-  genEnergy, genAttire, genColorway, genAttireColor, genPose, genShot, genLighting,
-
-  // ✅ Zustand objects
-  portraits: useFlyerState.getState().portraits,
-  emojis: useFlyerState.getState().emojis,
-};
+      const rawData = buildPortableProjectState(savedAt);
 
       
       // Normalize Images (Async Blob conversion)
@@ -17617,7 +17709,11 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
 // ✅ HANDLER: Export Design to JSON
   const handleExportJSON = () => {
     try {
-      const json = exportDesignJSON();
+      const json = JSON.stringify(
+        { state: buildPortableProjectState(new Date().toISOString()) },
+        null,
+        2
+      );
       const blob = new Blob([json], { type: "application/json" });
       
       const url = URL.createObjectURL(blob);
@@ -17793,18 +17889,31 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
 
       applyIfDefined(data.details2Size, setDetails2Size);
       applyIfDefined(data.details2LineHeight, setDetails2LineHeight);
+      applyIfDefined(data.details2LetterSpacing, setDetails2LetterSpacing);
       applyIfDefined(data.details2Align, setDetails2Align);
       applyIfDefined(data.details2Color, setDetails2Color);
+      applyIfDefined(data.details2Uppercase, setDetails2Uppercase);
+      applyIfDefined(data.details2Bold, setDetails2Bold);
+      applyIfDefined(data.details2Italic, setDetails2Italic);
+      applyIfDefined(data.details2Underline, setDetails2Underline);
 
       applyIfDefined(data.venueSize, setVenueSize);
       applyIfDefined(data.venueColor, setVenueColor);
       applyIfDefined(data.venueAlign, setVenueAlign);
       applyIfDefined(data.venueLineHeight, setVenueLineHeight);
+      applyIfDefined(data.venueUppercase, setVenueUppercase);
+      applyIfDefined(data.venueBold, setVenueBold);
+      applyIfDefined(data.venueItalic, setVenueItalic);
 
       applyIfDefined(data.subtagSize, setSubtagSize);
       applyIfDefined(data.subtagBgColor, setSubtagBgColor);
       applyIfDefined(data.subtagTextColor, setSubtagTextColor);
       applyIfDefined(data.subtagAlpha, setSubtagAlpha);
+      applyIfDefined(data.subtagAlign, setSubtagAlign);
+      applyIfDefined(data.subtagUppercase, setSubtagUppercase);
+      applyIfDefined(data.subtagBold, setSubtagBold);
+      applyIfDefined(data.subtagItalic, setSubtagItalic);
+      applyIfDefined(data.subtagUnderline, setSubtagUnderline);
 
       // ✅ restore grading
       applyIfDefined(data.hue, setHue);
@@ -18107,6 +18216,7 @@ const applyTemplate = React.useCallback<
     setDetails2Size(merged.details2Size ?? 12);
     setDetails2Family(merged.details2Family ?? 'Inter');
     setDetails2LineHeight(merged.details2LineHeight ?? 1.2);
+    setDetails2LetterSpacing(merged.details2LetterSpacing ?? 0);
     setDetails2Uppercase(merged.details2Uppercase ?? false);
     setDetails2Bold(merged.details2Bold ?? false);
     setDetails2Italic(merged.details2Italic ?? false);
@@ -18128,12 +18238,16 @@ const applyTemplate = React.useCallback<
     setVenueColor(merged.venueColor ?? '#ffffff');
     setVenueSize(merged.venueSize ?? 30);
     setVenueLineHeight(merged.venueLineHeight ?? 1);
+    setVenueUppercase(merged.venueUppercase ?? true);
+    setVenueBold(merged.venueBold ?? true);
+    setVenueItalic(merged.venueItalic ?? false);
 
     setSubtagFamily(merged.subtagFamily ?? 'Inter');
     setSubtagSize(merged.subtagSize ?? 12);
     setSubtagBgColor(merged.subtagBgColor ?? '#000000');
     setSubtagTextColor(merged.subtagTextColor ?? '#ffffff');
     setSubtagAlpha(merged.subtagAlpha ?? 1);
+    setSubtagAlign((merged.subtagAlign as any) ?? 'center');
     setSubtagUppercase(merged.subtagUppercase ?? true);
     setSubtagBold((merged as any).subtagBold ?? true);
     setSubtagItalic(merged.subtagItalic ?? false);
@@ -19006,11 +19120,13 @@ const syncCurrentStateToSession = () => {
     details2Color,
     details2Size,
     details2LineHeight,
+    details2LetterSpacing,
     details2Align,
     // Styles
     details2Uppercase,       // ✅ Added
+    details2Bold,
     details2Italic,          // ✅ Added
-    // details2Underline is not used in applyTemplate; skip to avoid undefined
+    details2Underline,
     // Shadows
     details2Shadow,
     details2ShadowStrength,
@@ -19028,6 +19144,9 @@ const syncCurrentStateToSession = () => {
     venueSize,
     venueLineHeight,
     venueAlign,
+    venueUppercase,
+    venueBold,
+    venueItalic,
     // Shadows
     venueShadow,             // ✅ Added
     venueShadowStrength,     // ✅ Added
@@ -19046,8 +19165,12 @@ const syncCurrentStateToSession = () => {
     subtagTextColor,
     subtagBgColor,
     subtagAlpha,
+    subtagAlign,
     // Styles
     subtagUppercase,         // ✅ Added
+    subtagBold,
+    subtagItalic,
+    subtagUnderline,
     // Shadows
     subtagShadow,            // ✅ Added
     subtagShadowStrength,    // ✅ Added
@@ -22595,6 +22718,11 @@ return (
                 <span>Scale</span>
                 <Chip small active={exportScale===2} onClick={()=>setExportScale(2)}>2x</Chip>
                 <Chip small active={exportScale===4} onClick={()=>setExportScale(4)}>4x</Chip>
+                {exportType === "png" && (
+                  <Chip small active={exportScale===PRINT_EXPORT_SCALE} onClick={()=>setExportScale(PRINT_EXPORT_SCALE)}>
+                    Print
+                  </Chip>
+                )}
               </div>
               <div className="ml-auto">
                 <Chip
@@ -22916,6 +23044,11 @@ return (
               </div>
               <div>Size: {formatBytes(exportMeta.sizeBytes)}</div>
             </div>
+            {exportMeta.format === "png" && exportMeta.scale >= PRINT_EXPORT_SCALE && (
+              <div className="text-[11px] text-cyan-200">
+                Print export enabled. PNG includes 300 DPI metadata and the highest clean raster size in the app.
+              </div>
+            )}
             {isIOS ? (
               <div className="text-[12px] text-neutral-300 space-y-1">
                 <div>Hold down on the image and tap <b>Save to Photos</b>.</div>
