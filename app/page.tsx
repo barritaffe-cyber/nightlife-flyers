@@ -15443,7 +15443,9 @@ async function dataUrlToBlobWithProgress(
 
   const encodedBytes = concatByteArrays(chunks);
   const outputBytes = applyExportResolutionMetadata(encodedBytes, mime);
-  return new Blob([outputBytes], { type: mime });
+  const outputBuffer = new ArrayBuffer(outputBytes.byteLength);
+  new Uint8Array(outputBuffer).set(outputBytes);
+  return new Blob([outputBuffer], { type: mime });
 }
 
 function extractCssUrls(input: string): string[] {
@@ -17637,6 +17639,9 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
     const storeExport = useFlyerState.getState().exportDesign();
     const activeFormat = storeExport.format;
     const activeSession = storeExport.session?.[activeFormat] ?? {};
+    const activeIcons = Array.isArray((activeSession as any).icons)
+      ? ((activeSession as any).icons as typeof iconList)
+      : iconList || [];
 
     return {
       ...storeExport,
@@ -17646,7 +17651,7 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       format: activeFormat,
       portraitSlots: normalizePortraitSlots(portraitSlots || []),
       logoSlots: logoSlots || [],
-      icons: Array.isArray(activeSession.icons) ? activeSession.icons : iconList || [],
+      icons: activeIcons,
     };
   };
 
@@ -18238,16 +18243,16 @@ const applyTemplate = React.useCallback<
     setVenueColor(merged.venueColor ?? '#ffffff');
     setVenueSize(merged.venueSize ?? 30);
     setVenueLineHeight(merged.venueLineHeight ?? 1);
-    setVenueUppercase(merged.venueUppercase ?? true);
-    setVenueBold(merged.venueBold ?? true);
-    setVenueItalic(merged.venueItalic ?? false);
+    setVenueUppercase((merged as any).venueUppercase ?? true);
+    setVenueBold((merged as any).venueBold ?? true);
+    setVenueItalic((merged as any).venueItalic ?? false);
 
     setSubtagFamily(merged.subtagFamily ?? 'Inter');
     setSubtagSize(merged.subtagSize ?? 12);
     setSubtagBgColor(merged.subtagBgColor ?? '#000000');
     setSubtagTextColor(merged.subtagTextColor ?? '#ffffff');
     setSubtagAlpha(merged.subtagAlpha ?? 1);
-    setSubtagAlign((merged.subtagAlign as any) ?? 'center');
+    setSubtagAlign(((merged as any).subtagAlign as any) ?? 'center');
     setSubtagUppercase(merged.subtagUppercase ?? true);
     setSubtagBold((merged as any).subtagBold ?? true);
     setSubtagItalic(merged.subtagItalic ?? false);
