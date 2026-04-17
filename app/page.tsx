@@ -20009,7 +20009,7 @@ const getSmartWorkflowTarget = React.useCallback(
     return {
       label: "Export",
       panel: "mastergrade",
-      tab: "assets" as const,
+      tab: "design" as const,
       uiMode: "finish" as const,
       targetId: "mastergrade-panel",
     };
@@ -20138,7 +20138,7 @@ const currentMobileAction = React.useMemo(() => {
     return {
       label: "Export",
       panel: "mastergrade",
-      tab: "assets" as const,
+      tab: "design" as const,
       uiMode: "finish" as const,
       targetId: "mastergrade-panel",
     };
@@ -22932,7 +22932,7 @@ return (
                   small
                   className="shrink-0 whitespace-nowrap"
                   onClick={() => {
-                    openCreatorWorkflowTarget("mastergrade", "assets", {
+                    openCreatorWorkflowTarget("mastergrade", "design", {
                       uiMode: "finish",
                       targetId: "mastergrade-panel",
                     });
@@ -28193,14 +28193,14 @@ style={{ top: STICKY_TOP }}
           <div className="mt-3 grid grid-cols-1 gap-2">
             <button
               type="button"
-              onClick={() => openCreatorWorkflowTarget("mastergrade", "assets", { uiMode: "finish" })}
+              onClick={() => openCreatorWorkflowTarget("mastergrade", "design", { uiMode: "finish" })}
               className="w-full border border-white/15 bg-white/[0.06] px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-white transition hover:bg-white/[0.09]"
             >
               Open Finish Mode
             </button>
             <button
               type="button"
-              onClick={() => openCreatorWorkflowTarget("mastergrade", "assets", { uiMode: "finish" })}
+              onClick={() => openCreatorWorkflowTarget("mastergrade", "design", { uiMode: "finish" })}
               className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900"
             >
               Open Master Color Grade
