@@ -72,8 +72,9 @@ import {
   type SafeZone,
 } from "../lib/djBrandKit";
 import { TEXT_SEPARATOR_GRAPHICS, buildSeparatorSvgDataUrl } from "../lib/textSeparators";
-import { SHAPE_GRAPHICS, buildShapeSvgDataUrl } from "../lib/shapeGraphics";
+import { SHAPE_GRAPHICS, buildShapeSvgDataUrl, buildShapeSvgMarkup } from "../lib/shapeGraphics";
 import { getPublicLegalName, getPublicSupportEmail } from "../lib/publicIdentity";
+import { getClientTrackingPayload } from "../lib/analytics/client";
 
 const AiBackgroundPanel = dynamic(() => import("../components/editor/AiBackgroundPanel"), {
   ssr: false,
@@ -864,6 +865,8 @@ const CINEMATIC_REF_LIBRARY = [
   { id: "lines", label: "Lines", src: "/cinematic-refs/lines.png" },
   { id: "african", label: "African", src: "/cinematic-refs/african.png" },
   { id: "pink", label: "Pink", src: "/cinematic-refs/pink.png" },
+  { id: "gold-drip", label: "Gold Drip", src: "/cinematic-refs/gold-drip.png" },
+  { id: "pink-diamond", label: "Pink Diamond", src: "/cinematic-refs/pink-diamond.png" },
 ] as const;
 
 const WRAP_LIBRARY = [
@@ -971,6 +974,15 @@ const NIGHTLIFE_GRAPHICS = [
       "M27.396,80.812c0.276-1.683,0.394-3.407,0.85-5.04c3.04-10.924,10.19-17.529,21.236-19.938c2.741-0.599,5.52-0.61,8.302-0.293 c0.246,0.027,0.486,0.107,0.753,0.169c0,4.726,0,9.413,0,14.181c-0.821-0.145-1.6-0.311-2.388-0.418c-6.767-0.921-13.138,3.772-14.228,10.477 c-1.102,6.767,3.33,13.203,10.033,14.56c7.837,1.588,15.156-4.181,15.271-12.175c0.11-7.366,0.047-14.735,0.05-22.101 c0.006-12.204,0-24.409,0-36.61c0-0.356,0-0.711,0-1.111c4.747,0,9.375,0,13.92,0c1.517,13.173,8.788,20.403,22.027,21.76 c0,4.513,0,9.132,0,13.849c-8.05-0.05-15.236-2.507-21.819-7.387c0,0.456,0,0.767,0,1.081c0.036,9.899,0.083,19.796,0.107,29.695 c0.03,12.886-8.281,23.493-20.803,26.53c-1.301,0.317-2.655,0.415-3.985,0.619c-0.273,0.041-0.542,0.107-0.815,0.163c-0.957,0-1.911,0-2.868,0 c-1.159-0.169-2.323-0.317-3.479-0.51c-10.465-1.751-19.227-10.104-21.467-20.501c-0.317-1.47-0.471-2.978-0.699-4.465 C27.396,82.498,27.396,81.656,27.396,80.812z",
     ],
   },
+  {
+    id: "twitter_logo",
+    label: "Twitter",
+    renderMode: "fill",
+    viewBox: "0 0 356.51 364.75",
+    paths: [
+      "m.41,364.75c6.87-8.15,13.66-16.36,20.61-24.44,38.59-44.9,77.22-89.78,115.83-134.66.77-.9,1.49-1.84,2.38-2.93C92.97,135.39,46.73,68.08,0,.05c1.66,0,2.74,0,3.81,0,33.11,0,66.22.02,99.33-.05,0,0,63.53,87.81,92.75,130.33.73,1.06,1.5,2.1,2.55,3.57,2.93-3.35,5.71-6.5,8.45-9.68C241.79,83.65,278.49,40.62,313.33,0c0,0,21.9.05,31.97.05-44.49,51.74-88.52,102.94-132.78,154.4.7,1.05,1.39,2.11,2.11,3.15,46.6,67.83,93.21,135.67,139.8,203.51.79,1.15,1.39,2.43,2.08,3.64h-106.12c-.23-.41-.44-.84-.7-1.22-31.6-46.02-63.2-92.04-94.82-138.06-.45-.66-1.05-1.22-1.67-1.93-.92,1.01-1.73,1.86-2.5,2.75-20.58,23.92-41.17,47.83-61.73,71.76-19.09,22.22-38.15,44.46-57.22,66.7H.41ZM43.13,23.75c1.02,1.56,1.56,2.46,2.16,3.32,72.78,104.13,145.57,208.25,218.3,312.41,1.3,1.86,2.59,2.63,4.9,2.61,13.77-.12,27.54-.05,41.3-.06,1.01,0,2.03-.09,3.53-.17-1-1.54-1.71-2.72-2.49-3.85C240.04,236.72,89.77,23.22,89.77,23.22l-46.63.53Z",
+    ],
+  },
 ] as const;
 
 const SOCIAL_MEDIA_STICKERS = [
@@ -1011,25 +1023,6 @@ const GRAPHIC_STICKERS = [
 
 const STUDIO_NIGHTLIFE_GRAPHICS = [
   {
-    id: "vip",
-    label: "VIP",
-    paths: [
-      "M20 34L36 20L52 38L64 18L76 38L92 20L108 34L92 52L108 70L92 88L76 70L64 94L52 70L36 88L20 70L36 52Z",
-      "M44 52L56 64L84 36",
-    ],
-  },
-  {
-    id: "rooftop",
-    label: "Rooftop",
-    paths: [
-      "M18 88H110",
-      "M24 88V52L46 68V40L68 56V28L92 44V88",
-      "M32 78H38",
-      "M54 64H60",
-      "M76 52H82",
-    ],
-  },
-  {
     id: "champagne",
     label: "Champagne",
     renderMode: "fill",
@@ -1043,17 +1036,6 @@ const STUDIO_NIGHTLIFE_GRAPHICS = [
       "M50.044,55.461c-1.105-0.006-2.053-0.963-2.027-2.041c0.027-1.096,0.993-2.006,2.098-1.976c1.073,0.03,1.956,0.927,1.964,2 C52.089,54.554,51.167,55.467,50.044,55.461z",
       "M89.218,44.083c0.015,1.316-0.569,2.098-1.487,2.317c-1.01,0.24-1.967-0.142-2.305-1.123c-0.913-2.655-1.766-5.333-2.578-8.021 c-0.293-0.972,0.379-2.009,1.319-2.305c1.09-0.344,2.184,0.154,2.587,1.304c0.684,1.956,1.298,3.938,1.926,5.914 C88.91,42.895,89.093,43.641,89.218,44.083z",
       "M83.781,29.425c-0.009,1.099-0.981,2.053-2.053,2.021c-1.055-0.033-1.953-0.954-1.964-2.015c-0.015-1.111,0.913-2.059,2.009-2.062 C82.874,27.369,83.79,28.308,83.781,29.425z",
-    ],
-  },
-  {
-    id: "laser",
-    label: "Laser",
-    paths: [
-      "M16 86L54 48",
-      "M26 96L64 58",
-      "M76 44L112 8",
-      "M66 54L102 18",
-      "M18 18H42V42",
     ],
   },
 ] as const;
@@ -6695,7 +6677,7 @@ export default function Page() {
   // =========================================================
  const handleCreateCinematic = async () => {
   if (isStarterPlan) {
-    alert("Starter plan has 0 AI generations. Upgrade or use a pass to access Cinematic Text.");
+    alert("Cinematic Text is still a paid feature. Use Starter AI Scene or Portrait Blend for the trial, then upgrade for more tools.");
     return;
   }
   let ref = cinematicRefUrl;
@@ -6833,8 +6815,8 @@ export default function Page() {
  // 1. Upload Handler (Auto-Cuts Subject)
 // 1. Upload Handler (Auto-Cuts Subject & Converts to Base64)
   const handleBlendUpload = async (type: 'subject' | 'bg', file: File) => {
-    if (isStarterPlan) {
-      alert("Starter plan disables uploads. Upgrade or use a pass to unlock uploads and Magic Blend.");
+    if (isStarterPlan && type === "bg") {
+      alert("Starter includes one portrait or logo upload. Background uploads still require a pass or subscription.");
       return;
     }
     // Helper: Read file to Base64
@@ -6915,6 +6897,10 @@ export default function Page() {
         const usableCutout = await hasUsableTransparency(cutoutBase64);
         if (!usableCutout) {
           throw new Error("Background removal did not produce a transparent cutout.");
+        }
+        if (isStarterPlan) {
+          const consumed = await consumeStarterTrialBenefit("upload");
+          if (!consumed) return;
         }
         setBlendSubject(cutoutBase64);
         setBlendSubjectCutout(cutoutBase64);
@@ -7161,12 +7147,10 @@ export default function Page() {
     subjectLayer?: any | null;
     backgroundPriority?: "upload" | "canvas";
   }) => {
-    if (isStarterPlan) {
-      alert("Starter plan has 0 AI generations. Upgrade or use a pass to use Magic Blend.");
-      return;
-    }
-    if (generationQuota?.remaining != null && generationQuota.remaining < 2) {
-      alert("No generations left for Magic Blend.");
+    const token = await ensureAiAccess(2, {
+      onBlocked: (message) => alert(message),
+    });
+    if (!token) {
       return;
     }
     const subjectLayerForBlend =
@@ -7196,12 +7180,6 @@ export default function Page() {
       : captureCurrentPortraitVersion();
 
     try {
-      const token = await getAccessToken();
-      if (!token) {
-        throw new Error("Sign in to use Magic Blend.");
-      }
-
-
       // ✅ 1. Get Background: Respect priority, fallback if needed
       const fetchCanvasBg = async () => {
         if (!artRef.current) return null;
@@ -7300,11 +7278,11 @@ export default function Page() {
       }
       const extraPrompt = extraParts.join(" ");
 
-      const res = await fetch("/api/magic-blend", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+        const res = await fetch("/api/magic-blend", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           subject: subjectToBlend,
@@ -7318,6 +7296,7 @@ export default function Page() {
           cameraZoom: blendCameraZoom,
           extraPrompt,
           provider: "fal",
+          tracking: getClientTrackingPayload(),
         }),
       });
 
@@ -7381,10 +7360,10 @@ export default function Page() {
   };
 
   const handleDjMainFaceBake = async () => {
-    if (isStarterPlan) {
-      alert("Starter plan has 0 AI generations. Upgrade or use a pass to use Magic Blend.");
-      return;
-    }
+    const token = await ensureAiAccess(2, {
+      onBlocked: (message) => alert(message),
+    });
+    if (!token) return;
     if (!mainFaceOnCanvas?.url) {
       alert("Place Main Face on the canvas before baking it into the scene.");
       return;
@@ -7395,11 +7374,6 @@ export default function Page() {
     const originalPortraitVersion = capturePortraitLayerVersion(mainFaceOnCanvas);
 
     try {
-      const token = await getAccessToken();
-      if (!token) {
-        throw new Error("Sign in to use Magic Blend.");
-      }
-
       const subjectToBlend = await ensureTransparentMainFace(mainFaceOnCanvas.url, {
         persistToKit: !!mainFaceOnCanvas?.isBrandFace,
         portraitId: mainFaceOnCanvas?.id ?? null,
@@ -9085,20 +9059,10 @@ const pendingLogoSlot = useRef<number | null>(null);
 // Portrait picker (for BG remover)
 
 function triggerUploadForSlot(i: number) {
-  if (isStarterPlan) {
-    alert("Starter plan disables logo uploads. Upgrade or use a pass to unlock logos.");
-    return;
-  }
   pendingLogoSlot.current = i;
   logoSlotPickerRef.current?.click();
 }
 function onLogoSlotFile(e: React.ChangeEvent<HTMLInputElement>) {
-  if (isStarterPlan) {
-    alert("Starter plan disables uploads. Upgrade or use a pass to unlock logo uploads.");
-    e.currentTarget.value = '';
-    pendingLogoSlot.current = null;
-    return;
-  }
   const file = e.target.files?.[0];
 
   // allow re-selecting the same file later
@@ -9114,17 +9078,30 @@ function onLogoSlotFile(e: React.ChangeEvent<HTMLInputElement>) {
   const reader = new FileReader();
   reader.onload = () => {
     const dataUrl = String(reader.result || '');
+    const applyLogo = () => {
+      setLogoSlots(prev => {
+        const next = [...prev];
+        next[idx] = dataUrl;
+        try { localStorage.setItem('nf:logoSlots', JSON.stringify(next)); } catch {}
+        return next;
+      });
 
-    // write into the chosen slot + persist
-    setLogoSlots(prev => {
-      const next = [...prev];
-      next[idx] = dataUrl;
-      try { localStorage.setItem('nf:logoSlots', JSON.stringify(next)); } catch {}
-      return next;
-    });
+      pendingLogoSlot.current = null;
+    };
 
-    // clear slot pointer
-    pendingLogoSlot.current = null;
+    if (isStarterPlan) {
+      void (async () => {
+        const consumed = await consumeStarterTrialBenefit("upload");
+        if (!consumed) {
+          pendingLogoSlot.current = null;
+          return;
+        }
+        applyLogo();
+      })();
+      return;
+    }
+
+    applyLogo();
   };
 
   reader.readAsDataURL(file);
@@ -9153,28 +9130,28 @@ function placeLogoFromSlot(idx: number) {
 
 
 const openPortraitPicker = () => {
-  if (isStarterPlan) {
-    alert("Starter plan disables portrait uploads. Upgrade or use a pass to unlock portraits.");
-    return;
-  }
   portraitPickerRef.current?.click();
 };
 const openLogoPicker = () => {
-  if (isStarterPlan) {
-    alert("Starter plan disables logo uploads. Upgrade or use a pass to unlock logos.");
-    return;
-  }
   logoPickerRef.current?.click();
 };
 
-const onLogoFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
-  if (isStarterPlan) {
-    alert("Starter plan disables uploads. Upgrade or use a pass to unlock logo uploads.");
-    e.currentTarget.value = '';
-    return;
-  }
+const onLogoFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
   const files = e.target.files;
-  if (files && files.length) addLogosFromFiles(files);
+  if (files && files.length) {
+    if (isStarterPlan) {
+      const consumed = await consumeStarterTrialBenefit("upload");
+      if (!consumed) {
+        e.currentTarget.value = '';
+        return;
+      }
+      const dataUrl = await fileToDataURL(files[0]);
+      setLogoUrl(dataUrl);
+      addToLogoLibrary(dataUrl);
+    } else {
+      await addLogosFromFiles(files);
+    }
+  }
   e.currentTarget.value = ''; // allow re-selecting the same file later
 };
 
@@ -9539,21 +9516,11 @@ function persistLogoSlots(next: string[]) {
 }
 
 function triggerLogoUpload(i: number) {
-  if (isStarterPlan) {
-    alert("Starter plan disables logo uploads. Upgrade or use a pass to unlock logos.");
-    return;
-  }
   pendingLogoSlot.current = i;
   logoSlotPickerRef.current?.click();
 }
 
 async function onLogoFile(e: React.ChangeEvent<HTMLInputElement>) {
-  if (isStarterPlan) {
-    alert("Starter plan disables logo uploads. Upgrade or use a pass to unlock logos.");
-    e.currentTarget.value = '';
-    pendingLogoSlot.current = null;
-    return;
-  }
   const file = e.target.files?.[0];
   e.currentTarget.value = '';
   const idx = pendingLogoSlot.current;
@@ -9562,6 +9529,10 @@ async function onLogoFile(e: React.ChangeEvent<HTMLInputElement>) {
 
   try {
     const dataUrl = await IS_fileToDataURL(file); // reuse your existing fileToDataURL
+    if (isStarterPlan) {
+      const consumed = await consumeStarterTrialBenefit("upload");
+      if (!consumed) return;
+    }
     persistLogoSlots(logoSlots.map((s, i) => (i === idx ? dataUrl : s)));
   } catch (err: any) {
     alert(`Logo upload failed: ${err?.message || err}`);
@@ -9571,10 +9542,6 @@ async function onLogoFile(e: React.ChangeEvent<HTMLInputElement>) {
 
 
 function triggerPortraitSlotUpload(i: number) {
-  if (isStarterPlan) {
-    alert("Starter plan disables portrait uploads. Upgrade or use a pass to unlock portraits.");
-    return;
-  }
   pendingPortraitSlot.current = i;
   portraitSlotPickerRef.current?.click();
 }
@@ -9582,12 +9549,6 @@ function triggerPortraitSlotUpload(i: number) {
 // ✅ FIX: Use local AI instead of server API
 // ✅ FIX: Keep track of the active slot while processing
 async function onPortraitSlotFile(e: React.ChangeEvent<HTMLInputElement>) {
-  if (isStarterPlan) {
-    alert("Starter plan disables portrait uploads. Upgrade or use a pass to unlock portraits.");
-    e.currentTarget.value = '';
-    pendingPortraitSlot.current = null;
-    return;
-  }
   const file = e.target.files?.[0];
   e.currentTarget.value = ''; // allow re-selecting same file
   
@@ -9606,6 +9567,10 @@ async function onPortraitSlotFile(e: React.ChangeEvent<HTMLInputElement>) {
     // Note: ensure removeBackgroundLocal is imported/available
     const cutDataUrl = await removeBackgroundLocal(originalUrl);
     const scaledCut = await downscaleDataUrlIfNeeded(cutDataUrl, 1800);
+    if (isStarterPlan) {
+      const consumed = await consumeStarterTrialBenefit("upload");
+      if (!consumed) return;
+    }
 
     // 3. Save to slot
     setPortraitSlots(prev => {
@@ -11477,6 +11442,7 @@ React.useEffect(() => {
   const [exportProgressActive, setExportProgressActive] = useState(false);
   const [exportBlobUrl, setExportBlobUrl] = useState<string | null>(null);
   const [exportFilename, setExportFilename] = useState<string | null>(null);
+  const [starterCleanExportUnlocked, setStarterCleanExportUnlocked] = useState(false);
   const PRINT_EXPORT_SCALE = 6;
   const HISTORY_LIMIT = 10;
   const historyRef = React.useRef<{
@@ -11810,7 +11776,17 @@ const mobileFloatSticky = isMobileView && format === "story";
     updatePortrait,
   ]);
 
-  const [subscriptionStatus, setSubscriptionStatus] = React.useState<"active" | "ondemand" | "inactive">("inactive");
+  type SubscriptionAccessState = "active" | "ondemand" | "starter" | "inactive";
+  type StarterTrialQuota = {
+    uploadLimit: number;
+    uploadUsed: number;
+    uploadRemaining: number;
+    cleanExportLimit: number;
+    cleanExportUsed: number;
+    cleanExportRemaining: number;
+  };
+
+  const [subscriptionStatus, setSubscriptionStatus] = React.useState<SubscriptionAccessState>("inactive");
   const [accessPlan, setAccessPlan] = React.useState<string | null>(null);
   const isPaid = subscriptionStatus === "active";
   const hasOnDemandPass = subscriptionStatus === "ondemand";
@@ -11828,6 +11804,7 @@ const mobileFloatSticky = isMobileView && format === "story";
     used: number;
     remaining: number;
   } | null>(null);
+  const [starterTrialQuota, setStarterTrialQuota] = React.useState<StarterTrialQuota | null>(null);
   const starterTemplateGallery = React.useMemo(
     () => TEMPLATE_GALLERY.filter((t) => STARTER_TEMPLATE_IDS.has(t.id)),
     []
@@ -11867,6 +11844,8 @@ const mobileFloatSticky = isMobileView && format === "story";
     generationLimit: number;
     generationUsed: number;
     generationRemaining: number;
+    starterUploadRemaining: number;
+    starterCleanExportRemaining: number;
   } | null>(null);
 
   const applyGenerationQuota = React.useCallback((payload: any) => {
@@ -11887,20 +11866,63 @@ const mobileFloatSticky = isMobileView && format === "story";
     });
   }, []);
 
+  const applyStarterTrialQuota = React.useCallback((payload: any) => {
+    const uploadLimit = Number(
+      payload?.starter_upload_limit ?? payload?.starterUploadLimit ?? 1
+    );
+    const uploadUsed = Number(
+      payload?.starter_upload_used ?? payload?.starterUploadUsed ?? 0
+    );
+    const uploadRemaining = Number(
+      payload?.starter_upload_remaining ??
+        payload?.starterUploadRemaining ??
+        (Number.isFinite(uploadLimit)
+          ? Math.max(0, uploadLimit - (Number.isFinite(uploadUsed) ? uploadUsed : 0))
+          : NaN)
+    );
+    const cleanExportLimit = Number(
+      payload?.starter_clean_export_limit ?? payload?.starterCleanExportLimit ?? 1
+    );
+    const cleanExportUsed = Number(
+      payload?.starter_clean_export_used ?? payload?.starterCleanExportUsed ?? 0
+    );
+    const cleanExportRemaining = Number(
+      payload?.starter_clean_export_remaining ??
+        payload?.starterCleanExportRemaining ??
+        (Number.isFinite(cleanExportLimit)
+          ? Math.max(0, cleanExportLimit - (Number.isFinite(cleanExportUsed) ? cleanExportUsed : 0))
+          : NaN)
+    );
+
+    setStarterTrialQuota({
+      uploadLimit: Number.isFinite(uploadLimit) ? Math.max(0, uploadLimit) : 1,
+      uploadUsed: Number.isFinite(uploadUsed) ? Math.max(0, uploadUsed) : 0,
+      uploadRemaining: Number.isFinite(uploadRemaining) ? Math.max(0, uploadRemaining) : 0,
+      cleanExportLimit: Number.isFinite(cleanExportLimit) ? Math.max(0, cleanExportLimit) : 1,
+      cleanExportUsed: Number.isFinite(cleanExportUsed) ? Math.max(0, cleanExportUsed) : 0,
+      cleanExportRemaining: Number.isFinite(cleanExportRemaining)
+        ? Math.max(0, cleanExportRemaining)
+        : 0,
+    });
+  }, []);
+
   const applyAccessPayload = React.useCallback(
     (payload: any) => {
-      const nextStatus: "active" | "ondemand" | "inactive" =
+      const nextStatus: SubscriptionAccessState =
         payload?.status === "ondemand"
           ? "ondemand"
           : payload?.status === "active"
             ? "active"
+            : payload?.status === "starter"
+              ? "starter"
             : "inactive";
       setSubscriptionStatus(nextStatus);
       setAccessPlan(typeof payload?.plan === "string" ? payload.plan : null);
       applyGenerationQuota(payload);
+      applyStarterTrialQuota(payload);
       return nextStatus;
     },
-    [applyGenerationQuota]
+    [applyGenerationQuota, applyStarterTrialQuota]
   );
 
   const getAccessToken = React.useCallback(async () => {
@@ -11916,6 +11938,7 @@ const mobileFloatSticky = isMobileView && format === "story";
         setSubscriptionStatus("inactive");
         setAccessPlan(null);
         setGenerationQuota(null);
+        setStarterTrialQuota(null);
         if (opts?.includeAccount) {
           setAccountData({
             email: null,
@@ -11925,6 +11948,8 @@ const mobileFloatSticky = isMobileView && format === "story";
             generationLimit: 0,
             generationUsed: 0,
             generationRemaining: 0,
+            starterUploadRemaining: 0,
+            starterCleanExportRemaining: 0,
           });
         }
         return null;
@@ -11959,6 +11984,8 @@ const mobileFloatSticky = isMobileView && format === "story";
             generationLimit: Number(json.generation_limit || 0),
             generationUsed: Number(json.generation_used || 0),
             generationRemaining: Number(json.generation_remaining || 0),
+            starterUploadRemaining: Number(json.starter_upload_remaining || 0),
+            starterCleanExportRemaining: Number(json.starter_clean_export_remaining || 0),
           });
         }
 
@@ -11970,9 +11997,136 @@ const mobileFloatSticky = isMobileView && format === "story";
     [applyAccessPayload, getAccessToken]
   );
 
+  const consumeStarterTrialBenefit = React.useCallback(
+    async (
+      kind: "upload" | "clean_export",
+      opts?: { silent?: boolean }
+    ) => {
+      if (!isStarterPlan) return true;
+
+      const token = await getAccessToken();
+      if (!token) {
+        if (!opts?.silent) {
+          alert(
+            kind === "upload"
+              ? "Sign in to claim your Starter upload."
+              : "Sign in to claim your Starter clean export."
+          );
+        }
+        return false;
+      }
+
+      let nextQuota = starterTrialQuota;
+      if (!nextQuota) {
+        const refreshed = await refreshAccessSnapshot();
+        if (refreshed?.json) {
+          nextQuota = {
+            uploadLimit: Number(refreshed.json.starter_upload_limit || 1),
+            uploadUsed: Number(refreshed.json.starter_upload_used || 0),
+            uploadRemaining: Number(refreshed.json.starter_upload_remaining || 0),
+            cleanExportLimit: Number(refreshed.json.starter_clean_export_limit || 1),
+            cleanExportUsed: Number(refreshed.json.starter_clean_export_used || 0),
+            cleanExportRemaining: Number(refreshed.json.starter_clean_export_remaining || 0),
+          };
+        }
+      }
+
+      const remaining =
+        kind === "upload"
+          ? nextQuota?.uploadRemaining ?? 0
+          : nextQuota?.cleanExportRemaining ?? 0;
+      if (remaining <= 0) {
+        if (!opts?.silent) {
+          alert(
+            kind === "upload"
+              ? "Starter includes one portrait or logo upload. Upgrade or use a pass for more uploads."
+              : "Starter includes one clean export. Upgrade or use a pass for unlimited clean exports."
+          );
+        }
+        return false;
+      }
+
+      try {
+        try {
+          await fetch("/api/auth/profile-bootstrap", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+        } catch {}
+
+        const res = await fetch("/api/auth/starter-trial/consume", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ kind, tracking: getClientTrackingPayload() }),
+        });
+        const json = await res.json().catch(() => ({} as any));
+        if (
+          json &&
+          (typeof json.status === "string" ||
+            json.generation_limit != null ||
+            json.starter_upload_remaining != null)
+        ) {
+          applyAccessPayload(json);
+        }
+        if (opts?.silent && !res.ok) return false;
+        if (!res.ok) {
+          alert(
+            json?.error ||
+              (kind === "upload"
+                ? "Starter upload could not be used."
+                : "Starter clean export could not be used.")
+          );
+          return false;
+        }
+        return true;
+      } catch {
+        if (!opts?.silent) {
+          alert(
+            kind === "upload"
+              ? "Starter upload could not be used."
+              : "Starter clean export could not be used."
+          );
+        }
+        return false;
+      }
+    },
+    [applyAccessPayload, getAccessToken, isStarterPlan, refreshAccessSnapshot, starterTrialQuota]
+  );
+
+  const ensureAiAccess = React.useCallback(
+    async (units: number, opts?: { onBlocked?: (message: string) => void }) => {
+      const token = await getAccessToken();
+      if (!token) {
+        const message = isStarterPlan
+          ? "Sign in to claim your Starter AI generations."
+          : "Sign in to use AI generation.";
+        opts?.onBlocked?.(message);
+        return null;
+      }
+
+      const remaining = generationQuota?.remaining;
+      if (remaining != null && remaining < units) {
+        const message = isStarterPlan
+          ? `Starter includes ${generationQuota?.limit ?? 3} AI generations total. Upgrade or use a pass for more generations.`
+          : units > 1
+            ? "No generations left for Magic Blend."
+            : "No generations left.";
+        opts?.onBlocked?.(message);
+        return null;
+      }
+
+      return token;
+    },
+    [generationQuota?.limit, generationQuota?.remaining, getAccessToken, isStarterPlan]
+  );
+
   React.useEffect(() => {
     if (subscriptionStatus === "inactive") {
       setGenerationQuota(null);
+      setStarterTrialQuota(null);
       return;
     }
     void refreshAccessSnapshot().catch(() => undefined);
@@ -11981,11 +12135,7 @@ const mobileFloatSticky = isMobileView && format === "story";
   React.useEffect(() => {
     if (!isStarterPlan) return;
     if (
-      selectedPanel === "logo" ||
-      selectedPanel === "portrait" ||
-      selectedPanel === "dj_branding" ||
-      selectedPanel === "ai_background" ||
-      selectedPanel === "magic_blend"
+      selectedPanel === "dj_branding"
     ) {
       setSelectedPanel("template");
     }
@@ -12007,6 +12157,7 @@ const mobileFloatSticky = isMobileView && format === "story";
     }
     setExportFilename(null);
     setExportMeta(null);
+    setStarterCleanExportUnlocked(false);
     startExportProgress();
 
     const isMobileExport =
@@ -12135,10 +12286,18 @@ const mobileFloatSticky = isMobileView && format === "story";
         throw lastErr || new Error('Export failed');
       }
 
+      let usedStarterCleanExport = false;
       if (isStarterPlan) {
+        usedStarterCleanExport = await consumeStarterTrialBenefit("clean_export", {
+          silent: true,
+        });
+      }
+
+      if (isStarterPlan && !usedStarterCleanExport) {
         dataUrl = await addStarterWatermark(dataUrl, exportType);
         sizeBytes = dataUrlBytes(dataUrl);
       }
+      setStarterCleanExportUnlocked(usedStarterCleanExport);
 
       setExportDataUrl(dataUrl);
       const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
@@ -12173,7 +12332,16 @@ const mobileFloatSticky = isMobileView && format === "story";
       setExportProgressActive(false);
       setExportProgress(0);
     }
-  }, [artRef, canvasSize.h, canvasSize.w, exportScale, exportType, exportStatus, isStarterPlan]);
+  }, [
+    artRef,
+    canvasSize.h,
+    canvasSize.w,
+    consumeStarterTrialBenefit,
+    exportScale,
+    exportType,
+    exportStatus,
+    isStarterPlan,
+  ]);
 
   const triggerExportStart = React.useCallback(() => {
     runAfterNextPaint(() => {
@@ -12267,6 +12435,7 @@ const mobileFloatSticky = isMobileView && format === "story";
     setExportStatus('idle');
     setExportError(null);
     setExportDataUrl(null);
+    setStarterCleanExportUnlocked(false);
     if (exportBlobUrl) {
       try { URL.revokeObjectURL(exportBlobUrl); } catch {}
     }
@@ -12667,28 +12836,23 @@ const onBgFile = (e: React.ChangeEvent<HTMLInputElement>) => {
 
 // === FULL GENERATE BACKGROUND FUNCTION (Updated: Party People Subject) ===
 const generateBackground = async (opts: GenOpts = {}) => {
-  if (isStarterPlan) {
-    setGenError("Starter plan has 0 AI generations. Upgrade or use a pass to generate backgrounds.");
-    return;
-  }
-  const remaining = generationQuota?.remaining;
-  if (remaining != null && remaining <= 0) {
-    if (!(bgUploadUrl || bgUrl)) {
-      setBgUploadUrl(FALLBACK_BG); setBgUrl(null);
-      setIsPlaceholder(true);
-      setGenError('No generations left — showing fallback.');
-    } else {
-      setGenError('No generations left.');
-    }
+  const token = await ensureAiAccess(1, {
+    onBlocked: (message) => {
+      if (!(bgUploadUrl || bgUrl) && !isStarterPlan && /No generations left/i.test(message)) {
+        setBgUploadUrl(FALLBACK_BG);
+        setBgUrl(null);
+        setIsPlaceholder(true);
+        setGenError("No generations left — showing fallback.");
+        return;
+      }
+      setGenError(message);
+    },
+  });
+  if (!token) {
     return;
   }
 
   try {
-    const token = await getAccessToken();
-    if (!token) {
-      setGenError("Sign in to use AI generation.");
-      return;
-    }
     setGenLoading(true);
     setGenError('');
     setGenCandidates([]);
@@ -12995,7 +13159,7 @@ const generateBackground = async (opts: GenOpts = {}) => {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify(body)
+          body: JSON.stringify({ ...body, tracking: getClientTrackingPayload() })
         });
 
         const j = await res.json().catch(() => ({} as any));
@@ -13072,26 +13236,19 @@ const generateBackground = async (opts: GenOpts = {}) => {
 };
 
 const generateSubjectForBackground = async () => {
-  if (isStarterPlan) {
-    setSubjectGenError("Starter plan has 0 AI generations. Upgrade or use a pass to generate subjects.");
-    return;
-  }
   if (subjectGenLoading) return;
   if (!(bgUploadUrl || bgUrl)) {
     setSubjectGenError("Add a background first.");
     return;
   }
-  if (generationQuota?.remaining != null && generationQuota.remaining <= 0) {
-    setSubjectGenError("No generations left.");
+  const token = await ensureAiAccess(1, {
+    onBlocked: (message) => setSubjectGenError(message),
+  });
+  if (!token) {
     return;
   }
 
   try {
-    const token = await getAccessToken();
-    if (!token) {
-      setSubjectGenError("Sign in to use AI generation.");
-      return;
-    }
     setSubjectGenLoading(true);
     setSubjectGenError(null);
 
@@ -13255,6 +13412,7 @@ const generateSubjectForBackground = async () => {
           referenceHint: includeReference && referenceSample
             ? "Use the reference for facial structure, skin tone, and hairstyle. Do not copy clothing or pose. Keep likeness without being identical."
             : undefined,
+          tracking: getClientTrackingPayload(),
         }),
       });
       const j = await res.json().catch(() => ({} as any));
@@ -14483,10 +14641,6 @@ async function alignActiveToCenter() {
 // === onUploadPortraitAndRemoveBg (drop-in once, between addIcon() and the return) ===
 // ✅ FIX: Use local AI instead of server API
 const onUploadPortraitAndRemoveBg = async (files: FileList | null) => {
-  if (isStarterPlan) {
-    alert("Starter plan disables portrait uploads. Upgrade or use a pass to unlock portraits.");
-    return;
-  }
   const file = files?.[0];
   if (!file) return;
 
@@ -14501,6 +14655,10 @@ const onUploadPortraitAndRemoveBg = async (files: FileList | null) => {
 
     // 2. Process locally
     const cutDataUrl = await removeBackgroundLocal(originalUrl);
+    if (isStarterPlan) {
+      const consumed = await consumeStarterTrialBenefit("upload");
+      if (!consumed) return;
+    }
 
     // 3. Update state & Library
     setPortraitUrl(cutDataUrl);
@@ -18604,6 +18762,7 @@ const handleAutoLayoutFromBackground = React.useCallback(async () => {
           venue,
           subtag,
         },
+        tracking: getClientTrackingPayload(),
       }),
     });
 
@@ -18688,6 +18847,7 @@ const requestAutoLayout = React.useCallback(
         format: params.format,
         currentText: params.currentText,
         textMode: params.textMode ?? "generate",
+        tracking: getClientTrackingPayload(),
       }),
     });
 
@@ -20681,6 +20841,7 @@ const activeAssetControls = React.useMemo(() => {
         locked: !!sel.locked,
         showColor: hasIconColor,
         colorValue: (sel as any).iconColor || "#ffffff",
+        shapeGradient: isShapeGraphic ? (sel as any).shapeGradient !== false : undefined,
         rotation: sel.rotation ?? 0,
         separatorLength: isSeparator
           ? Number((sel as any).separatorWidth ?? 180)
@@ -20701,6 +20862,7 @@ const activeAssetControls = React.useMemo(() => {
             ? (sel as any).tint
             : 0,
         onColor: (value: string) => {
+          const gradientEnabled = (sel as any).shapeGradient !== false;
           const nextUrl = isSeparator
             ? buildSeparatorSvgDataUrl(
                 String((sel as any).separatorKind || ""),
@@ -20713,7 +20875,7 @@ const activeAssetControls = React.useMemo(() => {
                 const kind = String((sel as any).shapeKind || "");
                 const shapeItem = SHAPE_GRAPHICS.find((item) => item.id === kind);
                 if (!shapeItem) return String(sel.url || "");
-                return buildShapeSvgDataUrl(kind, value);
+                return buildShapeSvgDataUrl(kind, value, gradientEnabled);
               })()
             : (() => {
                 const template = String((sel as any).svgTemplate || "");
@@ -20726,6 +20888,24 @@ const activeAssetControls = React.useMemo(() => {
             iconColor: value,
           });
         },
+        onToggleShapeGradient: isShapeGraphic
+          ? () => {
+              const nextGradient = (sel as any).shapeGradient === false;
+              useFlyerState.getState().updatePortrait(format, sel.id, {
+                shapeGradient: nextGradient,
+                url: buildShapeSvgDataUrl(
+                  String((sel as any).shapeKind || ""),
+                  String((sel as any).iconColor || "#ffffff"),
+                  nextGradient
+                ),
+                svgTemplate: buildShapeSvgMarkup(
+                  String((sel as any).shapeKind || ""),
+                  "{{COLOR}}",
+                  nextGradient
+                ),
+              });
+            }
+          : undefined,
         onSeparatorLength: isSeparator
           ? (v: number) =>
               useFlyerState.getState().updatePortrait(format, sel.id, {
@@ -22892,6 +23072,12 @@ return (
             <div>
               Generations: {accountData?.generationRemaining ?? 0} left / {accountData?.generationLimit ?? 0}
             </div>
+            {accountData?.status === "starter" && (
+              <>
+                <div>Starter upload remaining: {accountData?.starterUploadRemaining ?? 0}</div>
+                <div>Starter clean export remaining: {accountData?.starterCleanExportRemaining ?? 0}</div>
+              </>
+            )}
             <div>
               Expires:{" "}
               {accountData?.periodEnd
@@ -23062,14 +23248,18 @@ return (
                 </div>
                 {isStarterPlan && (
                   <div className="text-[11px] text-amber-300">
-                    Starter exports include a watermark. Want clean exports without a subscription? Grab a pass on Pricing.
+                    {starterCleanExportUnlocked
+                      ? "Starter clean export used. This preview is watermark-free."
+                      : "Starter exports include a watermark. Sign in to claim your one clean export, or grab a pass for more."}
                   </div>
                 )}
               </div>
             ) : (
               <div className="text-[12px] text-neutral-300">
                 {isStarterPlan
-                  ? "Your export is ready. Starter includes a watermark. Prefer one-off clean exports? Use an on-demand pass."
+                  ? starterCleanExportUnlocked
+                    ? "Your export is ready. Your Starter clean export was applied."
+                    : "Your export is ready. Starter includes a watermark unless you claim the one clean export."
                   : "Your export is ready. Download the clean file below."}
               </div>
             )}
@@ -25716,6 +25906,16 @@ style={{ top: STICKY_TOP }}
                 value={activeAssetControls.colorValue || "#ffffff"}
                 onChange={(v) => activeAssetControls.onColor?.(v)}
               />
+              {activeAssetControls.onToggleShapeGradient && (
+                <button
+                  type="button"
+                  onClick={() => activeAssetControls.onToggleShapeGradient?.()}
+                  className="rounded border border-neutral-700 bg-neutral-900/60 px-2 py-1 text-[10px] text-neutral-200 hover:bg-neutral-800"
+                  disabled={activeAssetControls.locked}
+                >
+                  {activeAssetControls.shapeGradient ? "Gradient" : "Flat"}
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -26567,21 +26767,15 @@ style={{ top: STICKY_TOP }}
     data-tour="background"
     className={clsx(creatorStepPanelClass("scene"), mobilePanelClass("assets", "ai_background"))}
   >
-  {isStarterPlan ? (
-    <div className={`${editorSectionCardClass} text-white/85`}>
-      <div className={editorSectionTitleClass}>AI Scene</div>
-      <div className={editorHelperTextClass}>
-        Paid users get AI generation. Starter mode lets you browse templates and edit layouts before upgrading.
+    {isStarterPlan && (
+      <div className={`${editorSectionCardClass} mb-3 text-white/85`}>
+        <div className={editorSectionTitleClass}>Starter Trial</div>
+        <div className={editorHelperTextClass}>
+          Signed-in Starter accounts get {generationQuota?.limit ?? 3} AI generations total.
+          Remaining: {generationQuota?.remaining ?? 0}. Upgrade or use a pass when you need more.
+        </div>
       </div>
-      <a
-        href="/pricing"
-        onClick={(event) => void handleStudioNavigation(event, "/pricing")}
-        className={`mt-4 inline-flex ${editorSecondaryButtonClass}`}
-      >
-        Unlock AI tools
-      </a>
-    </div>
-  ) : (
+    )}
     <AiBackgroundPanel
       selectedPanel={selectedPanel}
       setSelectedPanel={(nextPanel) => {
@@ -26663,7 +26857,6 @@ style={{ top: STICKY_TOP }}
       onUseGeneratedBackground={applyGeneratedSharedBackground}
       onUseGeneratedCandidate={applyGeneratedCandidate}
     />
-  )}
   </div>
 )}
 {/* UI: AI BACKGROUND (END) */}
@@ -26671,28 +26864,16 @@ style={{ top: STICKY_TOP }}
 
 
 {/* UI: MAGIC BLEND PANEL (BEGIN) */}
-{!isDjStartupMode && (isStarterPlan ? (
+{!isDjStartupMode && (
   <div className={clsx(creatorStepPanelClass("assets"), mobilePanelClass("assets", "magic_blend"))}>
-    <div
-      id="magic-blend-panel"
-      data-tour="magic-blend"
-      className={`${editorSectionCardClass} text-white/85`}
-    >
-    <div className={editorSectionTitleClass}>Portrait Blend</div>
-    <div className={editorHelperTextClass}>
-      Paid users can blend subjects and scenes here.
-    </div>
-    <a
-      href="/pricing"
-      onClick={(event) => void handleStudioNavigation(event, "/pricing")}
-      className={`mt-4 inline-flex ${editorSecondaryButtonClass}`}
-    >
-      Unlock Portrait Blend
-    </a>
-    </div>
-  </div>
-) : (
-  <div className={clsx(creatorStepPanelClass("assets"), mobilePanelClass("assets", "magic_blend"))}>
+    {isStarterPlan && (
+      <div className={`${editorSectionCardClass} mb-3 text-white/85`}>
+        <div className={editorSectionTitleClass}>Starter Trial</div>
+        <div className={editorHelperTextClass}>
+          Use your one portrait or logo upload here, then spend 2 generations on a full Portrait Blend if you want a fast before-and-after win.
+        </div>
+      </div>
+    )}
     <MagicBlendPanel
       selectedPanel={selectedPanel}
       onToggle={() =>
@@ -26739,7 +26920,7 @@ style={{ top: STICKY_TOP }}
       onUseGeneratedBackground={applyGeneratedSharedBackground}
     />
   </div>
-))}
+)}
 {/* UI: MAGIC BLEND PANEL (END) */}
 <div className={clsx(creatorStepPanelClass("scene"), mobilePanelClass("assets", "background"))}>
   <BackgroundPanels
@@ -26796,7 +26977,7 @@ style={{ top: STICKY_TOP }}
     vignetteStrength={vignetteStrength}
     genProvider={genProvider}
     setGenProvider={setGenProvider}
-    showAiTools={!isStarterPlan}
+    showAiTools={!isDjStartupMode}
     enableExtractSubject={isStudioPlan}
     onPlaceExtractedLayer={placeExtractedLayer}
   />
