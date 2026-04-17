@@ -175,6 +175,8 @@ type Portrait = {
   isExtracted?: boolean;
   isBrandFace?: boolean;
   isShapeGraphic?: boolean;
+  shapeKind?: string;
+  shapeGradient?: boolean;
   tint?: number;          // hue-rotate degrees for tinting overlays/flares
   tintMode?: "hue" | "colorize";
   svgTemplate?: string;

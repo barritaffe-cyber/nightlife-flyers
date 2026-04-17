@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import sharp from "sharp";
+import type { User } from "@supabase/supabase-js";
 import { supabaseAdmin } from "../../../lib/supabase/admin";
 import { supabaseAuth } from "../../../lib/supabase/auth";
+import { extractClientTrackingPayload, insertAnalyticsEventForUser } from "../../../lib/analytics/server";
 import {
   getAccessSnapshotForUser,
   refundGenerationUnits,
@@ -883,6 +885,36 @@ function sanitizeLayout(
 export async function POST(req: Request) {
   let reservedUserId: string | null = null;
   let previousUsed: number | null = null;
+  let usageBucket: "standard" | "starter" = "standard";
+  let analyticsAdmin: ReturnType<typeof supabaseAdmin> | null = null;
+  let analyticsUser: User | null = null;
+  let analyticsTracking: ReturnType<typeof extractClientTrackingPayload> | null = null;
+
+  const trackAnalytics = async (
+    eventName: "auto_layout_started" | "auto_layout_succeeded" | "auto_layout_failed",
+    properties: Record<string, unknown>
+  ) => {
+    if (!analyticsAdmin || !analyticsUser || !analyticsTracking) return;
+    try {
+      await insertAnalyticsEventForUser(analyticsAdmin, eventName, {
+        req,
+        user: analyticsUser,
+        path: analyticsTracking.path,
+        anonId: analyticsTracking.anonId,
+        sessionId: analyticsTracking.sessionId,
+        referrer: analyticsTracking.referrer,
+        utmSource: analyticsTracking.utmSource,
+        utmMedium: analyticsTracking.utmMedium,
+        utmCampaign: analyticsTracking.utmCampaign,
+        utmTerm: analyticsTracking.utmTerm,
+        utmContent: analyticsTracking.utmContent,
+        landingPath: analyticsTracking.landingPath,
+        properties,
+      });
+    } catch (error) {
+      console.error(`Analytics ${eventName} failed`, error);
+    }
+  };
 
   try {
     if (!OPENAI_API_KEY) {
@@ -902,6 +934,7 @@ export async function POST(req: Request) {
     }
 
     const admin = supabaseAdmin();
+    analyticsAdmin = admin;
     const snapshot = await getAccessSnapshotForUser(admin, userData.user.id);
     if (!snapshot || snapshot.status !== "active") {
       return NextResponse.json(
@@ -932,8 +965,13 @@ export async function POST(req: Request) {
 
     reservedUserId = userData.user.id;
     previousUsed = reservation.previousUsed;
+    usageBucket = reservation.usageBucket;
+    analyticsUser = userData.user;
 
     const body = await req.json();
+    const trackingBody =
+      body?.tracking && typeof body.tracking === "object" ? body.tracking : body;
+    analyticsTracking = extractClientTrackingPayload(req, trackingBody);
     const background = String(body?.background || "");
     const format = pickEnum(body?.format, FORMAT_CHOICES, "square");
     const textMode: AutoLayoutTextMode =
@@ -942,6 +980,11 @@ export async function POST(req: Request) {
     if (!background) {
       return NextResponse.json({ error: "Missing background image." }, { status: 400 });
     }
+
+    await trackAnalytics("auto_layout_started", {
+      format,
+      text_mode: textMode,
+    });
 
     const sourceBuf = await toBufferFromAnyImage(background);
     const analysisImage = await buildCompressedAnalysisImage(sourceBuf);
@@ -1060,6 +1103,15 @@ export async function POST(req: Request) {
       providedText: textHints,
     });
 
+    await trackAnalytics("auto_layout_succeeded", {
+      format,
+      text_mode: textMode,
+      brightness: analysisImage.brightness,
+      temperature: analysisImage.temperature,
+      side: textZone.side,
+      align: textZone.align,
+    });
+
     return NextResponse.json({
       layout,
       rationale: layout.rationale,
@@ -1069,10 +1121,13 @@ export async function POST(req: Request) {
       generation_remaining: reservation.snapshot.generationRemaining,
     });
   } catch (err: any) {
+    await trackAnalytics("auto_layout_failed", {
+      message: err?.message || "Auto layout failed.",
+    });
     if (reservedUserId && previousUsed != null) {
       try {
         const admin = supabaseAdmin();
-        await refundGenerationUnits(admin, reservedUserId, previousUsed);
+        await refundGenerationUnits(admin, reservedUserId, previousUsed, usageBucket);
       } catch {}
     }
     return NextResponse.json(

@@ -10,7 +10,7 @@ const AUTH_GATE_ENABLED = process.env.NEXT_PUBLIC_AUTH_GATE_ENABLED === "1";
 export default function AuthGate({
   onStatusChange,
 }: {
-  onStatusChange?: (status: "active" | "ondemand" | "inactive") => void;
+  onStatusChange?: (status: "active" | "ondemand" | "starter" | "inactive") => void;
 }) {
   const [loading, setLoading] = React.useState(true);
   const [blocked, setBlocked] = React.useState<null | {
@@ -72,7 +72,15 @@ export default function AuthGate({
         });
 
         if (deviceRes.status === 409) {
-          if (mounted) onStatusChange?.(status.status === "ondemand" ? "ondemand" : "active");
+          if (mounted) {
+            onStatusChange?.(
+              status.status === "ondemand"
+                ? "ondemand"
+                : status.status === "starter"
+                  ? "starter"
+                  : "active"
+            );
+          }
           if (mounted) setBlocked({ reason: "replace" });
           return;
         }
@@ -83,7 +91,15 @@ export default function AuthGate({
           return;
         }
 
-        if (mounted) onStatusChange?.(status.status === "ondemand" ? "ondemand" : "active");
+        if (mounted) {
+          onStatusChange?.(
+            status.status === "ondemand"
+              ? "ondemand"
+              : status.status === "starter"
+                ? "starter"
+                : "active"
+          );
+        }
         if (mounted) setBlocked(null);
       } catch {
         if (mounted) onStatusChange?.("inactive");

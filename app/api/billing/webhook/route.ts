@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { insertAnalyticsEvent } from "../../../../lib/analytics/server";
 import { supabaseAdmin } from "../../../../lib/supabase/admin";
 import { applyBillingSelectionToProfile, applyDirectBillingUpdate } from "../../../../lib/billing/entitlements";
 import {
@@ -462,6 +463,39 @@ export async function POST(req: Request) {
       powertranz_transaction_id: paymentTransactionId || null,
       powertranz_pan_token: paymentPanToken || null,
     });
+
+    try {
+      await insertAnalyticsEvent(admin, {
+        eventName: "checkout_succeeded",
+        path: "/billing/success",
+        email: checkout.email,
+        properties: {
+          selection_kind: selection.kind,
+          plan: selection.kind === "plan" ? selection.plan : null,
+          billing: selection.kind === "plan" ? selection.billing : null,
+          offer: selection.kind === "offer" ? selection.offer : null,
+          checkout_id: checkout.id,
+          billing_provider: "powertranz",
+          transaction_id: paymentTransactionId || checkout.transaction_identifier,
+        },
+      });
+
+      if (selection.kind === "plan") {
+        await insertAnalyticsEvent(admin, {
+          eventName: "subscription_activated",
+          path: "/billing/success",
+          email: checkout.email,
+          properties: {
+            plan: selection.plan,
+            billing: selection.billing,
+            checkout_id: checkout.id,
+            billing_provider: "powertranz",
+          },
+        });
+      }
+    } catch (error) {
+      console.error("Analytics checkout_succeeded failed", error);
+    }
 
     return renderBillingCallbackPage({
       title: "Payment received",

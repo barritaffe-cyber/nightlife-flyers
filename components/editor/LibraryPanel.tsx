@@ -62,6 +62,7 @@ type NightlifeGraphic = {
   id: string;
   label: string;
   paths: ReadonlyArray<string>;
+  viewBox?: string;
   strokeWidth?: number;
   renderMode?: "stroke" | "fill";
 };
@@ -465,6 +466,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
               <ColorDot
                 value={(sel as any).iconColor || '#ffffff'}
                 onChange={(value) => {
+                  const gradientEnabled = (sel as any).shapeGradient !== false;
                   const nextUrl = isSeparator
                     ? buildSeparatorSvgDataUrl(
                         String((sel as any).separatorKind || ''),
@@ -475,7 +477,8 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                     : isShapeGraphic
                     ? buildShapeSvgDataUrl(
                         String((sel as any).shapeKind || ''),
-                        value
+                        value,
+                        gradientEnabled
                       )
                     : (() => {
                         const template = String((sel as any).svgTemplate || '');
@@ -489,6 +492,31 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                   });
                 }}
               />
+              {isShapeGraphic && (
+                <button
+                  type="button"
+                  disabled={locked}
+                  onClick={() => {
+                    const nextGradient = (sel as any).shapeGradient === false;
+                    updatePortrait(format, sel.id, {
+                      shapeGradient: nextGradient,
+                      url: buildShapeSvgDataUrl(
+                        String((sel as any).shapeKind || ''),
+                        String((sel as any).iconColor || '#ffffff'),
+                        nextGradient
+                      ),
+                      svgTemplate: buildShapeSvgMarkup(
+                        String((sel as any).shapeKind || ''),
+                        '{{COLOR}}',
+                        nextGradient
+                      ),
+                    });
+                  }}
+                  className={railActionClass}
+                >
+                  {(sel as any).shapeGradient === false ? 'Flat' : 'Gradient'}
+                </button>
+              )}
             </div>
           )}
           {(() => {
@@ -875,7 +903,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
 
     const addVectorSticker = React.useCallback(
       (item: NightlifeGraphic) => {
-        const svgTemplate = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" ${
+        const svgTemplate = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="${item.viewBox || "0 0 128 128"}" ${
           item.renderMode === "fill"
             ? `fill="{{COLOR}}" stroke="none"`
             : `fill="none" stroke="{{COLOR}}" stroke-width="${item.strokeWidth ?? 6}" stroke-linecap="round" stroke-linejoin="round"`
@@ -919,12 +947,12 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
         deferLibraryPlacement(() => {
           addPortrait(format, {
             id,
-            url: buildShapeSvgDataUrl(shape.id, iconColor),
+            url: buildShapeSvgDataUrl(shape.id, iconColor, true),
             x: 50,
             y: 50,
             scale: 0.65,
             locked: false,
-            svgTemplate: buildShapeSvgMarkup(shape.id, '{{COLOR}}'),
+            svgTemplate: buildShapeSvgMarkup(shape.id, '{{COLOR}}', true),
             iconColor,
             label: shape.label,
             showLabel: false,
@@ -933,6 +961,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
             labelSkew: 0,
             isShapeGraphic: true,
             shapeKind: shape.id,
+            shapeGradient: true,
             shapeLength,
             shapeSkew: 0,
             isSticker: true,
@@ -1482,7 +1511,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                         <svg
                           width="22"
                           height="22"
-                          viewBox="0 0 128 128"
+                          viewBox={item.viewBox || "0 0 128 128"}
                           fill={item.renderMode === "fill" ? "currentColor" : "none"}
                           stroke={item.renderMode === "fill" ? "none" : "currentColor"}
                           strokeWidth={item.renderMode === "fill" ? undefined : item.strokeWidth ?? 6}
@@ -1582,7 +1611,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                     onClick={() => addShapeSticker(shape)}
                   >
                     <img
-                      src={buildShapeSvgDataUrl(shape.id, '#ffffff')}
+                      src={buildShapeSvgDataUrl(shape.id, '#ffffff', true)}
                       alt={shape.label}
                       className="h-[18px] w-[28px] object-contain opacity-90 group-hover:scale-105 transition-transform"
                       draggable={false}

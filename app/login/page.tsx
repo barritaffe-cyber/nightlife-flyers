@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { trackClientEvent } from "../../lib/analytics/client";
 import { supabaseBrowser } from "../../lib/supabase/client";
 import { buildBillingCheckoutHref, resolveBillingSelection } from "../../lib/billing/catalog";
 import PublicSiteFooter from "../../components/ui/PublicSiteFooter";
@@ -173,20 +174,49 @@ function LoginPageInner() {
       }
 
       if (mode === "signup") {
+        await trackClientEvent("signup_started", {
+          properties: {
+            plan: selection?.kind === "plan" ? selection.plan : null,
+            offer: selection?.kind === "offer" ? selection.offer : null,
+            billing: selection?.kind === "plan" ? selection.billing : null,
+          },
+        });
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) setMsg(error.message);
-        else
+        else {
+          await trackClientEvent("signup_requested", {
+            properties: {
+              plan: selection?.kind === "plan" ? selection.plan : null,
+              offer: selection?.kind === "offer" ? selection.offer : null,
+              billing: selection?.kind === "plan" ? selection.billing : null,
+            },
+          });
           setMsg(
             selection
               ? "Check your email to confirm your account. After confirming, sign in to continue to checkout."
               : "Check your email to confirm your account."
           );
+        }
         return;
       }
 
+      await trackClientEvent("login_started", {
+        properties: {
+          plan: selection?.kind === "plan" ? selection.plan : null,
+          offer: selection?.kind === "offer" ? selection.offer : null,
+          billing: selection?.kind === "plan" ? selection.billing : null,
+        },
+      });
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setMsg(error.message);
-      else window.location.href = postAuthHref;
+      else {
+        await trackClientEvent("login_succeeded", {
+          properties: {
+            destination: postAuthHref,
+          },
+        });
+        window.location.href = postAuthHref;
+      }
     } finally {
       setBusy(false);
     }

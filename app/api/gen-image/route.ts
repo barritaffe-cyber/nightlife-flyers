@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dns from "node:dns/promises";
 import net from "node:net";
+import type { User } from "@supabase/supabase-js";
 import { supabaseAdmin } from "../../../lib/supabase/admin";
 import { supabaseAuth } from "../../../lib/supabase/auth";
+import { extractClientTrackingPayload, insertAnalyticsEventForUser } from "../../../lib/analytics/server";
 import { refundReservedUnits, reserveGenerationUnits } from "../../../lib/accessQuota";
 
 export const runtime = 'nodejs';
@@ -628,8 +630,41 @@ export async function POST(req: NextRequest) {
     | Awaited<ReturnType<typeof reserveGenerationUnits>>
     | null = null;
   let reservedUserId: string | null = null;
+  let usageBucket: "standard" | "starter" = "standard";
+  let analyticsAdmin: ReturnType<typeof supabaseAdmin> | null = null;
+  let analyticsUser: User | null = null;
+  let analyticsTracking: ReturnType<typeof extractClientTrackingPayload> | null = null;
+
+  const trackAnalytics = async (
+    eventName: "ai_generation_started" | "ai_generation_succeeded" | "ai_generation_failed",
+    properties: Record<string, unknown>
+  ) => {
+    if (!analyticsAdmin || !analyticsUser || !analyticsTracking) return;
+    try {
+      await insertAnalyticsEventForUser(analyticsAdmin, eventName, {
+        req,
+        user: analyticsUser,
+        path: analyticsTracking.path,
+        anonId: analyticsTracking.anonId,
+        sessionId: analyticsTracking.sessionId,
+        referrer: analyticsTracking.referrer,
+        utmSource: analyticsTracking.utmSource,
+        utmMedium: analyticsTracking.utmMedium,
+        utmCampaign: analyticsTracking.utmCampaign,
+        utmTerm: analyticsTracking.utmTerm,
+        utmContent: analyticsTracking.utmContent,
+        landingPath: analyticsTracking.landingPath,
+        properties,
+      });
+    } catch (error) {
+      console.error(`Analytics ${eventName} failed`, error);
+    }
+  };
   try {
     const body = await req.json();
+    const trackingBody =
+      body?.tracking && typeof body.tracking === "object" ? body.tracking : body;
+    analyticsTracking = extractClientTrackingPayload(req, trackingBody);
     const prompt = String(body?.prompt || '').trim();
     const referenceHint = String(body?.referenceHint || '').trim();
     const effectivePrompt = [prompt, referenceHint].filter(Boolean).join(', ');
@@ -666,7 +701,9 @@ export async function POST(req: NextRequest) {
     }
 
     reservedUserId = userData.user.id;
+    analyticsUser = userData.user;
     const admin = supabaseAdmin();
+    analyticsAdmin = admin;
     reservation = await reserveGenerationUnits(admin, reservedUserId, 1);
     if (!reservation.ok) {
       return NextResponse.json(
@@ -683,16 +720,41 @@ export async function POST(req: NextRequest) {
       generation_used: reservation.snapshot.generationUsed,
       generation_remaining: reservation.snapshot.generationRemaining,
     };
+    usageBucket = reservation.usageBucket;
+
+    await trackAnalytics("ai_generation_started", {
+      provider,
+      format,
+      has_reference: Boolean(reference),
+      reference_count: normalizedReferences.length,
+      usage_bucket: usageBucket,
+    });
 
     if (provider === 'venice' || provider === 'imagine') {
       const r = await genWithImagine(effectivePrompt, format);
       if (!r.ok) {
-        await refundReservedUnits(admin, reservedUserId, reservation.previousUsed, 1);
+        await trackAnalytics("ai_generation_failed", {
+          provider,
+          format,
+          reason: r.error || "imagine_failed",
+        });
+        await refundReservedUnits(admin, reservedUserId, reservation.previousUsed, 1, usageBucket);
         return NextResponse.json({ error: r.error, placeholder: r.placeholder }, { status: 200 });
       }
-      if (r.b64) return NextResponse.json({ b64: r.b64, ...quotaMeta });
-      if (r.url) return NextResponse.json({ url: r.url, ...quotaMeta });
-      await refundReservedUnits(admin, reservedUserId, reservation.previousUsed, 1);
+      if (r.b64) {
+        await trackAnalytics("ai_generation_succeeded", { provider, format, result: "b64" });
+        return NextResponse.json({ b64: r.b64, ...quotaMeta });
+      }
+      if (r.url) {
+        await trackAnalytics("ai_generation_succeeded", { provider, format, result: "url" });
+        return NextResponse.json({ url: r.url, ...quotaMeta });
+      }
+      await trackAnalytics("ai_generation_failed", {
+        provider,
+        format,
+        reason: "empty_result",
+      });
+      await refundReservedUnits(admin, reservedUserId, reservation.previousUsed, 1, usageBucket);
       return NextResponse.json({ placeholder: placeholderDataURL(format, 'empty result') });
     }
 
@@ -701,13 +763,29 @@ export async function POST(req: NextRequest) {
       const r = await genWithOpenAI(effectivePrompt, format, reference, origin, normalizedReferences);
       if (!r.ok) {
         // still return a placeholder so your UI can keep going
-        await refundReservedUnits(admin, reservedUserId, reservation.previousUsed, 1);
+        await trackAnalytics("ai_generation_failed", {
+          provider,
+          format,
+          reason: r.error || "openai_failed",
+        });
+        await refundReservedUnits(admin, reservedUserId, reservation.previousUsed, 1, usageBucket);
         return NextResponse.json({ error: r.error, placeholder: r.placeholder }, { status: 200 });
       }
-      if (r.b64) return NextResponse.json({ b64: r.b64, ...quotaMeta });
-      if (r.url) return NextResponse.json({ url: r.url, ...quotaMeta });
+      if (r.b64) {
+        await trackAnalytics("ai_generation_succeeded", { provider, format, result: "b64" });
+        return NextResponse.json({ b64: r.b64, ...quotaMeta });
+      }
+      if (r.url) {
+        await trackAnalytics("ai_generation_succeeded", { provider, format, result: "url" });
+        return NextResponse.json({ url: r.url, ...quotaMeta });
+      }
       // safety net
-      await refundReservedUnits(admin, reservedUserId, reservation.previousUsed, 1);
+      await trackAnalytics("ai_generation_failed", {
+        provider,
+        format,
+        reason: "empty_result",
+      });
+      await refundReservedUnits(admin, reservedUserId, reservation.previousUsed, 1, usageBucket);
       return NextResponse.json({ placeholder: placeholderDataURL(format, 'empty result') });
     }
 
@@ -718,18 +796,35 @@ export async function POST(req: NextRequest) {
       if (rFal.ok) {
         const falB64 = (rFal as any).b64 as string | undefined;
         const falUrl = (rFal as any).url as string | undefined;
-        if (falB64) return NextResponse.json({ b64: falB64, ...quotaMeta });
-        if (falUrl) return NextResponse.json({ url: falUrl, ...quotaMeta });
+        if (falB64) {
+          await trackAnalytics("ai_generation_succeeded", { provider: "fal", format, result: "b64" });
+          return NextResponse.json({ b64: falB64, ...quotaMeta });
+        }
+        if (falUrl) {
+          await trackAnalytics("ai_generation_succeeded", { provider: "fal", format, result: "url" });
+          return NextResponse.json({ url: falUrl, ...quotaMeta });
+        }
       }
 
       // Graceful fallback to OpenAI if fal fails or is not configured.
       const rOpenAI = await genWithOpenAI(effectivePrompt, format, reference, origin, normalizedReferences);
       if (rOpenAI.ok) {
-        if (rOpenAI.b64) return NextResponse.json({ b64: rOpenAI.b64, ...quotaMeta });
-        if (rOpenAI.url) return NextResponse.json({ url: rOpenAI.url, ...quotaMeta });
+        if (rOpenAI.b64) {
+          await trackAnalytics("ai_generation_succeeded", { provider: "openai_fallback", format, result: "b64" });
+          return NextResponse.json({ b64: rOpenAI.b64, ...quotaMeta });
+        }
+        if (rOpenAI.url) {
+          await trackAnalytics("ai_generation_succeeded", { provider: "openai_fallback", format, result: "url" });
+          return NextResponse.json({ url: rOpenAI.url, ...quotaMeta });
+        }
       }
 
-      await refundReservedUnits(admin, reservedUserId, reservation.previousUsed, 1);
+      await trackAnalytics("ai_generation_failed", {
+        provider,
+        format,
+        reason: rFal.error || rOpenAI.error || "Generation failed",
+      });
+      await refundReservedUnits(admin, reservedUserId, reservation.previousUsed, 1, usageBucket);
       return NextResponse.json(
         {
           error: rFal.error || rOpenAI.error || "Generation failed",
@@ -740,13 +835,21 @@ export async function POST(req: NextRequest) {
     }
 
     // unknown provider
-    await refundReservedUnits(admin, reservedUserId, reservation.previousUsed, 1);
+    await trackAnalytics("ai_generation_failed", {
+      provider,
+      format,
+      reason: `Unknown provider: ${provider}`,
+    });
+    await refundReservedUnits(admin, reservedUserId, reservation.previousUsed, 1, usageBucket);
     return NextResponse.json({ error: `Unknown provider: ${provider}` }, { status: 400 });
   } catch (e: any) {
+    await trackAnalytics("ai_generation_failed", {
+      reason: String(e?.message || e),
+    });
     if (reservation?.ok && reservedUserId) {
       try {
         const admin = supabaseAdmin();
-        await refundReservedUnits(admin, reservedUserId, reservation.previousUsed, 1);
+        await refundReservedUnits(admin, reservedUserId, reservation.previousUsed, 1, usageBucket);
       } catch {}
     }
     return NextResponse.json({ error: String(e?.message || e) }, { status: 500 });

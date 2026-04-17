@@ -12,6 +12,9 @@ create table if not exists profiles (
   powertranz_order_id text,
   generation_used integer not null default 0,
   generation_cycle_end timestamptz,
+  starter_generations_used integer not null default 0,
+  starter_uploads_used integer not null default 0,
+  starter_clean_exports_used integer not null default 0,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -41,8 +44,32 @@ create table if not exists devices (
   unique (user_id, device_type)
 );
 
+create table if not exists analytics_events (
+  id uuid primary key default gen_random_uuid(),
+  event_name text not null,
+  path text,
+  properties jsonb not null default '{}'::jsonb,
+  user_id uuid references auth.users on delete set null,
+  email text,
+  anon_id text,
+  session_id text,
+  referrer text,
+  utm_source text,
+  utm_medium text,
+  utm_campaign text,
+  utm_term text,
+  utm_content text,
+  landing_path text,
+  user_agent text,
+  ip_hash text,
+  created_at timestamptz not null default now()
+);
+
 alter table profiles add column if not exists generation_used integer not null default 0;
 alter table profiles add column if not exists generation_cycle_end timestamptz;
+alter table profiles add column if not exists starter_generations_used integer not null default 0;
+alter table profiles add column if not exists starter_uploads_used integer not null default 0;
+alter table profiles add column if not exists starter_clean_exports_used integer not null default 0;
 alter table profiles add column if not exists powertranz_transaction_id text;
 alter table profiles add column if not exists powertranz_pan_token text;
 alter table profiles add column if not exists powertranz_order_id text;
@@ -60,8 +87,32 @@ alter table billing_checkouts add column if not exists expires_at timestamptz;
 alter table billing_checkouts add column if not exists created_at timestamptz default now();
 alter table billing_checkouts add column if not exists updated_at timestamptz default now();
 
+alter table analytics_events add column if not exists event_name text;
+alter table analytics_events add column if not exists path text;
+alter table analytics_events add column if not exists properties jsonb not null default '{}'::jsonb;
+alter table analytics_events add column if not exists user_id uuid references auth.users on delete set null;
+alter table analytics_events add column if not exists email text;
+alter table analytics_events add column if not exists anon_id text;
+alter table analytics_events add column if not exists session_id text;
+alter table analytics_events add column if not exists referrer text;
+alter table analytics_events add column if not exists utm_source text;
+alter table analytics_events add column if not exists utm_medium text;
+alter table analytics_events add column if not exists utm_campaign text;
+alter table analytics_events add column if not exists utm_term text;
+alter table analytics_events add column if not exists utm_content text;
+alter table analytics_events add column if not exists landing_path text;
+alter table analytics_events add column if not exists user_agent text;
+alter table analytics_events add column if not exists ip_hash text;
+alter table analytics_events add column if not exists created_at timestamptz not null default now();
+
 alter table profiles enable row level security;
 alter table devices enable row level security;
+alter table analytics_events enable row level security;
+
+create index if not exists analytics_events_created_at_idx on analytics_events (created_at desc);
+create index if not exists analytics_events_event_name_idx on analytics_events (event_name);
+create index if not exists analytics_events_user_id_idx on analytics_events (user_id);
+create index if not exists analytics_events_anon_id_idx on analytics_events (anon_id);
 drop policy if exists "profiles_read_own" on profiles;
 drop policy if exists "profiles_update_own" on profiles;
 drop policy if exists "devices_read_own" on devices;

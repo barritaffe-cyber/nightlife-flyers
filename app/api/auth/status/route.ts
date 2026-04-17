@@ -38,6 +38,12 @@ export async function GET(req: Request) {
       generation_limit: snapshot.generationLimit,
       generation_used: snapshot.generationUsed,
       generation_remaining: snapshot.generationRemaining,
+      starter_upload_limit: snapshot.starterUploadLimit,
+      starter_upload_used: snapshot.starterUploadUsed,
+      starter_upload_remaining: snapshot.starterUploadRemaining,
+      starter_clean_export_limit: snapshot.starterCleanExportLimit,
+      starter_clean_export_used: snapshot.starterCleanExportUsed,
+      starter_clean_export_remaining: snapshot.starterCleanExportRemaining,
     });
   } catch {
     return NextResponse.json({ error: "Status check failed" }, { status: 500 });

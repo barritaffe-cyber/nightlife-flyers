@@ -15,6 +15,7 @@ import {
   getBillingCatalogItem,
   resolveBillingSelection,
 } from "../../../lib/billing/catalog";
+import { getClientTrackingPayload } from "../../../lib/analytics/client";
 
 function BillingCheckoutInner() {
   const searchParams = useSearchParams();
@@ -82,7 +83,10 @@ function BillingCheckoutInner() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(selection.kind === "offer" ? { offer: selection.offer } : selection),
+        body: JSON.stringify({
+          ...(selection.kind === "offer" ? { offer: selection.offer } : selection),
+          tracking: getClientTrackingPayload(),
+        }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {

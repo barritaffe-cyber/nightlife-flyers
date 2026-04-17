@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import sharp from "sharp";
+import type { User } from "@supabase/supabase-js";
 import { supabaseAdmin } from "../../../lib/supabase/admin";
 import { supabaseAuth } from "../../../lib/supabase/auth";
+import { extractClientTrackingPayload, insertAnalyticsEventForUser } from "../../../lib/analytics/server";
 import { refundReservedUnits, reserveGenerationUnits } from "../../../lib/accessQuota";
 
 export const runtime = "nodejs";
@@ -1261,6 +1263,36 @@ export async function POST(req: Request) {
   let activeProvider: "stability" | "openai" | "replicate" | "nano" | "fal" | undefined;
   let reservedUserId: string | null = null;
   let previousUsed: number | null = null;
+  let usageBucket: "standard" | "starter" = "standard";
+  let analyticsAdmin: ReturnType<typeof supabaseAdmin> | null = null;
+  let analyticsUser: User | null = null;
+  let analyticsTracking: ReturnType<typeof extractClientTrackingPayload> | null = null;
+
+  const trackAnalytics = async (
+    eventName: "magic_blend_started" | "magic_blend_succeeded" | "magic_blend_failed",
+    properties: Record<string, unknown>
+  ) => {
+    if (!analyticsAdmin || !analyticsUser || !analyticsTracking) return;
+    try {
+      await insertAnalyticsEventForUser(analyticsAdmin, eventName, {
+        req,
+        user: analyticsUser,
+        path: analyticsTracking.path,
+        anonId: analyticsTracking.anonId,
+        sessionId: analyticsTracking.sessionId,
+        referrer: analyticsTracking.referrer,
+        utmSource: analyticsTracking.utmSource,
+        utmMedium: analyticsTracking.utmMedium,
+        utmCampaign: analyticsTracking.utmCampaign,
+        utmTerm: analyticsTracking.utmTerm,
+        utmContent: analyticsTracking.utmContent,
+        landingPath: analyticsTracking.landingPath,
+        properties,
+      });
+    } catch (error) {
+      console.error(`Analytics ${eventName} failed`, error);
+    }
+  };
   try {
     stage = "check-keys";
     if (!OPENAI_API_KEY && !AI_API_KEY && !STABILITY_API_KEY && !FAL_API_KEY) {
@@ -1272,6 +1304,9 @@ export async function POST(req: Request) {
 
     stage = "parse-body";
     const body = await req.json();
+    const trackingBody =
+      body?.tracking && typeof body.tracking === "object" ? body.tracking : body;
+    analyticsTracking = extractClientTrackingPayload(req, trackingBody);
     const {
       subject,
       background,
@@ -1320,7 +1355,9 @@ export async function POST(req: Request) {
     }
 
     reservedUserId = userData.user.id;
+    analyticsUser = userData.user;
     const admin = supabaseAdmin();
+    analyticsAdmin = admin;
     const reservation = await reserveGenerationUnits(admin, reservedUserId, 2);
     if (!reservation.ok) {
       return NextResponse.json(
@@ -1333,17 +1370,35 @@ export async function POST(req: Request) {
       );
     }
     previousUsed = reservation.previousUsed;
+    usageBucket = reservation.usageBucket;
     const quotaMeta = {
       generation_limit: reservation.snapshot.generationLimit,
       generation_used: reservation.snapshot.generationUsed,
       generation_remaining: reservation.snapshot.generationRemaining,
     };
 
+    await trackAnalytics("magic_blend_started", {
+      provider,
+      format,
+      replace_subject: Boolean(replaceSubject),
+      usage_bucket: usageBucket,
+    });
+
     stage = "resolve-style";
     const safeStyle: MagicBlendStyle =
       style === "tropical" || style === "jazz_bar" || style === "outdoor_summer"
         ? style
         : "club";
+
+    const successResponse = async (providerName: string, outUrl: string) => {
+      await trackAnalytics("magic_blend_succeeded", {
+        provider: providerName,
+        format,
+        style: safeStyle,
+        replace_subject: Boolean(replaceSubject),
+      });
+      return NextResponse.json({ url: outUrl, style: safeStyle, format, ...quotaMeta });
+    };
 
     stage = "resolve-format";
     const aspect_ratio: "1:1" | "9:16" | "4:5" =
@@ -1792,7 +1847,7 @@ ${STYLE_SUFFIX[safeStyle]}${extraBlock}`;
             maskDataUrl: stagedMaskDataUrl,
             prompt: harmonizationPrompt,
           });
-          return NextResponse.json({ url: outUrl, style: safeStyle, format, ...quotaMeta });
+          return successResponse("replicate_inpaint", outUrl);
         } catch (err) {
           console.error("magic-blend replacement replicate masked fallback", err);
         }
@@ -1807,7 +1862,7 @@ ${STYLE_SUFFIX[safeStyle]}${extraBlock}`;
             prompt: harmonizationPrompt,
             size: sizeStr,
           });
-          return NextResponse.json({ url: outUrl, style: safeStyle, format, ...quotaMeta });
+          return successResponse("openai_mask", outUrl);
         } catch (err) {
           console.error("magic-blend replacement openai masked fallback", err);
         }
@@ -1821,7 +1876,7 @@ ${STYLE_SUFFIX[safeStyle]}${extraBlock}`;
             prompt: primaryPrompt,
             format,
           });
-          return NextResponse.json({ url: outUrl, style: safeStyle, format, ...quotaMeta });
+          return successResponse("fal", outUrl);
         } catch (err) {
           console.error("magic-blend replacement fal freeform fallback", err);
         }
@@ -1838,7 +1893,7 @@ ${STYLE_SUFFIX[safeStyle]}${extraBlock}`;
             aspect_ratio,
             safety_tolerance: 2,
           });
-          return NextResponse.json({ url: outUrl, style: safeStyle, format, ...quotaMeta });
+          return successResponse("replicate", outUrl);
         } catch (err) {
           console.error("magic-blend replacement replicate freeform fallback", err);
         }
@@ -1856,7 +1911,7 @@ ${STYLE_SUFFIX[safeStyle]}${extraBlock}`;
         prompt: primaryPrompt,
         format,
       });
-      return NextResponse.json({ url: outUrl, style: safeStyle, format, ...quotaMeta });
+      return successResponse("fal", outUrl);
     }
 
     if (resolvedProvider === "replicate") {
@@ -1870,7 +1925,7 @@ ${STYLE_SUFFIX[safeStyle]}${extraBlock}`;
           aspect_ratio,
           safety_tolerance: 2,
         });
-        return NextResponse.json({ url: outUrl, style: safeStyle, format, ...quotaMeta });
+        return successResponse("replicate", outUrl);
       } catch (err: any) {
         const msg = String(err?.message || err || "");
         const msgLower = msg.toLowerCase();
@@ -1894,7 +1949,7 @@ ${STYLE_SUFFIX[safeStyle]}${extraBlock}`;
               prompt: stagedPrompt,
               size: sizeStr,
             });
-            return NextResponse.json({ url: outUrl, style: safeStyle, format, ...quotaMeta });
+            return successResponse("openai_fallback", outUrl);
           } catch {
             try {
               stage = "replicate:fallback-stability";
@@ -1903,7 +1958,7 @@ ${STYLE_SUFFIX[safeStyle]}${extraBlock}`;
                 prompt: stagedPrompt,
                 size: sizeStr,
               });
-              return NextResponse.json({ url: outUrl, style: safeStyle, format, ...quotaMeta });
+              return successResponse("stability_fallback", outUrl);
             } catch {
               throw new Error(
                 `Replicate credits exhausted and fallback providers failed. Original: ${msg}`
@@ -1933,7 +1988,7 @@ ${STYLE_SUFFIX[safeStyle]}${extraBlock}`;
           aspect_ratio,
           safety_tolerance: 1,
         });
-        return NextResponse.json({ url: outUrl, style: safeStyle, format, ...quotaMeta });
+        return successResponse("replicate_safe_retry", outUrl);
       }
     }
 
@@ -1944,7 +1999,7 @@ ${STYLE_SUFFIX[safeStyle]}${extraBlock}`;
         prompt: stagedPrompt,
         size: sizeStr,
       });
-      return NextResponse.json({ url: outUrl, style: safeStyle, format, ...quotaMeta });
+      return successResponse("openai", outUrl);
     }
 
     stage = "stability:run";
@@ -1953,12 +2008,17 @@ ${STYLE_SUFFIX[safeStyle]}${extraBlock}`;
       prompt: stagedPrompt,
       size: sizeStr,
     });
-    return NextResponse.json({ url: outUrl, style: safeStyle, format, ...quotaMeta });
+    return successResponse("stability", outUrl);
   } catch (err: any) {
+    await trackAnalytics("magic_blend_failed", {
+      stage,
+      provider: activeProvider,
+      message: err?.message || String(err),
+    });
     if (reservedUserId && previousUsed != null) {
       try {
         const admin = supabaseAdmin();
-        await refundReservedUnits(admin, reservedUserId, previousUsed, 2);
+        await refundReservedUnits(admin, reservedUserId, previousUsed, 2, usageBucket);
       } catch {}
     }
     const message = err?.message || String(err);
