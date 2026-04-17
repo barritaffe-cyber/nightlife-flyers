@@ -1683,7 +1683,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                 onToggle={() => toggleLibrarySection('graphics')}
               >
                   <div
-                    className="grid grid-cols-4 gap-2"
+                    className="grid grid-cols-3 min-[420px]:grid-cols-4 auto-rows-fr gap-2"
                     style={{
                       maxHeight: 180,
                       overflowY: 'auto',
@@ -1693,7 +1693,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                       <button
                         key={sticker.id}
                         type="button"
-                        className="aspect-square rounded-md bg-neutral-900/60 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-600 transition-all flex items-center justify-center p-2 group relative overflow-hidden"
+                        className="aspect-square min-w-0 min-h-0 rounded-md bg-neutral-900/60 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-600 transition-all flex items-center justify-center p-2 group relative overflow-hidden"
                         title={`Add ${sticker.name}`}
                         onClick={() => {
                           const id = `sticker_${sticker.id}_${Date.now()}`;
