@@ -10,6 +10,7 @@ export type ProfileQuotaRow = {
   status: string | null;
   current_period_end: string | null;
   plan: string | null;
+  founding_discount_percent: number | null;
   generation_used: number | null;
   generation_cycle_end: string | null;
   starter_generations_used: number | null;
@@ -32,10 +33,11 @@ export type AccessSnapshot = {
   starterCleanExportLimit: number;
   starterCleanExportUsed: number;
   starterCleanExportRemaining: number;
+  foundingDiscountPercent: number;
 };
 
 const PROFILE_QUOTA_FIELDS =
-  "id,email,status,current_period_end,plan,generation_used,generation_cycle_end,starter_generations_used,starter_uploads_used,starter_clean_exports_used";
+  "id,email,status,current_period_end,plan,founding_discount_percent,generation_used,generation_cycle_end,starter_generations_used,starter_uploads_used,starter_clean_exports_used";
 
 export const STARTER_TRIAL_GENERATION_LIMIT = 3;
 export const STARTER_TRIAL_UPLOAD_LIMIT = 1;
@@ -151,6 +153,7 @@ export function buildAccessSnapshot(profile: ProfileQuotaRow): AccessSnapshot {
       0,
       STARTER_TRIAL_CLEAN_EXPORT_LIMIT - starterCleanExportUsed
     ),
+    foundingDiscountPercent: Math.max(0, Number(profile.founding_discount_percent || 0)),
   };
 }
 

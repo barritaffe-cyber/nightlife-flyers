@@ -15,6 +15,7 @@ test("buildAccessSnapshot exposes starter trial quotas for free profiles", () =>
     status: "trial",
     current_period_end: null,
     plan: "monthly",
+    founding_discount_percent: 0,
     generation_used: 0,
     generation_cycle_end: null,
     starter_generations_used: 1,
@@ -45,6 +46,7 @@ test("buildAccessSnapshot keeps paid subscriptions on the standard quota bucket"
     status: "active",
     current_period_end: new Date(Date.now() + 86_400_000).toISOString(),
     plan: "creator",
+    founding_discount_percent: 20,
     generation_used: 12,
     generation_cycle_end: new Date(Date.now() + 86_400_000).toISOString(),
     starter_generations_used: 2,
@@ -56,4 +58,5 @@ test("buildAccessSnapshot keeps paid subscriptions on the standard quota bucket"
   assert.equal(snapshot.generationUsageBucket, "standard");
   assert.equal(snapshot.generationLimit, 90);
   assert.equal(snapshot.generationUsed, 12);
+  assert.equal(snapshot.foundingDiscountPercent, 20);
 });

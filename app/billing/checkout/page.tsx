@@ -17,6 +17,35 @@ import {
 } from "../../../lib/billing/catalog";
 import { getClientTrackingPayload } from "../../../lib/analytics/client";
 
+type FoundingOfferPrice = {
+  original_price: number;
+  effective_price: number;
+  founding_discount_applied: boolean;
+  founding_discount_percent: number;
+};
+
+type FoundingOfferState = {
+  active: boolean;
+  retained_for_user: boolean;
+  total_slots: number;
+  remaining_slots: number;
+  discount_percent: number;
+  prices: {
+    creator: {
+      monthly: FoundingOfferPrice;
+      yearly: FoundingOfferPrice;
+    };
+    studio: {
+      monthly: FoundingOfferPrice;
+      yearly: FoundingOfferPrice;
+    };
+  };
+};
+
+function formatPrice(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/\.?0+$/, "");
+}
+
 function BillingCheckoutInner() {
   const searchParams = useSearchParams();
   const selection = React.useMemo(
@@ -37,11 +66,15 @@ function BillingCheckoutInner() {
   const [msg, setMsg] = React.useState<string | null>(null);
   const [missing, setMissing] = React.useState<string[]>([]);
   const [checkoutHtml, setCheckoutHtml] = React.useState<string | null>(null);
+  const [foundingOffer, setFoundingOffer] = React.useState<FoundingOfferState | null>(null);
   const supportPhone = getPublicSupportPhone();
   const merchantAddress = getPublicMerchantAddress();
   const currency = getPublicTransactionCurrency();
   const isRecurringPlan = selection?.kind === "plan";
-  const recurringAmount = item ? `${currency} ${item.price}` : "";
+  const foundingPlan =
+    selection?.kind === "plan" ? foundingOffer?.prices?.[selection.plan]?.[selection.billing] : null;
+  const displayPrice = foundingPlan?.effective_price ?? item?.price ?? 0;
+  const recurringAmount = item ? `${currency} ${formatPrice(displayPrice)}` : "";
   const recurringCadenceLabel =
     selection?.kind === "plan" ? (selection.billing === "yearly" ? "every year" : "every month") : "";
 
@@ -50,8 +83,16 @@ function BillingCheckoutInner() {
     const run = async () => {
       const supabase = supabaseBrowser();
       const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      const offerRes = await fetch("/api/billing/founding-offer", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      }).catch(() => null);
+      const offerJson = offerRes ? await offerRes.json().catch(() => null) : null;
       if (cancelled) return;
       setEmail(data.session?.user?.email || null);
+      if (offerRes?.ok && offerJson) {
+        setFoundingOffer(offerJson as FoundingOfferState);
+      }
     };
     void run();
     return () => {
@@ -143,7 +184,13 @@ function BillingCheckoutInner() {
         <div className="mt-5 rounded-xl border border-white/10 bg-black/20 p-4">
           <div className="flex items-end justify-between gap-4">
             <div>
-              <div className="text-3xl font-bold">${item.price}</div>
+              <div className="text-3xl font-bold">${formatPrice(displayPrice)}</div>
+              {foundingPlan?.founding_discount_applied ? (
+                <div className="mt-1 text-xs text-amber-200">
+                  <span className="line-through text-white/40">${formatPrice(foundingPlan.original_price)}</span>
+                  {" "}Founding 50 price locked at {foundingPlan.founding_discount_percent}% off
+                </div>
+              ) : null}
               <div className="text-xs text-white/55">{item.cadence}</div>
             </div>
             <div className="text-right text-xs text-white/55">
@@ -153,6 +200,18 @@ function BillingCheckoutInner() {
           </div>
           <p className="mt-3 text-sm text-white/70">{item.description}</p>
         </div>
+
+        {isRecurringPlan && foundingOffer && (foundingOffer.active || foundingOffer.retained_for_user) ? (
+          <div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-100">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em]">Founding 50</div>
+            <div className="mt-1">
+              {foundingPlan?.founding_discount_applied
+                ? `This checkout qualifies for ${foundingPlan.founding_discount_percent}% off.`
+                : `Founder pricing is no longer available for this selection.`}
+              {foundingOffer.active ? ` ${foundingOffer.remaining_slots} founder spots remain.` : ""}
+            </div>
+          </div>
+        ) : null}
 
         {isRecurringPlan ? (
           <div className="mt-5 space-y-3 border border-fuchsia-500/20 bg-fuchsia-500/8 p-4">

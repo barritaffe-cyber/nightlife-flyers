@@ -457,6 +457,9 @@ export async function POST(req: Request) {
       providerTransactionId: paymentTransactionId || checkout.transaction_identifier,
       panToken: paymentPanToken || null,
       orderIdentifier: paymentOrderIdentifier || checkout.order_identifier,
+      foundingDiscountPercent: checkout.founding_discount_applied
+        ? checkout.founding_discount_percent || 0
+        : 0,
     });
 
     await markPowerTranzCheckoutStatus(checkout.id, "completed", {
@@ -477,6 +480,10 @@ export async function POST(req: Request) {
           checkout_id: checkout.id,
           billing_provider: "powertranz",
           transaction_id: paymentTransactionId || checkout.transaction_identifier,
+          founding_discount_applied: checkout.founding_discount_applied || false,
+          founding_discount_percent: checkout.founding_discount_percent || 0,
+          original_price: checkout.original_price,
+          effective_price: checkout.effective_price,
         },
       });
 
@@ -490,6 +497,10 @@ export async function POST(req: Request) {
             billing: selection.billing,
             checkout_id: checkout.id,
             billing_provider: "powertranz",
+            founding_discount_applied: checkout.founding_discount_applied || false,
+            founding_discount_percent: checkout.founding_discount_percent || 0,
+            original_price: checkout.original_price,
+            effective_price: checkout.effective_price,
           },
         });
       }

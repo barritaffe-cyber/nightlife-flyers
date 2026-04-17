@@ -10,6 +10,7 @@ export async function applyBillingSelectionToProfile(
     providerTransactionId?: string | null;
     panToken?: string | null;
     orderIdentifier?: string | null;
+    foundingDiscountPercent?: number | null;
   }
 ) {
   const item = getBillingCatalogItem(selection);
@@ -17,7 +18,7 @@ export async function applyBillingSelectionToProfile(
 
   const { data: user, error: lookupError } = await admin
     .from("profiles")
-    .select("id,email")
+    .select("id,email,founding_discount_percent")
     .eq("email", email)
     .limit(1)
     .maybeSingle();
@@ -30,12 +31,25 @@ export async function applyBillingSelectionToProfile(
     throw new Error("User not found. Please log in once to create a profile.");
   }
 
+  const nextFoundingDiscountPercent =
+    selection.kind === "plan"
+      ? Math.max(
+          Number(
+            (user as { founding_discount_percent?: number | null }).founding_discount_percent || 0
+          ),
+          Number(options?.foundingDiscountPercent || 0)
+        )
+      : Number(
+          (user as { founding_discount_percent?: number | null }).founding_discount_percent || 0
+        );
+
   const { error: updateError } = await admin
     .from("profiles")
     .update({
       status: item.status,
       plan: item.plan,
       billing_provider: "powertranz",
+      founding_discount_percent: nextFoundingDiscountPercent,
       ...(options?.providerTransactionId ? { powertranz_transaction_id: options.providerTransactionId } : {}),
       ...(options?.panToken ? { powertranz_pan_token: options.panToken } : {}),
       ...(options?.orderIdentifier ? { powertranz_order_id: options.orderIdentifier } : {}),

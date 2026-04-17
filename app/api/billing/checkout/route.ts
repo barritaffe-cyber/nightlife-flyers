@@ -69,6 +69,10 @@ export async function POST(req: Request) {
           billing: selection.kind === "plan" ? selection.billing : null,
           offer: selection.kind === "offer" ? selection.offer : null,
           provider_mode: result.mode,
+          original_price: result.originalPrice,
+          effective_price: result.effectivePrice,
+          founding_discount_applied: result.foundingDiscountApplied,
+          founding_discount_percent: result.foundingDiscountPercent,
         },
       });
     } catch (error) {
@@ -79,6 +83,10 @@ export async function POST(req: Request) {
       mode: result.mode,
       checkoutId: result.checkoutId,
       redirectDataHtml: result.redirectDataHtml,
+      original_price: result.originalPrice,
+      effective_price: result.effectivePrice,
+      founding_discount_applied: result.foundingDiscountApplied,
+      founding_discount_percent: result.foundingDiscountPercent,
     });
   } catch {
     return NextResponse.json({ error: "Checkout initialization failed." }, { status: 500 });

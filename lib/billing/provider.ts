@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { buildBillingCheckoutHref, getBillingCatalogItem, type BillingSelection } from "./catalog";
+import { getFoundingOfferSnapshot, resolveBillingAmount } from "./foundingOffer";
 import { supabaseAdmin } from "../supabase/admin";
 
 export type BillingProvider = "powertranz";
@@ -25,6 +26,10 @@ type BillingProviderCheckoutSuccess = {
   mode: "iframe";
   checkoutId: string;
   redirectDataHtml: string;
+  originalPrice: number;
+  effectivePrice: number;
+  foundingDiscountApplied: boolean;
+  foundingDiscountPercent: number;
 };
 
 type BillingProviderSuccess = BillingProviderCheckoutSuccess;
@@ -33,6 +38,10 @@ type PowerTranzCheckoutRow = {
   id: string;
   email: string;
   selection: BillingSelection | null;
+  founding_discount_applied: boolean | null;
+  founding_discount_percent: number | null;
+  original_price: number | null;
+  effective_price: number | null;
   spi_token: string | null;
   transaction_identifier: string;
   order_identifier: string;
@@ -240,7 +249,10 @@ function buildSalePayload(
   selection: BillingSelection,
   customerEmail: string,
   checkoutId: string,
-  siteUrl: string
+  siteUrl: string,
+  priceOverride?: {
+    effectivePrice: number;
+  }
 ) {
   const item = getBillingCatalogItem(selection);
   const transactionIdentifier = randomUUID();
@@ -275,7 +287,7 @@ function buildSalePayload(
       OrderIdentifier: orderIdentifier,
       source: {},
       ThreeDSecure: true,
-      TotalAmount: item.price,
+      TotalAmount: priceOverride?.effectivePrice ?? item.price,
       TransactionIdentifier: transactionIdentifier,
       ...(recurring.RecurringInitial ? { RecurringInitial: true } : {}),
       ...(recurring.Tokenize ? { Tokenize: true } : {}),
@@ -393,11 +405,14 @@ export async function createProviderCheckout(
 
   const checkoutId = randomUUID();
   const admin = supabaseAdmin();
+  const foundingOffer = await getFoundingOfferSnapshot(admin, { email: customerEmail });
+  const pricing = resolveBillingAmount(selection, foundingOffer);
   const { transactionIdentifier, orderIdentifier, payload, hostedPage, merchantResponseUrl } = buildSalePayload(
     selection,
     customerEmail,
     checkoutId,
-    siteUrl
+    siteUrl,
+    { effectivePrice: pricing.effectivePrice }
   );
 
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
@@ -405,6 +420,10 @@ export async function createProviderCheckout(
     id: checkoutId,
     email: customerEmail,
     selection,
+    founding_discount_applied: pricing.foundingDiscountApplied,
+    founding_discount_percent: pricing.foundingDiscountPercent,
+    original_price: pricing.originalPrice,
+    effective_price: pricing.effectivePrice,
     transaction_identifier: transactionIdentifier,
     order_identifier: orderIdentifier,
     status: "initiated",
@@ -438,6 +457,8 @@ export async function createProviderCheckout(
       hasBillingEmail: Boolean(payload.BillingAddress?.EmailAddress),
       merchantResponseUrl,
       recurring: selection.kind === "plan",
+      foundingDiscountApplied: pricing.foundingDiscountApplied,
+      foundingDiscountPercent: pricing.foundingDiscountPercent,
     });
 
     const response = await powerTranzRequest<PowerTranzFinancialResponse>("/spi/sale", {
@@ -506,6 +527,10 @@ export async function createProviderCheckout(
       mode: "iframe",
       checkoutId,
       redirectDataHtml: redirectData,
+      originalPrice: pricing.originalPrice,
+      effectivePrice: pricing.effectivePrice,
+      foundingDiscountApplied: pricing.foundingDiscountApplied,
+      foundingDiscountPercent: pricing.foundingDiscountPercent,
     };
   } catch (error) {
     console.error("PowerTranz sale failed", {
@@ -550,7 +575,7 @@ export async function getPendingPowerTranzCheckout(checkoutId: string): Promise<
   const admin = supabaseAdmin();
   const { data, error } = await admin
     .from("billing_checkouts")
-    .select("id,email,selection,spi_token,transaction_identifier,order_identifier,status,expires_at")
+    .select("id,email,selection,founding_discount_applied,founding_discount_percent,original_price,effective_price,spi_token,transaction_identifier,order_identifier,status,expires_at")
     .eq("id", checkoutId)
     .limit(1)
     .maybeSingle();

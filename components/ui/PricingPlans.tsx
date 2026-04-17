@@ -4,6 +4,7 @@ import * as React from 'react';
 import { motion } from 'framer-motion';
 import { Check, Crown, Shield, Sparkles, Star, Users, Zap } from 'lucide-react';
 import { buildBillingCheckoutHref } from '../../lib/billing/catalog';
+import { supabaseBrowser } from '../../lib/supabase/client';
 
 type BillingCycle = 'monthly' | 'yearly';
 type PlanId = 'free' | 'creator' | 'studio';
@@ -35,6 +36,37 @@ type Offer = {
   details: string[];
   cta: string;
 };
+
+type FoundingOfferPrice = {
+  original_price: number;
+  effective_price: number;
+  founding_discount_applied: boolean;
+  founding_discount_percent: number;
+};
+
+type FoundingOfferState = {
+  active: boolean;
+  retained_for_user: boolean;
+  total_slots: number;
+  claimed_slots: number;
+  reserved_slots: number;
+  remaining_slots: number;
+  discount_percent: number;
+  prices: {
+    creator: {
+      monthly: FoundingOfferPrice;
+      yearly: FoundingOfferPrice;
+    };
+    studio: {
+      monthly: FoundingOfferPrice;
+      yearly: FoundingOfferPrice;
+    };
+  };
+};
+
+function formatPrice(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/\.?0+$/, '');
+}
 
 const plans: readonly Plan[] = [
   {
@@ -158,7 +190,7 @@ const offers: readonly Offer[] = [
   },
 ] as const;
 
-type PlanCardProps = Plan & { billing: BillingCycle };
+type PlanCardProps = Plan & { billing: BillingCycle; foundingOffer: FoundingOfferState | null };
 
 function PlanCard({
   id,
@@ -174,8 +206,11 @@ function PlanCard({
   monthlyPrice,
   yearlyPrice,
   billing,
+  foundingOffer,
 }: PlanCardProps) {
-  const currentPrice = billing === 'yearly' ? yearlyPrice : monthlyPrice;
+  const foundingPlan =
+    id === 'creator' || id === 'studio' ? foundingOffer?.prices?.[id]?.[billing] : null;
+  const currentPrice = foundingPlan?.effective_price ?? (billing === 'yearly' ? yearlyPrice : monthlyPrice);
   const cadence = currentPrice === 0 ? '' : billing === 'yearly' ? '/yr' : '/mo';
   const savings =
     monthlyPrice > 0 && yearlyPrice > 0 ? Math.max(0, monthlyPrice * 12 - yearlyPrice) : 0;
@@ -212,10 +247,21 @@ function PlanCard({
 
       <div className="mt-4 flex items-end gap-1">
         <div className="text-4xl font-bold leading-none">
-          {currentPrice === 0 ? '$0' : `$${currentPrice}`}
+          {currentPrice === 0 ? '$0' : `$${formatPrice(currentPrice)}`}
         </div>
         {cadence && <div className="pb-1 text-sm text-white/60">{cadence}</div>}
       </div>
+      {foundingPlan?.founding_discount_applied ? (
+        <div className="mt-1 flex items-center gap-2 text-[11px] text-amber-200">
+          <span className="rounded-full border border-amber-300/25 bg-amber-400/10 px-2 py-0.5 uppercase tracking-[0.16em]">
+            Founding 50
+          </span>
+          <span>
+            <span className="line-through text-white/40">${formatPrice(foundingPlan.original_price)}</span>
+            {" "}save {foundingPlan.founding_discount_percent}%
+          </span>
+        </div>
+      ) : null}
       <p className="mt-2 text-xs text-white/70">{tagline}</p>
       {billing === 'yearly' && savings > 0 && (
         <p className="mt-1 text-[11px] text-emerald-300">Save ${savings}/year vs monthly billing</p>
@@ -320,6 +366,31 @@ function OfferCard({ name, audience, tagline, icon: Icon, gradient, price, detai
 
 export default function PricingPlans() {
   const [billing, setBilling] = React.useState<BillingCycle>('monthly');
+  const [foundingOffer, setFoundingOffer] = React.useState<FoundingOfferState | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    const loadFoundingOffer = async () => {
+      try {
+        const supabase = supabaseBrowser();
+        const { data } = await supabase.auth.getSession();
+        const token = data.session?.access_token;
+        const res = await fetch('/api/billing/founding-offer', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        const json = (await res.json().catch(() => null)) as FoundingOfferState | null;
+        if (!cancelled && res.ok && json) {
+          setFoundingOffer(json);
+        }
+      } catch {}
+    };
+
+    void loadFoundingOffer();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="w-full py-8 text-white sm:py-12">
@@ -336,6 +407,17 @@ export default function PricingPlans() {
           <p className="mt-3 text-white/70">
             Choose between DJ / Promo, Creator Studio, and on-demand passes based on how often you ship flyers.
           </p>
+          {foundingOffer && (foundingOffer.active || foundingOffer.retained_for_user) ? (
+            <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em]">Founding 50</div>
+              <div className="mt-1">
+                Save {foundingOffer.discount_percent}% on Creator and Studio subscriptions.
+                {foundingOffer.active
+                  ? ` ${foundingOffer.remaining_slots} of ${foundingOffer.total_slots} spots remain.`
+                  : ' The public founder spots are gone, but this account still keeps the founding price.'}
+              </div>
+            </div>
+          ) : null}
 
           <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 p-1">
             <button
@@ -361,7 +443,7 @@ export default function PricingPlans() {
 
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {plans.map((plan) => (
-            <PlanCard key={plan.id} {...plan} billing={billing} />
+            <PlanCard key={plan.id} {...plan} billing={billing} foundingOffer={foundingOffer} />
           ))}
         </div>
 

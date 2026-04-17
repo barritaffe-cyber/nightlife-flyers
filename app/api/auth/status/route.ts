@@ -44,6 +44,7 @@ export async function GET(req: Request) {
       starter_clean_export_limit: snapshot.starterCleanExportLimit,
       starter_clean_export_used: snapshot.starterCleanExportUsed,
       starter_clean_export_remaining: snapshot.starterCleanExportRemaining,
+      founding_discount_percent: snapshot.foundingDiscountPercent,
     });
   } catch {
     return NextResponse.json({ error: "Status check failed" }, { status: 500 });

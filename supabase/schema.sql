@@ -7,6 +7,7 @@ create table if not exists profiles (
   current_period_end timestamptz,
   billing_provider text default 'powertranz',
   plan text default 'monthly',
+  founding_discount_percent integer not null default 0,
   powertranz_transaction_id text,
   powertranz_pan_token text,
   powertranz_order_id text,
@@ -23,6 +24,10 @@ create table if not exists billing_checkouts (
   id uuid primary key default gen_random_uuid(),
   email text not null,
   selection jsonb not null,
+  founding_discount_applied boolean not null default false,
+  founding_discount_percent integer not null default 0,
+  original_price numeric(10,2),
+  effective_price numeric(10,2),
   spi_token text,
   transaction_identifier text not null,
   order_identifier text not null,
@@ -70,6 +75,7 @@ alter table profiles add column if not exists generation_cycle_end timestamptz;
 alter table profiles add column if not exists starter_generations_used integer not null default 0;
 alter table profiles add column if not exists starter_uploads_used integer not null default 0;
 alter table profiles add column if not exists starter_clean_exports_used integer not null default 0;
+alter table profiles add column if not exists founding_discount_percent integer not null default 0;
 alter table profiles add column if not exists powertranz_transaction_id text;
 alter table profiles add column if not exists powertranz_pan_token text;
 alter table profiles add column if not exists powertranz_order_id text;
@@ -77,6 +83,10 @@ alter table profiles alter column billing_provider set default 'powertranz';
 
 alter table billing_checkouts add column if not exists email text;
 alter table billing_checkouts add column if not exists selection jsonb;
+alter table billing_checkouts add column if not exists founding_discount_applied boolean not null default false;
+alter table billing_checkouts add column if not exists founding_discount_percent integer not null default 0;
+alter table billing_checkouts add column if not exists original_price numeric(10,2);
+alter table billing_checkouts add column if not exists effective_price numeric(10,2);
 alter table billing_checkouts add column if not exists spi_token text;
 alter table billing_checkouts add column if not exists transaction_identifier text;
 alter table billing_checkouts add column if not exists order_identifier text;
