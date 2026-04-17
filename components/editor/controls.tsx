@@ -551,7 +551,7 @@ export function InlineSliderInput({
           onPointerCancel={handleRangePointerCancel}
           disabled={disabled}
         />
-        <div className="ml-0.5 flex shrink-0 items-center justify-end gap-0.5 max-w-[54px] sm:ml-1 sm:max-w-[64px]">
+        <div className="ml-0.5 flex shrink-0 items-center justify-end gap-0.5 max-w-[50px] sm:ml-1 sm:max-w-[64px]">
           <input
             type="number"
             min={min * displayScale}
@@ -577,7 +577,7 @@ export function InlineSliderInput({
             disabled={disabled}
             className={
               inputClassName ||
-              `h-7 w-[40px] min-w-0 rounded-md px-1 ${controlInputClass} text-right font-semibold text-[12px] sm:h-auto sm:w-[48px] sm:px-1.5 sm:text-[11px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`
+              `h-[26px] w-[44px] min-w-0 rounded-md px-0.5 ${controlInputClass} origin-right scale-[0.82] text-right font-semibold tracking-[-0.03em] text-[16px] sm:h-auto sm:w-[48px] sm:scale-100 sm:px-1.5 sm:text-[11px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`
             }
             inputMode="decimal"
           />
