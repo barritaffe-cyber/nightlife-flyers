@@ -8147,6 +8147,14 @@ useEffect(() => {
   if (!moveTarget) return;
 
   if (moveTarget === "portrait" && selectedPortraitIsExtracted) {
+    const isMobileSelectionView =
+      typeof window !== "undefined" && window.innerWidth < 1024;
+    if (isMobileSelectionView) {
+      setUiMode("design");
+      setMobileControlsOpen(true);
+      setMobileControlsTab("assets");
+      return;
+    }
     focusCanvasSelectionHome("extract_subject");
     return;
   }
@@ -16560,24 +16568,29 @@ const portraitCanvas = React.useMemo(() => {
     if ((store as any).moveTarget !== target) {
       store.setMoveTarget(target);
     }
-    focusCanvasSelectionHome(panel);
-
     if (isExtracted) {
       if (isMobileView) {
+        setUiMode("design");
+        setMobileControlsOpen(true);
+        setMobileControlsTab("assets");
         setFloatingAssetVisible(true);
       } else {
+        focusCanvasSelectionHome(panel);
         window.setTimeout(() => {
           document
             .getElementById("extract-selected-controls")
             ?.scrollIntoView({ behavior: "smooth", block: "start" });
         }, 80);
       }
-    } else if (!isBrandFace && !isLogo && !isFlare && !isSticker) {
+    } else {
+      focusCanvasSelectionHome(panel);
+      if (!isBrandFace && !isLogo && !isFlare && !isSticker) {
       window.setTimeout(() => {
         document
           .getElementById("portrait-selected-controls")
           ?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 80);
+      }
     }
   };
 
@@ -17377,7 +17390,7 @@ const portraitCanvas = React.useMemo(() => {
     </div>
   );
   // ✅ Added dragging to dependencies to ensure UI refreshes on move start/end
-}, [portraits, format, selectedPortraitId, dragging, unlockingIds]);
+}, [portraits, format, selectedPortraitId, dragging, unlockingIds, isMobileView]);
 
 
 
@@ -27013,7 +27026,7 @@ style={{ top: STICKY_TOP }}
   {isStudioPlan && !isDjStartupMode && (
   <div
     id="extract-subject-panel"
-    className={clsx("relative rounded-xl transition", creatorStepPanelClass("scene"), mobilePanelClass("assets", "background"))}
+    className={clsx("relative rounded-xl transition", creatorStepPanelClass("scene"), mobilePanelClass("assets", "extract_subject"))}
 >
   <Collapsible
     title="Selected Cutout"
