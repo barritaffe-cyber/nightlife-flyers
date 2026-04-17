@@ -16573,7 +16573,7 @@ const portraitCanvas = React.useMemo(() => {
         setUiMode("design");
         setMobileControlsOpen(true);
         setMobileControlsTab("assets");
-        setFloatingAssetVisible(true);
+        showMobileFloat("asset");
       } else {
         focusCanvasSelectionHome(panel);
         window.setTimeout(() => {
@@ -19650,14 +19650,63 @@ function activeElementWithinAnyFloat() {
   );
 }
 
+const hideMobileFloats = React.useCallback(
+  (options?: { clearSelection?: boolean }) => {
+    floatFocusLockRef.current = false;
+    setFloatingEditorVisible(false);
+    setFloatingAssetVisible(false);
+    setFloatingBgVisible(false);
+    setFloatingLightingVisible(false);
+    if (options?.clearSelection) {
+      setSelectedEmojiId(null);
+      setSelectedPortraitId(null);
+    }
+  },
+  []
+);
+
+const showMobileFloat = React.useCallback(
+  (kind: "text" | "asset" | "bg" | "lighting") => {
+    floatFocusLockRef.current = false;
+    setFloatingEditorVisible(kind === "text");
+    setFloatingAssetVisible(kind === "asset");
+    setFloatingBgVisible(kind === "bg");
+    setFloatingLightingVisible(kind === "lighting");
+  },
+  []
+);
+
 function hideAllFloatsAndClearSelection() {
-  setFloatingEditorVisible(false);
+  hideMobileFloats({ clearSelection: true });
+}
+
+React.useEffect(() => {
+  if (!floatingEditorVisible) return;
   setFloatingAssetVisible(false);
   setFloatingBgVisible(false);
   setFloatingLightingVisible(false);
-  setSelectedEmojiId(null);
-  setSelectedPortraitId(null);
-}
+}, [floatingEditorVisible]);
+
+React.useEffect(() => {
+  if (!floatingAssetVisible) return;
+  setFloatingEditorVisible(false);
+  setFloatingBgVisible(false);
+  setFloatingLightingVisible(false);
+}, [floatingAssetVisible]);
+
+React.useEffect(() => {
+  if (!floatingBgVisible) return;
+  setFloatingEditorVisible(false);
+  setFloatingAssetVisible(false);
+  setFloatingLightingVisible(false);
+}, [floatingBgVisible]);
+
+React.useEffect(() => {
+  if (!floatingLightingVisible) return;
+  setFloatingEditorVisible(false);
+  setFloatingAssetVisible(false);
+  setFloatingBgVisible(false);
+}, [floatingLightingVisible]);
 
 React.useEffect(() => {
   const onFocusIn = (ev: FocusEvent) => {
@@ -19854,10 +19903,8 @@ const clearTransientCanvasFocus = React.useCallback(() => {
   store.setMoveTarget(null);
   setSelectedEmojiId(null);
   setSelectedPortraitId(null);
-  setFloatingAssetVisible(false);
-  setFloatingBgVisible(false);
-  setFloatingEditorVisible(false);
-}, []);
+  hideMobileFloats();
+}, [hideMobileFloats]);
 
 const openCreatorWorkflowTarget = React.useCallback(
   (
@@ -21045,8 +21092,8 @@ const hasAssetControls = !!activeAssetControls;
 
 // On mobile, always show asset float when an asset is active
 React.useEffect(() => {
-  if (isMobileView && activeAssetControls) setFloatingAssetVisible(true);
-}, [isMobileView, activeAssetControls]);
+  if (isMobileView && activeAssetControls) showMobileFloat("asset");
+}, [isMobileView, activeAssetControls, showMobileFloat]);
 
 const activeBgControls = React.useMemo(() => {
   if (selectedPanel !== "background" && moveTarget !== "background") return null;
@@ -21151,13 +21198,14 @@ const undoAssetPosition = React.useCallback(() => {
   setLastMoveStack((prev) => prev.slice(0, -1));
   if (isMobileView && activeAssetControls) {
     // Keep asset float open after undo to avoid control flicker/closure.
-    setFloatingAssetVisible(true);
+    showMobileFloat("asset");
   }
 }, [
   lastMoveStack,
   format,
   isMobileView,
   activeAssetControls,
+  showMobileFloat,
   updateIcon,
   updateEmoji,
   updatePortrait,
@@ -21195,7 +21243,7 @@ const mobileControlsTabs = (
         if (floatingAssetRef.current && floatingAssetRef.current.contains(e.target as Node)) {
           return;
         }
-        setFloatingAssetVisible(false);
+        hideMobileFloats();
       }}
     >
       <button
@@ -21325,13 +21373,13 @@ React.useEffect(() => {
 React.useEffect(() => {
   // Open when asset controls exist; close when they disappear
   if (hasAssetControls) {
-    setFloatingAssetVisible(true);
+    showMobileFloat("asset");
   }
   if (!hasAssetControls) {
     floatFocusLockRef.current = false;
     setFloatingAssetVisible(false);
   }
-}, [hasAssetControls]);
+}, [hasAssetControls, showMobileFloat]);
 
 // If user switches to a non-asset target, clear selections and close the asset float
 React.useEffect(() => {
@@ -21346,12 +21394,11 @@ React.useEffect(() => {
 
 React.useEffect(() => {
   if (activeBgControls) {
-    setFloatingBgVisible(true);
-    setFloatingAssetVisible(false);
+    showMobileFloat("bg");
   } else {
     setFloatingBgVisible(false);
   }
-}, [activeBgControls]);
+}, [activeBgControls, showMobileFloat]);
 
 React.useEffect(() => {
   const shouldShowLightingFloat =
@@ -21365,10 +21412,7 @@ React.useEffect(() => {
     if (!floatingLightingVisible) {
       setMobileLightingSlide(0);
     }
-    setFloatingLightingVisible(true);
-    setFloatingAssetVisible(false);
-    setFloatingEditorVisible(false);
-    setFloatingBgVisible(false);
+    showMobileFloat("lighting");
     return;
   }
 
@@ -21380,6 +21424,7 @@ React.useEffect(() => {
   isStarterPlan,
   mainFaceOnCanvas?.id,
   selectedPanel,
+  showMobileFloat,
 ]);
 
 // Mobile auto-tab routing:
@@ -21480,7 +21525,6 @@ React.useEffect(() => {
     eventWithinAnyFloat(ev) || activeElementWithinAnyFloat() || floatFocusLockRef.current;
   const onAppScroll = (ev?: Event) => {
     if (shouldSkipBecauseDragging()) return;
-    if (interactingWithinFloat(ev)) return;
     releaseFloatFocus();
     hideFloats();
   };
@@ -22360,7 +22404,7 @@ const emojiCanvas = React.useMemo(() => {
     // ✅ select existing emoji (no newId, no addEmoji)
     store.setSelectedEmojiId(em.id);
     setSelectedEmojiId(em.id);
-    setFloatingAssetVisible(true);
+    showMobileFloat("asset");
 
     // ✅ SAME AS FLARES: keep correct controls open
     store.setFocus("icon", "emoji");
@@ -22386,7 +22430,7 @@ const emojiCanvas = React.useMemo(() => {
     // ✅ SAME AS FLARES: select + route FIRST
     store.setSelectedEmojiId(em.id);
     setSelectedEmojiId(em.id);
-    setFloatingAssetVisible(true);
+    showMobileFloat("asset");
     store.setFocus("icon", "emoji");
     store.setSelectedPanel("icons");
     setSelectedPanel("icons");
@@ -22508,7 +22552,7 @@ const emojiCanvas = React.useMemo(() => {
         // ✅ select + keep emoji panel open (flare-style)
         store.setSelectedEmojiId(em.id);
         setSelectedEmojiId(em.id);
-        setFloatingAssetVisible(true);
+        showMobileFloat("asset");
         store.setFocus("icon", "emoji");
         store.setSelectedPanel("emoji");
         store.setMoveTarget("icon");
@@ -25295,7 +25339,6 @@ style={{ top: STICKY_TOP }}
       }}
       onMouseDownCapture={(e) => {
         if (suppressCloseRef.current) return;
-        setFloatingEditorVisible(true);
 
         const el = e.target as HTMLElement;
 
@@ -25676,9 +25719,7 @@ style={{ top: STICKY_TOP }}
             onMobileDragEnd={handleMobileDragEnd}
             onOpenTextFloat={() => {
               if (!isMobileView) return;
-              setFloatingEditorVisible(true);
-              setFloatingAssetVisible(false);
-              setFloatingBgVisible(false);
+              showMobileFloat("text");
             }}
             portraitCanvas={portraitCanvas}
             emojiCanvas={emojiCanvas}
@@ -26146,7 +26187,7 @@ style={{ top: STICKY_TOP }}
             className="mt-2"
             onPointerDownCapture={() => {
               floatFocusLockRef.current = true;
-              setFloatingAssetVisible(true);
+              showMobileFloat("asset");
             }}
           >
             <div className="flex items-center justify-between text-[10px] text-neutral-400 mb-1">
@@ -26177,7 +26218,7 @@ style={{ top: STICKY_TOP }}
                   className="mt-2 w-full rounded-md bg-neutral-900 border border-neutral-700 text-[11px] px-2 py-1.5 text-white"
                   value={activeAssetControls.labelValue || ""}
                   onChange={(e) => activeAssetControls.onLabel?.(e.target.value)}
-                  onFocus={() => setFloatingAssetVisible(true)}
+                  onFocus={() => showMobileFloat("asset")}
                   onBlur={() => {
                     floatFocusLockRef.current = false;
                   }}
