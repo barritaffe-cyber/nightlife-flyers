@@ -1682,13 +1682,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                 open={librarySectionsOpen.graphics || !!selectedGraphicStickerAsset}
                 onToggle={() => toggleLibrarySection('graphics')}
               >
-                  <div
-                    className="grid grid-cols-3 min-[420px]:grid-cols-4 auto-rows-fr gap-2"
-                    style={{
-                      maxHeight: 180,
-                      overflowY: 'auto',
-                    }}
-                  >
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                     {graphicStickers.map((sticker) => (
                       <button
                         key={sticker.id}
