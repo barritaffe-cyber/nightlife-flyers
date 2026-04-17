@@ -577,7 +577,7 @@ export function InlineSliderInput({
             disabled={disabled}
             className={
               inputClassName ||
-              `h-[26px] w-[44px] min-w-0 rounded-md px-0.5 ${controlInputClass} origin-right scale-[0.82] text-right font-semibold tracking-[-0.03em] text-[16px] sm:h-auto sm:w-[48px] sm:scale-100 sm:px-1.5 sm:text-[11px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`
+              `h-[26px] w-[44px] min-w-0 rounded-md px-0.5 ${controlInputClass} origin-right scale-[0.74] text-right font-medium tracking-[-0.02em] text-[16px] sm:h-auto sm:w-[48px] sm:scale-100 sm:px-1.5 sm:text-[11px] sm:font-semibold [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`
             }
             inputMode="decimal"
           />
