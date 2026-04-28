@@ -20141,6 +20141,7 @@ const [floatingAssetVisible, setFloatingAssetVisible] = React.useState(false);
 const [floatingBgVisible, setFloatingBgVisible] = React.useState(false);
 const [floatingLightingVisible, setFloatingLightingVisible] = React.useState(false);
 const [mobileTextFloatTab, setMobileTextFloatTab] = React.useState<"text" | "style">("text");
+const [mobileHeadlineStyleFocus, setMobileHeadlineStyleFocus] = React.useState<"3d" | "gradient" | "echo" | null>(null);
 const [mobileLightingSlide, setMobileLightingSlide] = React.useState<0 | 1 | 2>(0);
 const [projectHelpOpen, setProjectHelpOpen] = React.useState(false);
 const [workflowHelpOpen, setWorkflowHelpOpen] = React.useState(false);
@@ -21795,6 +21796,12 @@ const showMobileTextFloatBasics =
   !headlineTextStyleTabsVisible || mobileTextFloatTab === "text";
 const showMobileHeadlineStyleControls =
   headlineTextStyleTabsVisible && mobileTextFloatTab === "style";
+const showMobileHeadline3dControls =
+  showMobileHeadlineStyleControls && mobileHeadlineStyleFocus === "3d";
+const showMobileHeadlineGradientControls =
+  showMobileHeadlineStyleControls && mobileHeadlineStyleFocus === "gradient";
+const showMobileHeadlineEchoControls =
+  showMobileHeadlineStyleControls && mobileHeadlineStyleFocus === "echo";
 const activeMobileTextFloatPanelStyle = headlineTextStyleTabsVisible
   ? mobileHeadlineFloatPanelStyle
   : mobileFloatPanelStyle;
@@ -21808,6 +21815,7 @@ React.useEffect(() => {
 React.useEffect(() => {
   if (!floatingEditorVisible) return;
   setMobileTextFloatTab("text");
+  setMobileHeadlineStyleFocus(null);
 }, [activeTextTarget, floatingEditorVisible]);
 
 const activeBgControls = React.useMemo(() => {
@@ -26809,7 +26817,7 @@ style={{ top: STICKY_TOP }}
               </div>
             </>
           )}
-          {(!headlineTextStyleTabsVisible || showMobileHeadlineStyleControls) && activeTextControls.onSkew && (
+          {showMobileTextFloatBasics && activeTextControls.onSkew && (
             <div>
               <InlineSliderInput
                 label="Skew"
@@ -26824,7 +26832,7 @@ style={{ top: STICKY_TOP }}
               />
             </div>
           )}
-          {(!headlineTextStyleTabsVisible || showMobileHeadlineStyleControls) &&
+          {showMobileTextFloatBasics &&
             (activeTextControls.onShadowStrength || activeTextControls.onStrokeWidth) && (
               <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
                 {activeTextControls.onShadowStrength && (
@@ -26857,7 +26865,7 @@ style={{ top: STICKY_TOP }}
                 )}
               </div>
             )}
-          {(!headlineTextStyleTabsVisible || showMobileHeadlineStyleControls) &&
+          {showMobileTextFloatBasics &&
             (activeTextControls.onToggleStroke || activeTextControls.onStrokeColor) && (
               <div className="flex flex-wrap items-center gap-2">
                 {activeTextControls.onToggleStroke && (
@@ -26884,16 +26892,31 @@ style={{ top: STICKY_TOP }}
             <>
               <div className="-mx-1 overflow-x-auto pb-1">
                 <div className="flex min-w-max items-center gap-2 px-1 whitespace-nowrap">
-                  <Chip small onClick={applyHeadlineSportsPreset}>
+                  <Chip
+                    small
+                    active={mobileHeadlineStyleFocus === "3d"}
+                    onClick={() => {
+                      setMobileHeadlineStyleFocus("3d");
+                      applyHeadlineSportsPreset();
+                    }}
+                  >
                     Flat 3D
                   </Chip>
-                  <Chip small onClick={applyHeadlineRetroSlicePreset}>
+                  <Chip
+                    small
+                    active={mobileHeadlineStyleFocus === "echo"}
+                    onClick={() => {
+                      setMobileHeadlineStyleFocus("echo");
+                      applyHeadlineRetroSlicePreset();
+                    }}
+                  >
                     Retro Slice
                   </Chip>
                   <Chip
                     small
-                    active={textFx.gradient}
+                    active={mobileHeadlineStyleFocus === "gradient"}
                     onClick={() => {
+                      setMobileHeadlineStyleFocus("gradient");
                       const next = { ...textFx, gradient: !textFx.gradient };
                       setTextFx(next);
                       setSessionValue(format, "textFx", next);
@@ -26901,89 +26924,138 @@ style={{ top: STICKY_TOP }}
                   >
                     Gradient
                   </Chip>
-                  <Chip small active={headSliceEnabled} onClick={() => setHeadSliceEnabled((v) => !v)}>
+                  <Chip
+                    small
+                    active={mobileHeadlineStyleFocus === "echo"}
+                    onClick={() => {
+                      setMobileHeadlineStyleFocus("echo");
+                      setHeadSliceEnabled((v) => !v);
+                    }}
+                  >
                     Echo Bands
                   </Chip>
                 </div>
               </div>
-              {activeTextControls.color && (
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] uppercase tracking-wider text-neutral-400">Fill</span>
+              {!mobileHeadlineStyleFocus && (
+                <div className="rounded border border-white/10 bg-black/20 px-3 py-2 text-[11px] text-neutral-400">
+                  Tap a style chip above to open only that effect&apos;s controls.
+                </div>
+              )}
+              {showMobileHeadline3dControls && (
+                <>
+                  {activeTextControls.color && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] uppercase tracking-wider text-neutral-400">Fill</span>
+                      <ColorDot
+                        value={activeTextControls.color}
+                        allowNone={!!activeTextControls.allowNoFill}
+                        noneTitle="No fill"
+                        onChange={(v) => activeTextControls.onColor?.(v)}
+                      />
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
+                    <div>
+                      <InlineSliderInput
+                        label="3D Depth"
+                        value={headExtrudeDepth}
+                        min={0}
+                        max={40}
+                        step={1}
+                        precision={0}
+                        onChange={setHeadExtrudeDepth}
+                        rangeClassName="flex-1 accent-cyan-400"
+                      />
+                    </div>
+                    <div>
+                      <InlineSliderInput
+                        label="3D Angle"
+                        value={headExtrudeAngle}
+                        min={0}
+                        max={360}
+                        step={1}
+                        precision={0}
+                        suffix="°"
+                        onChange={setHeadExtrudeAngle}
+                        rangeClassName="flex-1 accent-emerald-400"
+                      />
+                    </div>
+                    <div className="min-[420px]:col-span-2">
+                      <InlineSliderInput
+                        label="3D Distance"
+                        value={headExtrudeDistance}
+                        min={0}
+                        max={60}
+                        step={1}
+                        precision={0}
+                        onChange={setHeadExtrudeDistance}
+                        rangeClassName="flex-1 accent-amber-400"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {textFx.gradient && (
+                      <>
+                        <span className="text-[10px] uppercase tracking-wider text-neutral-400">Grad A</span>
+                        <ColorDot
+                          value={textFx.gradFrom}
+                          onChange={(c) => {
+                            const next = { ...textFx, gradFrom: c };
+                            setTextFx(next);
+                            setSessionValue(format, "textFx", next);
+                          }}
+                        />
+                        <span className="text-[10px] uppercase tracking-wider text-neutral-400">Grad B</span>
+                        <ColorDot
+                          value={textFx.gradTo}
+                          onChange={(c) => {
+                            const next = { ...textFx, gradTo: c };
+                            setTextFx(next);
+                            setSessionValue(format, "textFx", next);
+                          }}
+                        />
+                      </>
+                    )}
+                    <span className="text-[10px] uppercase tracking-wider text-neutral-400">3D</span>
+                    <ColorDot value={headExtrudeColor} onChange={setHeadExtrudeColor} />
+                  </div>
+                </>
+              )}
+              {showMobileHeadlineGradientControls && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[10px] uppercase tracking-wider text-neutral-400">Grad A</span>
                   <ColorDot
-                    value={activeTextControls.color}
-                    allowNone={!!activeTextControls.allowNoFill}
-                    noneTitle="No fill"
-                    onChange={(v) => activeTextControls.onColor?.(v)}
+                    value={textFx.gradFrom}
+                    onChange={(c) => {
+                      const next = { ...textFx, gradient: true, gradFrom: c };
+                      setTextFx(next);
+                      setSessionValue(format, "textFx", next);
+                    }}
+                  />
+                  <span className="text-[10px] uppercase tracking-wider text-neutral-400">Grad B</span>
+                  <ColorDot
+                    value={textFx.gradTo}
+                    onChange={(c) => {
+                      const next = { ...textFx, gradient: true, gradTo: c };
+                      setTextFx(next);
+                      setSessionValue(format, "textFx", next);
+                    }}
                   />
                 </div>
               )}
-              <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
-                <div>
-                  <InlineSliderInput
-                    label="3D Depth"
-                    value={headExtrudeDepth}
-                    min={0}
-                    max={40}
-                    step={1}
-                    precision={0}
-                    onChange={setHeadExtrudeDepth}
-                    rangeClassName="flex-1 accent-cyan-400"
-                  />
-                </div>
-                <div>
-                  <InlineSliderInput
-                    label="3D Angle"
-                    value={headExtrudeAngle}
-                    min={0}
-                    max={360}
-                    step={1}
-                    precision={0}
-                    suffix="°"
-                    onChange={setHeadExtrudeAngle}
-                    rangeClassName="flex-1 accent-emerald-400"
-                  />
-                </div>
-                <div className="min-[420px]:col-span-2">
-                  <InlineSliderInput
-                    label="3D Distance"
-                    value={headExtrudeDistance}
-                    min={0}
-                    max={60}
-                    step={1}
-                    precision={0}
-                    onChange={setHeadExtrudeDistance}
-                    rangeClassName="flex-1 accent-amber-400"
-                  />
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {textFx.gradient && (
-                  <>
-                    <span className="text-[10px] uppercase tracking-wider text-neutral-400">Grad A</span>
-                    <ColorDot
-                      value={textFx.gradFrom}
-                      onChange={(c) => {
-                        const next = { ...textFx, gradFrom: c };
-                        setTextFx(next);
-                        setSessionValue(format, "textFx", next);
-                      }}
-                    />
-                    <span className="text-[10px] uppercase tracking-wider text-neutral-400">Grad B</span>
-                    <ColorDot
-                      value={textFx.gradTo}
-                      onChange={(c) => {
-                        const next = { ...textFx, gradTo: c };
-                        setTextFx(next);
-                        setSessionValue(format, "textFx", next);
-                      }}
-                    />
-                  </>
-                )}
-                <span className="text-[10px] uppercase tracking-wider text-neutral-400">3D</span>
-                <ColorDot value={headExtrudeColor} onChange={setHeadExtrudeColor} />
-              </div>
-              {headSliceEnabled && (
+              {showMobileHeadlineEchoControls && (
                 <>
+                  {activeTextControls.color && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] uppercase tracking-wider text-neutral-400">Fill</span>
+                      <ColorDot
+                        value={activeTextControls.color}
+                        allowNone={!!activeTextControls.allowNoFill}
+                        noneTitle="No fill"
+                        onChange={(v) => activeTextControls.onColor?.(v)}
+                      />
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
                     <div>
                       <InlineSliderInput
