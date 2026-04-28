@@ -101,9 +101,9 @@ const categories = [
     label: "DJ / Promo",
     desc: "Built for DJs, artists, and performers who need to get the word out fast with polished promo flyers.",
     accent:
-      "border-cyan-400/20 bg-[linear-gradient(135deg,rgba(10,14,20,0.98),rgba(14,31,49,0.92))] hover:border-cyan-300/45 hover:bg-[linear-gradient(135deg,rgba(12,18,26,1),rgba(16,42,66,0.98))]",
+      "border-cyan-400/10 bg-[linear-gradient(135deg,rgba(10,14,20,0.98),rgba(14,31,49,0.92))] hover:border-cyan-300/20 hover:bg-[linear-gradient(135deg,rgba(12,18,26,1),rgba(16,42,66,0.98))]",
     iconWrap:
-      "border-cyan-300/18 bg-[linear-gradient(135deg,rgba(10,18,28,0.96),rgba(16,34,48,0.9))] text-cyan-100",
+      "border-cyan-300/9 bg-[linear-gradient(135deg,rgba(10,18,28,0.96),rgba(16,34,48,0.9))] text-cyan-100",
     icon: (
       <svg width="34" height="34" viewBox="0 0 64 64" fill="none" stroke="currentColor">
         <circle cx="24" cy="34" r="16" strokeWidth="2.1" opacity="0.9" />
@@ -122,9 +122,9 @@ const categories = [
     label: "Creator Studio",
     desc: "Built for promoters, venue owners, and creative teams who need full campaign control, templates, and studio tools.",
     accent:
-      "border-fuchsia-400/20 bg-[linear-gradient(135deg,rgba(10,14,20,0.98),rgba(31,22,44,0.94))] hover:border-fuchsia-300/45 hover:bg-[linear-gradient(135deg,rgba(12,18,26,1),rgba(44,29,62,0.98))]",
+      "border-fuchsia-400/10 bg-[linear-gradient(135deg,rgba(10,14,20,0.98),rgba(31,22,44,0.94))] hover:border-fuchsia-300/20 hover:bg-[linear-gradient(135deg,rgba(12,18,26,1),rgba(44,29,62,0.98))]",
     iconWrap:
-      "border-fuchsia-300/18 bg-[linear-gradient(135deg,rgba(16,18,28,0.96),rgba(34,24,46,0.92))] text-fuchsia-100",
+      "border-fuchsia-300/9 bg-[linear-gradient(135deg,rgba(16,18,28,0.96),rgba(34,24,46,0.92))] text-fuchsia-100",
     icon: (
       <svg width="34" height="34" viewBox="0 0 64 64" fill="none" stroke="currentColor">
         <path strokeWidth="2" d="M32 12 49 22 49 42 32 52 15 42 15 22 32 12Z" />
@@ -233,26 +233,26 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
 
   const modalClassName =
     screen === "entry"
-      ? "w-[min(92vw,420px)] max-h-[84vh] overflow-y-auto border border-white/10 bg-[linear-gradient(180deg,rgba(10,12,18,0.99),rgba(13,16,24,0.98))] p-5 text-center shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
-      : "w-[min(92vw,620px)] max-h-[84vh] overflow-y-auto border border-white/10 bg-[linear-gradient(180deg,rgba(10,12,18,0.99),rgba(13,16,24,0.98))] p-5 text-center shadow-[0_24px_80px_rgba(0,0,0,0.55)]";
+      ? "w-[min(92vw,420px)] max-h-[84vh] overflow-y-auto border border-white/6 bg-[linear-gradient(180deg,rgba(10,12,18,0.99),rgba(13,16,24,0.98))] p-5 text-center shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
+      : "w-[min(92vw,620px)] max-h-[84vh] overflow-y-auto border border-white/6 bg-[linear-gradient(180deg,rgba(10,12,18,0.99),rgba(13,16,24,0.98))] p-5 text-center shadow-[0_24px_80px_rgba(0,0,0,0.55)]";
 
   const startupButtonClass =
-    "border border-white/14 bg-white/[0.04] px-4 py-3 text-sm font-medium text-white transition hover:bg-white/[0.08] disabled:opacity-60";
+    "border border-white/8 bg-white/[0.03] px-4 py-3 text-sm font-medium text-white transition hover:bg-white/[0.06] disabled:opacity-60";
   const startupSecondaryButtonClass =
-    "border border-white/10 bg-white/[0.05] px-3 py-2 text-xs text-white/80 hover:bg-white/[0.09]";
+    "border border-white/7 bg-white/[0.04] px-3 py-2 text-xs text-white/80 hover:bg-white/[0.07]";
   const advancedCardClass =
-    "border border-fuchsia-400/18 bg-[linear-gradient(180deg,rgba(55,31,71,0.22),rgba(14,17,25,0.92))] p-4 text-left transition hover:border-fuchsia-300/34 hover:bg-[linear-gradient(180deg,rgba(72,40,94,0.28),rgba(17,20,29,0.95))]";
+    "border border-fuchsia-400/9 bg-[linear-gradient(180deg,rgba(55,31,71,0.22),rgba(14,17,25,0.92))] p-4 text-left transition hover:border-fuchsia-300/16 hover:bg-[linear-gradient(180deg,rgba(72,40,94,0.28),rgba(17,20,29,0.95))]";
   const advancedTemplateCardClass =
-    "group relative border border-fuchsia-400/16 bg-[linear-gradient(180deg,rgba(58,33,74,0.22),rgba(18,21,31,0.9))] p-3.5 text-left text-white transition hover:border-fuchsia-300/34 hover:bg-[linear-gradient(180deg,rgba(76,43,98,0.3),rgba(20,23,33,0.95))]";
+    "group relative border border-fuchsia-400/9 bg-[linear-gradient(180deg,rgba(58,33,74,0.22),rgba(18,21,31,0.9))] p-3.5 text-left text-white transition hover:border-fuchsia-300/16 hover:bg-[linear-gradient(180deg,rgba(76,43,98,0.3),rgba(20,23,33,0.95))]";
   const advancedIconWrapClass =
-    "mb-3 flex h-12 w-12 items-center justify-center border border-fuchsia-300/18 bg-[linear-gradient(135deg,rgba(22,18,32,0.96),rgba(45,28,60,0.92))] text-fuchsia-100";
+    "mb-3 flex h-12 w-12 items-center justify-center border border-fuchsia-300/9 bg-[linear-gradient(135deg,rgba(22,18,32,0.96),rgba(45,28,60,0.92))] text-fuchsia-100";
   const advancedLabelClass = "text-[11px] uppercase tracking-[0.16em] text-fuchsia-100/55";
   const advancedButtonClass =
-    startupButtonClass + " border-fuchsia-400/28 bg-fuchsia-500/[0.10] hover:bg-fuchsia-500/[0.18]";
+    startupButtonClass + " border-fuchsia-400/10 bg-fuchsia-500/[0.07] hover:bg-fuchsia-500/[0.11]";
   const advancedUploadClass =
-    "mt-4 group flex w-full cursor-pointer items-center justify-center border border-dashed border-fuchsia-300/22 bg-fuchsia-500/[0.08] px-4 py-3 transition-colors hover:bg-fuchsia-500/[0.14]";
+    "mt-4 group flex w-full cursor-pointer items-center justify-center border border-dashed border-fuchsia-300/12 bg-fuchsia-500/[0.06] px-4 py-3 transition-colors hover:bg-fuchsia-500/[0.10]";
   const advancedBackButtonClass =
-    startupSecondaryButtonClass + " border-fuchsia-400/18 bg-fuchsia-500/[0.08] text-fuchsia-50 hover:bg-fuchsia-500/[0.14]";
+    startupSecondaryButtonClass + " border-fuchsia-400/10 bg-fuchsia-500/[0.06] text-fuchsia-50 hover:bg-fuchsia-500/[0.10]";
 
   return (
     <AnimatePresence>
