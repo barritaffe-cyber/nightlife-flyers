@@ -41,8 +41,13 @@ const templates = [
     label: "Miami Nights",
     desc: "Ocean Drive glow & neon nightlife",
     icon: (
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M12 3l1.8 4.7L19 9l-4.2 3.3L16.2 18 12 15.3 7.8 18l1.4-5.7L5 9l5.2-1.3L12 3z" />
+      <svg width="30" height="30" viewBox="0 0 64 64" fill="none" stroke="currentColor">
+        <path strokeWidth="2.2" d="M14 42c6-11.2 14.7-16.8 26-16.8 4.6 0 8.8.8 12.6 2.4" />
+        <path strokeWidth="2.2" d="M12 49.5c7.1-6 14.3-9 21.8-9 6.6 0 12.8 2 18.7 6" />
+        <circle cx="20" cy="24" r="2.6" fill="currentColor" stroke="none" />
+        <circle cx="31.5" cy="20" r="2.2" fill="currentColor" stroke="none" />
+        <circle cx="44" cy="23" r="2.6" fill="currentColor" stroke="none" />
+        <path strokeWidth="2" d="M9 54h46" opacity="0.45" />
       </svg>
     ),
   },
@@ -51,9 +56,13 @@ const templates = [
     label: "Latin Tropical Street",
     desc: "Street party energy with warm color",
     icon: (
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M12 4v6m0 0l4-4m-4 4L8 6" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M4 20h16M6 16h12M8 12h8" />
+      <svg width="30" height="30" viewBox="0 0 64 64" fill="none" stroke="currentColor">
+        <path strokeWidth="2.2" d="M32 12v22" />
+        <path strokeWidth="2.2" d="M32 19c7-5.3 13.2-7.9 18.6-7.9" />
+        <path strokeWidth="2.2" d="M32 24.5c-7-5.3-13.2-7.9-18.6-7.9" />
+        <path strokeWidth="2.2" d="M32 30c5.9-4 11.5-5.9 16.8-5.9" />
+        <path strokeWidth="2.2" d="M32 34.5C26.1 30.5 20.5 28.6 15.2 28.6" />
+        <path strokeWidth="2" d="M12 52h40" opacity="0.45" />
       </svg>
     ),
   },
@@ -62,9 +71,12 @@ const templates = [
     label: "Atlanta Skyline",
     desc: "City lights, late-night skyline mood",
     icon: (
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M12 3l8 9-8 9-8-9 8-9z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M9 12h6" />
+      <svg width="30" height="30" viewBox="0 0 64 64" fill="none" stroke="currentColor">
+        <path strokeWidth="2.2" d="M12 52h40" />
+        <path strokeWidth="2.2" d="M18 52V28h10v24" />
+        <path strokeWidth="2.2" d="M30 52V16h10v36" />
+        <path strokeWidth="2.2" d="M42 52V24h8v28" />
+        <path strokeWidth="2" d="M22 33h2M22 38h2M34 22h2M34 28h2M34 34h2M46 30h2M46 36h2" opacity="0.65" />
       </svg>
     ),
   },
@@ -73,10 +85,11 @@ const templates = [
     label: "Hip Hop Block Party",
     desc: "Street party energy, raw crowd vibe",
     icon: (
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M3 20h18" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M6 20V8l6-3 6 3v12" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M10 20v-4h4v4" />
+      <svg width="30" height="30" viewBox="0 0 64 64" fill="none" stroke="currentColor">
+        <path strokeWidth="2.2" d="M12 52h40" />
+        <path strokeWidth="2.2" d="M16 52V29l16-8 16 8v23" />
+        <path strokeWidth="2.2" d="M24 52V39h16v13" />
+        <path strokeWidth="2" d="M21 33h2M28 29h2M34 29h2M41 33h2" opacity="0.65" />
       </svg>
     ),
   },
@@ -88,19 +101,19 @@ const categories = [
     label: "DJ / Promo",
     desc: "Built for DJs, artists, and performers who need to get the word out fast with polished promo flyers.",
     accent:
-      "border-cyan-400/20 bg-[linear-gradient(135deg,rgba(17,24,39,0.98),rgba(8,47,73,0.88))] hover:border-cyan-300/45 hover:bg-[linear-gradient(135deg,rgba(20,28,45,1),rgba(10,58,92,0.96))]",
+      "border-cyan-400/20 bg-[linear-gradient(135deg,rgba(10,14,20,0.98),rgba(14,31,49,0.92))] hover:border-cyan-300/45 hover:bg-[linear-gradient(135deg,rgba(12,18,26,1),rgba(16,42,66,0.98))]",
     iconWrap:
-      "border-cyan-300/20 bg-[radial-gradient(circle_at_30%_30%,rgba(103,232,249,0.22),rgba(8,145,178,0.08)_45%,rgba(8,145,178,0)_75%)] text-cyan-100 shadow-[0_18px_40px_rgba(0,180,255,0.18)]",
+      "border-cyan-300/18 bg-[linear-gradient(135deg,rgba(10,18,28,0.96),rgba(16,34,48,0.9))] text-cyan-100",
     icon: (
       <svg width="34" height="34" viewBox="0 0 64 64" fill="none" stroke="currentColor">
-        <circle cx="24" cy="34" r="16" strokeWidth="2.4" opacity="0.9" />
-        <circle cx="24" cy="34" r="9" strokeWidth="2" opacity="0.75" />
+        <circle cx="24" cy="34" r="16" strokeWidth="2.1" opacity="0.9" />
+        <circle cx="24" cy="34" r="9" strokeWidth="1.8" opacity="0.75" />
         <circle cx="24" cy="34" r="2.6" fill="currentColor" stroke="none" />
-        <path strokeWidth="2.4" strokeLinecap="round" d="M40 17h10" />
-        <path strokeWidth="2.4" strokeLinecap="round" d="M50 17v18.5" />
-        <path strokeWidth="2.4" strokeLinecap="round" d="M50 35.5c0 4.1-3.4 7.5-7.5 7.5S35 39.6 35 35.5s3.4-7.5 7.5-7.5c1.9 0 3.5.6 4.8 1.7" />
-        <path strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" d="M33.5 24.5l10 6.5" />
-        <path strokeWidth="2.2" strokeLinecap="round" d="M10 50h28" opacity="0.5" />
+        <path strokeWidth="2.1" d="M40 17h10" />
+        <path strokeWidth="2.1" d="M50 17v18.5" />
+        <path strokeWidth="2.1" d="M50 35.5c0 4.1-3.4 7.5-7.5 7.5S35 39.6 35 35.5s3.4-7.5 7.5-7.5c1.9 0 3.5.6 4.8 1.7" />
+        <path strokeWidth="2.1" d="M33.5 24.5l10 6.5" />
+        <path strokeWidth="1.8" d="M10 50h28" opacity="0.45" />
       </svg>
     ),
   },
@@ -109,16 +122,17 @@ const categories = [
     label: "Creator Studio",
     desc: "Built for promoters, venue owners, and creative teams who need full campaign control, templates, and studio tools.",
     accent:
-      "border-fuchsia-400/20 bg-[linear-gradient(135deg,rgba(20,18,30,0.98),rgba(58,28,82,0.9))] hover:border-fuchsia-300/45 hover:bg-[linear-gradient(135deg,rgba(26,22,38,1),rgba(74,35,102,0.96))]",
+      "border-fuchsia-400/20 bg-[linear-gradient(135deg,rgba(10,14,20,0.98),rgba(31,22,44,0.94))] hover:border-fuchsia-300/45 hover:bg-[linear-gradient(135deg,rgba(12,18,26,1),rgba(44,29,62,0.98))]",
     iconWrap:
-      "border-fuchsia-300/20 bg-[radial-gradient(circle_at_30%_30%,rgba(244,114,182,0.24),rgba(168,85,247,0.08)_45%,rgba(168,85,247,0)_75%)] text-fuchsia-100 shadow-[0_18px_40px_rgba(217,70,239,0.16)]",
+      "border-fuchsia-300/18 bg-[linear-gradient(135deg,rgba(16,18,28,0.96),rgba(34,24,46,0.92))] text-fuchsia-100",
     icon: (
       <svg width="34" height="34" viewBox="0 0 64 64" fill="none" stroke="currentColor">
-        <path strokeWidth="2.2" strokeLinejoin="round" d="M32 11 48 20 48 40 32 49 16 40 16 20 32 11Z" />
-        <path strokeWidth="2.2" strokeLinejoin="round" opacity="0.9" d="M32 11v38" />
-        <path strokeWidth="2.2" strokeLinejoin="round" opacity="0.9" d="M16 20l16 9 16-9" />
-        <path strokeWidth="2.2" strokeLinejoin="round" opacity="0.9" d="M16 40l16-11 16 11" />
-        <path strokeWidth="2.2" strokeLinecap="round" d="M10 52h44" opacity="0.45" />
+        <path strokeWidth="2" d="M32 12 49 22 49 42 32 52 15 42 15 22 32 12Z" />
+        <path strokeWidth="1.8" opacity="0.9" d="M32 12v40" />
+        <path strokeWidth="1.8" opacity="0.9" d="M15 22l17 10 17-10" />
+        <path strokeWidth="1.8" opacity="0.9" d="M15 42l17-10 17 10" />
+        <path strokeWidth="1.8" opacity="0.55" d="M22 17l20 30" />
+        <path strokeWidth="1.8" opacity="0.45" d="M10 56h44" />
       </svg>
     ),
   },
@@ -219,8 +233,15 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
 
   const modalClassName =
     screen === "entry"
-      ? "w-[min(92vw,420px)] max-h-[84vh] overflow-y-auto rounded-2xl border border-white/10 bg-neutral-900 p-5 text-center shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
-      : "w-[min(92vw,620px)] max-h-[84vh] overflow-y-auto rounded-2xl border border-white/10 bg-neutral-900 p-5 text-center shadow-[0_24px_80px_rgba(0,0,0,0.55)]";
+      ? "w-[min(92vw,420px)] max-h-[84vh] overflow-y-auto border border-white/10 bg-[linear-gradient(180deg,rgba(10,12,18,0.99),rgba(13,16,24,0.98))] p-5 text-center shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
+      : "w-[min(92vw,620px)] max-h-[84vh] overflow-y-auto border border-white/10 bg-[linear-gradient(180deg,rgba(10,12,18,0.99),rgba(13,16,24,0.98))] p-5 text-center shadow-[0_24px_80px_rgba(0,0,0,0.55)]";
+
+  const startupCardClass =
+    "border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-4 text-left transition hover:border-white/20 hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03))]";
+  const startupButtonClass =
+    "border border-white/14 bg-white/[0.04] px-4 py-3 text-sm font-medium text-white transition hover:bg-white/[0.08] disabled:opacity-60";
+  const startupSecondaryButtonClass =
+    "border border-white/10 bg-white/[0.05] px-3 py-2 text-xs text-white/80 hover:bg-white/[0.09]";
 
   return (
     <AnimatePresence>
@@ -256,14 +277,14 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                       }
                     }}
                     className={
-                      "group w-full rounded-[22px] border px-4 py-4 text-left transition duration-200 disabled:opacity-60 " +
+                      "group w-full border px-4 py-4 text-left transition duration-200 disabled:opacity-60 " +
                       category.accent
                     }
                   >
                     <div className="flex items-start gap-3.5">
                       <div
                         className={
-                          "flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border backdrop-blur-sm " +
+                          "flex h-14 w-14 shrink-0 items-center justify-center border " +
                           category.iconWrap
                         }
                       >
@@ -299,7 +320,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                 <button
                   type="button"
                   onClick={goBackToEntry}
-                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
+                  className={startupSecondaryButtonClass}
                 >
                   Back
                 </button>
@@ -312,7 +333,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                     type="button"
                     disabled={buildForYouLoading}
                     onClick={() => onSelect("dj", { startupBackgroundSrc: background.src })}
-                    className="group overflow-hidden rounded-xl border border-white/10 bg-[#111723] text-left transition hover:border-cyan-400/45 hover:bg-[#151d2b] disabled:opacity-60"
+                    className="group overflow-hidden border border-white/10 bg-[linear-gradient(180deg,rgba(19,24,34,0.98),rgba(16,20,29,0.98))] text-left transition hover:border-cyan-400/45 hover:bg-[linear-gradient(180deg,rgba(22,28,40,1),rgba(18,23,33,1))] disabled:opacity-60"
                   >
                     <div className="aspect-[4/5] w-full overflow-hidden bg-black">
                       <img
@@ -328,7 +349,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                 ))}
               </div>
 
-              <label className="mt-4 flex w-full cursor-pointer items-center justify-center rounded-lg border border-dashed border-neutral-600 bg-neutral-800 px-4 py-3 text-sm text-white transition-colors hover:bg-neutral-700">
+              <label className="mt-4 flex w-full cursor-pointer items-center justify-center border border-dashed border-neutral-600 bg-neutral-800 px-4 py-3 text-sm text-white transition-colors hover:bg-neutral-700">
                 <input
                   type="file"
                   accept="image/*"
@@ -342,7 +363,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
               </label>
 
               {localError && (
-                <div className="mt-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-[12px] text-rose-200">
+                <div className="mt-3 border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-[12px] text-rose-200">
                   {localError}
                 </div>
               )}
@@ -359,13 +380,13 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                 <button
                   type="button"
                   onClick={goBackToEntry}
-                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
+                  className={startupSecondaryButtonClass}
                 >
                   Back
                 </button>
               </div>
 
-              <div className="border border-white/10 bg-white/[0.03] p-4 text-left">
+              <div className={startupCardClass}>
                 <div className="flex items-center justify-between gap-3">
                   <div className="text-[11px] uppercase tracking-[0.16em] text-neutral-500">
                     Recommended
@@ -383,11 +404,13 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                     <button
                       key={template.key}
                       onClick={() => onSelect(template.key)}
-                      className="group relative border border-white/10 bg-white/[0.03] p-3.5 text-left transition hover:border-white/20 hover:bg-white/[0.05]"
+                      className="group relative border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))] p-3.5 text-left text-white transition hover:border-white/20 hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.025))]"
                     >
-                      <div className="mb-2 text-2xl text-neutral-200">{template.icon}</div>
+                      <div className="mb-3 flex h-12 w-12 items-center justify-center border border-white/10 bg-white/[0.03] text-neutral-100">
+                        {template.icon}
+                      </div>
                       <div className="font-semibold text-white">{template.label}</div>
-                      <div className="mt-1 text-[11px] leading-5 text-neutral-400">{template.desc}</div>
+                      <div className="mt-1 text-[11px] leading-5 text-neutral-300">{template.desc}</div>
                       <div className="pointer-events-none absolute inset-0 bg-white/0 transition group-hover:bg-white/[0.03]" />
                     </button>
                   ))}
@@ -401,18 +424,18 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
               </div>
 
               <div className="mt-3 grid gap-4 text-left md:grid-cols-2">
-                <div className="border border-white/10 bg-white/[0.03] p-4">
+                <div className={startupCardClass}>
                   <div className="text-[11px] uppercase tracking-[0.16em] text-neutral-500">
                     Build From Background
                   </div>
-                  <div className="mt-2 text-sm text-neutral-300">
+                  <div className="mt-2 text-sm text-neutral-200">
                     Upload a background, add your text, and let AI build the first square and story layouts.
                   </div>
                   <button
                     type="button"
                     onClick={openBuildForYou}
                     disabled={buildForYouLoading}
-                    className="mt-4 w-full border border-cyan-400/30 bg-cyan-500/10 px-4 py-3 text-sm font-medium text-white transition hover:bg-cyan-500/20 disabled:opacity-60"
+                    className={startupButtonClass + " mt-4 w-full border-cyan-400/30 bg-cyan-500/10 hover:bg-cyan-500/20"}
                   >
                     Build For You
                   </button>
@@ -423,11 +446,11 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                   )}
                 </div>
 
-                <div className="border border-white/10 bg-white/[0.03] p-4">
+                <div className={startupCardClass}>
                   <div className="text-[11px] uppercase tracking-[0.16em] text-neutral-500">
                     Open Saved Design
                   </div>
-                  <div className="mt-2 text-sm text-neutral-300">
+                  <div className="mt-2 text-sm text-neutral-200">
                     Reopen a saved project file and keep working from where you left off.
                   </div>
                   <label className="mt-4 group flex w-full cursor-pointer items-center justify-center border border-dashed border-neutral-600 bg-neutral-800 px-4 py-3 transition-colors hover:bg-neutral-700">
@@ -448,7 +471,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                         reader.readAsText(file);
                       }}
                     />
-                    <span className="flex items-center gap-2 text-sm font-medium text-neutral-400 group-hover:text-white">
+                    <span className="flex items-center gap-2 text-sm font-medium text-neutral-200 group-hover:text-white">
                       <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                       </svg>
@@ -470,7 +493,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                 <button
                   type="button"
                   onClick={goBackToAdvanced}
-                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
+                  className={startupSecondaryButtonClass}
                 >
                   Back
                 </button>
@@ -487,7 +510,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                       onChange={(e) => setHeadline(e.target.value)}
                       rows={2}
                       placeholder="Main event title"
-                      className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500"
+                      className="w-full border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500"
                     />
                   </div>
 
@@ -499,7 +522,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                       value={head2}
                       onChange={(e) => setHead2(e.target.value)}
                       placeholder="Optional sub-headline"
-                      className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500"
+                      className="w-full border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500"
                     />
                   </div>
 
@@ -512,7 +535,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                       onChange={(e) => setDetails(e.target.value)}
                       rows={4}
                       placeholder={"Date / time / attractions\nLine breaks are preserved"}
-                      className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500"
+                      className="w-full border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500"
                     />
                   </div>
 
@@ -525,7 +548,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                       onChange={(e) => setDetails2(e.target.value)}
                       rows={2}
                       placeholder="Optional supporting line"
-                      className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500"
+                      className="w-full border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500"
                     />
                   </div>
 
@@ -538,7 +561,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                         value={venue}
                         onChange={(e) => setVenue(e.target.value)}
                         placeholder="Optional venue"
-                        className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500"
+                        className="w-full border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500"
                       />
                     </div>
                     <div>
@@ -549,7 +572,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                         value={subtag}
                         onChange={(e) => setSubtag(e.target.value)}
                         placeholder="Optional pill label"
-                        className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500"
+                        className="w-full border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500"
                       />
                     </div>
                   </div>
@@ -560,7 +583,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                     <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-neutral-400">
                       Background
                     </label>
-                    <label className="flex min-h-[220px] cursor-pointer items-center justify-center rounded-xl border border-dashed border-white/15 bg-black/20 p-4 text-center transition hover:bg-white/[0.04]">
+                    <label className="flex min-h-[220px] cursor-pointer items-center justify-center border border-dashed border-white/15 bg-black/20 p-4 text-center transition hover:bg-white/[0.04]">
                       <input
                         type="file"
                         accept="image/*"
@@ -575,7 +598,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                         <img
                           src={backgroundPreview}
                           alt="Background preview"
-                          className="max-h-[280px] w-full rounded-lg object-cover"
+                          className="max-h-[280px] w-full object-cover"
                         />
                       ) : (
                         <div>
@@ -589,7 +612,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                   </div>
 
                   {(localError || buildForYouError) && (
-                    <div className="rounded-lg border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-xs text-amber-200">
+                    <div className="border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-xs text-amber-200">
                       {localError || buildForYouError}
                     </div>
                   )}
@@ -598,7 +621,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                     type="button"
                     onClick={() => void handleBuildSubmit()}
                     disabled={buildForYouLoading}
-                    className="w-full rounded-lg bg-fuchsia-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-fuchsia-500 disabled:opacity-60"
+                    className="w-full bg-fuchsia-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-fuchsia-500 disabled:opacity-60"
                   >
                     {buildForYouLoading ? "Building square + story..." : "Build Flyer"}
                   </button>
