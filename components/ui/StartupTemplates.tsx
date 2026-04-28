@@ -236,12 +236,23 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
       ? "w-[min(92vw,420px)] max-h-[84vh] overflow-y-auto border border-white/10 bg-[linear-gradient(180deg,rgba(10,12,18,0.99),rgba(13,16,24,0.98))] p-5 text-center shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
       : "w-[min(92vw,620px)] max-h-[84vh] overflow-y-auto border border-white/10 bg-[linear-gradient(180deg,rgba(10,12,18,0.99),rgba(13,16,24,0.98))] p-5 text-center shadow-[0_24px_80px_rgba(0,0,0,0.55)]";
 
-  const startupCardClass =
-    "border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-4 text-left transition hover:border-white/20 hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03))]";
   const startupButtonClass =
     "border border-white/14 bg-white/[0.04] px-4 py-3 text-sm font-medium text-white transition hover:bg-white/[0.08] disabled:opacity-60";
   const startupSecondaryButtonClass =
     "border border-white/10 bg-white/[0.05] px-3 py-2 text-xs text-white/80 hover:bg-white/[0.09]";
+  const advancedCardClass =
+    "border border-fuchsia-400/18 bg-[linear-gradient(180deg,rgba(55,31,71,0.22),rgba(14,17,25,0.92))] p-4 text-left transition hover:border-fuchsia-300/34 hover:bg-[linear-gradient(180deg,rgba(72,40,94,0.28),rgba(17,20,29,0.95))]";
+  const advancedTemplateCardClass =
+    "group relative border border-fuchsia-400/16 bg-[linear-gradient(180deg,rgba(58,33,74,0.22),rgba(18,21,31,0.9))] p-3.5 text-left text-white transition hover:border-fuchsia-300/34 hover:bg-[linear-gradient(180deg,rgba(76,43,98,0.3),rgba(20,23,33,0.95))]";
+  const advancedIconWrapClass =
+    "mb-3 flex h-12 w-12 items-center justify-center border border-fuchsia-300/18 bg-[linear-gradient(135deg,rgba(22,18,32,0.96),rgba(45,28,60,0.92))] text-fuchsia-100";
+  const advancedLabelClass = "text-[11px] uppercase tracking-[0.16em] text-fuchsia-100/55";
+  const advancedButtonClass =
+    startupButtonClass + " border-fuchsia-400/28 bg-fuchsia-500/[0.10] hover:bg-fuchsia-500/[0.18]";
+  const advancedUploadClass =
+    "mt-4 group flex w-full cursor-pointer items-center justify-center border border-dashed border-fuchsia-300/22 bg-fuchsia-500/[0.08] px-4 py-3 transition-colors hover:bg-fuchsia-500/[0.14]";
+  const advancedBackButtonClass =
+    startupSecondaryButtonClass + " border-fuchsia-400/18 bg-fuchsia-500/[0.08] text-fuchsia-50 hover:bg-fuchsia-500/[0.14]";
 
   return (
     <AnimatePresence>
@@ -297,7 +308,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                             Enter
                           </div>
                         </div>
-                        <div className="mt-1 text-[12px] leading-4.5 text-white/72">{category.desc}</div>
+                        <div className="mt-1 text-[12px] leading-4.5 text-white/80">{category.desc}</div>
                       </div>
                     </div>
                   </button>
@@ -380,23 +391,23 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                 <button
                   type="button"
                   onClick={goBackToEntry}
-                  className={startupSecondaryButtonClass}
+                  className={advancedBackButtonClass}
                 >
                   Back
                 </button>
               </div>
 
-              <div className={startupCardClass}>
+              <div className={advancedCardClass}>
                 <div className="flex items-center justify-between gap-3">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-neutral-500">
+                  <div className={advancedLabelClass}>
                     Recommended
                   </div>
-                  <div className="text-[10px] uppercase tracking-[0.14em] text-neutral-300">
+                  <div className="text-[10px] uppercase tracking-[0.14em] text-fuchsia-100/72">
                     Start Here
                   </div>
                 </div>
                 <div className="mt-2 text-sm font-medium text-white">Start From Template</div>
-                <div className="mt-1 text-sm text-neutral-400">
+                <div className="mt-1 text-sm text-neutral-300">
                   Fastest path for most flyers. Pick a layout, then swap text, background, portraits, and brand elements.
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-3">
@@ -404,28 +415,28 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                     <button
                       key={template.key}
                       onClick={() => onSelect(template.key)}
-                      className="group relative border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))] p-3.5 text-left text-white transition hover:border-white/20 hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.025))]"
+                      className={advancedTemplateCardClass}
                     >
-                      <div className="mb-3 flex h-12 w-12 items-center justify-center border border-white/10 bg-white/[0.03] text-neutral-100">
+                      <div className={advancedIconWrapClass}>
                         {template.icon}
                       </div>
                       <div className="font-semibold text-white">{template.label}</div>
                       <div className="mt-1 text-[11px] leading-5 text-neutral-300">{template.desc}</div>
-                      <div className="pointer-events-none absolute inset-0 bg-white/0 transition group-hover:bg-white/[0.03]" />
+                      <div className="pointer-events-none absolute inset-0 bg-white/0 transition group-hover:bg-fuchsia-400/[0.04]" />
                     </button>
                   ))}
                 </div>
               </div>
 
               <div className="mt-6 text-left">
-                <div className="text-[11px] uppercase tracking-[0.16em] text-neutral-500">
+                <div className={advancedLabelClass}>
                   Other Ways To Start
                 </div>
               </div>
 
               <div className="mt-3 grid gap-4 text-left md:grid-cols-2">
-                <div className={startupCardClass}>
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-neutral-500">
+                <div className={advancedCardClass}>
+                  <div className={advancedLabelClass}>
                     Build From Background
                   </div>
                   <div className="mt-2 text-sm text-neutral-200">
@@ -435,7 +446,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                     type="button"
                     onClick={openBuildForYou}
                     disabled={buildForYouLoading}
-                    className={startupButtonClass + " mt-4 w-full border-cyan-400/30 bg-cyan-500/10 hover:bg-cyan-500/20"}
+                    className={advancedButtonClass + " mt-4 w-full"}
                   >
                     Build For You
                   </button>
@@ -446,14 +457,14 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                   )}
                 </div>
 
-                <div className={startupCardClass}>
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-neutral-500">
+                <div className={advancedCardClass}>
+                  <div className={advancedLabelClass}>
                     Open Saved Design
                   </div>
                   <div className="mt-2 text-sm text-neutral-200">
                     Reopen a saved project file and keep working from where you left off.
                   </div>
-                  <label className="mt-4 group flex w-full cursor-pointer items-center justify-center border border-dashed border-neutral-600 bg-neutral-800 px-4 py-3 transition-colors hover:bg-neutral-700">
+                  <label className={advancedUploadClass}>
                     <input
                       type="file"
                       accept=".json,application/json"
@@ -471,7 +482,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                         reader.readAsText(file);
                       }}
                     />
-                    <span className="flex items-center gap-2 text-sm font-medium text-neutral-200 group-hover:text-white">
+                    <span className="flex items-center gap-2 text-sm font-medium text-fuchsia-50 group-hover:text-white">
                       <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                       </svg>
