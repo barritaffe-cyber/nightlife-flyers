@@ -87,13 +87,40 @@ const categories = [
     key: "dj",
     label: "DJ / Promo",
     desc: "Built for DJs, artists, and performers who need to get the word out fast with polished promo flyers.",
-    accent: "border-transparent",
+    accent:
+      "border-cyan-400/20 bg-[linear-gradient(135deg,rgba(17,24,39,0.98),rgba(8,47,73,0.88))] hover:border-cyan-300/45 hover:bg-[linear-gradient(135deg,rgba(20,28,45,1),rgba(10,58,92,0.96))]",
+    iconWrap:
+      "border-cyan-300/20 bg-[radial-gradient(circle_at_30%_30%,rgba(103,232,249,0.22),rgba(8,145,178,0.08)_45%,rgba(8,145,178,0)_75%)] text-cyan-100 shadow-[0_18px_40px_rgba(0,180,255,0.18)]",
+    icon: (
+      <svg width="34" height="34" viewBox="0 0 64 64" fill="none" stroke="currentColor">
+        <circle cx="24" cy="34" r="16" strokeWidth="2.4" opacity="0.9" />
+        <circle cx="24" cy="34" r="9" strokeWidth="2" opacity="0.75" />
+        <circle cx="24" cy="34" r="2.6" fill="currentColor" stroke="none" />
+        <path strokeWidth="2.4" strokeLinecap="round" d="M40 17h10" />
+        <path strokeWidth="2.4" strokeLinecap="round" d="M50 17v18.5" />
+        <path strokeWidth="2.4" strokeLinecap="round" d="M50 35.5c0 4.1-3.4 7.5-7.5 7.5S35 39.6 35 35.5s3.4-7.5 7.5-7.5c1.9 0 3.5.6 4.8 1.7" />
+        <path strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" d="M33.5 24.5l10 6.5" />
+        <path strokeWidth="2.2" strokeLinecap="round" d="M10 50h28" opacity="0.5" />
+      </svg>
+    ),
   },
   {
     key: "advanced",
     label: "Creator Studio",
     desc: "Built for promoters, venue owners, and creative teams who need full campaign control, templates, and studio tools.",
-    accent: "border-transparent",
+    accent:
+      "border-fuchsia-400/20 bg-[linear-gradient(135deg,rgba(20,18,30,0.98),rgba(58,28,82,0.9))] hover:border-fuchsia-300/45 hover:bg-[linear-gradient(135deg,rgba(26,22,38,1),rgba(74,35,102,0.96))]",
+    iconWrap:
+      "border-fuchsia-300/20 bg-[radial-gradient(circle_at_30%_30%,rgba(244,114,182,0.24),rgba(168,85,247,0.08)_45%,rgba(168,85,247,0)_75%)] text-fuchsia-100 shadow-[0_18px_40px_rgba(217,70,239,0.16)]",
+    icon: (
+      <svg width="34" height="34" viewBox="0 0 64 64" fill="none" stroke="currentColor">
+        <path strokeWidth="2.2" strokeLinejoin="round" d="M32 11 48 20 48 40 32 49 16 40 16 20 32 11Z" />
+        <path strokeWidth="2.2" strokeLinejoin="round" opacity="0.9" d="M32 11v38" />
+        <path strokeWidth="2.2" strokeLinejoin="round" opacity="0.9" d="M16 20l16 9 16-9" />
+        <path strokeWidth="2.2" strokeLinejoin="round" opacity="0.9" d="M16 40l16-11 16 11" />
+        <path strokeWidth="2.2" strokeLinecap="round" d="M10 52h44" opacity="0.45" />
+      </svg>
+    ),
   },
 ] as const;
 
@@ -229,12 +256,29 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                       }
                     }}
                     className={
-                      "group w-full rounded-xl border bg-white/[0.03] px-4 py-3.5 text-center transition hover:border-cyan-400/30 hover:bg-white/[0.05] disabled:opacity-60 " +
+                      "group w-full rounded-[22px] border px-4 py-4 text-left transition duration-200 disabled:opacity-60 " +
                       category.accent
                     }
                   >
-                    <div className="text-[15px] font-semibold text-white">{category.label}</div>
-                    <div className="mt-1 text-[12px] leading-4.5 text-neutral-400">{category.desc}</div>
+                    <div className="flex items-start gap-3.5">
+                      <div
+                        className={
+                          "flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border backdrop-blur-sm " +
+                          category.iconWrap
+                        }
+                      >
+                        {category.icon}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-[15px] font-semibold tracking-[0.01em] text-white">{category.label}</div>
+                          <div className="text-[10px] uppercase tracking-[0.18em] text-white/40 transition group-hover:text-white/70">
+                            Enter
+                          </div>
+                        </div>
+                        <div className="mt-1 text-[12px] leading-4.5 text-white/72">{category.desc}</div>
+                      </div>
+                    </div>
                   </button>
                 ))}
               </div>
