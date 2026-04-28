@@ -24,6 +24,18 @@ export const PREMIUM_CUTOUT_CLEANUP: CleanupParams = {
   edgeClamp: 0.14,
 };
 
+export const EXTRACT_SUBJECT_CLEANUP: CleanupParams = {
+  shrinkPx: 1,
+  featherPx: 1,
+  alphaBoost: 1.68,
+  decontaminate: 0.82,
+  alphaSmoothPx: 1,
+  edgeGamma: 0.9,
+  spillSuppress: 0.72,
+  alphaFill: 0.14,
+  edgeClamp: 0.2,
+};
+
 // Small helper: clamp
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
@@ -76,6 +88,16 @@ export async function cleanupCutoutUrl(
     0,
     0.92
   );
+  const fringeTighten = clamp(
+    0.12 + edgeClamp * 0.5 + Math.max(0, alphaBoost - 1) * 0.16 + shrinkPx * 0.06,
+    0,
+    0.86
+  );
+  const haloNeutralize = clamp(
+    0.16 + decon * 0.34 + spillSuppress * 0.42 + edgeClamp * 0.18,
+    0,
+    0.94
+  );
 
   // ------------------------------------------------------------
   // 1) Alpha boost (makes hair/edges more solid)
@@ -103,7 +125,19 @@ export async function cleanupCutoutUrl(
   }
 
   // ------------------------------------------------------------
-  // 4) Snap semi-transparent edge pixels to cleaner mask boundaries
+  // 3b) Fill tiny transparent pinholes inside solid subject areas
+  // ------------------------------------------------------------
+  fillAlphaPinholes(d, w, h);
+
+  // ------------------------------------------------------------
+  // 4) Tighten fuzzy edge fringe before snapping mask boundaries
+  // ------------------------------------------------------------
+  if (fringeTighten > 0) {
+    tightenEdgeFringe(d, w, h, fringeTighten);
+  }
+
+  // ------------------------------------------------------------
+  // 5) Snap semi-transparent edge pixels to cleaner mask boundaries
   // ------------------------------------------------------------
   if (snapStrength > 0) {
     despeckleAlpha(d, w, h);
@@ -111,7 +145,7 @@ export async function cleanupCutoutUrl(
   }
 
   // ------------------------------------------------------------
-  // 5) Alpha fill — close near-opaque pinholes
+  // 6) Alpha fill — close near-opaque pinholes
   // ------------------------------------------------------------
   if (alphaFill > 0) {
     const t = 1 - alphaFill; 
@@ -125,7 +159,7 @@ export async function cleanupCutoutUrl(
   ctx.putImageData(id, 0, 0);
 
   // ------------------------------------------------------------
-  // 6) Feather (blur ONLY alpha edge via destination-in blur)
+  // 7) Feather (blur ONLY alpha edge via destination-in blur)
   // ------------------------------------------------------------
   if (featherPx > 0) {
     const mask = document.createElement("canvas");
@@ -156,7 +190,7 @@ export async function cleanupCutoutUrl(
   }
 
   // ------------------------------------------------------------
-  // 7) Edge gamma + edge clamp
+  // 8) Edge gamma + edge clamp
   // ------------------------------------------------------------
   if (edgeGamma !== 1.0 || edgeClamp > 0) {
     const id3 = ctx.getImageData(0, 0, w, h);
@@ -177,7 +211,7 @@ export async function cleanupCutoutUrl(
   }
 
   // ------------------------------------------------------------
-  // 8) Decontaminate — pull edge RGB toward neutral
+  // 9) Decontaminate — pull edge RGB toward neutral
   // ------------------------------------------------------------
   if (decon > 0) {
     const id2 = ctx.getImageData(0, 0, w, h);
@@ -197,7 +231,7 @@ export async function cleanupCutoutUrl(
   }
 
   // ------------------------------------------------------------
-  // 9) Spill suppress — pull edge RGB toward nearest solid pixels
+  // 10) Spill suppress — pull edge RGB toward nearest solid pixels
   // ------------------------------------------------------------
   if (spillSuppress > 0) {
     const id4 = ctx.getImageData(0, 0, w, h);
@@ -244,6 +278,15 @@ export async function cleanupCutoutUrl(
       }
     }
     ctx.putImageData(id4, 0, 0);
+  }
+
+  // ------------------------------------------------------------
+  // 11) Neutralize bright/dark edge halos against nearby solid colors
+  // ------------------------------------------------------------
+  if (haloNeutralize > 0) {
+    const id5 = ctx.getImageData(0, 0, w, h);
+    neutralizeEdgeHalos(id5.data, w, h, haloNeutralize);
+    ctx.putImageData(id5, 0, 0);
   }
 
   return canvas.toDataURL("image/png");
@@ -336,6 +379,35 @@ function blurAlphaBox(data: Uint8ClampedArray, w: number, h: number, radius: num
   }
 }
 
+function fillAlphaPinholes(data: Uint8ClampedArray, w: number, h: number) {
+  const copy = new Uint8ClampedArray(data);
+  const idxA = (x: number, y: number) => (y * w + x) * 4 + 3;
+
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const i = idxA(x, y);
+      if (copy[i] > 44) continue;
+
+      let solidCount = 0;
+      let alphaSum = 0;
+      for (let oy = -1; oy <= 1; oy++) {
+        for (let ox = -1; ox <= 1; ox++) {
+          if (ox === 0 && oy === 0) continue;
+          const na = copy[idxA(x + ox, y + oy)];
+          if (na >= 232) {
+            solidCount += 1;
+            alphaSum += na;
+          }
+        }
+      }
+
+      if (solidCount >= 6) {
+        data[i] = clamp(Math.round(alphaSum / solidCount), 0, 255);
+      }
+    }
+  }
+}
+
 function despeckleAlpha(data: Uint8ClampedArray, w: number, h: number) {
   const copy = new Uint8ClampedArray(data);
   const idxA = (x: number, y: number) => (y * w + x) * 4 + 3;
@@ -406,6 +478,102 @@ function snapAlphaEdges(data: Uint8ClampedArray, w: number, h: number, amount: n
       const snapped = softened + (target - softened) * localAmount;
 
       data[i] = clamp(Math.round(snapped * 255), 0, 255);
+    }
+  }
+}
+
+function tightenEdgeFringe(data: Uint8ClampedArray, w: number, h: number, amount: number) {
+  if (amount <= 0) return;
+
+  const copy = new Uint8ClampedArray(data);
+  const idxA = (x: number, y: number) => (y * w + x) * 4 + 3;
+
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const i = idxA(x, y);
+      const base = copy[i] / 255;
+      if (base <= 0.02 || base >= 0.98) continue;
+
+      let empties = 0;
+      let solids = 0;
+      for (let oy = -1; oy <= 1; oy++) {
+        for (let ox = -1; ox <= 1; ox++) {
+          if (ox === 0 && oy === 0) continue;
+          const neighbor = copy[idxA(x + ox, y + oy)] / 255;
+          if (neighbor <= 0.06) empties += 1;
+          else if (neighbor >= 0.88) solids += 1;
+        }
+      }
+
+      if (empties === 0) continue;
+
+      const exposure = empties / 8;
+      const support = solids / 8;
+      const localAmount = clamp(
+        amount * (0.34 + exposure * 0.95 + Math.max(0, 0.45 - support) * 0.9),
+        0,
+        0.9
+      );
+      const reduction =
+        support >= 0.5 ? localAmount * 0.35 + exposure * 0.08 : localAmount;
+      const tightened = clamp(base * (1 - reduction), 0, 1);
+
+      data[i] = clamp(Math.round(tightened * 255), 0, 255);
+    }
+  }
+}
+
+function neutralizeEdgeHalos(data: Uint8ClampedArray, w: number, h: number, amount: number) {
+  if (amount <= 0) return;
+
+  const copy = new Uint8ClampedArray(data);
+  const idx = (x: number, y: number) => (y * w + x) * 4;
+
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const i = idx(x, y);
+      const alpha = copy[i + 3] / 255;
+      if (alpha <= 0.03 || alpha >= 0.97) continue;
+
+      let transparentCount = 0;
+      let solidCount = 0;
+      let sr = 0;
+      let sg = 0;
+      let sb = 0;
+
+      for (let oy = -1; oy <= 1; oy++) {
+        for (let ox = -1; ox <= 1; ox++) {
+          if (ox === 0 && oy === 0) continue;
+          const j = idx(x + ox, y + oy);
+          const na = copy[j + 3] / 255;
+          if (na <= 0.03) {
+            transparentCount += 1;
+          } else if (na >= 0.9) {
+            solidCount += 1;
+            sr += copy[j];
+            sg += copy[j + 1];
+            sb += copy[j + 2];
+          }
+        }
+      }
+
+      if (transparentCount === 0 || solidCount === 0) continue;
+
+      const nr = sr / solidCount;
+      const ng = sg / solidCount;
+      const nb = sb / solidCount;
+      const colorDelta =
+        (Math.abs(copy[i] - nr) + Math.abs(copy[i + 1] - ng) + Math.abs(copy[i + 2] - nb)) /
+        (255 * 3);
+      const localAmount = clamp(
+        amount * (0.28 + (transparentCount / 8) * 0.85 + (1 - alpha) * 0.7 + colorDelta * 0.65),
+        0,
+        0.96
+      );
+
+      data[i] = clamp(Math.round(copy[i] + (nr - copy[i]) * localAmount), 0, 255);
+      data[i + 1] = clamp(Math.round(copy[i + 1] + (ng - copy[i + 1]) * localAmount), 0, 255);
+      data[i + 2] = clamp(Math.round(copy[i + 2] + (nb - copy[i + 2]) * localAmount), 0, 255);
     }
   }
 }
