@@ -26,7 +26,11 @@ import AuthGate from "../components/auth/AuthGate";
 import type { TemplateBase } from "../lib/templates";
 import type { MoveTarget } from "../app/state/flyerState";
 import { removeBackgroundLocal } from "../lib/removeBgLocal";
-import { cleanupCutoutUrl, PREMIUM_CUTOUT_CLEANUP } from "../lib/cleanupCutoutUrl";
+import {
+  cleanupCutoutUrl,
+  EXTRACT_SUBJECT_CLEANUP,
+  PREMIUM_CUTOUT_CLEANUP,
+} from "../lib/cleanupCutoutUrl";
 import { supabaseBrowser } from "../lib/supabase/client";
 import * as Slider from "@radix-ui/react-slider";
 import type { CleanupParams } from "../lib/cleanupCutoutUrl";
@@ -88,6 +92,8 @@ const BackgroundPanels = dynamic(() => import("../components/editor/BackgroundPa
 const LibraryPanel = dynamic(() => import("../components/editor/LibraryPanel"), {
   ssr: false,
 });
+
+const MAGIC_BLEND_ENABLED = false;
 
 
 
@@ -197,6 +203,19 @@ function rgbToHex(color: LightingRgb) {
   return `#${[color.r, color.g, color.b]
     .map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0"))
     .join("")}`;
+}
+
+function interpolateThreeColorRamp(
+  t: number,
+  topHex: string,
+  midHex: string,
+  bottomHex: string
+) {
+  const clamped = Math.max(0, Math.min(1, t));
+  if (clamped <= 0.5) {
+    return rgbToHex(mixRgb(hexToRgb(topHex), hexToRgb(midHex), clamped / 0.5));
+  }
+  return rgbToHex(mixRgb(hexToRgb(midHex), hexToRgb(bottomHex), (clamped - 0.5) / 0.5));
 }
 
 function mixRgb(a: LightingRgb, b: LightingRgb, amount: number): LightingRgb {
@@ -741,10 +760,39 @@ function runAfterNextPaint(fn: () => void) {
   });
 }
 
-function runTransitionAfterNextPaint(fn: () => void) {
+function runAfterPaintAndYield(fn: () => void) {
   runAfterNextPaint(() => {
-    React.startTransition(fn);
+    window.setTimeout(() => {
+      React.startTransition(fn);
+    }, 0);
   });
+}
+
+function runTransitionAfterNextPaint(fn: () => void) {
+  runAfterPaintAndYield(fn);
+}
+
+function summarizeApiErrorText(raw: string) {
+  const normalized = raw
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return normalized || "Request failed.";
+}
+
+async function readApiResponsePayload(res: Response) {
+  const raw = await res.text();
+  if (!raw) return {} as Record<string, any>;
+
+  try {
+    return JSON.parse(raw) as Record<string, any>;
+  } catch {
+    return {
+      error: summarizeApiErrorText(raw),
+    } as Record<string, any>;
+  }
 }
 
 function buildPremiumTextShadow(strength: number = 1, glow: number = 0) {
@@ -1325,8 +1373,10 @@ const TemplateGalleryPanel = React.memo(({
                 className="text-[12px] px-2 py-1 rounded-md border border-indigo-400/40 bg-indigo-600/20 hover:bg-indigo-600/30 focus-ring"
                 disabled={pendingTemplateId === t.id}
                 onClick={() => {
-                  setPendingTemplateId(t.id);
-                  runAfterNextPaint(() => {
+                  flushSync(() => {
+                    setPendingTemplateId(t.id);
+                  });
+                  runAfterPaintAndYield(() => {
                     try {
                       onApply(t, { targetFormat: format });
                     } finally {
@@ -1414,8 +1464,10 @@ const BackgroundGalleryPanel = React.memo(({
                 className="rounded-md border border-indigo-400/40 bg-indigo-600/20 px-2 py-1 text-[12px] hover:bg-indigo-600/30 focus-ring"
                 disabled={pendingBackgroundId === background.id}
                 onClick={() => {
-                  setPendingBackgroundId(background.id);
-                  runAfterNextPaint(() => {
+                  flushSync(() => {
+                    setPendingBackgroundId(background.id);
+                  });
+                  runAfterPaintAndYield(() => {
                     try {
                       onApply(background.src);
                     } finally {
@@ -2433,7 +2485,7 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
   bgLocked: boolean;
   setBgLocked: (v: boolean) => void;
 
-  headRotate: number; head2Rotate: number; detailsRotate: number; details2Rotate: number; venueRotate: number; subtagRotate: number; logoRotate: number;
+  headRotate: number; headSkew: number; headSliceEnabled: boolean; headSliceBandCount: number; headSliceBandGap: number; headSliceEchoDistance: number; headSliceTopColor: string; headSliceMidColor: string; headSliceBottomColor: string; headSliceBlur: number; headSliceFade: number; headSliceShadowStrength: number; headExtrudeDepth: number; headExtrudeAngle: number; headExtrudeDistance: number; headExtrudeColor: string; head2Rotate: number; head2Skew: number; detailsRotate: number; details2Rotate: number; venueRotate: number; subtagRotate: number; logoRotate: number;
   portraitBoxW: number; portraitBoxH: number; portraitLocked?: boolean; hideUiForExport?: boolean; headAlign: Align;
   onTogglePortraitLock: () => void;
   details2Uppercase?: boolean;
@@ -2532,7 +2584,7 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
 }>((p, ref) => {
   // ✅ CLEAN DESTRUCTURE — do NOT put type annotations here.
   const {
-    headRotate, head2Rotate, detailsRotate, details2Rotate, venueRotate, subtagRotate, logoRotate, headAlign,
+    headRotate, headSkew, headSliceEnabled, headSliceBandCount, headSliceBandGap, headSliceEchoDistance, headSliceTopColor, headSliceMidColor, headSliceBottomColor, headSliceBlur, headSliceFade, headSliceShadowStrength, headExtrudeDepth, headExtrudeAngle, headExtrudeDistance, headExtrudeColor, head2Rotate, head2Skew, detailsRotate, details2Rotate, venueRotate, subtagRotate, logoRotate, headAlign,
     palette, format, portraitUrl, bgUrl, bgUploadUrl, logoUrl, hue, haze, grade, leak, vignette, bgPosX, bgPosY,
     portraitScale, subtagUppercase, opticalMargin, leadTrackDelta, lastTrackDelta, kerningFix, headBehindPortrait,
     headlineLayerZ, head2LayerZ, detailsLayerZ, details2LayerZ, venueLayerZ, subtagLayerZ,
@@ -4169,7 +4221,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     opacity: headlineHidden ? 0 : 1,
     
     // No transform here, purely absolute positioning for 1:1 sync
-    transform: `rotate(${headRotate}deg)`,
+    transform: `skewX(${headSkew}deg) rotate(${headRotate}deg)`,
     transformOrigin: '50% 50%',
     
     transition: 'none',
@@ -4177,70 +4229,229 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     touchAction: "none",
   }}
 >
-  <h1
-    key={`headline-${headlineFamily}-${headlineFontTick}`}
-    className="font-black"
-    style={{
-      fontFamily: headlineFamily,
-      fontSize: headDisplayPx,
-      lineHeight,
-      whiteSpace: 'pre-wrap',
-      display: 'block',
-      minWidth: 'fit-content',
-      maxWidth: '100%',
-      letterSpacing: `${textFx.tracking}em`,
-      textTransform: textFx.uppercase ? 'uppercase' : 'none',
-      fontWeight: textFx.bold ? 900 : 700,
-      fontStyle: textFx.italic ? 'italic' : 'normal',
-      textDecorationLine: textFx.underline ? 'underline' : 'none',
-      opacity: textFx.alpha,
+  {(() => {
+    const extrudeDepth = Math.max(0, Math.round(headExtrudeDepth));
+    const extrudeDistance = Math.max(0, Number(headExtrudeDistance) || 0);
+    const extrudeAngleRad = (Number(headExtrudeAngle) || 0) * (Math.PI / 180);
+    const extrudeStepX = extrudeDepth > 0 ? (Math.cos(extrudeAngleRad) * extrudeDistance) / extrudeDepth : 0;
+    const extrudeStepY = extrudeDepth > 0 ? (Math.sin(extrudeAngleRad) * extrudeDistance) / extrudeDepth : 0;
+    const headlineText = textFx.uppercase ? headline.toUpperCase() : headline;
+    const explicitLineCount = Math.max(1, headlineText.split("\n").length);
+    const estimatedTextHeight = Math.max(headDisplayPx, headDisplayPx * lineHeight * explicitLineCount);
+    const sliceBandCount = Math.max(3, Math.round(headSliceBandCount || 0));
+    const sliceEchoDistance = Math.max(0, Number(headSliceEchoDistance) || 0);
+    const sliceAreaHeight = estimatedTextHeight + sliceEchoDistance * 2;
+    const sliceBandSlotHeight = sliceAreaHeight / sliceBandCount;
+    const sliceClipHeight = Math.max(2, sliceBandSlotHeight - Math.max(0, Number(headSliceBandGap) || 0));
+    const mainSliceShadow =
+      headSliceEnabled && headSliceShadowStrength > 0
+        ? `0 ${Math.round(12 * headSliceShadowStrength)}px 0 rgba(0,0,0,${Math.min(0.45, 0.18 + headSliceShadowStrength * 0.4)})`
+        : "none";
 
-      color: textFx.gradient ? 'transparent' : textFx.color,
+    return (
+      <div
+        className="relative"
+        style={{
+          display: "block",
+          minWidth: "fit-content",
+          maxWidth: "100%",
+          overflow: "visible",
+        }}
+      >
+        {headSliceEnabled && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute left-0 right-0"
+            style={{
+              top: -sliceEchoDistance,
+              height: sliceAreaHeight,
+              overflow: "visible",
+              zIndex: 0,
+            }}
+          >
+            {Array.from({ length: sliceBandCount }, (_, idx) => {
+              const t = sliceBandCount <= 1 ? 0.5 : idx / (sliceBandCount - 1);
+              const bandTop = idx * sliceBandSlotHeight;
+              const yOffset = (t - 0.5) * 2 * sliceEchoDistance;
+              const color = interpolateThreeColorRamp(
+                t,
+                headSliceTopColor,
+                headSliceMidColor,
+                headSliceBottomColor
+              );
+              const normalizedDistance = Math.abs(t - 0.5) / 0.5;
+              const opacity = Math.max(0.12, 1 - normalizedDistance * headSliceFade);
+              const blurPx = Math.max(0, headSliceBlur * (0.2 + t * 0.9));
+              return (
+                <div
+                  key={`headline-slice-${idx}`}
+                  className="absolute left-0 right-0 overflow-hidden"
+                  style={{
+                    top: bandTop,
+                    height: sliceClipHeight,
+                  }}
+                >
+                  <h1
+                    className="absolute left-0 top-0 font-black select-none"
+                    style={{
+                      top: sliceEchoDistance + yOffset - bandTop,
+                      fontFamily: headlineFamily,
+                      fontSize: headDisplayPx,
+                      lineHeight,
+                      whiteSpace: "pre-wrap",
+                      display: "block",
+                      width: "100%",
+                      letterSpacing: `${textFx.tracking}em`,
+                      textTransform: textFx.uppercase ? "uppercase" : "none",
+                      fontWeight: textFx.bold ? 900 : 700,
+                      fontStyle: textFx.italic ? "italic" : "normal",
+                      textDecorationLine: textFx.underline ? "underline" : "none",
+                      color,
+                      WebkitTextFillColor: color,
+                      opacity,
+                      filter: blurPx > 0 ? `blur(${blurPx.toFixed(2)}px)` : "none",
+                      textShadow: "none",
+                    }}
+                  >
+                    {renderHeadlineRich(headlineText, {
+                      baseTrackEm: textFx.tracking,
+                      leadDeltaEm: leadTrackDelta,
+                      lastDeltaEm: lastTrackDelta,
+                      opticalMargin,
+                      kerningFix,
+                      lineHeight,
+                      lineStyle: {
+                        display: "block",
+                        width: "100%",
+                        color,
+                        WebkitTextFillColor: color,
+                      },
+                    })}
+                  </h1>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
-      textShadow: dragging
-        ? 'none'
-        : headShadow
-        ? buildPremiumTextShadow(headShadowStrength ?? 1, textFx.glow ?? 0)
-        : 'none',
+        {extrudeDepth > 0 &&
+          !headSliceEnabled &&
+          Array.from({ length: extrudeDepth }, (_, idx) => {
+            const layer = extrudeDepth - idx;
+            return (
+              <h1
+                key={`headline-extrude-${layer}`}
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 font-black select-none"
+                style={{
+                  fontFamily: headlineFamily,
+                  fontSize: headDisplayPx,
+                  lineHeight,
+                  whiteSpace: "pre-wrap",
+                  display: "block",
+                  width: "100%",
+                  letterSpacing: `${textFx.tracking}em`,
+                  textTransform: textFx.uppercase ? "uppercase" : "none",
+                  fontWeight: textFx.bold ? 900 : 700,
+                  fontStyle: textFx.italic ? "italic" : "normal",
+                  textDecorationLine: textFx.underline ? "underline" : "none",
+                  opacity: textFx.alpha,
+                  color: headExtrudeColor,
+                  WebkitTextFillColor: headExtrudeColor,
+                  WebkitTextStrokeWidth: textFx.strokeWidth ? `${textFx.strokeWidth}px` : undefined,
+                  WebkitTextStrokeColor: headExtrudeColor,
+                  textShadow: "none",
+                  transform: `translate(${(layer * extrudeStepX).toFixed(2)}px, ${(layer * extrudeStepY).toFixed(2)}px)`,
+                  zIndex: 0,
+                }}
+              >
+                {renderHeadlineRich(headlineText, {
+                  baseTrackEm: textFx.tracking,
+                  leadDeltaEm: leadTrackDelta,
+                  lastDeltaEm: lastTrackDelta,
+                  opticalMargin,
+                  kerningFix,
+                  lineHeight,
+                  lineStyle: {
+                    display: "block",
+                    width: "100%",
+                    color: headExtrudeColor,
+                    WebkitTextFillColor: headExtrudeColor,
+                    WebkitTextStrokeWidth: textFx.strokeWidth ? `${textFx.strokeWidth}px` : undefined,
+                    WebkitTextStrokeColor: headExtrudeColor,
+                  },
+                })}
+              </h1>
+            );
+          })}
 
-      ...(dragging
-        ? {}
-        : isActive('headline')
-        ? { filter: 'drop-shadow(0 0 8px rgba(147,197,253,0.9))' }
-        : {}),
-    }}
-  >
-    {renderHeadlineRich(
-      textFx.uppercase ? headline.toUpperCase() : headline,
-      {
-        baseTrackEm: textFx.tracking,
-        leadDeltaEm: leadTrackDelta,
-        lastDeltaEm: lastTrackDelta,
-        opticalMargin,
-        kerningFix,
-        lineHeight: lineHeight,
-        lineStyle: {
-          display: 'block',
-          width: '100%',
-          WebkitTextStrokeWidth: textFx.strokeWidth
-            ? `${textFx.strokeWidth}px`
-            : undefined,
-          WebkitTextStrokeColor: textFx.strokeColor,
-          ...(textFx.gradient
-            ? {
-                backgroundImage: `linear-gradient(180deg, ${textFx.gradFrom}, ${textFx.gradTo})`,
-                backgroundSize: '100% 100%',
-                backgroundRepeat: 'no-repeat',
-                WebkitBackgroundClip: 'text',
-                backgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                color: 'transparent',
-              }
-            : {}),
-        },
-      }
-    )}
-  </h1>
+        <h1
+          key={`headline-${headlineFamily}-${headlineFontTick}`}
+          className="relative font-black"
+          style={{
+            fontFamily: headlineFamily,
+            fontSize: headDisplayPx,
+            lineHeight,
+            whiteSpace: 'pre-wrap',
+            display: 'block',
+            minWidth: 'fit-content',
+            maxWidth: '100%',
+            letterSpacing: `${textFx.tracking}em`,
+            textTransform: textFx.uppercase ? 'uppercase' : 'none',
+            fontWeight: textFx.bold ? 900 : 700,
+            fontStyle: textFx.italic ? 'italic' : 'normal',
+            textDecorationLine: textFx.underline ? 'underline' : 'none',
+            opacity: textFx.alpha,
+            color: textFx.gradient ? 'transparent' : textFx.color,
+            textShadow: dragging
+              ? 'none'
+              : headSliceEnabled
+              ? mainSliceShadow
+              : headShadow
+              ? buildPremiumTextShadow(headShadowStrength ?? 1, textFx.glow ?? 0)
+              : 'none',
+            ...(dragging
+              ? {}
+              : isActive('headline')
+              ? { filter: 'drop-shadow(0 0 8px rgba(147,197,253,0.9))' }
+              : {}),
+            zIndex: 1,
+          }}
+        >
+          {renderHeadlineRich(
+            headlineText,
+            {
+              baseTrackEm: textFx.tracking,
+              leadDeltaEm: leadTrackDelta,
+              lastDeltaEm: lastTrackDelta,
+              opticalMargin,
+              kerningFix,
+              lineHeight: lineHeight,
+              lineStyle: {
+                display: 'block',
+                width: '100%',
+                WebkitTextStrokeWidth: textFx.strokeWidth
+                  ? `${textFx.strokeWidth}px`
+                  : undefined,
+                WebkitTextStrokeColor: textFx.strokeColor,
+                ...(textFx.gradient
+                  ? {
+                      backgroundImage: `linear-gradient(180deg, ${textFx.gradFrom}, ${textFx.gradTo})`,
+                      backgroundSize: '100% 100%',
+                      backgroundRepeat: 'no-repeat',
+                      WebkitBackgroundClip: 'text',
+                      backgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      color: 'transparent',
+                    }
+                  : {}),
+              },
+            }
+          )}
+        </h1>
+      </div>
+    );
+  })()}
 </div>
 {/* HEADLINE (END) */}
 
@@ -4353,7 +4564,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     borderRadius: 8,
     
     // 🔥 No Transform Drag (Rotation Only)
-    transform: `rotate(${head2Rotate}deg)`,
+    transform: `skewX(${head2Skew}deg) rotate(${head2Rotate}deg)`,
     transformOrigin: '50% 50%',
     
     // 🔥 Disable transition for instant moves
@@ -6677,7 +6888,7 @@ export default function Page() {
   // =========================================================
  const handleCreateCinematic = async () => {
   if (isStarterPlan) {
-    alert("Cinematic Text is still a paid feature. Use Starter AI Scene or Portrait Blend for the trial, then upgrade for more tools.");
+    alert("Cinematic Text is still a paid feature. Use Starter AI Scene for the trial, then upgrade for more tools.");
     return;
   }
   let ref = cinematicRefUrl;
@@ -7295,12 +7506,12 @@ export default function Page() {
           format: format,
           cameraZoom: blendCameraZoom,
           extraPrompt,
-          provider: "fal",
+          provider: "openai",
           tracking: getClientTrackingPayload(),
         }),
       });
 
-      const data = await res.json();
+      const data = await readApiResponsePayload(res);
       applyGenerationQuota(data);
       if (!res.ok) throw new Error(data.error || "Blend failed");
 
@@ -7482,11 +7693,11 @@ export default function Page() {
           format,
           cameraZoom: blendCameraZoom,
           extraPrompt: extraParts.join(" "),
-          provider: "fal",
+          provider: "openai",
         }),
       });
 
-      const data = await res.json();
+      const data = await readApiResponsePayload(res);
       applyGenerationQuota(data);
       if (!res.ok) throw new Error(data.error || "Blend failed");
 
@@ -7820,7 +8031,7 @@ const {
 
 type CleanupById = Record<string, CleanupParams>;
 
-const DEFAULT_CLEANUP: CleanupParams = { ...PREMIUM_CUTOUT_CLEANUP };
+const DEFAULT_CLEANUP: CleanupParams = { ...EXTRACT_SUBJECT_CLEANUP };
 
 
 const [cleanupById, setCleanupById] = useState<CleanupById>({});
@@ -7851,6 +8062,16 @@ const selectedPortraitIsAsset = React.useMemo(() => {
     !!(selectedPortrait as any).isExtracted ||
     !!(selectedPortrait as any).isBrandFace ||
     id.startsWith("logo_")
+  );
+}, [selectedPortrait]);
+const selectedPortraitSupportsLighting = React.useMemo(() => {
+  if (!selectedPortrait) return false;
+  const id = String((selectedPortrait as any).id || "");
+  return (
+    !(selectedPortrait as any).isFlare &&
+    !(selectedPortrait as any).isSticker &&
+    !(selectedPortrait as any).isBrandFace &&
+    !id.startsWith("logo_")
   );
 }, [selectedPortrait]);
 
@@ -8110,7 +8331,7 @@ function getCanvasSelectionHome(panelOrTarget: string | null) {
     case "ai_background":
       return { panel: "ai_background", tab: "assets" as const };
     case "magic_blend":
-      return { panel: "magic_blend", tab: "assets" as const };
+      return { panel: MAGIC_BLEND_ENABLED ? "magic_blend" : "portrait", tab: "assets" as const };
     case "extract_subject":
       return { panel: "extract_subject", tab: "assets" as const };
     case "portrait":
@@ -8395,7 +8616,10 @@ useEffect(() => {
   const [hydrated, setHydrated] = React.useState(false);
   const [storageReady, setStorageReady] = React.useState(false);
   const storageReadyRef = React.useRef(false);
-  const pendingStartupKeyRef = React.useRef<string | null>(null);
+  const pendingStartupSelectionRef = React.useRef<{
+    key: string;
+    payload?: StartupSelectPayload;
+  } | null>(null);
   // ===== LOGO UPLOAD (fix for “Cannot find name 'addLogosFromFiles'”) =====
 
 const countLogos = (list: any[]) => list.filter(i => i.imgUrl && i.name === 'logo').length;
@@ -8569,7 +8793,7 @@ const deferCanvasPlacement = React.useCallback(
 
 const MOBILE_ONLY_TOUR_STEP_IDS = new Set(["text_tab", "design_tab"]);
 
-const TOUR_STEPS = [
+const TOUR_STEPS = ([
   {
     id: 'templates',
     title: 'Pick a template',
@@ -8747,7 +8971,7 @@ const TOUR_STEPS = [
       setSelectedPanel(null); // Close side panels for export
     },
   },
-] as const;
+] as const).filter((step) => MAGIC_BLEND_ENABLED || step.id !== "magic_blend");
 
 const isTourStepVisible = React.useCallback(
   (stepId: string) => isMobileView || !MOBILE_ONLY_TOUR_STEP_IDS.has(stepId),
@@ -9216,7 +9440,9 @@ async function onRemovePortraitBg() {
     setRemovingBg(true);
     
     // ✅ CHANGED: Use the new high-quality local remover
-    const cut = await removeBackgroundLocal(portraitUrl);
+    const cut = await removeBackgroundLocal(portraitUrl, {
+      cleanup: EXTRACT_SUBJECT_CLEANUP,
+    });
     
     setPortraitUrl(cut);
     setClarity(0.15); // Auto-enhance clarity slightly
@@ -9573,7 +9799,9 @@ async function onPortraitSlotFile(e: React.ChangeEvent<HTMLInputElement>) {
 
     // 2. Process locally
     // Note: ensure removeBackgroundLocal is imported/available
-    const cutDataUrl = await removeBackgroundLocal(originalUrl);
+    const cutDataUrl = await removeBackgroundLocal(originalUrl, {
+      cleanup: EXTRACT_SUBJECT_CLEANUP,
+    });
     const scaledCut = await downscaleDataUrlIfNeeded(cutDataUrl, 1800);
     if (isStarterPlan) {
       const consumed = await consumeStarterTrialBenefit("upload");
@@ -9612,7 +9840,7 @@ function placeExtractedLayer(src: string) {
   if (!src) return;
 
   const id = `extract_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-  const defaults = { ...PREMIUM_CUTOUT_CLEANUP };
+  const defaults = { ...EXTRACT_SUBJECT_CLEANUP };
 
   const newPortrait = {
     id,
@@ -9703,7 +9931,23 @@ function removeFromLogoLibrary(url: string) {
   // rotations (degrees)
   const [headRotate, setHeadRotate]       = useState<number>(0);
   const [headlineRotate, setHeadlineRotate] = useState(0);
+  const [headSkew, setHeadSkew]           = useState<number>(0);
+  const [headSliceEnabled, setHeadSliceEnabled] = useState<boolean>(false);
+  const [headSliceBandCount, setHeadSliceBandCount] = useState<number>(7);
+  const [headSliceBandGap, setHeadSliceBandGap] = useState<number>(10);
+  const [headSliceEchoDistance, setHeadSliceEchoDistance] = useState<number>(135);
+  const [headSliceTopColor, setHeadSliceTopColor] = useState<string>("#e85b2e");
+  const [headSliceMidColor, setHeadSliceMidColor] = useState<string>("#ffe9b3");
+  const [headSliceBottomColor, setHeadSliceBottomColor] = useState<string>("#55b6c7");
+  const [headSliceBlur, setHeadSliceBlur] = useState<number>(6);
+  const [headSliceFade, setHeadSliceFade] = useState<number>(0.5);
+  const [headSliceShadowStrength, setHeadSliceShadowStrength] = useState<number>(0.35);
+  const [headExtrudeDepth, setHeadExtrudeDepth] = useState<number>(0);
+  const [headExtrudeAngle, setHeadExtrudeAngle] = useState<number>(135);
+  const [headExtrudeDistance, setHeadExtrudeDistance] = useState<number>(0);
+  const [headExtrudeColor, setHeadExtrudeColor] = useState<string>("#000000");
   const [head2Rotate, setHead2Rotate]     = useState<number>(0);
+  const [head2Skew, setHead2Skew]         = useState<number>(0);
   const [detailsRotate, setDetailsRotate] = useState<number>(0);
   
   const [venueRotate, setVenueRotate]     = useState<number>(0);
@@ -11507,7 +11751,14 @@ React.useEffect(() => {
   }, [viewport.w, viewport.h, canvasSize.w, canvasSize.h]);
 const scaledCanvasW = Math.round(canvasSize.w * canvasScale);
 const scaledCanvasH = Math.round(canvasSize.h * canvasScale);
-const mobileFloatSticky = isMobileView && format === "story";
+const mobileFloatViewportStyle = {
+  top: "calc(env(safe-area-inset-top, 0px) + 72px)",
+  bottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)",
+};
+const mobileFloatViewportClass =
+  "lg:hidden fixed left-0 right-0 z-[1200] flex items-end justify-center px-3 pointer-events-none";
+const mobileFloatPanelClass =
+  "pointer-events-auto max-h-full overflow-y-auto overscroll-contain touch-pan-y border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl";
 
   const handleClearIconSelection = React.useCallback(() => setSelIconId(null), []);
   const handleMobileDragEnd = React.useCallback(() => {}, []);
@@ -11676,7 +11927,7 @@ const mobileFloatSticky = isMobileView && format === "story";
 
   const updateSelectedPortraitLighting = React.useCallback(
     (patch: Partial<PortraitLighting>) => {
-      if (!selectedPortrait?.id || selectedPortraitIsAsset) return;
+      if (!selectedPortrait?.id || !selectedPortraitSupportsLighting) return;
       updatePortrait(format, selectedPortrait.id, {
         lighting: normalizeMainFaceLighting({
           ...selectedPortraitLighting,
@@ -11684,7 +11935,7 @@ const mobileFloatSticky = isMobileView && format === "story";
         }),
       });
     },
-    [format, selectedPortrait, selectedPortraitIsAsset, selectedPortraitLighting, updatePortrait]
+    [format, selectedPortrait, selectedPortraitLighting, selectedPortraitSupportsLighting, updatePortrait]
   );
 
   const updateSelectedPortraitLightingRaf = useRafThrottle(
@@ -11697,15 +11948,15 @@ const mobileFloatSticky = isMobileView && format === "story";
   );
 
   const resetSelectedPortraitLighting = React.useCallback(() => {
-    if (!selectedPortrait?.id || selectedPortraitIsAsset) return;
+    if (!selectedPortrait?.id || !selectedPortraitSupportsLighting) return;
     updatePortrait(format, selectedPortrait.id, {
       lighting: { ...DEFAULT_MAIN_FACE_LIGHTING },
     });
-  }, [format, selectedPortrait, selectedPortraitIsAsset, updatePortrait]);
+  }, [format, selectedPortrait, selectedPortraitSupportsLighting, updatePortrait]);
 
   const updateSelectedPortraitFilter = React.useCallback(
     (patch: { preset?: MainFaceFilterPreset; strength?: number }) => {
-      if (!selectedPortrait?.id || selectedPortraitIsAsset) return;
+      if (!selectedPortrait?.id || !selectedPortraitSupportsLighting) return;
       updatePortrait(format, selectedPortrait.id, {
         ...(patch.preset ? { filterPreset: normalizeMainFaceFilterPreset(patch.preset) } : {}),
         ...(typeof patch.strength === "number"
@@ -11713,7 +11964,7 @@ const mobileFloatSticky = isMobileView && format === "story";
           : {}),
       });
     },
-    [format, selectedPortrait, selectedPortraitIsAsset, updatePortrait]
+    [format, selectedPortrait, selectedPortraitSupportsLighting, updatePortrait]
   );
 
   const updateSelectedPortraitFilterRaf = useRafThrottle(
@@ -11726,7 +11977,7 @@ const mobileFloatSticky = isMobileView && format === "story";
   );
 
   const autoAnalyzeSelectedPortraitLighting = React.useCallback(async () => {
-    if (!selectedPortrait?.id || selectedPortraitIsAsset) {
+    if (!selectedPortrait?.id || !selectedPortraitSupportsLighting) {
       alert("Place a portrait on the canvas first.");
       return;
     }
@@ -11779,10 +12030,285 @@ const mobileFloatSticky = isMobileView && format === "story";
     capturePortraitPlacementFromCanvas,
     format,
     selectedPortrait,
-    selectedPortraitIsAsset,
     selectedPortraitLighting,
+    selectedPortraitSupportsLighting,
     updatePortrait,
   ]);
+
+  const selectedPortraitLightingSection = React.useMemo(
+    () => (
+      <div className="mt-3 rounded-xl border border-white/10 bg-black/25 p-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-200">
+              Advanced Lighting
+            </div>
+            <div className="mt-1 text-[11px] text-neutral-500">
+              {!selectedPortraitId
+                ? "Select a placed portrait to shape the light."
+                : !selectedPortraitSupportsLighting
+                ? "Lighting controls are only for portrait cutouts."
+                : selectedPortraitLighting.analyzed
+                ? "Analyze has been applied. Refine the light below."
+                : "Analyze the current scene to build a clean starting light."}
+            </div>
+          </div>
+          {selectedPortraitSupportsLighting && !!selectedPortraitId && (
+            <Chip
+              small
+              active={selectedPortraitLighting.enabled}
+              onClick={() =>
+                updateSelectedPortraitLighting({ enabled: !selectedPortraitLighting.enabled })
+              }
+            >
+              {selectedPortraitLighting.enabled ? "On" : "Off"}
+            </Chip>
+          )}
+        </div>
+
+        {!selectedPortraitId ? (
+          <div className="mt-3 text-[12px] italic text-neutral-500">
+            Place and select a portrait on the canvas first.
+          </div>
+        ) : !selectedPortraitSupportsLighting ? (
+          <div className="mt-3 text-[12px] italic text-neutral-500">
+            This section is reserved for portrait cutouts rather than graphics, logos, or main-face assets.
+          </div>
+        ) : (
+          <div className="mt-3 space-y-3">
+            <div className="border border-neutral-800 bg-neutral-900/40 px-3 py-2.5 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-[10px] uppercase tracking-[0.12em] text-neutral-400">Easy Mode</div>
+                <div className="text-[10px] text-neutral-500">
+                  {selectedPortraitLighting.analyzed ? "Applied" : "Ready"}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => void autoAnalyzeSelectedPortraitLighting()}
+                  className="rounded border border-cyan-400/70 bg-cyan-500/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-100 hover:bg-cyan-500/16"
+                >
+                  {selectedPortraitLighting.analyzed ? "Analyze + Reapply" : "Analyze + Apply"}
+                </button>
+                <button
+                  type="button"
+                  onClick={resetSelectedPortraitLighting}
+                  className="rounded border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-[11px] font-medium uppercase tracking-[0.14em] text-neutral-200 hover:bg-neutral-900"
+                >
+                  Reset Lighting
+                </button>
+              </div>
+              <div className="text-[10px] text-neutral-500">
+                Analyze reads the current scene behind this portrait and builds a lighting baseline.
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                <Chip
+                  small
+                  className="!w-full !rounded-none"
+                  active={selectedPortraitLighting.autoMatch}
+                  deferHeavy
+                  onClick={() =>
+                    updateSelectedPortraitLighting({
+                      autoMatch: !selectedPortraitLighting.autoMatch,
+                    })
+                  }
+                >
+                  Auto Match
+                </Chip>
+                <Chip
+                  small
+                  className="!w-full !rounded-none"
+                  active={portraitLightingAdvancedOpen}
+                  onClick={() => setPortraitLightingAdvancedOpen((open) => !open)}
+                >
+                  Advanced
+                </Chip>
+              </div>
+
+              <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+                {mainFaceLightingPresets.map((preset) => (
+                  <Chip
+                    key={preset.id}
+                    small
+                    className="!w-full !rounded-none"
+                    deferHeavy
+                    onClick={() => updateSelectedPortraitLighting(preset.patch)}
+                    disabled={!selectedPortraitLighting.enabled}
+                  >
+                    {preset.label}
+                  </Chip>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                {([
+                  ["none", "Clean"],
+                  ["mono", "Mono"],
+                  ["contrast", "Punch"],
+                  ["halftone", "Halftone"],
+                  ["poster", "Poster"],
+                  ["pop", "Pop"],
+                  ["neo", "Neo Red"],
+                  ["comic", "Comic Vector"],
+                ] as const).map(([preset, label]) => (
+                  <Chip
+                    key={preset}
+                    small
+                    className="!w-full !rounded-none"
+                    active={selectedPortraitFilterPreset === preset}
+                    deferHeavy
+                    onClick={() => updateSelectedPortraitFilter({ preset })}
+                    disabled={!selectedPortraitLighting.enabled}
+                  >
+                    {label}
+                  </Chip>
+                ))}
+              </div>
+
+              <InlineSliderInput
+                label="Filter Strength"
+                value={selectedPortraitFilterStrength}
+                min={0}
+                max={1}
+                step={0.01}
+                onChange={(next) => updateSelectedPortraitFilterRaf({ strength: next })}
+                displayScale={100}
+                precision={0}
+                suffix="%"
+                rangeClassName="flex-1 accent-fuchsia-400"
+                disabled={!selectedPortraitLighting.enabled || selectedPortraitFilterPreset === "none"}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
+              <div className="flex items-center gap-2 text-[11px] text-neutral-400">
+                <span>Light Side</span>
+                <Chip
+                  small
+                  active={selectedPortraitLighting.lightSide === "left"}
+                  onClick={() => updateSelectedPortraitLighting({ lightSide: "left" })}
+                  disabled={!selectedPortraitLighting.enabled}
+                >
+                  Left
+                </Chip>
+                <Chip
+                  small
+                  active={selectedPortraitLighting.lightSide === "right"}
+                  onClick={() => updateSelectedPortraitLighting({ lightSide: "right" })}
+                  disabled={!selectedPortraitLighting.enabled}
+                >
+                  Right
+                </Chip>
+              </div>
+              <div className="flex items-center gap-2 text-[11px] text-neutral-400">
+                <span>Light Color</span>
+                <ColorDot
+                  value={selectedPortraitLighting.highlightColor}
+                  onChange={(next) => updateSelectedPortraitLighting({ highlightColor: next })}
+                  title="Lighting color"
+                />
+              </div>
+            </div>
+
+            {portraitLightingAdvancedOpen && (
+              <div className="space-y-2.5">
+                <div className="space-y-2.5 border border-neutral-800 bg-neutral-900/40 p-2.5">
+                  <div className="text-[10px] uppercase tracking-wide text-neutral-500">Light</div>
+                  {[
+                    ["Ambient", selectedPortraitLighting.ambient, 0, 1, 0.01, "ambient"],
+                    ["Key Light", selectedPortraitLighting.keyLight, 0, 1, 0.01, "keyLight"],
+                    ["Fill Light", selectedPortraitLighting.fillLight, 0, 1, 0.01, "fillLight"],
+                  ].map(([label, value, min, max, step, key]) => (
+                    <InlineSliderInput
+                      key={String(key)}
+                      label={String(label)}
+                      value={Number(value)}
+                      min={Number(min)}
+                      max={Number(max)}
+                      step={Number(step)}
+                      onChange={(next) =>
+                        updateSelectedPortraitLightingRaf({ [String(key)]: next })
+                      }
+                      displayScale={100}
+                      precision={0}
+                      suffix="%"
+                      rangeClassName="flex-1 accent-cyan-400"
+                      disabled={!selectedPortraitLighting.enabled}
+                    />
+                  ))}
+                </div>
+
+                <div className="space-y-2.5 border border-neutral-800 bg-neutral-900/40 p-2.5">
+                  <div className="text-[10px] uppercase tracking-wide text-neutral-500">Finish</div>
+                  {[
+                    ["Rim Light", selectedPortraitLighting.rimLight, 0, 1, 0.01, "rimLight"],
+                    ["Shadow Depth", selectedPortraitLighting.shadowDepth, 0, 1, 0.01, "shadowDepth"],
+                  ].map(([label, value, min, max, step, key]) => (
+                    <InlineSliderInput
+                      key={String(key)}
+                      label={String(label)}
+                      value={Number(value)}
+                      min={Number(min)}
+                      max={Number(max)}
+                      step={Number(step)}
+                      onChange={(next) =>
+                        updateSelectedPortraitLightingRaf({ [String(key)]: next })
+                      }
+                      displayScale={100}
+                      precision={0}
+                      suffix="%"
+                      rangeClassName="flex-1 accent-cyan-400"
+                      disabled={!selectedPortraitLighting.enabled}
+                    />
+                  ))}
+
+                  {[
+                    ["Warmth", selectedPortraitLighting.warmth, "warmth"],
+                    ["Contrast", selectedPortraitLighting.contrast, "contrast"],
+                  ].map(([label, value, key]) => (
+                    <InlineSliderInput
+                      key={String(key)}
+                      label={String(label)}
+                      value={Number(value)}
+                      min={-1}
+                      max={1}
+                      step={0.01}
+                      onChange={(next) =>
+                        updateSelectedPortraitLightingRaf({ [String(key)]: next })
+                      }
+                      displayScale={100}
+                      precision={0}
+                      rangeClassName="flex-1 accent-amber-400"
+                      disabled={!selectedPortraitLighting.enabled}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    ),
+    [
+      autoAnalyzeSelectedPortraitLighting,
+      portraitLightingAdvancedOpen,
+      resetSelectedPortraitLighting,
+      selectedPortraitFilterPreset,
+      selectedPortraitFilterStrength,
+      selectedPortraitId,
+      selectedPortraitLighting,
+      selectedPortraitSupportsLighting,
+      setPortraitLightingAdvancedOpen,
+      updateSelectedPortraitFilter,
+      updateSelectedPortraitFilterRaf,
+      updateSelectedPortraitLighting,
+      updateSelectedPortraitLightingRaf,
+    ]
+  );
 
   type SubscriptionAccessState = "active" | "ondemand" | "starter" | "inactive";
   type StarterTrialQuota = {
@@ -12120,7 +12646,7 @@ const mobileFloatSticky = isMobileView && format === "story";
         const message = isStarterPlan
           ? `Starter includes ${generationQuota?.limit ?? 3} AI generations total. Upgrade or use a pass for more generations.`
           : units > 1
-            ? "No generations left for Magic Blend."
+            ? "No generations left for this tool."
             : "No generations left.";
         opts?.onBlocked?.(message);
         return null;
@@ -13569,8 +14095,8 @@ const generateSubjectForBackground = async () => {
     setPortraitX(50);
     setPortraitY(55);
     setPortraitScale(0.9);
-    setSelectedPanel("magic_blend");
-    useFlyerState.getState().setSelectedPanel("magic_blend");
+    setSelectedPanel("portrait");
+    useFlyerState.getState().setSelectedPanel("portrait");
     let slotIdx = portraitSlots.findIndex((s) => !s);
     if (slotIdx === -1) {
       slotIdx =
@@ -13761,6 +14287,11 @@ const buildEdgeAwareLassoMask = (
       bgPosX, bgPosY,
       // rotations
       headRotate, head2Rotate, detailsRotate, details2Rotate, venueRotate, subtagRotate, logoRotate,
+      headSkew, head2Skew,
+      headSliceEnabled, headSliceBandCount, headSliceBandGap, headSliceEchoDistance,
+      headSliceTopColor, headSliceMidColor, headSliceBottomColor,
+      headSliceBlur, headSliceFade, headSliceShadowStrength,
+      headExtrudeDepth, headExtrudeAngle, headExtrudeDistance, headExtrudeColor,
       textLayerOffset,
 
       // headline
@@ -13863,6 +14394,20 @@ const buildEdgeAwareLassoMask = (
         // read-only in current code
       }
       if (s.textFx && typeof s.textFx === 'object') setTextFx((prev) => ({ ...prev, ...s.textFx }));
+      if (typeof s.headSliceEnabled === 'boolean') setHeadSliceEnabled(s.headSliceEnabled);
+      if (typeof s.headSliceBandCount === 'number') setHeadSliceBandCount(s.headSliceBandCount);
+      if (typeof s.headSliceBandGap === 'number') setHeadSliceBandGap(s.headSliceBandGap);
+      if (typeof s.headSliceEchoDistance === 'number') setHeadSliceEchoDistance(s.headSliceEchoDistance);
+      if (typeof s.headSliceTopColor === 'string') setHeadSliceTopColor(s.headSliceTopColor);
+      if (typeof s.headSliceMidColor === 'string') setHeadSliceMidColor(s.headSliceMidColor);
+      if (typeof s.headSliceBottomColor === 'string') setHeadSliceBottomColor(s.headSliceBottomColor);
+      if (typeof s.headSliceBlur === 'number') setHeadSliceBlur(s.headSliceBlur);
+      if (typeof s.headSliceFade === 'number') setHeadSliceFade(s.headSliceFade);
+      if (typeof s.headSliceShadowStrength === 'number') setHeadSliceShadowStrength(s.headSliceShadowStrength);
+      if (typeof s.headExtrudeDepth === 'number') setHeadExtrudeDepth(s.headExtrudeDepth);
+      if (typeof s.headExtrudeAngle === 'number') setHeadExtrudeAngle(s.headExtrudeAngle);
+      if (typeof s.headExtrudeDistance === 'number') setHeadExtrudeDistance(s.headExtrudeDistance);
+      if (typeof s.headExtrudeColor === 'string') setHeadExtrudeColor(s.headExtrudeColor);
 
       // headline size mode (optional in templates)
       if (typeof s.headSizeAuto === 'boolean') setHeadSizeAuto(s.headSizeAuto);
@@ -13935,7 +14480,9 @@ const buildEdgeAwareLassoMask = (
       if (typeof s.subtagAlign === 'string') setSubtagAlign(s.subtagAlign as Align);
 
       if (typeof s.headRotate === 'number') setHeadRotate(s.headRotate);
+      if (typeof s.headSkew === 'number') setHeadSkew(s.headSkew);
       if (typeof s.head2Rotate === 'number') setHead2Rotate(s.head2Rotate);
+      if (typeof s.head2Skew === 'number') setHead2Skew(s.head2Skew);
       if (typeof s.detailsRotate === 'number') setDetailsRotate(s.detailsRotate);
       if (typeof s.details2Rotate === 'number') setDetails2Rotate(s.details2Rotate);
       if (typeof s.venueRotate === 'number') setVenueRotate(s.venueRotate);
@@ -15100,7 +15647,7 @@ function exportDesignJSON(): string {
     // headline
     headline, headlineFamily, align, lineHeight, textColWidth,
     headSizeAuto, headManualPx, headMaxPx, textFx, tallHeadline,
-    headX, headY, headRotate, headAlign,
+    headX, headY, headRotate, headSkew, headAlign,
 
     // details (main)
     details, bodyFamily, bodyColor, bodySize, bodyUppercase, bodyBold,
@@ -15118,7 +15665,7 @@ function exportDesignJSON(): string {
 
     // headline 2 (custom)
     headline2Enabled, head2, head2Family, head2Align, head2LineHeight,
-    head2ColWidth, head2Fx, head2Alpha, head2SizePx, head2X, head2Y, head2Rotate,
+    head2ColWidth, head2Fx, head2Alpha, head2SizePx, head2X, head2Y, head2Rotate, head2Skew,
 
     // details 2 (more)
     details2Enabled, details2,
@@ -15160,7 +15707,7 @@ function buildHistorySnapshot(): string {
     // headline
     headline, headlineFamily, align, lineHeight, textColWidth,
     headSizeAuto, headManualPx, headMaxPx, textFx, tallHeadline,
-    headX, headY, headRotate, headAlign,
+    headX, headY, headRotate, headSkew, headAlign,
 
     // details (main)
     details, bodyFamily, bodyColor, bodySize, bodyUppercase, bodyBold,
@@ -15178,7 +15725,7 @@ function buildHistorySnapshot(): string {
 
     // headline 2 (custom)
     headline2Enabled, head2, head2Family, head2Align, head2LineHeight,
-    head2ColWidth, head2Fx, head2Alpha, head2SizePx, head2X, head2Y, head2Rotate,
+    head2ColWidth, head2Fx, head2Alpha, head2SizePx, head2X, head2Y, head2Rotate, head2Skew,
 
     // details 2 (more)
     details2Enabled, details2,
@@ -15216,7 +15763,7 @@ const historySnapshot = React.useMemo(() => buildHistorySnapshot(), [
   format,
   headline, headlineFamily, align, lineHeight, textColWidth,
   headSizeAuto, headManualPx, headMaxPx, textFx, tallHeadline,
-  headX, headY, headRotate, headAlign,
+  headX, headY, headRotate, headSkew, headAlign,
   details, bodyFamily, bodyColor, bodySize, bodyUppercase, bodyBold,
   bodyItalic, bodyUnderline, bodyTracking, detailsLineHeight,
   detailsAlign, detailsX, detailsY, detailsRotate, detailsFamily,
@@ -15226,7 +15773,7 @@ const historySnapshot = React.useMemo(() => buildHistorySnapshot(), [
   subtagAlpha, subtagUppercase, subtagBold, subtagItalic, subtagUnderline,
   subtagSize, subtagX, subtagY, subtagRotate, subtagAlign,
   headline2Enabled, head2, head2Family, head2Align, head2LineHeight,
-  head2ColWidth, head2Fx, head2Alpha, head2SizePx, head2X, head2Y, head2Rotate,
+  head2ColWidth, head2Fx, head2Alpha, head2SizePx, head2X, head2Y, head2Rotate, head2Skew,
   details2Enabled, details2,
   details2LineHeight, details2Align, details2X, details2Y, details2Rotate,
   details2Size, details2Color,
@@ -16663,7 +17210,7 @@ const portraitCanvas = React.useMemo(() => {
     const isPortraitAsset =
       !!(p as any).isFlare ||
       !!(p as any).isSticker ||
-      !!(p as any).isExtracted ||
+      !!(p as any).isBrandFace ||
       !!(p as any).isLogo ||
       String((p as any).id || "").startsWith("logo_");
     const shapeScale = Math.max(0.01, Math.min(6, Number(p.scale ?? 1)));
@@ -18004,10 +18551,26 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       applyIfDefined(data.headX, setHeadX);
       applyIfDefined(data.headY, setHeadY);
       applyIfDefined(data.headRotate, setHeadRotate);
+      applyIfDefined(data.headSkew, setHeadSkew);
+      applyIfDefined(data.headSliceEnabled, setHeadSliceEnabled);
+      applyIfDefined(data.headSliceBandCount, setHeadSliceBandCount);
+      applyIfDefined(data.headSliceBandGap, setHeadSliceBandGap);
+      applyIfDefined(data.headSliceEchoDistance, setHeadSliceEchoDistance);
+      applyIfDefined(data.headSliceTopColor, setHeadSliceTopColor);
+      applyIfDefined(data.headSliceMidColor, setHeadSliceMidColor);
+      applyIfDefined(data.headSliceBottomColor, setHeadSliceBottomColor);
+      applyIfDefined(data.headSliceBlur, setHeadSliceBlur);
+      applyIfDefined(data.headSliceFade, setHeadSliceFade);
+      applyIfDefined(data.headSliceShadowStrength, setHeadSliceShadowStrength);
+      applyIfDefined(data.headExtrudeDepth, setHeadExtrudeDepth);
+      applyIfDefined(data.headExtrudeAngle, setHeadExtrudeAngle);
+      applyIfDefined(data.headExtrudeDistance, setHeadExtrudeDistance);
+      applyIfDefined(data.headExtrudeColor, setHeadExtrudeColor);
 
       applyIfDefined(data.head2X, setHead2X);
       applyIfDefined(data.head2Y, setHead2Y);
       applyIfDefined(data.head2Rotate, setHead2Rotate);
+      applyIfDefined(data.head2Skew, setHead2Skew);
 
       applyIfDefined(data.detailsX, setDetailsX);
       applyIfDefined(data.detailsY, setDetailsY);
@@ -18357,7 +18920,9 @@ const applyTemplate = React.useCallback<
 
     // --- SCALES & ROTATIONS ---
     setHeadRotate(merged.headRotate ?? 0);
+    setHeadSkew((merged as any).headSkew ?? 0);
     setHead2Rotate(merged.head2Rotate ?? 0);
+    setHead2Skew((merged as any).head2Skew ?? 0);
     setDetailsRotate(merged.detailsRotate ?? 0);
     setDetails2Rotate(merged.details2Rotate ?? 0);
     setVenueRotate(merged.venueRotate ?? 0);
@@ -19232,6 +19797,21 @@ const syncCurrentStateToSession = () => {
     headX,
     headY,
     headRotate,
+    headSkew,
+    headSliceEnabled,
+    headSliceBandCount,
+    headSliceBandGap,
+    headSliceEchoDistance,
+    headSliceTopColor,
+    headSliceMidColor,
+    headSliceBottomColor,
+    headSliceBlur,
+    headSliceFade,
+    headSliceShadowStrength,
+    headExtrudeDepth,
+    headExtrudeAngle,
+    headExtrudeDistance,
+    headExtrudeColor,
     // FX (keep shadow flags in sync with headline shadow toggle)
     textFx: { ...textFx, shadowEnabled: headShadow, shadow: headShadowStrength },   // Deep copy to prevent ref issues
     headShadow,
@@ -19261,6 +19841,7 @@ const syncCurrentStateToSession = () => {
     head2X,
     head2Y,
     head2Rotate,
+    head2Skew,
     // FX
     head2Fx: { ...head2Fx },
 
@@ -19446,87 +20027,89 @@ const handleTemplateSelect = React.useCallback(
     setStartupStudioMode(key === "dj" ? "dj" : null);
     setDjStartupFlowStage("design");
     if (!storageReadyRef.current) {
-      pendingStartupKeyRef.current = key;
+      pendingStartupSelectionRef.current = { key, payload };
       return;
     }
 
-    try {
-      const startupFormat: Format = "square";
-      const store = useFlyerState.getState();
-      store.setSession((prev) => ({ ...prev, square: {}, story: {} }));
-      store.setSessionDirty((prev) => ({ ...prev, square: false, story: false }));
-      setFormat(startupFormat);
+    runAfterNextPaint(() => {
+      try {
+        const startupFormat: Format = "square";
+        const store = useFlyerState.getState();
+        store.setSession((prev) => ({ ...prev, square: {}, story: {} }));
+        store.setSessionDirty((prev) => ({ ...prev, square: false, story: false }));
+        setFormat(startupFormat);
 
-      if (key === "dj" || key === "promoter" || key === "artist") {
-        const startupTemplate = buildStartupCategoryTemplate(key);
-        setTemplateId(startupTemplate.id);
-        setActiveTemplate(startupTemplate);
-        applyTemplate(startupTemplate, { targetFormat: startupFormat, initialLoad: true });
+        if (key === "dj" || key === "promoter" || key === "artist") {
+          const startupTemplate = buildStartupCategoryTemplate(key);
+          setTemplateId(startupTemplate.id);
+          setActiveTemplate(startupTemplate);
+          applyTemplate(startupTemplate, { targetFormat: startupFormat, initialLoad: true });
+
+          if (key === "dj") {
+            const startupBackground =
+              payload?.startupBackgroundDataUrl ||
+              payload?.startupBackgroundSrc ||
+              DJ_STARTUP_BACKGROUNDS[0].src;
+            applyStartupBackground(startupBackground);
+            setTextSide("left");
+            setHeadAlign("left");
+            setAlign("left");
+            setTextStyle("headline", startupFormat, { align: "left" });
+            setHead2Align("left");
+            setTextStyle("headline2", startupFormat, { align: "left" });
+            setDetailsAlign("left");
+            setDetails2Align("left");
+            setVenueAlign("left");
+            setSubtagAlign("left");
+          }
+
+          if (key === "promoter" || key === "artist") {
+            setHeadAlign("center");
+            setAlign("center");
+            setTextStyle("headline", startupFormat, { align: "center" });
+            setHead2Align("center");
+            setTextStyle("headline2", startupFormat, { align: "center" });
+            setDetailsAlign("center");
+            setDetails2Align("center");
+            setVenueAlign("center");
+            setSubtagAlign("center");
+          }
+        } else {
+          // ✅ Map each vibe to a real template index
+          const vibeToTemplateId: Record<string, string> = {
+            club: isStarterPlan ? "edm_stage_co2" : "miami2",
+            tropical: isStarterPlan ? "afrobeat_rooftop" : "latin_street_tropical",
+            luxury: isStarterPlan ? "edm_tunnel" : "atlanta",
+            urban: isStarterPlan ? "hiphop_lowrider" : "hiphop_graffiti",
+          };
+
+          const tplId = vibeToTemplateId[key] ?? TEMPLATE_GALLERY[0]?.id;
+          const tpl = TEMPLATE_GALLERY.find((t) => t.id === tplId);
+          if (!tpl) throw new Error("Template not found for vibe: " + key);
+          applyTemplateFromGallery(tpl, { targetFormat: startupFormat });
+        }
+      } catch {
+        alert("Could not load template.");
+      }
+
+      // ✅ Close startup modal once template applied
+      setTimeout(() => {
+        setLoadingStartup(false);
+        setShowStartup(false);
+        scrollToArtboard();
 
         if (key === "dj") {
-          const startupBackground =
-            payload?.startupBackgroundDataUrl ||
-            payload?.startupBackgroundSrc ||
-            DJ_STARTUP_BACKGROUNDS[0].src;
-          applyStartupBackground(startupBackground);
-          setTextSide("left");
-          setHeadAlign("left");
-          setAlign("left");
-          setTextStyle("headline", startupFormat, { align: "left" });
-          setHead2Align("left");
-          setTextStyle("headline2", startupFormat, { align: "left" });
-          setDetailsAlign("left");
-          setDetails2Align("left");
-          setVenueAlign("left");
-          setSubtagAlign("left");
+          setMobileControlsOpen(true);
+          setMobileControlsTab("assets");
+          useFlyerState.getState().setSelectedPanel(isStarterPlan ? "portrait" : "dj_branding");
+          return;
         }
 
-        if (key === "promoter" || key === "artist") {
-          setHeadAlign("center");
-          setAlign("center");
-          setTextStyle("headline", startupFormat, { align: "center" });
-          setHead2Align("center");
-          setTextStyle("headline2", startupFormat, { align: "center" });
-          setDetailsAlign("center");
-          setDetails2Align("center");
-          setVenueAlign("center");
-          setSubtagAlign("center");
+        if (useFlyerState.getState().selectedPanel == null) {
+          useFlyerState.getState().setSelectedPanel("template");
         }
-      } else {
-        // ✅ Map each vibe to a real template index
-      const vibeToTemplateId: Record<string, string> = {
-        club: isStarterPlan ? "edm_stage_co2" : "miami2",
-        tropical: isStarterPlan ? "afrobeat_rooftop" : "latin_street_tropical",
-        luxury: isStarterPlan ? "edm_tunnel" : "atlanta",
-        urban: isStarterPlan ? "hiphop_lowrider" : "hiphop_graffiti",
-      };
-
-      const tplId = vibeToTemplateId[key] ?? TEMPLATE_GALLERY[0]?.id;
-      const tpl = TEMPLATE_GALLERY.find((t) => t.id === tplId);
-      if (!tpl) throw new Error("Template not found for vibe: " + key);
-      applyTemplateFromGallery(tpl, { targetFormat: startupFormat });
-      }
-    } catch {
-      alert("Could not load template.");
-    }
-
-    // ✅ Close startup modal once template applied
-  setTimeout(() => {
-  setLoadingStartup(false);
-  setShowStartup(false);
-  scrollToArtboard();
-
-  if (key === "dj") {
-    setMobileControlsOpen(true);
-    setMobileControlsTab("assets");
-    useFlyerState.getState().setSelectedPanel(isStarterPlan ? "portrait" : "dj_branding");
-    return;
-  }
-
-  if (useFlyerState.getState().selectedPanel == null) {
-    useFlyerState.getState().setSelectedPanel("template");
-  }
-}, 240);
+      }, 240);
+    });
 
   },
   [applyStartupBackground, applyTemplate, applyTemplateFromGallery, isStarterPlan, scrollToArtboard, setTextStyle]
@@ -19535,10 +20118,10 @@ const handleTemplateSelect = React.useCallback(
 
 React.useEffect(() => {
   if (!storageReady) return;
-  const pending = pendingStartupKeyRef.current;
+  const pending = pendingStartupSelectionRef.current;
   if (!pending) return;
-  pendingStartupKeyRef.current = null;
-  handleTemplateSelect(pending);
+  pendingStartupSelectionRef.current = null;
+  handleTemplateSelect(pending.key, pending.payload);
 }, [storageReady, handleTemplateSelect]);
 
 
@@ -19619,6 +20202,15 @@ const floatingTextRef = React.useRef<HTMLDivElement | null>(null);
 const floatingBgRef = React.useRef<HTMLDivElement | null>(null);
 const floatingLightingRef = React.useRef<HTMLDivElement | null>(null);
 const floatFocusLockRef = React.useRef(false);
+const floatRecentInteractionAtRef = React.useRef(0);
+
+function markFloatInteraction() {
+  floatRecentInteractionAtRef.current = Date.now();
+}
+
+function floatRecentlyInteracted() {
+  return Date.now() - floatRecentInteractionAtRef.current < 900;
+}
 
 function eventWithinAnyFloat(ev?: Event) {
   const anyEv = ev as any;
@@ -19653,6 +20245,7 @@ function activeElementWithinAnyFloat() {
 const hideMobileFloats = React.useCallback(
   (options?: { clearSelection?: boolean }) => {
     floatFocusLockRef.current = false;
+    floatRecentInteractionAtRef.current = 0;
     setFloatingEditorVisible(false);
     setFloatingAssetVisible(false);
     setFloatingBgVisible(false);
@@ -19668,6 +20261,7 @@ const hideMobileFloats = React.useCallback(
 const showMobileFloat = React.useCallback(
   (kind: "text" | "asset" | "bg" | "lighting") => {
     floatFocusLockRef.current = false;
+    markFloatInteraction();
     setFloatingEditorVisible(kind === "text");
     setFloatingAssetVisible(kind === "asset");
     setFloatingBgVisible(kind === "bg");
@@ -19714,6 +20308,7 @@ React.useEffect(() => {
     if (!t) return;
     if (t.closest?.('[data-floating-controls]')) {
       floatFocusLockRef.current = true;
+      markFloatInteraction();
     }
   };
   const onFocusOut = () => {
@@ -20186,11 +20781,11 @@ const currentMobileAction = React.useMemo(() => {
 
   if (selectedPanel === "magic_blend") {
     return {
-      label: "Portrait Blend",
-      panel: "magic_blend",
+      label: MAGIC_BLEND_ENABLED ? "Portrait Blend" : "Portrait",
+      panel: MAGIC_BLEND_ENABLED ? "magic_blend" : "portrait",
       tab: "assets" as const,
       uiMode: "design" as const,
-      targetId: "magic-blend-panel",
+      targetId: MAGIC_BLEND_ENABLED ? "magic-blend-panel" : "portrait-panel",
     };
   }
 
@@ -20310,7 +20905,7 @@ const mobileVisibleCreatorPanels = React.useMemo(() => {
   copyPanels.forEach((panel) => design.add(panel));
   assets.add("background");
   assets.add("ai_background");
-  assets.add("magic_blend");
+  if (MAGIC_BLEND_ENABLED) assets.add("magic_blend");
   assets.add("icons");
   assets.add("portrait");
 
@@ -20319,6 +20914,87 @@ const mobileVisibleCreatorPanels = React.useMemo(() => {
   isDjStartupMode,
   isMobileView,
 ]);
+
+const applyHeadlineSportsPreset = React.useCallback(() => {
+  const nextFx: TextFx = {
+    ...textFx,
+    uppercase: true,
+    bold: true,
+    italic: false,
+    tracking: -0.05,
+    gradient: true,
+    gradFrom: "#67e8f9",
+    gradTo: "#facc15",
+    color: "#ffffff",
+    strokeWidth: 1.8,
+    strokeColor: "#08111b",
+    glow: 0,
+    shadowEnabled: false,
+  };
+
+  setHeadlineFamily("Nexa-Heavy");
+  setTextFx(nextFx);
+  setSessionValue(format, "textFx", nextFx);
+  setHeadSkew(-12);
+  setHeadSliceEnabled(false);
+  setHeadShadow(false);
+  setHeadShadowStrength(0);
+  setHeadExtrudeDepth(28);
+  setHeadExtrudeAngle(32);
+  setHeadExtrudeDistance(32);
+  setHeadExtrudeColor("#05070b");
+  setHeadAlign("center");
+  setAlign("center");
+  setLineHeight(0.82);
+}, [
+  format,
+  setSessionValue,
+  textFx,
+]);
+
+const applyHeadlineRetroSlicePreset = React.useCallback(() => {
+  const nextFx: TextFx = {
+    ...textFx,
+    uppercase: true,
+    bold: true,
+    italic: false,
+    tracking: 0,
+    gradient: false,
+    color: "#ffe9b3",
+    strokeWidth: 0,
+    strokeColor: "#111827",
+    glow: 0,
+    shadowEnabled: false,
+  };
+
+  setHeadlineFamily("Nexa-Heavy");
+  setTextFx(nextFx);
+  setSessionValue(format, "textFx", nextFx);
+  setHeadAlign("center");
+  setAlign("center");
+  setLineHeight(0.9);
+  setHeadSkew(0);
+  setHeadRotate(0);
+  setHeadShadow(false);
+  setHeadShadowStrength(0);
+  setHeadExtrudeDepth(0);
+  setHeadExtrudeDistance(0);
+  setHeadSliceEnabled(true);
+  setHeadSliceBandCount(7);
+  setHeadSliceBandGap(10);
+  setHeadSliceEchoDistance(135);
+  setHeadSliceTopColor("#e85b2e");
+  setHeadSliceMidColor("#ffe9b3");
+  setHeadSliceBottomColor("#55b6c7");
+  setHeadSliceBlur(6);
+  setHeadSliceFade(0.5);
+  setHeadSliceShadowStrength(0.35);
+}, [
+  format,
+  setSessionValue,
+  textFx,
+]);
+
 const mobilePanelClass = React.useCallback(
   (tab: "design" | "assets", panel: string | string[]) => {
     if (!mobileVisibleCreatorPanels) return "";
@@ -20425,6 +21101,11 @@ type ActiveTextControls = {
   onLine?: (v: number) => void;
   rotation?: number;
   onRotate?: (v: number) => void;
+  skew?: number;
+  skewMin?: number;
+  skewMax?: number;
+  skewStep?: number;
+  onSkew?: (v: number) => void;
   layerOffset?: number;
   onLayerUp?: () => void;
   onLayerDown?: () => void;
@@ -20473,6 +21154,11 @@ const activeTextControls = React.useMemo<ActiveTextControls | null>(() => {
         onLine: (v: number) => setLineHeight(v),
         rotation: headRotate,
         onRotate: (v: number) => setHeadRotate(v),
+        skew: headSkew,
+        skewMin: -45,
+        skewMax: 45,
+        skewStep: 1,
+        onSkew: (v: number) => setHeadSkew(v),
         layerOffset: textLayerOffset.headline,
         onLayerUp: () => nudgeTextLayer("headline", "up"),
         onLayerDown: () => nudgeTextLayer("headline", "down"),
@@ -20513,6 +21199,11 @@ const activeTextControls = React.useMemo<ActiveTextControls | null>(() => {
         onLine: (v: number) => setHead2LineHeight(v),
         rotation: head2Rotate,
         onRotate: (v: number) => setHead2Rotate(v),
+        skew: head2Skew,
+        skewMin: -45,
+        skewMax: 45,
+        skewStep: 1,
+        onSkew: (v: number) => setHead2Skew(v),
         layerOffset: textLayerOffset.headline2,
         onLayerUp: () => nudgeTextLayer("headline2", "up"),
         onLayerDown: () => nudgeTextLayer("headline2", "down"),
@@ -20632,6 +21323,7 @@ const activeTextControls = React.useMemo<ActiveTextControls | null>(() => {
   headManualPx,
   headMaxPx,
   headRotate,
+  headSkew,
   setTextFx,
   headShadowStrength,
   textFx,
@@ -20644,6 +21336,7 @@ const activeTextControls = React.useMemo<ActiveTextControls | null>(() => {
   head2LineHeight,
   head2Color,
   head2Rotate,
+  head2Skew,
   head2ShadowStrength,
   head2Fx,
   setHead2Color,
@@ -21229,6 +21922,20 @@ const undoAssetPosition = React.useCallback(() => {
   setBgPosY,
 ]);
 
+const prepareForMobileTabSwitch = React.useCallback(() => {
+  const store = useFlyerState.getState();
+  store.setMoveTarget(null);
+  store.setSelectedEmojiId(null);
+  store.setSelectedPortraitId(null);
+  setSelectedEmojiId(null);
+  setSelectedPortraitId(null);
+  floatFocusLockRef.current = false;
+  setFloatingEditorVisible(false);
+  setFloatingAssetVisible(false);
+  setFloatingBgVisible(false);
+  setFloatingLightingVisible(false);
+}, [setSelectedEmojiId, setSelectedPortraitId]);
+
 const mobileControlsTabs = (
   <div className="lg:hidden flex justify-center px-3 py-2">
     <div
@@ -21249,6 +21956,7 @@ const mobileControlsTabs = (
       <button
         type="button"
         onClick={() => {
+          prepareForMobileTabSwitch();
           setMobileControlsOpen(true);
           setMobileControlsTab("design");
           if (
@@ -21279,6 +21987,7 @@ const mobileControlsTabs = (
       <button
         type="button"
         onClick={() => {
+          prepareForMobileTabSwitch();
           setMobileControlsOpen(true);
           setMobileControlsTab("assets");
           if (
@@ -21393,12 +22102,25 @@ React.useEffect(() => {
 }, [moveTarget]);
 
 React.useEffect(() => {
-  if (activeBgControls) {
+  const suppressMobileBgFloat =
+    isMobileView &&
+    mobileControlsOpen &&
+    selectedPanel === "background" &&
+    moveTarget !== "background";
+
+  if (activeBgControls && !suppressMobileBgFloat) {
     showMobileFloat("bg");
   } else {
     setFloatingBgVisible(false);
   }
-}, [activeBgControls, showMobileFloat]);
+}, [
+  activeBgControls,
+  isMobileView,
+  mobileControlsOpen,
+  moveTarget,
+  selectedPanel,
+  showMobileFloat,
+]);
 
 React.useEffect(() => {
   const shouldShowLightingFloat =
@@ -21448,13 +22170,15 @@ React.useEffect(() => {
   const designPanels = new Set([
     "dj_branding",
     "ai_background",
-    "magic_blend",
     "background",
     "bgfx",
     "icons",
     "portrait",
     "project",
   ]);
+  if (MAGIC_BLEND_ENABLED) {
+    designPanels.add("magic_blend");
+  }
 
   let nextTab: "design" | "assets" | null = null;
 
@@ -21492,7 +22216,12 @@ React.useEffect(() => {
 // Consolidated scroll/touch hide logic for mobile floats
 React.useEffect(() => {
   if (!isMobileView) return;
-  if (!mobileControlsOpen && !mobileFloatSticky) return;
+  const anyMobileFloatVisible =
+    floatingEditorVisible ||
+    floatingAssetVisible ||
+    floatingBgVisible ||
+    floatingLightingVisible;
+  if (!mobileControlsOpen && !anyMobileFloatVisible) return;
   if (floatingLightingVisible) return;
   let raf = 0;
   const hideFloats = () => {
@@ -21521,16 +22250,17 @@ React.useEffect(() => {
     }
     floatFocusLockRef.current = false;
   };
-  const interactingWithinFloat = (ev?: Event) =>
-    eventWithinAnyFloat(ev) || activeElementWithinAnyFloat() || floatFocusLockRef.current;
+  const interactingWithinFloatEvent = (ev?: Event) =>
+    eventWithinAnyFloat(ev) || floatFocusLockRef.current;
   const onAppScroll = (ev?: Event) => {
     if (shouldSkipBecauseDragging()) return;
+    if (eventWithinAnyFloat(ev) || floatRecentlyInteracted()) return;
     releaseFloatFocus();
     hideFloats();
   };
   const onUserMove = (ev?: Event) => {
     if (shouldSkipBecauseDragging()) return;
-    if (interactingWithinFloat(ev)) return;
+    if (interactingWithinFloatEvent(ev)) return;
     releaseFloatFocus();
     hideFloats();
   };
@@ -21560,7 +22290,14 @@ React.useEffect(() => {
     window.removeEventListener("touchcancel", release);
     if (raf) cancelAnimationFrame(raf);
   };
-}, [floatingLightingVisible, isMobileView, mobileControlsOpen, mobileFloatSticky]);
+}, [
+  floatingAssetVisible,
+  floatingBgVisible,
+  floatingEditorVisible,
+  floatingLightingVisible,
+  isMobileView,
+  mobileControlsOpen,
+]);
 
 // Desktop-only: background click-to-edit prototype (guarded by flag)
 React.useEffect(() => {
@@ -24333,6 +25070,18 @@ style={{ top: STICKY_TOP }}
         />
       </div>
 
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <Chip small onClick={applyHeadlineSportsPreset}>
+          Flat 3D
+        </Chip>
+        <Chip small onClick={applyHeadlineRetroSlicePreset}>
+          Retro Slice
+        </Chip>
+        <span className="text-[11px] text-neutral-500">
+          Flat 3D adds extrusion. Retro Slice adds clipped echo bands.
+        </span>
+      </div>
+
       {/* TEXT INPUT */}
       <textarea
         value={headline}
@@ -24362,6 +25111,7 @@ style={{ top: STICKY_TOP }}
           digits={2}
         />
         <Stepper label="Rotation (°)" value={headRotate} setValue={setHeadRotate} min={-360} max={360} step={0.5} />
+        <Stepper label="Skew (°)" value={headSkew} setValue={setHeadSkew} min={-45} max={45} step={1} />
       </div>
 
       <div className="grid grid-cols-3 gap-3 mt-2">
@@ -24387,6 +25137,18 @@ style={{ top: STICKY_TOP }}
         <Chip small active={textFx.bold} onClick={() => setTextFx((v) => ({ ...v, bold: !v.bold }))}>Bold</Chip>
         <Chip small active={textFx.italic} onClick={() => setTextFx((v) => ({ ...v, italic: !v.italic }))}>Italic</Chip>
         <Chip small active={headShadow} onClick={() => setHeadShadow(!headShadow)}>Shadow</Chip>
+        <Chip
+          small
+          active={textFx.gradient}
+          onClick={() => {
+            const next = { ...textFx, gradient: !textFx.gradient };
+            setTextFx(next);
+            setSessionValue(format, "textFx", next);
+          }}
+        >
+          Gradient
+        </Chip>
+        <Chip small active={headSliceEnabled} onClick={() => setHeadSliceEnabled((v) => !v)}>Echo Bands</Chip>
         <Chip
           small
           active={textFx.strokeWidth > 0}
@@ -24424,6 +25186,94 @@ style={{ top: STICKY_TOP }}
         />
       </div>
 
+      <div className="grid grid-cols-3 gap-3 mt-2">
+        <Stepper
+          label="3D Depth"
+          value={headExtrudeDepth}
+          setValue={setHeadExtrudeDepth}
+          min={0}
+          max={40}
+          step={1}
+        />
+        <Stepper
+          label="3D Angle"
+          value={headExtrudeAngle}
+          setValue={setHeadExtrudeAngle}
+          min={0}
+          max={360}
+          step={1}
+        />
+        <Stepper
+          label="3D Distance"
+          value={headExtrudeDistance}
+          setValue={setHeadExtrudeDistance}
+          min={0}
+          max={60}
+          step={1}
+        />
+      </div>
+
+      {headSliceEnabled && (
+        <>
+          <div className="grid grid-cols-3 gap-3 mt-2">
+            <Stepper
+              label="Band Count"
+              value={headSliceBandCount}
+              setValue={setHeadSliceBandCount}
+              min={3}
+              max={15}
+              step={1}
+            />
+            <Stepper
+              label="Band Gap"
+              value={headSliceBandGap}
+              setValue={setHeadSliceBandGap}
+              min={0}
+              max={40}
+              step={1}
+            />
+            <Stepper
+              label="Echo Dist"
+              value={headSliceEchoDistance}
+              setValue={setHeadSliceEchoDistance}
+              min={0}
+              max={220}
+              step={1}
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 mt-2">
+            <Stepper
+              label="Blur"
+              value={headSliceBlur}
+              setValue={setHeadSliceBlur}
+              min={0}
+              max={20}
+              step={0.5}
+              digits={1}
+            />
+            <Stepper
+              label="Fade"
+              value={headSliceFade}
+              setValue={setHeadSliceFade}
+              min={0}
+              max={1}
+              step={0.05}
+              digits={2}
+            />
+            <Stepper
+              label="Shadow"
+              value={headSliceShadowStrength}
+              setValue={setHeadSliceShadowStrength}
+              min={0}
+              max={1}
+              step={0.05}
+              digits={2}
+            />
+          </div>
+        </>
+      )}
+
       <div className="flex items-end mt-2 flex-wrap w-full">
         <div className="ml-auto flex flex-wrap items-center gap-3 justify-end text-[11px]">
           <span className="opacity-80">Fill</span>
@@ -24437,6 +25287,38 @@ style={{ top: STICKY_TOP }}
               setSessionValue(format, "textFx", next);
             }}
           />
+          {textFx.gradient && (
+            <>
+              <span className="opacity-80">Grad A</span>
+              <ColorDot
+                value={textFx.gradFrom}
+                onChange={(c) => {
+                  const next = { ...textFx, gradFrom: c };
+                  setTextFx(next);
+                  setSessionValue(format, "textFx", next);
+                }}
+              />
+              <span className="opacity-80">Grad B</span>
+              <ColorDot
+                value={textFx.gradTo}
+                onChange={(c) => {
+                  const next = { ...textFx, gradTo: c };
+                  setTextFx(next);
+                  setSessionValue(format, "textFx", next);
+                }}
+              />
+            </>
+          )}
+          {headSliceEnabled && (
+            <>
+              <span className="opacity-80">Top</span>
+              <ColorDot value={headSliceTopColor} onChange={setHeadSliceTopColor} />
+              <span className="opacity-80">Middle</span>
+              <ColorDot value={headSliceMidColor} onChange={setHeadSliceMidColor} />
+              <span className="opacity-80">Bottom</span>
+              <ColorDot value={headSliceBottomColor} onChange={setHeadSliceBottomColor} />
+            </>
+          )}
           <span className="opacity-80">Stroke</span>
           <ColorDot
             value={textFx.strokeColor}
@@ -24445,6 +25327,11 @@ style={{ top: STICKY_TOP }}
               setTextFx(next);
               setSessionValue(format, "textFx", next);
             }}
+          />
+          <span className="opacity-80">3D</span>
+          <ColorDot
+            value={headExtrudeColor}
+            onChange={setHeadExtrudeColor}
           />
         </div>
       </div>
@@ -24573,6 +25460,14 @@ style={{ top: STICKY_TOP }}
           setValue={(n) => setHead2Rotate(normDeg(n))}
           min={-360}
           max={360}
+          step={1}
+        />
+        <Stepper
+          label="Skew (°)"
+          value={head2Skew}
+          setValue={setHead2Skew}
+          min={-45}
+          max={45}
           step={1}
         />
       </div>
@@ -25652,7 +26547,23 @@ style={{ top: STICKY_TOP }}
             details2Align={details2Align}
             headMaxPx={headMaxPx}
             headRotate={headRotate}
+            headSkew={headSkew}
+            headSliceEnabled={headSliceEnabled}
+            headSliceBandCount={headSliceBandCount}
+            headSliceBandGap={headSliceBandGap}
+            headSliceEchoDistance={headSliceEchoDistance}
+            headSliceTopColor={headSliceTopColor}
+            headSliceMidColor={headSliceMidColor}
+            headSliceBottomColor={headSliceBottomColor}
+            headSliceBlur={headSliceBlur}
+            headSliceFade={headSliceFade}
+            headSliceShadowStrength={headSliceShadowStrength}
+            headExtrudeDepth={headExtrudeDepth}
+            headExtrudeAngle={headExtrudeAngle}
+            headExtrudeDistance={headExtrudeDistance}
+            headExtrudeColor={headExtrudeColor}
             head2Rotate={head2Rotate}
+            head2Skew={head2Skew}
             detailsRotate={detailsRotate}
             venueRotate={venueRotate}
             subtagRotate={subtagRotate}
@@ -25736,25 +26647,29 @@ style={{ top: STICKY_TOP }}
   </div>
 
   {activeTextControls && floatingEditorVisible && (
-    <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 flex justify-center px-3 z-[1200]" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
+    <div className={mobileFloatViewportClass} style={mobileFloatViewportStyle}>
       <div className="w-full max-w-[320px] sm:max-w-[340px]">
         <div
-          className="overflow-hidden border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl"
+          className={mobileFloatPanelClass}
           ref={floatingTextRef}
           data-floating-controls="text"
           onPointerDownCapture={(e) => {
+            markFloatInteraction();
             floatFocusLockRef.current = true;
             e.stopPropagation();
           }}
           onTouchStartCapture={(e) => {
+            markFloatInteraction();
             floatFocusLockRef.current = true;
             e.stopPropagation();
           }}
           onTouchMoveCapture={(e) => {
+            markFloatInteraction();
             floatFocusLockRef.current = true;
             e.stopPropagation();
           }}
           onWheelCapture={(e) => {
+            markFloatInteraction();
             floatFocusLockRef.current = true;
             e.stopPropagation();
           }}
@@ -25780,6 +26695,10 @@ style={{ top: STICKY_TOP }}
             rows={2}
             value={activeTextControls.text ?? ""}
             onChange={(e) => activeTextControls.onText?.(e.target.value)}
+            onFocus={() => {
+              markFloatInteraction();
+              floatFocusLockRef.current = true;
+            }}
             placeholder="Edit text"
             inputMode="text"
             className="w-full border border-white/10 bg-neutral-900 px-3 py-2 text-[16px] text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-fuchsia-500"
@@ -25833,6 +26752,21 @@ style={{ top: STICKY_TOP }}
               rangeClassName="flex-1 accent-cyan-400"
             />
           </div>
+          {activeTextControls.onSkew && (
+            <div>
+              <InlineSliderInput
+                label="Skew"
+                value={Number(activeTextControls.skew || 0)}
+                min={Number(activeTextControls.skewMin ?? -45)}
+                max={Number(activeTextControls.skewMax ?? 45)}
+                step={Number(activeTextControls.skewStep ?? 1)}
+                precision={0}
+                suffix="°"
+                onChange={(next) => activeTextControls.onSkew?.(next)}
+                rangeClassName="flex-1 accent-emerald-400"
+              />
+            </div>
+          )}
           {(activeTextControls.onShadowStrength || activeTextControls.onStrokeWidth) && (
             <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
               {activeTextControls.onShadowStrength && (
@@ -25887,6 +26821,185 @@ style={{ top: STICKY_TOP }}
               )}
             </div>
           )}
+          {activeTextTarget === "headline" && (
+            <>
+              <div className="-mx-1 overflow-x-auto pb-1">
+                <div className="flex min-w-max items-center gap-2 px-1 whitespace-nowrap">
+                  <Chip small onClick={applyHeadlineSportsPreset}>
+                    Flat 3D
+                  </Chip>
+                  <Chip small onClick={applyHeadlineRetroSlicePreset}>
+                    Retro Slice
+                  </Chip>
+                  <Chip
+                    small
+                    active={textFx.gradient}
+                    onClick={() => {
+                      const next = { ...textFx, gradient: !textFx.gradient };
+                      setTextFx(next);
+                      setSessionValue(format, "textFx", next);
+                    }}
+                  >
+                    Gradient
+                  </Chip>
+                  <Chip small active={headSliceEnabled} onClick={() => setHeadSliceEnabled((v) => !v)}>
+                    Echo Bands
+                  </Chip>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
+                <div>
+                  <InlineSliderInput
+                    label="3D Depth"
+                    value={headExtrudeDepth}
+                    min={0}
+                    max={40}
+                    step={1}
+                    precision={0}
+                    onChange={setHeadExtrudeDepth}
+                    rangeClassName="flex-1 accent-cyan-400"
+                  />
+                </div>
+                <div>
+                  <InlineSliderInput
+                    label="3D Angle"
+                    value={headExtrudeAngle}
+                    min={0}
+                    max={360}
+                    step={1}
+                    precision={0}
+                    suffix="°"
+                    onChange={setHeadExtrudeAngle}
+                    rangeClassName="flex-1 accent-emerald-400"
+                  />
+                </div>
+                <div className="min-[420px]:col-span-2">
+                  <InlineSliderInput
+                    label="3D Distance"
+                    value={headExtrudeDistance}
+                    min={0}
+                    max={60}
+                    step={1}
+                    precision={0}
+                    onChange={setHeadExtrudeDistance}
+                    rangeClassName="flex-1 accent-amber-400"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {textFx.gradient && (
+                  <>
+                    <span className="text-[10px] uppercase tracking-wider text-neutral-400">Grad A</span>
+                    <ColorDot
+                      value={textFx.gradFrom}
+                      onChange={(c) => {
+                        const next = { ...textFx, gradFrom: c };
+                        setTextFx(next);
+                        setSessionValue(format, "textFx", next);
+                      }}
+                    />
+                    <span className="text-[10px] uppercase tracking-wider text-neutral-400">Grad B</span>
+                    <ColorDot
+                      value={textFx.gradTo}
+                      onChange={(c) => {
+                        const next = { ...textFx, gradTo: c };
+                        setTextFx(next);
+                        setSessionValue(format, "textFx", next);
+                      }}
+                    />
+                  </>
+                )}
+                <span className="text-[10px] uppercase tracking-wider text-neutral-400">3D</span>
+                <ColorDot value={headExtrudeColor} onChange={setHeadExtrudeColor} />
+              </div>
+              {headSliceEnabled && (
+                <>
+                  <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
+                    <div>
+                      <InlineSliderInput
+                        label="Band Count"
+                        value={headSliceBandCount}
+                        min={3}
+                        max={15}
+                        step={1}
+                        precision={0}
+                        onChange={setHeadSliceBandCount}
+                        rangeClassName="flex-1 accent-rose-400"
+                      />
+                    </div>
+                    <div>
+                      <InlineSliderInput
+                        label="Band Gap"
+                        value={headSliceBandGap}
+                        min={0}
+                        max={40}
+                        step={1}
+                        precision={0}
+                        onChange={setHeadSliceBandGap}
+                        rangeClassName="flex-1 accent-fuchsia-400"
+                      />
+                    </div>
+                    <div>
+                      <InlineSliderInput
+                        label="Echo Dist"
+                        value={headSliceEchoDistance}
+                        min={0}
+                        max={220}
+                        step={1}
+                        precision={0}
+                        onChange={setHeadSliceEchoDistance}
+                        rangeClassName="flex-1 accent-sky-400"
+                      />
+                    </div>
+                    <div>
+                      <InlineSliderInput
+                        label="Blur"
+                        value={headSliceBlur}
+                        min={0}
+                        max={20}
+                        step={0.5}
+                        precision={1}
+                        onChange={setHeadSliceBlur}
+                        rangeClassName="flex-1 accent-indigo-400"
+                      />
+                    </div>
+                    <div>
+                      <InlineSliderInput
+                        label="Fade"
+                        value={headSliceFade}
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        precision={2}
+                        onChange={setHeadSliceFade}
+                        rangeClassName="flex-1 accent-teal-400"
+                      />
+                    </div>
+                    <div>
+                      <InlineSliderInput
+                        label="Shadow"
+                        value={headSliceShadowStrength}
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        precision={2}
+                        onChange={setHeadSliceShadowStrength}
+                        rangeClassName="flex-1 accent-violet-400"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] uppercase tracking-wider text-neutral-400">Top</span>
+                    <ColorDot value={headSliceTopColor} onChange={setHeadSliceTopColor} />
+                    <span className="text-[10px] uppercase tracking-wider text-neutral-400">Middle</span>
+                    <ColorDot value={headSliceMidColor} onChange={setHeadSliceMidColor} />
+                    <span className="text-[10px] uppercase tracking-wider text-neutral-400">Bottom</span>
+                    <ColorDot value={headSliceBottomColor} onChange={setHeadSliceBottomColor} />
+                  </div>
+                </>
+              )}
+            </>
+          )}
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -25930,21 +27043,29 @@ style={{ top: STICKY_TOP }}
   )}
 
   {activeAssetControls && floatingAssetVisible && (
-    <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 flex justify-center px-3 z-[1200]" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
+    <div className={mobileFloatViewportClass} style={mobileFloatViewportStyle}>
       <div className="w-full max-w-[320px] sm:max-w-[340px]">
         <div
-          className="overflow-hidden border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl"
+          className={mobileFloatPanelClass}
           ref={floatingAssetRef}
           data-floating-controls="asset"
           onPointerDownCapture={(e) => {
+            markFloatInteraction();
             floatFocusLockRef.current = true;
             e.stopPropagation();
           }}
           onTouchStartCapture={(e) => {
+            markFloatInteraction();
             floatFocusLockRef.current = true;
             e.stopPropagation();
           }}
           onTouchMoveCapture={(e) => {
+            markFloatInteraction();
+            floatFocusLockRef.current = true;
+            e.stopPropagation();
+          }}
+          onWheelCapture={(e) => {
+            markFloatInteraction();
             floatFocusLockRef.current = true;
             e.stopPropagation();
           }}
@@ -26328,21 +27449,29 @@ style={{ top: STICKY_TOP }}
   )}
 
   {floatingLightingVisible && (
-    <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 z-[1200] flex justify-center px-3" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
+    <div className={mobileFloatViewportClass} style={mobileFloatViewportStyle}>
       <div className="w-full max-w-[320px] sm:max-w-[340px]">
         <div
-          className="max-h-[72vh] overflow-y-auto border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl"
+          className={mobileFloatPanelClass}
           ref={floatingLightingRef}
           data-floating-controls="lighting"
           onPointerDownCapture={(e) => {
+            markFloatInteraction();
             floatFocusLockRef.current = true;
             e.stopPropagation();
           }}
           onTouchStartCapture={(e) => {
+            markFloatInteraction();
             floatFocusLockRef.current = true;
             e.stopPropagation();
           }}
           onTouchMoveCapture={(e) => {
+            markFloatInteraction();
+            floatFocusLockRef.current = true;
+            e.stopPropagation();
+          }}
+          onWheelCapture={(e) => {
+            markFloatInteraction();
             floatFocusLockRef.current = true;
             e.stopPropagation();
           }}
@@ -26508,21 +27637,29 @@ style={{ top: STICKY_TOP }}
   )}
 
   {activeBgControls && floatingBgVisible && (
-    <div className={mobileFloatSticky ? "lg:hidden fixed bottom-3 left-0 right-0 flex justify-center px-3 z-[1200]" : "lg:hidden w-full flex justify-center px-3 pt-3"}>
+    <div className={mobileFloatViewportClass} style={mobileFloatViewportStyle}>
       <div className="w-full max-w-[340px]">
         <div
-          className="border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl"
+          className={mobileFloatPanelClass}
           ref={floatingBgRef}
           data-floating-controls="bg"
           onPointerDownCapture={(e) => {
+            markFloatInteraction();
             floatFocusLockRef.current = true;
             e.stopPropagation();
           }}
           onTouchStartCapture={(e) => {
+            markFloatInteraction();
             floatFocusLockRef.current = true;
             e.stopPropagation();
           }}
           onTouchMoveCapture={(e) => {
+            markFloatInteraction();
+            floatFocusLockRef.current = true;
+            e.stopPropagation();
+          }}
+          onWheelCapture={(e) => {
+            markFloatInteraction();
             floatFocusLockRef.current = true;
             e.stopPropagation();
           }}
@@ -26894,7 +28031,7 @@ style={{ top: STICKY_TOP }}
       genCandidates={genCandidates}
       hasSharedGeneratedBackground={!!sharedGeneratedBackground}
       sharedGeneratedBackgroundSource={
-        sharedGeneratedBackground?.source === "magic_blend" ? "Portrait Blend" : "AI Scene"
+        sharedGeneratedBackground?.source === "magic_blend" ? "Legacy Blend" : "AI Scene"
       }
       originalBackgroundSrc={sharedGeneratedBackground?.original?.src ?? null}
       generatedBackgroundSrc={sharedGeneratedBackground?.generated?.src ?? null}
@@ -26918,7 +28055,7 @@ style={{ top: STICKY_TOP }}
 
 
 {/* UI: MAGIC BLEND PANEL (BEGIN) */}
-{!isDjStartupMode && (
+{MAGIC_BLEND_ENABLED && !isDjStartupMode && (
   <div className={clsx(creatorStepPanelClass("assets"), mobilePanelClass("assets", "magic_blend"))}>
     {isStarterPlan && (
       <div className={`${editorSectionCardClass} mb-3 text-white/85`}>
@@ -26957,7 +28094,7 @@ style={{ top: STICKY_TOP }}
       isCapturingBackground={isCapturingBlendBackground}
       hasSharedGeneratedBackground={!!sharedGeneratedBackground}
       sharedGeneratedBackgroundSource={
-        sharedGeneratedBackground?.source === "magic_blend" ? "Portrait Blend" : "AI Scene"
+        sharedGeneratedBackground?.source === "magic_blend" ? "Legacy Blend" : "AI Scene"
       }
       originalBackgroundSrc={sharedGeneratedBackground?.original?.src ?? null}
       generatedBackgroundSrc={sharedGeneratedBackground?.generated?.src ?? null}
@@ -27232,6 +28369,8 @@ style={{ top: STICKY_TOP }}
               rangeClassName="flex-1 accent-cyan-400"
             />
           </div>
+
+          {selectedPortraitLightingSection}
         </>
       )}
     </div>
@@ -27385,7 +28524,9 @@ style={{ top: STICKY_TOP }}
                     try {
                       setRemovingBg(true);
                       const originalUrl = await blobToDataURL(file);
-                      const cutDataUrl = await removeBackgroundLocal(originalUrl);
+                      const cutDataUrl = await removeBackgroundLocal(originalUrl, {
+                        cleanup: EXTRACT_SUBJECT_CLEANUP,
+                      });
                       setPortraitSlots((prev) => {
                         const next = [...prev];
                         next[i] = cutDataUrl;
@@ -27423,7 +28564,7 @@ style={{ top: STICKY_TOP }}
                   if (!src) return;
 
                   const id = `p_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-                  const defaults = { ...PREMIUM_CUTOUT_CLEANUP };
+                  const defaults = { ...EXTRACT_SUBJECT_CLEANUP };
 
                   const newPortrait = {
                     id,
@@ -27552,7 +28693,7 @@ style={{ top: STICKY_TOP }}
             </button>
           </div>
 
-          {!isStarterPlan && (
+          {MAGIC_BLEND_ENABLED && !isStarterPlan && (
             <button
               type="button"
               className={clsx(
@@ -27565,8 +28706,8 @@ style={{ top: STICKY_TOP }}
                   : selectedPortrait.url;
                 setBlendSubject(cutoutSrc);
                 setBlendSubjectCutout(cutoutSrc);
-                setSelectedPanel("magic_blend");
-                useFlyerState.getState().setSelectedPanel("magic_blend");
+                setSelectedPanel("portrait");
+                useFlyerState.getState().setSelectedPanel("portrait");
               }}
             >
               {isMobileView ? "Send Selected Portrait To Blend" : "Send Selected Portrait To Portrait Blend"}
@@ -27640,259 +28781,7 @@ style={{ top: STICKY_TOP }}
           </div>
         );
       })()}
-
-    <div className="mt-3 rounded-xl border border-white/10 bg-black/25 p-3">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-200">
-            Advanced Lighting
-          </div>
-          <div className="mt-1 text-[11px] text-neutral-500">
-            {!selectedPortraitId
-              ? "Select a placed portrait to shape the light."
-              : selectedPortraitIsAsset
-              ? "Lighting controls are only for regular cutout portraits."
-              : selectedPortraitLighting.analyzed
-              ? "Analyze has been applied. Refine the light below."
-              : "Analyze the current scene to build a clean starting light."}
-          </div>
-        </div>
-        {!selectedPortraitIsAsset && !!selectedPortraitId && (
-          <Chip
-            small
-            active={selectedPortraitLighting.enabled}
-            onClick={() =>
-              updateSelectedPortraitLighting({ enabled: !selectedPortraitLighting.enabled })
-            }
-          >
-            {selectedPortraitLighting.enabled ? "On" : "Off"}
-          </Chip>
-        )}
-      </div>
-
-      {!selectedPortraitId ? (
-        <div className="mt-3 text-[12px] italic text-neutral-500">
-          Place and select a portrait on the canvas first.
-        </div>
-      ) : selectedPortraitIsAsset ? (
-        <div className="mt-3 text-[12px] italic text-neutral-500">
-          This section is reserved for cutout portraits rather than graphics, logos, or main-face assets.
-        </div>
-      ) : (
-        <div className="mt-3 space-y-3">
-          <div className="border border-neutral-800 bg-neutral-900/40 px-3 py-2.5 space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <div className="text-[10px] uppercase tracking-[0.12em] text-neutral-400">Easy Mode</div>
-              <div className="text-[10px] text-neutral-500">
-                {selectedPortraitLighting.analyzed ? "Applied" : "Ready"}
-              </div>
-            </div>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => void autoAnalyzeSelectedPortraitLighting()}
-                className="rounded border border-cyan-400/70 bg-cyan-500/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-100 hover:bg-cyan-500/16"
-              >
-                {selectedPortraitLighting.analyzed ? "Analyze + Reapply" : "Analyze + Apply"}
-              </button>
-              <button
-                type="button"
-                onClick={resetSelectedPortraitLighting}
-                className="rounded border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-[11px] font-medium uppercase tracking-[0.14em] text-neutral-200 hover:bg-neutral-900"
-              >
-                Reset Lighting
-              </button>
-            </div>
-            <div className="text-[10px] text-neutral-500">
-              Analyze reads the current scene behind this portrait and builds a lighting baseline.
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-              <Chip
-                small
-                className="!w-full !rounded-none"
-                active={selectedPortraitLighting.autoMatch}
-                onClick={() =>
-                  updateSelectedPortraitLighting({
-                    autoMatch: !selectedPortraitLighting.autoMatch,
-                  })
-                }
-              >
-                Auto Match
-              </Chip>
-              <Chip
-                small
-                className="!w-full !rounded-none"
-                active={portraitLightingAdvancedOpen}
-                onClick={() => setPortraitLightingAdvancedOpen((open) => !open)}
-              >
-                Advanced
-              </Chip>
-            </div>
-
-            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
-              {mainFaceLightingPresets.map((preset) => (
-                <Chip
-                  key={preset.id}
-                  small
-                  className="!w-full !rounded-none"
-                  onClick={() => updateSelectedPortraitLighting(preset.patch)}
-                  disabled={!selectedPortraitLighting.enabled}
-                >
-                  {preset.label}
-                </Chip>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
-              {([
-                ["none", "Clean"],
-                ["mono", "Mono"],
-                ["contrast", "Punch"],
-                ["halftone", "Halftone"],
-                ["poster", "Poster"],
-                ["pop", "Pop"],
-                ["neo", "Neo Red"],
-                ["comic", "Comic Vector"],
-              ] as const).map(([preset, label]) => (
-                <Chip
-                  key={preset}
-                  small
-                  className="!w-full !rounded-none"
-                  active={selectedPortraitFilterPreset === preset}
-                  onClick={() => updateSelectedPortraitFilter({ preset })}
-                  disabled={!selectedPortraitLighting.enabled}
-                >
-                  {label}
-                </Chip>
-              ))}
-            </div>
-
-            <InlineSliderInput
-              label="Filter Strength"
-              value={selectedPortraitFilterStrength}
-              min={0}
-              max={1}
-              step={0.01}
-              onChange={(next) => updateSelectedPortraitFilterRaf({ strength: next })}
-              displayScale={100}
-              precision={0}
-              suffix="%"
-              rangeClassName="flex-1 accent-fuchsia-400"
-              disabled={!selectedPortraitLighting.enabled || selectedPortraitFilterPreset === "none"}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
-            <div className="flex items-center gap-2 text-[11px] text-neutral-400">
-              <span>Light Side</span>
-              <Chip
-                small
-                active={selectedPortraitLighting.lightSide === "left"}
-                onClick={() => updateSelectedPortraitLighting({ lightSide: "left" })}
-                disabled={!selectedPortraitLighting.enabled}
-              >
-                Left
-              </Chip>
-              <Chip
-                small
-                active={selectedPortraitLighting.lightSide === "right"}
-                onClick={() => updateSelectedPortraitLighting({ lightSide: "right" })}
-                disabled={!selectedPortraitLighting.enabled}
-              >
-                Right
-              </Chip>
-            </div>
-            <div className="flex items-center gap-2 text-[11px] text-neutral-400">
-              <span>Light Color</span>
-              <ColorDot
-                value={selectedPortraitLighting.highlightColor}
-                onChange={(next) => updateSelectedPortraitLighting({ highlightColor: next })}
-                title="Lighting color"
-              />
-            </div>
-          </div>
-
-          {portraitLightingAdvancedOpen && (
-            <div className="space-y-2.5">
-              <div className="space-y-2.5 border border-neutral-800 bg-neutral-900/40 p-2.5">
-                <div className="text-[10px] uppercase tracking-wide text-neutral-500">Light</div>
-                {[
-                  ["Ambient", selectedPortraitLighting.ambient, 0, 1, 0.01, "ambient"],
-                  ["Key Light", selectedPortraitLighting.keyLight, 0, 1, 0.01, "keyLight"],
-                  ["Fill Light", selectedPortraitLighting.fillLight, 0, 1, 0.01, "fillLight"],
-                ].map(([label, value, min, max, step, key]) => (
-                  <InlineSliderInput
-                    key={String(key)}
-                    label={String(label)}
-                    value={Number(value)}
-                    min={Number(min)}
-                    max={Number(max)}
-                    step={Number(step)}
-                    onChange={(next) =>
-                      updateSelectedPortraitLightingRaf({ [String(key)]: next })
-                    }
-                    displayScale={100}
-                    precision={0}
-                    suffix="%"
-                    rangeClassName="flex-1 accent-cyan-400"
-                    disabled={!selectedPortraitLighting.enabled}
-                  />
-                ))}
-              </div>
-
-              <div className="space-y-2.5 border border-neutral-800 bg-neutral-900/40 p-2.5">
-                <div className="text-[10px] uppercase tracking-wide text-neutral-500">Finish</div>
-                {[
-                  ["Rim Light", selectedPortraitLighting.rimLight, 0, 1, 0.01, "rimLight"],
-                  ["Shadow Depth", selectedPortraitLighting.shadowDepth, 0, 1, 0.01, "shadowDepth"],
-                ].map(([label, value, min, max, step, key]) => (
-                  <InlineSliderInput
-                    key={String(key)}
-                    label={String(label)}
-                    value={Number(value)}
-                    min={Number(min)}
-                    max={Number(max)}
-                    step={Number(step)}
-                    onChange={(next) =>
-                      updateSelectedPortraitLightingRaf({ [String(key)]: next })
-                    }
-                    displayScale={100}
-                    precision={0}
-                    suffix="%"
-                    rangeClassName="flex-1 accent-cyan-400"
-                    disabled={!selectedPortraitLighting.enabled}
-                  />
-                ))}
-
-                {[
-                  ["Warmth", selectedPortraitLighting.warmth, "warmth"],
-                  ["Contrast", selectedPortraitLighting.contrast, "contrast"],
-                ].map(([label, value, key]) => (
-                  <InlineSliderInput
-                    key={String(key)}
-                    label={String(label)}
-                    value={Number(value)}
-                    min={-1}
-                    max={1}
-                    step={0.01}
-                    onChange={(next) =>
-                      updateSelectedPortraitLightingRaf({ [String(key)]: next })
-                    }
-                    displayScale={100}
-                    precision={0}
-                    rangeClassName="flex-1 accent-amber-400"
-                    disabled={!selectedPortraitLighting.enabled}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+    {selectedPortraitLightingSection}
   </Collapsible>
   </div>
   )}
@@ -28170,7 +29059,7 @@ style={{ top: STICKY_TOP }}
             >
               Cinematic Overlays
             </button>
-            {!isStarterPlan && (
+            {MAGIC_BLEND_ENABLED && !isStarterPlan && (
               <button
                 type="button"
                 onClick={() => openCreatorWorkflowTarget("magic_blend", "assets", { targetId: "magic-blend-panel" })}
@@ -28275,7 +29164,7 @@ style={{ top: STICKY_TOP }}
             <li>Open Template.</li>
             <li>Generate a new background.</li>
             <li>Add subject.</li>
-            <li>Use Portrait Blend to fuse subject with scene.</li>
+            <li>Place and light the subject on canvas, then finish the poster design.</li>
             <li>Add text and graphics.</li>
             <li>Export.</li>
           </ol>
