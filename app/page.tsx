@@ -20162,6 +20162,31 @@ const didCheckSavedDesignRef = React.useRef(false);
 const SAVE_NOTICE_DISMISSED_KEY = "nf:saveNoticeDismissed";
 const [saveNoticeDismissed, setSaveNoticeDismissed] = React.useState(false);
 const [showSaveNotice, setShowSaveNotice] = React.useState(false);
+const headlinePresetBaselineRef = React.useRef<null | {
+  headlineFamily: string;
+  textFx: TextFx;
+  headSkew: number;
+  headRotate: number;
+  headSliceEnabled: boolean;
+  headSliceBandCount: number;
+  headSliceBandGap: number;
+  headSliceEchoDistance: number;
+  headSliceTopColor: string;
+  headSliceMidColor: string;
+  headSliceBottomColor: string;
+  headSliceBlur: number;
+  headSliceFade: number;
+  headSliceShadowStrength: number;
+  headShadow: boolean;
+  headShadowStrength: number;
+  headExtrudeDepth: number;
+  headExtrudeAngle: number;
+  headExtrudeDistance: number;
+  headExtrudeColor: string;
+  headAlign: Align;
+  align: Align;
+  lineHeight: number;
+}>(null);
 
 React.useEffect(() => {
   try {
@@ -20926,6 +20951,33 @@ const mobileVisibleCreatorPanels = React.useMemo(() => {
 ]);
 
 const applyHeadlineSportsPreset = React.useCallback(() => {
+  if (!headlinePresetBaselineRef.current) {
+    headlinePresetBaselineRef.current = {
+      headlineFamily,
+      textFx,
+      headSkew,
+      headRotate,
+      headSliceEnabled,
+      headSliceBandCount,
+      headSliceBandGap,
+      headSliceEchoDistance,
+      headSliceTopColor,
+      headSliceMidColor,
+      headSliceBottomColor,
+      headSliceBlur,
+      headSliceFade,
+      headSliceShadowStrength,
+      headShadow,
+      headShadowStrength,
+      headExtrudeDepth,
+      headExtrudeAngle,
+      headExtrudeDistance,
+      headExtrudeColor,
+      headAlign,
+      align,
+      lineHeight,
+    };
+  }
   const nextFx: TextFx = {
     ...textFx,
     uppercase: true,
@@ -20957,12 +21009,61 @@ const applyHeadlineSportsPreset = React.useCallback(() => {
   setAlign("center");
   setLineHeight(0.82);
 }, [
+  align,
   format,
+  headAlign,
+  headExtrudeAngle,
+  headExtrudeColor,
+  headExtrudeDepth,
+  headExtrudeDistance,
+  headRotate,
+  headShadow,
+  headShadowStrength,
+  headSkew,
+  headSliceBandCount,
+  headSliceBandGap,
+  headSliceBlur,
+  headSliceBottomColor,
+  headSliceEchoDistance,
+  headSliceEnabled,
+  headSliceFade,
+  headSliceMidColor,
+  headSliceShadowStrength,
+  headSliceTopColor,
+  headlineFamily,
+  lineHeight,
   setSessionValue,
   textFx,
 ]);
 
 const applyHeadlineRetroSlicePreset = React.useCallback(() => {
+  if (!headlinePresetBaselineRef.current) {
+    headlinePresetBaselineRef.current = {
+      headlineFamily,
+      textFx,
+      headSkew,
+      headRotate,
+      headSliceEnabled,
+      headSliceBandCount,
+      headSliceBandGap,
+      headSliceEchoDistance,
+      headSliceTopColor,
+      headSliceMidColor,
+      headSliceBottomColor,
+      headSliceBlur,
+      headSliceFade,
+      headSliceShadowStrength,
+      headShadow,
+      headShadowStrength,
+      headExtrudeDepth,
+      headExtrudeAngle,
+      headExtrudeDistance,
+      headExtrudeColor,
+      headAlign,
+      align,
+      lineHeight,
+    };
+  }
   const nextFx: TextFx = {
     ...textFx,
     uppercase: true,
@@ -20999,6 +21100,79 @@ const applyHeadlineRetroSlicePreset = React.useCallback(() => {
   setHeadSliceBlur(6);
   setHeadSliceFade(0.5);
   setHeadSliceShadowStrength(0.35);
+}, [
+  align,
+  format,
+  headAlign,
+  headExtrudeAngle,
+  headExtrudeColor,
+  headExtrudeDepth,
+  headExtrudeDistance,
+  headRotate,
+  headShadow,
+  headShadowStrength,
+  headSkew,
+  headSliceBandCount,
+  headSliceBandGap,
+  headSliceBlur,
+  headSliceBottomColor,
+  headSliceEchoDistance,
+  headSliceEnabled,
+  headSliceFade,
+  headSliceMidColor,
+  headSliceShadowStrength,
+  headSliceTopColor,
+  headlineFamily,
+  lineHeight,
+  setSessionValue,
+  textFx,
+]);
+
+const resetHeadlinePresetStyles = React.useCallback(() => {
+  const baseline = headlinePresetBaselineRef.current;
+  if (!baseline) {
+    const nextFx: TextFx = {
+      ...textFx,
+      gradient: false,
+      glow: 0,
+      shadowEnabled: false,
+    };
+    setTextFx(nextFx);
+    setSessionValue(format, "textFx", nextFx);
+    setHeadSkew(0);
+    setHeadSliceEnabled(false);
+    setHeadExtrudeDepth(0);
+    setHeadExtrudeDistance(0);
+    setMobileHeadlineStyleFocus(null);
+    return;
+  }
+
+  setHeadlineFamily(baseline.headlineFamily);
+  setTextFx(baseline.textFx);
+  setSessionValue(format, "textFx", baseline.textFx);
+  setHeadSkew(baseline.headSkew);
+  setHeadRotate(baseline.headRotate);
+  setHeadSliceEnabled(baseline.headSliceEnabled);
+  setHeadSliceBandCount(baseline.headSliceBandCount);
+  setHeadSliceBandGap(baseline.headSliceBandGap);
+  setHeadSliceEchoDistance(baseline.headSliceEchoDistance);
+  setHeadSliceTopColor(baseline.headSliceTopColor);
+  setHeadSliceMidColor(baseline.headSliceMidColor);
+  setHeadSliceBottomColor(baseline.headSliceBottomColor);
+  setHeadSliceBlur(baseline.headSliceBlur);
+  setHeadSliceFade(baseline.headSliceFade);
+  setHeadSliceShadowStrength(baseline.headSliceShadowStrength);
+  setHeadShadow(baseline.headShadow);
+  setHeadShadowStrength(baseline.headShadowStrength);
+  setHeadExtrudeDepth(baseline.headExtrudeDepth);
+  setHeadExtrudeAngle(baseline.headExtrudeAngle);
+  setHeadExtrudeDistance(baseline.headExtrudeDistance);
+  setHeadExtrudeColor(baseline.headExtrudeColor);
+  setHeadAlign(baseline.headAlign);
+  setAlign(baseline.align);
+  setLineHeight(baseline.lineHeight);
+  setMobileHeadlineStyleFocus(null);
+  headlinePresetBaselineRef.current = null;
 }, [
   format,
   setSessionValue,
@@ -26916,8 +27090,35 @@ style={{ top: STICKY_TOP }}
                     small
                     active={mobileHeadlineStyleFocus === "gradient"}
                     onClick={() => {
+                      if (!headlinePresetBaselineRef.current) {
+                        headlinePresetBaselineRef.current = {
+                          headlineFamily,
+                          textFx,
+                          headSkew,
+                          headRotate,
+                          headSliceEnabled,
+                          headSliceBandCount,
+                          headSliceBandGap,
+                          headSliceEchoDistance,
+                          headSliceTopColor,
+                          headSliceMidColor,
+                          headSliceBottomColor,
+                          headSliceBlur,
+                          headSliceFade,
+                          headSliceShadowStrength,
+                          headShadow,
+                          headShadowStrength,
+                          headExtrudeDepth,
+                          headExtrudeAngle,
+                          headExtrudeDistance,
+                          headExtrudeColor,
+                          headAlign,
+                          align,
+                          lineHeight,
+                        };
+                      }
                       setMobileHeadlineStyleFocus("gradient");
-                      const next = { ...textFx, gradient: !textFx.gradient };
+                      const next = { ...textFx, gradient: true };
                       setTextFx(next);
                       setSessionValue(format, "textFx", next);
                     }}
@@ -26926,19 +27127,16 @@ style={{ top: STICKY_TOP }}
                   </Chip>
                   <Chip
                     small
-                    active={mobileHeadlineStyleFocus === "echo"}
-                    onClick={() => {
-                      setMobileHeadlineStyleFocus("echo");
-                      setHeadSliceEnabled((v) => !v);
-                    }}
+                    onClick={resetHeadlinePresetStyles}
+                    active={!mobileHeadlineStyleFocus}
                   >
-                    Echo Bands
+                    Reset
                   </Chip>
                 </div>
               </div>
               {!mobileHeadlineStyleFocus && (
                 <div className="rounded border border-white/10 bg-black/20 px-3 py-2 text-[11px] text-neutral-400">
-                  Tap a style chip above to open only that effect&apos;s controls.
+                  Choose a preset above. Reset returns the headline to its pre-preset state.
                 </div>
               )}
               {showMobileHeadline3dControls && (
