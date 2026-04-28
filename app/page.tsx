@@ -11755,10 +11755,18 @@ const mobileFloatViewportStyle = {
   top: "calc(env(safe-area-inset-top, 0px) + 72px)",
   bottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)",
 };
+const mobileFloatPanelStyle = {
+  maxHeight:
+    "min(56dvh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 108px))",
+};
+const mobileHeadlineFloatPanelStyle = {
+  maxHeight:
+    "min(48dvh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 108px))",
+};
 const mobileFloatViewportClass =
   "lg:hidden fixed left-0 right-0 z-[1200] flex items-end justify-center px-3 pointer-events-none";
 const mobileFloatPanelClass =
-  "pointer-events-auto max-h-full overflow-y-auto overscroll-contain touch-pan-y border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl";
+  "pointer-events-auto overflow-y-auto overscroll-contain touch-pan-y border border-white/10 bg-neutral-950/60 px-3 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.38)] ring-1 ring-white/10 backdrop-blur-2xl";
 
   const handleClearIconSelection = React.useCallback(() => setSelIconId(null), []);
   const handleMobileDragEnd = React.useCallback(() => {}, []);
@@ -20132,6 +20140,7 @@ const [floatingEditorVisible, setFloatingEditorVisible] = React.useState(false);
 const [floatingAssetVisible, setFloatingAssetVisible] = React.useState(false);
 const [floatingBgVisible, setFloatingBgVisible] = React.useState(false);
 const [floatingLightingVisible, setFloatingLightingVisible] = React.useState(false);
+const [mobileTextFloatTab, setMobileTextFloatTab] = React.useState<"text" | "style">("text");
 const [mobileLightingSlide, setMobileLightingSlide] = React.useState<0 | 1 | 2>(0);
 const [projectHelpOpen, setProjectHelpOpen] = React.useState(false);
 const [workflowHelpOpen, setWorkflowHelpOpen] = React.useState(false);
@@ -21781,12 +21790,25 @@ const activeAssetControls = React.useMemo(() => {
   onToggleLock,
 ]);
 
+const headlineTextStyleTabsVisible = activeTextTarget === "headline";
+const showMobileTextFloatBasics =
+  !headlineTextStyleTabsVisible || mobileTextFloatTab === "text";
+const showMobileHeadlineStyleControls =
+  headlineTextStyleTabsVisible && mobileTextFloatTab === "style";
+const activeMobileTextFloatPanelStyle = headlineTextStyleTabsVisible
+  ? mobileHeadlineFloatPanelStyle
+  : mobileFloatPanelStyle;
 const hasAssetControls = !!activeAssetControls;
 
 // On mobile, always show asset float when an asset is active
 React.useEffect(() => {
   if (isMobileView && activeAssetControls) showMobileFloat("asset");
 }, [isMobileView, activeAssetControls, showMobileFloat]);
+
+React.useEffect(() => {
+  if (!floatingEditorVisible) return;
+  setMobileTextFloatTab("text");
+}, [activeTextTarget, floatingEditorVisible]);
 
 const activeBgControls = React.useMemo(() => {
   if (selectedPanel !== "background" && moveTarget !== "background") return null;
@@ -26651,6 +26673,7 @@ style={{ top: STICKY_TOP }}
       <div className="w-full max-w-[320px] sm:max-w-[340px]">
         <div
           className={mobileFloatPanelClass}
+          style={activeMobileTextFloatPanelStyle}
           ref={floatingTextRef}
           data-floating-controls="text"
           onPointerDownCapture={(e) => {
@@ -26678,7 +26701,7 @@ style={{ top: STICKY_TOP }}
           <span className="text-[10px] uppercase tracking-wider text-neutral-400">Editing</span>
           <span className="text-neutral-300">•</span>
           <span className="min-w-0 truncate">{formatUiLabelCaps(activeTextControls.label === "Details 2" ? "More Details" : activeTextControls.label)}</span>
-          {activeTextControls.color && (
+          {activeTextControls.color && (!headlineTextStyleTabsVisible || showMobileHeadlineStyleControls) && (
             <div className="ml-auto flex items-center gap-1">
               <span className="text-[10px] uppercase tracking-wider text-neutral-400">Fill</span>
               <ColorDot
@@ -26690,69 +26713,103 @@ style={{ top: STICKY_TOP }}
             </div>
           )}
         </div>
-        <div className="mt-2">
-          <textarea
-            rows={2}
-            value={activeTextControls.text ?? ""}
-            onChange={(e) => activeTextControls.onText?.(e.target.value)}
-            onFocus={() => {
-              markFloatInteraction();
-              floatFocusLockRef.current = true;
-            }}
-            placeholder="Edit text"
-            inputMode="text"
-            className="w-full border border-white/10 bg-neutral-900 px-3 py-2 text-[16px] text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-fuchsia-500"
-            style={{ resize: "none" }}
-          />
-        </div>
         <div className="mt-2 space-y-2">
-          <div className="w-full">
-            <FontPicker
-              value={activeTextControls.font}
-              options={activeTextControls.fonts ?? []}
-              onChange={(v) => activeTextControls.onFont?.(v)}
-            />
-          </div>
-          <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
-            <div>
-              <InlineSliderInput
-                label="Size"
-                value={Number(activeTextControls.size || 0)}
-                min={Number(activeTextControls.sizeMin ?? 0)}
-                max={Number(activeTextControls.sizeMax ?? 0)}
-                step={Number(activeTextControls.sizeStep ?? 1)}
-                precision={0}
-                onChange={(next) => activeTextControls.onSize?.(next)}
-                rangeClassName="flex-1 accent-fuchsia-500"
-              />
+          {headlineTextStyleTabsVisible && (
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                data-mobile-float-lock="true"
+                onClick={() => setMobileTextFloatTab("text")}
+                className={clsx(
+                  "border px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]",
+                  mobileTextFloatTab === "text"
+                    ? "border-cyan-400/70 bg-cyan-500/12 text-cyan-100"
+                    : "border-neutral-700 bg-neutral-900/60 text-neutral-300"
+                )}
+              >
+                Text
+              </button>
+              <button
+                type="button"
+                data-mobile-float-lock="true"
+                onClick={() => setMobileTextFloatTab("style")}
+                className={clsx(
+                  "border px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]",
+                  mobileTextFloatTab === "style"
+                    ? "border-fuchsia-400/70 bg-fuchsia-500/12 text-fuchsia-100"
+                    : "border-neutral-700 bg-neutral-900/60 text-neutral-300"
+                )}
+              >
+                Style
+              </button>
             </div>
-            <div>
-              <InlineSliderInput
-                label="Line"
-                value={Number(activeTextControls.lineHeight || 0)}
-                min={Number(activeTextControls.lineMin ?? 0)}
-                max={Number(activeTextControls.lineMax ?? 0)}
-                step={Number(activeTextControls.lineStep ?? 0.01)}
-                precision={2}
-                onChange={(next) => activeTextControls.onLine?.(next)}
-                rangeClassName="flex-1 accent-indigo-400"
-              />
-            </div>
-          </div>
-          <div>
-            <InlineSliderInput
-              label="Rotation"
-              value={Number(activeTextControls.rotation || 0)}
-              min={-180}
-              max={180}
-              step={1}
-              precision={0}
-              suffix="°"
-              onChange={(next) => activeTextControls.onRotate?.(next)}
-              rangeClassName="flex-1 accent-cyan-400"
-            />
-          </div>
-          {activeTextControls.onSkew && (
+          )}
+          {showMobileTextFloatBasics && (
+            <>
+              <div>
+                <textarea
+                  rows={2}
+                  value={activeTextControls.text ?? ""}
+                  onChange={(e) => activeTextControls.onText?.(e.target.value)}
+                  onFocus={() => {
+                    markFloatInteraction();
+                    floatFocusLockRef.current = true;
+                  }}
+                  placeholder="Edit text"
+                  inputMode="text"
+                  className="w-full border border-white/10 bg-neutral-900 px-3 py-2 text-[16px] text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-fuchsia-500"
+                  style={{ resize: "none" }}
+                />
+              </div>
+              <div className="w-full">
+                <FontPicker
+                  value={activeTextControls.font}
+                  options={activeTextControls.fonts ?? []}
+                  onChange={(v) => activeTextControls.onFont?.(v)}
+                />
+              </div>
+              <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
+                <div>
+                  <InlineSliderInput
+                    label="Size"
+                    value={Number(activeTextControls.size || 0)}
+                    min={Number(activeTextControls.sizeMin ?? 0)}
+                    max={Number(activeTextControls.sizeMax ?? 0)}
+                    step={Number(activeTextControls.sizeStep ?? 1)}
+                    precision={0}
+                    onChange={(next) => activeTextControls.onSize?.(next)}
+                    rangeClassName="flex-1 accent-fuchsia-500"
+                  />
+                </div>
+                <div>
+                  <InlineSliderInput
+                    label="Line"
+                    value={Number(activeTextControls.lineHeight || 0)}
+                    min={Number(activeTextControls.lineMin ?? 0)}
+                    max={Number(activeTextControls.lineMax ?? 0)}
+                    step={Number(activeTextControls.lineStep ?? 0.01)}
+                    precision={2}
+                    onChange={(next) => activeTextControls.onLine?.(next)}
+                    rangeClassName="flex-1 accent-indigo-400"
+                  />
+                </div>
+              </div>
+              <div>
+                <InlineSliderInput
+                  label="Rotation"
+                  value={Number(activeTextControls.rotation || 0)}
+                  min={-180}
+                  max={180}
+                  step={1}
+                  precision={0}
+                  suffix="°"
+                  onChange={(next) => activeTextControls.onRotate?.(next)}
+                  rangeClassName="flex-1 accent-cyan-400"
+                />
+              </div>
+            </>
+          )}
+          {(!headlineTextStyleTabsVisible || showMobileHeadlineStyleControls) && activeTextControls.onSkew && (
             <div>
               <InlineSliderInput
                 label="Skew"
@@ -26767,61 +26824,63 @@ style={{ top: STICKY_TOP }}
               />
             </div>
           )}
-          {(activeTextControls.onShadowStrength || activeTextControls.onStrokeWidth) && (
-            <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
-              {activeTextControls.onShadowStrength && (
-                <div>
-                  <InlineSliderInput
-                    label="Shadow Strength"
-                    value={Number(activeTextControls.shadowStrength || 0)}
-                    min={0}
-                    max={5}
-                    step={0.1}
-                    precision={1}
-                    onChange={(next) => activeTextControls.onShadowStrength?.(next)}
-                    rangeClassName="flex-1 accent-violet-400"
-                  />
-                </div>
-              )}
-              {activeTextControls.onStrokeWidth && (
-                <div>
-                  <InlineSliderInput
-                    label="Stroke Width"
-                    value={Number(activeTextControls.strokeWidth || 0)}
-                    min={0}
-                    max={8}
-                    step={0.1}
-                    precision={1}
-                    onChange={(next) => activeTextControls.onStrokeWidth?.(next)}
-                    rangeClassName="flex-1 accent-amber-400"
-                  />
-                </div>
-              )}
-            </div>
-          )}
-          {(activeTextControls.onToggleStroke || activeTextControls.onStrokeColor) && (
-            <div className="flex flex-wrap items-center gap-2">
-              {activeTextControls.onToggleStroke && (
-                <Chip
-                  small
-                  active={!!activeTextControls.strokeEnabled}
-                  onClick={() => activeTextControls.onToggleStroke?.()}
-                >
-                  Stroke
-                </Chip>
-              )}
-              {activeTextControls.onStrokeColor && (
-                <div className="ml-auto flex items-center gap-1">
-                  <span className="text-[10px] uppercase tracking-wider text-neutral-400">Stroke</span>
-                  <ColorDot
-                    value={String(activeTextControls.strokeColor || "#000000")}
-                    onChange={(v) => activeTextControls.onStrokeColor?.(v)}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-          {activeTextTarget === "headline" && (
+          {(!headlineTextStyleTabsVisible || showMobileHeadlineStyleControls) &&
+            (activeTextControls.onShadowStrength || activeTextControls.onStrokeWidth) && (
+              <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
+                {activeTextControls.onShadowStrength && (
+                  <div>
+                    <InlineSliderInput
+                      label="Shadow Strength"
+                      value={Number(activeTextControls.shadowStrength || 0)}
+                      min={0}
+                      max={5}
+                      step={0.1}
+                      precision={1}
+                      onChange={(next) => activeTextControls.onShadowStrength?.(next)}
+                      rangeClassName="flex-1 accent-violet-400"
+                    />
+                  </div>
+                )}
+                {activeTextControls.onStrokeWidth && (
+                  <div>
+                    <InlineSliderInput
+                      label="Stroke Width"
+                      value={Number(activeTextControls.strokeWidth || 0)}
+                      min={0}
+                      max={8}
+                      step={0.1}
+                      precision={1}
+                      onChange={(next) => activeTextControls.onStrokeWidth?.(next)}
+                      rangeClassName="flex-1 accent-amber-400"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          {(!headlineTextStyleTabsVisible || showMobileHeadlineStyleControls) &&
+            (activeTextControls.onToggleStroke || activeTextControls.onStrokeColor) && (
+              <div className="flex flex-wrap items-center gap-2">
+                {activeTextControls.onToggleStroke && (
+                  <Chip
+                    small
+                    active={!!activeTextControls.strokeEnabled}
+                    onClick={() => activeTextControls.onToggleStroke?.()}
+                  >
+                    Stroke
+                  </Chip>
+                )}
+                {activeTextControls.onStrokeColor && (
+                  <div className="ml-auto flex items-center gap-1">
+                    <span className="text-[10px] uppercase tracking-wider text-neutral-400">Stroke</span>
+                    <ColorDot
+                      value={String(activeTextControls.strokeColor || "#000000")}
+                      onChange={(v) => activeTextControls.onStrokeColor?.(v)}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          {showMobileHeadlineStyleControls && (
             <>
               <div className="-mx-1 overflow-x-auto pb-1">
                 <div className="flex min-w-max items-center gap-2 px-1 whitespace-nowrap">
@@ -26847,6 +26906,17 @@ style={{ top: STICKY_TOP }}
                   </Chip>
                 </div>
               </div>
+              {activeTextControls.color && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] uppercase tracking-wider text-neutral-400">Fill</span>
+                  <ColorDot
+                    value={activeTextControls.color}
+                    allowNone={!!activeTextControls.allowNoFill}
+                    noneTitle="No fill"
+                    onChange={(v) => activeTextControls.onColor?.(v)}
+                  />
+                </div>
+              )}
               <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
                 <div>
                   <InlineSliderInput
@@ -27047,6 +27117,7 @@ style={{ top: STICKY_TOP }}
       <div className="w-full max-w-[320px] sm:max-w-[340px]">
         <div
           className={mobileFloatPanelClass}
+          style={mobileFloatPanelStyle}
           ref={floatingAssetRef}
           data-floating-controls="asset"
           onPointerDownCapture={(e) => {
@@ -27453,6 +27524,7 @@ style={{ top: STICKY_TOP }}
       <div className="w-full max-w-[320px] sm:max-w-[340px]">
         <div
           className={mobileFloatPanelClass}
+          style={mobileFloatPanelStyle}
           ref={floatingLightingRef}
           data-floating-controls="lighting"
           onPointerDownCapture={(e) => {
@@ -27641,6 +27713,7 @@ style={{ top: STICKY_TOP }}
       <div className="w-full max-w-[340px]">
         <div
           className={mobileFloatPanelClass}
+          style={mobileFloatPanelStyle}
           ref={floatingBgRef}
           data-floating-controls="bg"
           onPointerDownCapture={(e) => {
