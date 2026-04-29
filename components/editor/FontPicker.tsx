@@ -89,7 +89,12 @@ export function FontPicker({
   }, [open]);
 
   return (
-    <div className={`relative ${className ?? ''}`} ref={wrapRef} data-mobile-float-lock="true">
+    <div
+      className={`relative ${className ?? ''}`}
+      ref={wrapRef}
+      data-mobile-float-lock="true"
+      data-floating-controls="fontpicker"
+    >
       {label && <div className={`${controlLabelClass} mb-1`}>{label}</div>}
       <button
         type="button"
@@ -110,6 +115,7 @@ export function FontPicker({
           <div
             ref={menuRef}
             data-mobile-float-lock="true"
+            data-floating-controls="fontpicker"
             className={`fixed z-[9999] overflow-auto border border-neutral-700 bg-[#0f0f12] shadow-xl pb-2 ${menuClassName ?? ''}`}
             style={{
               top: menuPos.top,

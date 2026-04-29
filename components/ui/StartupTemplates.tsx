@@ -23,7 +23,7 @@ export type StartupSelectPayload = {
 
 interface StartupTemplatesProps {
   onSelect: (key: string, payload?: StartupSelectPayload) => void;
-  importDesignJSON: (json: string) => void;
+  onLoadProjectFile: (file: File) => Promise<void> | void;
   buildForYouEnabled: boolean;
   buildForYouLoading: boolean;
   buildForYouError: string | null;
@@ -144,7 +144,7 @@ function hasAnyText(payload: StartupBuildPayload["currentText"]) {
 
 const StartupTemplates: React.FC<StartupTemplatesProps> = ({
   onSelect,
-  importDesignJSON,
+  onLoadProjectFile,
   buildForYouEnabled,
   buildForYouLoading,
   buildForYouError,
@@ -253,6 +253,10 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
     "mt-4 group flex w-full cursor-pointer items-center justify-center bg-fuchsia-500/[0.06] px-4 py-3 shadow-[0_12px_28px_rgba(0,0,0,0.18)] transition-colors hover:bg-fuchsia-500/[0.10]";
   const advancedBackButtonClass =
     startupSecondaryButtonClass + " bg-fuchsia-500/[0.06] text-fuchsia-50 hover:bg-fuchsia-500/[0.10]";
+  const handleProjectFilePick = async (file?: File | null) => {
+    if (!file) return;
+    await onLoadProjectFile(file);
+  };
 
   return (
     <AnimatePresence>
@@ -314,6 +318,21 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                   </button>
                 ))}
               </div>
+
+              <label className="mx-auto mt-3 flex w-full max-w-[360px] cursor-pointer items-center justify-center bg-fuchsia-500/[0.06] px-4 py-3 text-sm font-medium text-fuchsia-50 shadow-[0_12px_28px_rgba(0,0,0,0.18)] transition-colors hover:bg-fuchsia-500/[0.10]">
+                <input
+                  type="file"
+                  accept=".json,application/json"
+                  className="hidden"
+                  onClick={(e) => {
+                    (e.target as HTMLInputElement).value = "";
+                  }}
+                  onChange={(e) => {
+                    void handleProjectFilePick(e.target.files?.[0]);
+                  }}
+                />
+                Load Saved File
+              </label>
 
               <div className="mt-3 text-[11px] text-neutral-500">
                 Once you&apos;re in, you can switch the whole vibe.
@@ -473,13 +492,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                         (e.target as HTMLInputElement).value = "";
                       }}
                       onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        const reader = new FileReader();
-                        reader.onload = () => {
-                          importDesignJSON(String(reader.result));
-                        };
-                        reader.readAsText(file);
+                        void handleProjectFilePick(e.target.files?.[0]);
                       }}
                     />
                     <span className="flex items-center gap-2 text-sm font-medium text-fuchsia-50 group-hover:text-white">

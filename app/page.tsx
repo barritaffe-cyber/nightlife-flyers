@@ -798,16 +798,16 @@ async function readApiResponsePayload(res: Response) {
 function buildPremiumTextShadow(strength: number = 1, glow: number = 0) {
   const s = Math.max(0, Number(strength) || 0);
   const g = Math.max(0, Number(glow) || 0);
-  const a1 = Math.min(0.55, 0.28 + 0.18 * s);
-  const a2 = Math.min(0.45, 0.22 + 0.14 * s);
-  const a3 = Math.min(0.35, 0.16 + 0.12 * s);
+  const a1 = Math.min(0.82, 0.26 + 0.11 * s);
+  const a2 = Math.min(0.68, 0.2 + 0.09 * s);
+  const a3 = Math.min(0.54, 0.14 + 0.075 * s);
   const shadows = [
-    `0 ${2 * s}px ${6 * s}px rgba(0,0,0,${a1})`,
-    `0 ${10 * s}px ${24 * s}px rgba(0,0,0,${a2})`,
-    `0 ${28 * s}px ${60 * s}px rgba(0,0,0,${a3})`,
+    `0 ${Math.max(1, 2.5 * s).toFixed(2)}px ${Math.max(4, 9 * s).toFixed(2)}px rgba(0,0,0,${a1})`,
+    `0 ${Math.max(3, 8 * s).toFixed(2)}px ${Math.max(10, 24 * s).toFixed(2)}px rgba(0,0,0,${a2})`,
+    `0 ${Math.max(10, 20 * s).toFixed(2)}px ${Math.max(24, 56 * s).toFixed(2)}px rgba(0,0,0,${a3})`,
   ];
   if (g > 0) {
-    shadows.push(`0 0 ${12 * g}px rgba(255,255,255,${0.18 * g})`);
+    shadows.push(`0 0 ${Math.max(10, 16 * g).toFixed(2)}px rgba(255,255,255,${Math.min(0.38, 0.16 + 0.08 * g)})`);
   }
   return shadows.join(',');
 }
@@ -2637,6 +2637,7 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
     emojiCanvas,
     flareCanvas,
     showDjTextEditing,
+    hideUiForExport,
 
     icons: iconsProp = [],
 
@@ -4130,7 +4131,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 </h1>
 
 
-{showDjTextEditing && (
+{showDjTextEditing && !headlineHidden && (
 <>
 
 {/* HEADLINE (BEGIN) - FIXED & THROTTLED */}
@@ -4271,6 +4272,13 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     const headlineText = textFx.uppercase ? headline.toUpperCase() : headline;
     const explicitLineCount = Math.max(1, headlineText.split("\n").length);
     const estimatedTextHeight = Math.max(headDisplayPx, headDisplayPx * lineHeight * explicitLineCount);
+    const exportTextMode = !!hideUiForExport;
+    const headlineExportColor =
+      typeof textFx.color === "string" &&
+      textFx.color !== "transparent" &&
+      textFx.color !== "none"
+        ? textFx.color
+        : textFx.gradFrom || "#ffffff";
     const sliceBandCount = Math.max(3, Math.round(headSliceBandCount || 0));
     const sliceEchoDistance = Math.max(0, Number(headSliceEchoDistance) || 0);
     const sliceAreaHeight = estimatedTextHeight + sliceEchoDistance * 2;
@@ -4291,7 +4299,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
           overflow: "visible",
         }}
       >
-        {headSliceEnabled && (
+        {!exportTextMode && headSliceEnabled && (
           <div
             aria-hidden="true"
             className="pointer-events-none absolute left-0 right-0"
@@ -4367,7 +4375,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
           </div>
         )}
 
-        {extrudeDepth > 0 &&
+        {!exportTextMode &&
+          extrudeDepth > 0 &&
           !headSliceEnabled &&
           Array.from({ length: extrudeDepth }, (_, idx) => {
             const layer = extrudeDepth - idx;
@@ -4435,7 +4444,12 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
             fontStyle: textFx.italic ? 'italic' : 'normal',
             textDecorationLine: textFx.underline ? 'underline' : 'none',
             opacity: textFx.alpha,
-            color: textFx.gradient ? 'transparent' : textFx.color,
+            color: exportTextMode
+              ? headlineExportColor
+              : textFx.gradient
+              ? 'transparent'
+              : textFx.color,
+            WebkitTextFillColor: exportTextMode ? headlineExportColor : undefined,
             textShadow: dragging
               ? 'none'
               : headSliceEnabled
@@ -4451,36 +4465,38 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
             zIndex: 1,
           }}
         >
-          {renderHeadlineRich(
-            headlineText,
-            {
-              baseTrackEm: textFx.tracking,
-              leadDeltaEm: leadTrackDelta,
-              lastDeltaEm: lastTrackDelta,
-              opticalMargin,
-              kerningFix,
-              lineHeight: lineHeight,
-              lineStyle: {
-                display: 'block',
-                width: '100%',
-                WebkitTextStrokeWidth: textFx.strokeWidth
-                  ? `${textFx.strokeWidth}px`
-                  : undefined,
-                WebkitTextStrokeColor: textFx.strokeColor,
-                ...(textFx.gradient
-                  ? {
-                      backgroundImage: `linear-gradient(180deg, ${textFx.gradFrom}, ${textFx.gradTo})`,
-                      backgroundSize: '100% 100%',
-                      backgroundRepeat: 'no-repeat',
-                      WebkitBackgroundClip: 'text',
-                      backgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      color: 'transparent',
-                    }
-                  : {}),
-              },
-            }
-          )}
+          {exportTextMode
+            ? renderWithDoubleBreaks(headlineText)
+            : renderHeadlineRich(
+                headlineText,
+                {
+                  baseTrackEm: textFx.tracking,
+                  leadDeltaEm: leadTrackDelta,
+                  lastDeltaEm: lastTrackDelta,
+                  opticalMargin,
+                  kerningFix,
+                  lineHeight: lineHeight,
+                  lineStyle: {
+                    display: 'block',
+                    width: '100%',
+                    WebkitTextStrokeWidth: textFx.strokeWidth
+                      ? `${textFx.strokeWidth}px`
+                      : undefined,
+                    WebkitTextStrokeColor: textFx.strokeColor,
+                    ...(textFx.gradient
+                      ? {
+                          backgroundImage: `linear-gradient(180deg, ${textFx.gradFrom}, ${textFx.gradTo})`,
+                          backgroundSize: '100% 100%',
+                          backgroundRepeat: 'no-repeat',
+                          WebkitBackgroundClip: 'text',
+                          backgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                          color: 'transparent',
+                        }
+                      : {}),
+                  },
+                }
+              )}
         </h1>
       </div>
     );
@@ -4641,7 +4657,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
           : 'none',
     }}
   >
-    {renderWithDoubleBreaks(head2Text)}
+    {hideUiForExport ? head2Text : renderWithDoubleBreaks(head2Text)}
   </div>
 </div>
 )}
@@ -11883,7 +11899,8 @@ React.useEffect(() => {
     undo: string[];
     redo: string[];
     last: string | null;
-  }>({ undo: [], redo: [], last: null });
+    lastSignature: string | null;
+  }>({ undo: [], redo: [], last: null, lastSignature: null });
   const historyPauseRef = React.useRef(false);
   const historyDebounceRef = React.useRef<number | null>(null);
   const [designName, setDesignName] = useState('');
@@ -15891,7 +15908,39 @@ function exportDesignJSON(): string {
   return JSON.stringify({ v: 1, state: safeState }, null, 2);
 }
 
-function buildHistorySnapshot(): string {
+function summarizeHistoryValue(value: unknown): unknown {
+  if (typeof value === "string") {
+    const looksHeavy =
+      /^data:image\//i.test(value) ||
+      /^blob:/i.test(value) ||
+      value.length > 4096;
+    if (!looksHeavy) return value;
+    return `${value.slice(0, 72)}…(${value.length})`;
+  }
+  if (Array.isArray(value)) return value.map(summarizeHistoryValue);
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+      out[key] = summarizeHistoryValue(child);
+    }
+    return out;
+  }
+  return value;
+}
+
+function summarizeHistorySnapshot(snapshot: string): string {
+  try {
+    const parsed = JSON.parse(snapshot) as { v?: number; state?: unknown };
+    return JSON.stringify({
+      v: parsed?.v ?? 1,
+      state: summarizeHistoryValue(parsed?.state ?? {}),
+    });
+  } catch {
+    return snapshot;
+  }
+}
+
+function buildHistoryState() {
   const state: Record<string, unknown> = {
     // core
     format,
@@ -15948,10 +15997,18 @@ function buildHistorySnapshot(): string {
     genEnergy, genAttire, genColorway, genAttireColor, genPose, genShot, genLighting,
   };
 
-  return JSON.stringify({ v: 1, state });
+  return state;
 }
 
-const historySnapshot = React.useMemo(() => buildHistorySnapshot(), [
+function buildHistorySnapshot(): string {
+  return JSON.stringify({ v: 1, state: buildHistoryState() });
+}
+
+function buildHistorySignature(): string {
+  return JSON.stringify({ v: 1, state: summarizeHistoryValue(buildHistoryState()) });
+}
+
+const historySignature = React.useMemo(() => buildHistorySignature(), [
   format,
   headline, headlineFamily, align, lineHeight, textColWidth,
   headSizeAuto, headManualPx, headMaxPx, textFx, tallHeadline, headlineHidden,
@@ -15982,14 +16039,15 @@ const historySnapshot = React.useMemo(() => buildHistorySnapshot(), [
 
 React.useEffect(() => {
   if (!historyRef.current.last) {
-    historyRef.current.last = historySnapshot;
+    historyRef.current.last = buildHistorySnapshot();
+    historyRef.current.lastSignature = historySignature;
   }
-}, [historySnapshot]);
+}, [historySignature]);
 
 React.useEffect(() => {
   if (historyPauseRef.current) return;
   if (isLiveDragging) return;
-  if (historyRef.current.last === historySnapshot) return;
+  if (historyRef.current.lastSignature === historySignature) return;
 
   if (historyDebounceRef.current) {
     window.clearTimeout(historyDebounceRef.current);
@@ -15998,14 +16056,16 @@ React.useEffect(() => {
   historyDebounceRef.current = window.setTimeout(() => {
     if (historyPauseRef.current) return;
     const ref = historyRef.current;
-    if (ref.last === historySnapshot) return;
+    if (ref.lastSignature === historySignature) return;
+    const nextSnapshot = buildHistorySnapshot();
     if (ref.last) {
       ref.undo.push(ref.last);
       if (ref.undo.length > HISTORY_LIMIT) {
         ref.undo = ref.undo.slice(-HISTORY_LIMIT);
       }
     }
-    ref.last = historySnapshot;
+    ref.last = nextSnapshot;
+    ref.lastSignature = historySignature;
     ref.redo = [];
   }, 300);
 
@@ -16014,7 +16074,7 @@ React.useEffect(() => {
       window.clearTimeout(historyDebounceRef.current);
     }
   };
-}, [historySnapshot, isLiveDragging]);
+}, [historySignature, isLiveDragging]);
 //const [selectedPortraitId, setSelectedPortraitId] = useState<string | null>(null);
 
 /* ========= IS_RESCUE: ICON SLOTS (BEGIN) ========= */
@@ -17442,7 +17502,7 @@ const portraitCanvas = React.useMemo(() => {
     const reduceDragEffects =
       isMobileView &&
       isLiveDragging &&
-      isDragging &&
+      isSelected &&
       (isLogo || isExtracted || isShapeGraphic || (!isFlare && !isSticker));
     const showSubjectLighting =
       !reduceDragEffects && !isShapeGraphic && !isPortraitAsset && portraitLighting.enabled;
@@ -18686,7 +18746,7 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
   const handleUploadDesignFromVibe = async (file: File) => {
     if (isStarterPlan) {
       alert("Starter plan does not include project save/load. Upgrade or use a pass to unlock project files.");
-      return;
+      return false;
     }
     try {
       const raw = await file.text();
@@ -18694,10 +18754,12 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       // Pass the raw text string directly to your main loader
       importDesignJSON(raw);
       setProjectFileStatusAndPersist({ kind: "loaded", at: new Date().toISOString() });
+      return true;
 
     } catch (err) {
 
       alert("That JSON couldn't be loaded.");
+      return false;
     }
   };
 
@@ -18998,9 +19060,9 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
 const applyHistorySnapshot = React.useCallback(
   (snapshot: string) => {
     const store = useFlyerState.getState();
-    const prevPanel = store.selectedPanel;
-    historyPauseRef.current = true;
-    importDesignJSON(snapshot, { preservePanel: true, skipTemplateOpen: true });
+  const prevPanel = store.selectedPanel;
+  historyPauseRef.current = true;
+  importDesignJSON(snapshot, { preservePanel: true, skipTemplateOpen: true });
     if (prevPanel !== null) {
       store.setSelectedPanel(prevPanel);
     }
@@ -19018,6 +19080,7 @@ const undoHistory = React.useCallback(() => {
   const prev = ref.undo.pop() as string;
   ref.redo.push(current);
   ref.last = prev;
+  ref.lastSignature = summarizeHistorySnapshot(prev);
   applyHistorySnapshot(prev);
 }, [applyHistorySnapshot]);
 
@@ -19031,6 +19094,7 @@ const redoHistory = React.useCallback(() => {
     ref.undo = ref.undo.slice(-HISTORY_LIMIT);
   }
   ref.last = next;
+  ref.lastSignature = summarizeHistorySnapshot(next);
   applyHistorySnapshot(next);
 }, [applyHistorySnapshot, HISTORY_LIMIT]);
 
@@ -20519,11 +20583,13 @@ function eventWithinAnyFloat(ev?: Event) {
   const anyEv = ev as any;
   const t = anyEv?.target as HTMLElement | null;
   if (t?.closest?.('[data-floating-controls]')) return true;
+  if (t?.closest?.('[data-mobile-float-lock="true"]')) return true;
   const path = (anyEv?.composedPath?.() || []) as any[];
   if (path?.length) {
     for (const node of path) {
       if (!node) continue;
       if ((node as any)?.dataset?.floatingControls) return true;
+      if ((node as any)?.dataset?.mobileFloatLock === "true") return true;
       if (floatingTextRef.current && node === floatingTextRef.current) return true;
       if (floatingAssetRef.current && node === floatingAssetRef.current) return true;
       if (floatingBgRef.current && node === floatingBgRef.current) return true;
@@ -20537,6 +20603,7 @@ function activeElementWithinAnyFloat() {
   const active = document.activeElement as HTMLElement | null;
   if (!active) return false;
   if (active.closest?.('[data-floating-controls]')) return true;
+  if (active.closest?.('[data-mobile-float-lock="true"]')) return true;
   return (
     (floatingTextRef.current && floatingTextRef.current.contains(active)) ||
     (floatingAssetRef.current && floatingAssetRef.current.contains(active)) ||
@@ -21575,7 +21642,7 @@ const activeTextControls = React.useMemo<ActiveTextControls | null>(() => {
         sizeMax: 300,
         sizeStep: 2,
         lineHeight,
-        lineMin: 0.3,
+        lineMin: 0.8,
         lineMax: 1.3,
         lineStep: 0.02,
         color: textFx?.color,
@@ -21627,7 +21694,7 @@ const activeTextControls = React.useMemo<ActiveTextControls | null>(() => {
         sizeMax: 120,
         sizeStep: 1,
         lineHeight: head2LineHeight,
-        lineMin: 0.6,
+        lineMin: 0.8,
         lineMax: 1.6,
         lineStep: 0.05,
         color: head2Color,
@@ -21723,7 +21790,7 @@ const activeTextControls = React.useMemo<ActiveTextControls | null>(() => {
         sizeMax: 96,
         sizeStep: 1,
         lineHeight: venueLineHeight,
-        lineMin: 0.6,
+        lineMin: 0.8,
         lineMax: 1.8,
         lineStep: 0.05,
         color: venueColor,
@@ -22048,6 +22115,8 @@ const activeAssetControls = React.useMemo(() => {
         colorValue: (sel as any).iconColor || "#ffffff",
         shapeGradient: isShapeGraphic ? (sel as any).shapeGradient !== false : undefined,
         rotation: sel.rotation ?? 0,
+        shadowBlur: isLogo ? Number((sel as any).shadowBlur ?? 0) : undefined,
+        shadowStrength: isLogo ? Number((sel as any).shadowAlpha ?? 0.48) : undefined,
         separatorLength: isSeparator
           ? Number((sel as any).separatorWidth ?? 180)
           : isShapeGraphic
@@ -22146,27 +22215,39 @@ const activeAssetControls = React.useMemo(() => {
                 shapeSkew: v,
               })
           : undefined,
-        showLabel: !!(sel as any).showLabel,
-        labelValue: String((sel as any).label ?? ""),
-        onLabel: (v: string) =>
-          useFlyerState.getState().updatePortrait(format, sel.id, { label: v }),
-        labelSize: Number.isFinite((sel as any).labelSize)
+        showLabel: isLogo ? undefined : !!(sel as any).showLabel,
+        labelValue: isLogo ? undefined : String((sel as any).label ?? ""),
+        onLabel: isLogo
+          ? undefined
+          : (v: string) =>
+              useFlyerState.getState().updatePortrait(format, sel.id, { label: v }),
+        labelSize: isLogo
+          ? undefined
+          : Number.isFinite((sel as any).labelSize)
           ? Number((sel as any).labelSize)
           : 9,
-        onLabelSize: (v: number) =>
-          useFlyerState.getState().updatePortrait(format, sel.id, { labelSize: v }),
-        labelOffsetY: Number((sel as any).labelOffsetY ?? 0),
-        onLabelOffsetY: (v: number) =>
-          useFlyerState.getState().updatePortrait(format, sel.id, { labelOffsetY: v }),
-        onToggleLabel: () =>
-          useFlyerState.getState().updatePortrait(format, sel.id, {
-            showLabel: !(sel as any).showLabel,
-          }),
-        labelBg: (sel as any).labelBg ?? true,
-        onToggleLabelBg: () =>
-          useFlyerState.getState().updatePortrait(format, sel.id, {
-            labelBg: !((sel as any).labelBg ?? true),
-          }),
+        onLabelSize: isLogo
+          ? undefined
+          : (v: number) =>
+              useFlyerState.getState().updatePortrait(format, sel.id, { labelSize: v }),
+        labelOffsetY: isLogo ? undefined : Number((sel as any).labelOffsetY ?? 0),
+        onLabelOffsetY: isLogo
+          ? undefined
+          : (v: number) =>
+              useFlyerState.getState().updatePortrait(format, sel.id, { labelOffsetY: v }),
+        onToggleLabel: isLogo
+          ? undefined
+          : () =>
+              useFlyerState.getState().updatePortrait(format, sel.id, {
+                showLabel: !(sel as any).showLabel,
+              }),
+        labelBg: isLogo ? undefined : (sel as any).labelBg ?? true,
+        onToggleLabelBg: isLogo
+          ? undefined
+          : () =>
+              useFlyerState.getState().updatePortrait(format, sel.id, {
+                labelBg: !((sel as any).labelBg ?? true),
+              }),
         onScale: (v: number) =>
           useFlyerState.getState().updatePortrait(format, sel.id, { scale: v }),
         onOpacity: (v: number) =>
@@ -22181,6 +22262,14 @@ const activeAssetControls = React.useMemo(() => {
           useFlyerState.getState().updatePortrait(format, sel.id, { y: clamp100(v) }),
         onRotate: (v: number) =>
           useFlyerState.getState().updatePortrait(format, sel.id, { rotation: v }),
+        onShadowBlur: isLogo
+          ? (v: number) =>
+              useFlyerState.getState().updatePortrait(format, sel.id, { shadowBlur: v })
+          : undefined,
+        onShadowStrength: isLogo
+          ? (v: number) =>
+              useFlyerState.getState().updatePortrait(format, sel.id, { shadowAlpha: v })
+          : undefined,
         onToggleLock: () =>
           useFlyerState.getState().updatePortrait(format, sel.id, {
             locked: !sel.locked,
@@ -23880,20 +23969,24 @@ return (
         >
         <StartupTemplates 
             onSelect={handleTemplateSelect} 
-            importDesignJSON={(json) => {
-              importDesignJSON(json);
-              setProjectFileStatusAndPersist({ kind: "loaded", at: new Date().toISOString() });
-              setStartupStudioMode(null);
-              setLoadingStartup(false);
-              setShowStartup(false);
-              requestAnimationFrame(() => {
-                scrollToArtboard();
-              });
-            }}
             buildForYouEnabled={hasCreatorAutoLayoutAccess}
             buildForYouLoading={loadingStartup}
             buildForYouError={startupBuildError}
             onBuildForYou={handleStartupBuildForYou}
+            onLoadProjectFile={async (file) => {
+              setLoadingStartup(true);
+              try {
+                const loaded = await handleUploadDesignFromVibe(file);
+                if (!loaded) return;
+                setStartupStudioMode(null);
+                setShowStartup(false);
+                requestAnimationFrame(() => {
+                  scrollToArtboard();
+                });
+              } finally {
+                setLoadingStartup(false);
+              }
+            }}
             djBackgroundOptions={DJ_STARTUP_BACKGROUNDS}
           />
         </motion.div>
@@ -25600,7 +25693,7 @@ style={{ top: STICKY_TOP }}
           max={300}
           step={2}
         />
-        <Stepper label="Line Height" value={lineHeight} setValue={setLineHeight} min={0.3} max={1.3} step={0.02} digits={2} />
+        <Stepper label="Line Height" value={lineHeight} setValue={setLineHeight} min={0.8} max={1.3} step={0.02} digits={2} />
         <Stepper label="Col Width %" value={textColWidth} setValue={setTextColWidth} min={30} max={100} step={1} />
       </div>
 
@@ -25639,7 +25732,7 @@ style={{ top: STICKY_TOP }}
           value={headShadowStrength}
           setValue={setHeadShadowStrength}
           min={0}
-          max={5}
+          max={8}
           step={0.1}
           digits={1}
         />
@@ -25963,7 +26056,7 @@ style={{ top: STICKY_TOP }}
           label="Line Height"
           value={head2LineHeight}
           setValue={setHead2LineHeight}
-          min={0.3}
+          min={0.8}
           max={1.3}
           step={0.02}
           digits={2}
@@ -26003,7 +26096,7 @@ style={{ top: STICKY_TOP }}
           value={head2ShadowStrength}
           setValue={setHead2ShadowStrength}
           min={0}
-          max={5}
+          max={8}
           step={0.1}
           digits={1}
         />
@@ -26106,7 +26199,7 @@ style={{ top: STICKY_TOP }}
       <div className="grid grid-cols-2 gap-3 mt-4">
         <Stepper label="Size px" value={bodySize} setValue={setBodySize} min={10} max={32} step={1} />
         <Stepper label="Track (em)" value={bodyTracking} setValue={setBodyTracking} min={0} max={0.12} step={0.01} digits={2} />
-        <Stepper label="Line Height" value={detailsLineHeight} setValue={setDetailsLineHeight} min={0.4} max={2.0} step={0.02} digits={2} />
+        <Stepper label="Line Height" value={detailsLineHeight} setValue={setDetailsLineHeight} min={0.8} max={2.0} step={0.02} digits={2} />
         <Stepper label="Rotation (°)" value={detailsRotate} setValue={(n) => setDetailsRotate(normDeg(n))} min={-360} max={360} step={1} />
       </div>
 
@@ -26131,7 +26224,7 @@ style={{ top: STICKY_TOP }}
         </div>
         <div className="mt-2 flex items-center justify-between">
           <span className="text-xs opacity-70">Shadow Strength</span>
-          <Stepper value={detailsShadowStrength} setValue={setDetailsShadowStrength} min={0} max={5} step={0.1} />
+          <Stepper value={detailsShadowStrength} setValue={setDetailsShadowStrength} min={0} max={8} step={0.1} />
         </div>
       </div>
     </div>
@@ -26210,7 +26303,7 @@ style={{ top: STICKY_TOP }}
         <div className="grid grid-cols-2 gap-3 mt-4">
           <Stepper label="Size px" value={details2Size} setValue={setDetails2Size} min={10} max={80} step={1} />
           <Stepper label="Track (em)" value={details2LetterSpacing} setValue={setDetails2LetterSpacing} min={0} max={0.15} step={0.01} digits={2} />
-          <Stepper label="Line Height" value={details2LineHeight} setValue={setDetails2LineHeight} min={0.5} max={2.5} step={0.05} digits={2} />
+          <Stepper label="Line Height" value={details2LineHeight} setValue={setDetails2LineHeight} min={0.8} max={2.5} step={0.05} digits={2} />
           <Stepper label="Rotation (°)" value={details2Rotate} setValue={(n) => setDetails2Rotate(normDeg(n))} min={-360} max={360} step={1} />
         </div>
 
@@ -26234,7 +26327,7 @@ style={{ top: STICKY_TOP }}
           </div>
           <div className="mt-2 flex items-center justify-between">
             <span className="text-xs opacity-70">Shadow Strength</span>
-            <Stepper value={details2ShadowStrength} setValue={setDetails2ShadowStrength} min={0} max={5} step={0.1} />
+            <Stepper value={details2ShadowStrength} setValue={setDetails2ShadowStrength} min={0} max={8} step={0.1} />
           </div>
         </div>
       </div>
@@ -26296,7 +26389,7 @@ style={{ top: STICKY_TOP }}
       {/* ---------- STEPPERS ---------- */}
       <div className="grid grid-cols-3 gap-3 mt-4">
         <Stepper label="Size px" value={venueSize} setValue={setVenueSize} min={10} max={96} step={1} />
-        <Stepper label="Line Height" value={venueLineHeight} setValue={setVenueLineHeight} min={0.7} max={1.4} step={0.02} digits={2} />
+        <Stepper label="Line Height" value={venueLineHeight} setValue={setVenueLineHeight} min={0.8} max={1.4} step={0.02} digits={2} />
         <Stepper label="Rotation (°)" value={venueRotate} setValue={(n) => setVenueRotate(normDeg(n))} min={-360} max={360} step={1} />
       </div>
 
@@ -26320,7 +26413,7 @@ style={{ top: STICKY_TOP }}
         </div>
         <div className="mt-2 flex items-center justify-between">
           <span className="text-xs opacity-70">Shadow Strength</span>
-          <Stepper value={venueShadowStrength} setValue={setVenueShadowStrength} min={0} max={5} step={0.1} />
+          <Stepper value={venueShadowStrength} setValue={setVenueShadowStrength} min={0} max={8} step={0.1} />
         </div>
       </div>
     </div>
@@ -26419,7 +26512,7 @@ style={{ top: STICKY_TOP }}
           </div>
           <div className="mt-2 flex items-center justify-between">
             <span className="text-xs opacity-70">Shadow Strength</span>
-            <Stepper value={subtagShadowStrength} setValue={setSubtagShadowStrength} min={0} max={5} step={0.1} />
+            <Stepper value={subtagShadowStrength} setValue={setSubtagShadowStrength} min={0} max={8} step={0.1} />
           </div>
         </div>
       </div>
@@ -27301,7 +27394,7 @@ style={{ top: STICKY_TOP }}
                       label="Shadow Strength"
                       value={Number(activeTextControls.shadowStrength || 0)}
                       min={0}
-                      max={5}
+                      max={8}
                       step={0.1}
                       precision={1}
                       onChange={(next) => activeTextControls.onShadowStrength?.(next)}
@@ -28768,7 +28861,9 @@ style={{ top: STICKY_TOP }}
     portraitSlotPickerRef={portraitSlotPickerRef}
     onPortraitSlotFile={onPortraitSlotFile}
     vibeUploadInputRef={vibeUploadInputRef}
-    handleUploadDesignFromVibe={handleUploadDesignFromVibe}
+    handleUploadDesignFromVibe={async (file) => {
+      await handleUploadDesignFromVibe(file);
+    }}
     bgScale={bgScale}
     bgBlur={bgBlur}
     hasSubject={!!portraitUrl}
