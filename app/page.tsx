@@ -17207,6 +17207,32 @@ const portraitCanvas = React.useMemo(() => {
     }
   };
 
+  const selectItemForDrag = (item: any) => {
+    const store = useFlyerState.getState();
+    const isBrandFace = !!item?.isBrandFace;
+    const { isLogo, isFlare, isSticker, isExtracted } = classify(item);
+    const panel = isBrandFace
+      ? "dj_branding"
+      : isLogo
+      ? "logo"
+      : isFlare || isSticker
+      ? "icons"
+      : isExtracted
+      ? "extract_subject"
+      : "portrait";
+    const target = isLogo ? "logo" : isFlare || isSticker ? "icon" : "portrait";
+
+    if ((store as any).selectedPortraitId !== item.id) {
+      store.setSelectedPortraitId(item.id);
+    }
+    if ((store as any).moveTarget !== target) {
+      store.setMoveTarget(target);
+    }
+    if ((store as any).selectedPanel !== panel) {
+      store.setSelectedPanel(panel);
+    }
+  };
+
   const canDrag = (item: any) => {
     const store = useFlyerState.getState();
     const mt = (store as any).moveTarget;
@@ -17393,11 +17419,12 @@ const portraitCanvas = React.useMemo(() => {
     const rimLayerFilter = `brightness(${(1.34 + portraitLighting.rimLight * 1.3).toFixed(3)}) saturate(${(1.1 + Math.abs(portraitLighting.warmth) * 0.22).toFixed(3)}) ${warmthTint} drop-shadow(${rimGlowOffset}px 0 ${rimGlowBlur}px rgba(${lightColor.r}, ${lightColor.g}, ${lightColor.b}, 0.75))`;
 
     const triggerUnlock = () => {
-      if (!locked) return;
+      if (!locked || unlocking) return;
       setUnlockingIds((prev) => (prev.includes(p.id) ? prev : [...prev, p.id]));
+      const s = useFlyerState.getState();
+      s.updatePortrait(format, p.id, { locked: false });
+      selectItemForDrag(p);
       window.setTimeout(() => {
-        const s = useFlyerState.getState();
-        s.updatePortrait(format, p.id, { locked: false });
         setUnlockingIds((prev) => prev.filter((id) => id !== p.id));
       }, 180);
     };
@@ -17427,7 +17454,7 @@ const portraitCanvas = React.useMemo(() => {
             if (clickThrough) return;
             e.preventDefault();
             e.stopPropagation();
-            selectItem(p.id);
+            selectItemForDrag(p);
 
             if (locked) return;
             if (!canDrag(p)) return;
@@ -17505,8 +17532,8 @@ const portraitCanvas = React.useMemo(() => {
             const finalY = Number(el.dataset.sy || "0") + (dy / ch) * 100;
 
             useFlyerState.getState().updatePortrait(format, p.id, {
-              x: finalX,
-              y: finalY,
+              x: Number.isFinite(finalX) ? clamp100(finalX) : p.x,
+              y: Number.isFinite(finalY) ? clamp100(finalY) : p.y,
             });
             useFlyerState.getState().setDragging(null);
             useFlyerState.getState().setIsLiveDragging(false);
@@ -18004,7 +18031,7 @@ const portraitCanvas = React.useMemo(() => {
               transformOrigin: "center",
               transition: "transform 160ms ease, opacity 160ms ease",
               ...(unlocking ? { transform: "translate(-50%, -50%) scale(0.7)" } : {}),
-              pointerEvents: "auto",
+              pointerEvents: unlocking ? "none" : "auto",
             }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -21866,7 +21893,7 @@ const activeAssetControls = React.useMemo(() => {
       return {
         label: formatUiLabelCaps(assetLabel),
         idLabel: `${sel.id}`,
-        showPosition: !(sel.isFlare || sel.isSticker),
+        showPosition: !(sel.isFlare || sel.isSticker || isLogo),
         posX: sel.x ?? 0,
         posY: sel.y ?? 0,
         scale: sel.scale ?? 1,
