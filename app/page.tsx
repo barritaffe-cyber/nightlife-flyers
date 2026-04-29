@@ -5495,15 +5495,78 @@ async function compressBackgroundForStorage(value: string): Promise<string> {
 // ------------------------------------------------------------------
 function normalizeDesignJson(design: any, currentFormat: string) {
   const targetFmt = design.format || design.targetFormat || currentFormat;
+  const sessionRoot =
+    design?.session && typeof design.session === "object" ? design.session : {};
   const sessionState =
-    design?.session && typeof design.session === "object"
-      ? design.session[targetFmt] ?? {}
-      : {};
+    sessionRoot && typeof sessionRoot === "object" ? sessionRoot[targetFmt] ?? {} : {};
   const merged = {
-    ...sessionState,
     ...design,
+    ...sessionState,
   };
-  
+
+  const readSessionArray = (fmt: Format, key: "portraits" | "emojis") => {
+    const bucket = sessionRoot?.[fmt]?.[key];
+    return Array.isArray(bucket) ? bucket : [];
+  };
+
+  const normalizeByFormatArray = (value: any, key: "portraits" | "emojis") => {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      return {
+        square: Array.isArray(value.square) ? value.square : readSessionArray("square", key),
+        story: Array.isArray(value.story) ? value.story : readSessionArray("story", key),
+      };
+    }
+    if (Array.isArray(value)) {
+      return {
+        square:
+          targetFmt === "square" ? value : readSessionArray("square", key),
+        story:
+          targetFmt === "story" ? value : readSessionArray("story", key),
+      };
+    }
+    return {
+      square: readSessionArray("square", key),
+      story: readSessionArray("story", key),
+    };
+  };
+
+  const normalizeFormatToggle = (
+    rootValue: any,
+    sessionKey: "head2Enabled" | "details2Enabled" | "subtagEnabled",
+    fallback = false
+  ) => {
+    if (rootValue && typeof rootValue === "object" && !Array.isArray(rootValue)) {
+      return {
+        square:
+          typeof rootValue.square === "boolean"
+            ? rootValue.square
+            : typeof sessionRoot?.square?.[sessionKey] === "boolean"
+            ? sessionRoot.square[sessionKey]
+            : fallback,
+        story:
+          typeof rootValue.story === "boolean"
+            ? rootValue.story
+            : typeof sessionRoot?.story?.[sessionKey] === "boolean"
+            ? sessionRoot.story[sessionKey]
+            : fallback,
+      };
+    }
+    return {
+      square:
+        targetFmt === "square" && typeof rootValue === "boolean"
+          ? rootValue
+          : typeof sessionRoot?.square?.[sessionKey] === "boolean"
+          ? sessionRoot.square[sessionKey]
+          : fallback,
+      story:
+        targetFmt === "story" && typeof rootValue === "boolean"
+          ? rootValue
+          : typeof sessionRoot?.story?.[sessionKey] === "boolean"
+          ? sessionRoot.story[sessionKey]
+          : fallback,
+    };
+  };
+
   // Flatten text styles if nested differently in older versions
   const headline = merged.headline ?? merged.text?.headline;
   const head2 = merged.head2 ?? merged.text?.head2 ?? merged.text?.headline2;
@@ -5511,7 +5574,55 @@ function normalizeDesignJson(design: any, currentFormat: string) {
   const details2 = merged.details2 ?? merged.text?.details2;
   const venue = merged.venue ?? merged.text?.venue;
   const subtag = merged.subtag ?? merged.text?.subtag;
-  
+
+  const portraits = normalizeByFormatArray(
+    design.portraits ?? design.portraitsByFormat ?? sessionState?.portraits,
+    "portraits"
+  );
+  const emojis = normalizeByFormatArray(
+    design.emojis ?? design.emojisByFormat ?? sessionState?.emojis,
+    "emojis"
+  );
+
+  const headline2Enabled = normalizeFormatToggle(
+    design.headline2Enabled,
+    "head2Enabled",
+    true
+  );
+  const details2Enabled = normalizeFormatToggle(
+    design.details2Enabled,
+    "details2Enabled",
+    false
+  );
+  const subtagEnabled = normalizeFormatToggle(
+    design.subtagEnabled,
+    "subtagEnabled",
+    true
+  );
+
+  const normalizedSession = {
+    square: {
+      ...(sessionRoot?.square && typeof sessionRoot.square === "object"
+        ? sessionRoot.square
+        : {}),
+      portraits: portraits.square,
+      emojis: emojis.square,
+      subtagEnabled: subtagEnabled.square,
+      details2Enabled: details2Enabled.square,
+      head2Enabled: headline2Enabled.square,
+    },
+    story: {
+      ...(sessionRoot?.story && typeof sessionRoot.story === "object"
+        ? sessionRoot.story
+        : {}),
+      portraits: portraits.story,
+      emojis: emojis.story,
+      subtagEnabled: subtagEnabled.story,
+      details2Enabled: details2Enabled.story,
+      head2Enabled: headline2Enabled.story,
+    },
+  };
+
   return {
     ...merged,
     format: targetFmt,
@@ -5521,8 +5632,21 @@ function normalizeDesignJson(design: any, currentFormat: string) {
     details2,
     venue,
     subtag,
-    portraits: merged.portraits || merged.portraitsByFormat || {},
-    emojis: merged.emojis || merged.emojisByFormat || {},
+    head2SizePx: merged.head2SizePx ?? merged.head2Size,
+    headManualPx: merged.headManualPx ?? merged.headlineSize ?? merged.headSize,
+    headlineHidden: !!(merged.headlineHidden ?? false),
+    portraits,
+    emojis,
+    headline2Enabled,
+    details2Enabled,
+    subtagEnabled,
+    session: normalizedSession,
+    icons:
+      Array.isArray(merged.icons)
+        ? merged.icons
+        : Array.isArray(sessionRoot?.[targetFmt]?.icons)
+        ? sessionRoot[targetFmt].icons
+        : [],
   };
 }
 
@@ -18493,13 +18617,23 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
     const storeExport = useFlyerState.getState().exportDesign();
     const activeFormat = storeExport.format;
     const activeSession = storeExport.session?.[activeFormat] ?? {};
+    const flatActiveSession = Object.fromEntries(
+      Object.entries((activeSession as Record<string, unknown>) || {}).filter(
+        ([key]) =>
+          key !== "portraits" &&
+          key !== "emojis" &&
+          key !== "icons" &&
+          key !== "subtagEnabled" &&
+          key !== "details2Enabled"
+      )
+    );
     const activeIcons = Array.isArray((activeSession as any).icons)
       ? ((activeSession as any).icons as typeof iconList)
       : iconList || [];
 
     return {
       ...storeExport,
-      ...activeSession,
+      ...flatActiveSession,
       version: "3.0",
       savedAt,
       format: activeFormat,
@@ -18648,6 +18782,7 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       applyIfDefined(data.details2, setDetails2);
       applyIfDefined(data.venue, setVenue);
       applyIfDefined(data.subtag, setSubtag);
+      applyIfDefined(data.headlineHidden, setHeadlineHidden);
 
       // ✅ restore font families
       applyIfDefined(data.headlineFamily, setHeadlineFamily);
@@ -18751,7 +18886,7 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       applyIfDefined(data.headManualPx, setHeadManualPx);
       applyIfDefined(data.headMaxPx, setHeadMaxPx);
 
-      applyIfDefined(data.head2SizePx, setHead2SizePx);
+      applyIfDefined(data.head2SizePx ?? data.head2Size, setHead2SizePx);
       applyIfDefined(data.head2LineHeight, setHead2LineHeight);
       applyIfDefined(data.head2Align, setHead2Align);
       applyIfDefined(data.head2Alpha, setHead2Alpha);
@@ -19929,6 +20064,7 @@ const syncCurrentStateToSession = () => {
     headlineItalic: textFx.italic,
     headlineBold: textFx.bold,
     headlineUppercase: textFx.uppercase,
+    headlineHidden,
     // Position & Rotation
     headX,
     headY,
@@ -19962,6 +20098,7 @@ const syncCurrentStateToSession = () => {
     head2Family,
     head2Color,
     head2Size: head2SizePx,  // ✅ Map internal 'Px' state to template 'Size'
+    head2SizePx,
     head2Align,
     head2LineHeight,
     head2TrackEm: head2Fx.tracking,
