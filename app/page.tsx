@@ -8058,6 +8058,31 @@ const {
   }))
 );
 
+const useSafeFormatSwitchTransition = React.useMemo(() => {
+  const hasHeavyAssets = (fmt: Format | null | undefined) => {
+    if (!fmt) return false;
+    const bucket = Array.isArray(portraits?.[fmt]) ? portraits[fmt] : [];
+    if (bucket.length >= 6) return true;
+    return bucket.some((item: any) => {
+      const id = String(item?.id || "");
+      return (
+        !!item?.isExtracted ||
+        !!item?.isFlare ||
+        !!item?.isLogo ||
+        !!item?.isShapeGraphic ||
+        id.startsWith("logo_") ||
+        Number(item?.shadowBlur ?? 0) > 0 ||
+        (!!item?.lighting && item.lighting.enabled) ||
+        ((typeof item?.filterPreset === "string" && item.filterPreset !== "none") ||
+          (typeof item?.mainFaceFilterPreset === "string" &&
+            item.mainFaceFilterPreset !== "none"))
+      );
+    });
+  };
+
+  return hasHeavyAssets(format) || hasHeavyAssets(pendingFormat);
+}, [format, pendingFormat, portraits]);
+
 
 // --- Cutout cleanup UI state ---
 
@@ -26664,15 +26689,33 @@ style={{ top: STICKY_TOP }}
           initial={{ opacity: 1 }}
           animate={
             fadeOut
-              ? { opacity: 0, filter: "blur(24px)" }
+              ? {
+                  opacity: useSafeFormatSwitchTransition ? 0.06 : 0,
+                  filter: useSafeFormatSwitchTransition ? "blur(0px)" : "blur(24px)",
+                }
               : { opacity: 1, filter: "blur(0px)" }
           }
           transition={{
-            opacity: { duration: fadeOut ? 0.35 : 1, ease: "easeInOut" },
-            filter: { duration: fadeOut ? 0.35 : 1, ease: "easeInOut" },
+            opacity: {
+              duration: fadeOut
+                ? useSafeFormatSwitchTransition
+                  ? 0.18
+                  : 0.35
+                : 1,
+              ease: "easeInOut",
+            },
+            filter: {
+              duration: fadeOut
+                ? useSafeFormatSwitchTransition
+                  ? 0
+                  : 0.35
+                : 1,
+              ease: "easeInOut",
+            },
           }}
           // Ensure the wrapper is relative so absolute children position correctly
-          className="relative" 
+          className="relative"
+          style={{ willChange: useSafeFormatSwitchTransition ? "opacity" : "opacity, filter" }}
           onAnimationComplete={() => {
             if (!fadeOut || !pendingFormat) return;
 
