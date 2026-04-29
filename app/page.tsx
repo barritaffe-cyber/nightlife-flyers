@@ -2851,8 +2851,41 @@ const setDragging = useFlyerState((s) => s.setDragging);
 const moveTarget = useFlyerState((s) => s.moveTarget);
 const setMoveTarget = useFlyerState((s) => s.setMoveTarget);
 const setSelectedPortraitId = useFlyerState((s) => s.setSelectedPortraitId);
-const dragReturnTimer = useRef<NodeJS.Timeout | null>(null);
+const dragReturnTimer = useRef<number | null>(null);
 const bgDragRef = useRef<HTMLDivElement>(null); // ✅ Dedicated ref for background
+
+const pauseMobileDragEffects = React.useCallback(() => {
+  if (!isMobileView) return;
+  if (dragReturnTimer.current) {
+    window.clearTimeout(dragReturnTimer.current);
+    dragReturnTimer.current = null;
+  }
+  setDragEffectsDisabled(true);
+}, [isMobileView]);
+
+const resumeMobileDragEffects = React.useCallback(() => {
+  if (dragReturnTimer.current) {
+    window.clearTimeout(dragReturnTimer.current);
+    dragReturnTimer.current = null;
+  }
+  if (!isMobileView) {
+    setDragEffectsDisabled(false);
+    return;
+  }
+  dragReturnTimer.current = window.setTimeout(() => {
+    setDragEffectsDisabled(false);
+    dragReturnTimer.current = null;
+  }, 120);
+}, [isMobileView]);
+
+React.useEffect(() => {
+  return () => {
+    if (dragReturnTimer.current) {
+      window.clearTimeout(dragReturnTimer.current);
+      dragReturnTimer.current = null;
+    }
+  };
+}, []);
 
   // Stores the drag state purely in memory (immune to re-renders)
 const bgDragState = useRef({
@@ -17169,7 +17202,7 @@ const portraitCanvas = React.useMemo(() => {
   const renderItem = (p: any, i: number, baseZ: number) => {
     const isSelected = selectedPortraitId === p.id;
     const locked = !!p.locked;
-    const { isFlare, isSticker } = classify(p);
+    const { isLogo, isFlare, isSticker, isExtracted } = classify(p);
     const isImageSticker = isSticker && typeof (p as any).svgTemplate !== "string" && !!p.url;
     const clickThrough = locked;
     const shadowBlur = Number((p as any).shadowBlur ?? 0);
@@ -17183,15 +17216,15 @@ const portraitCanvas = React.useMemo(() => {
     const tintMode =
       (p as any).tintMode ??
       (isImageSticker || !!(p as any).isExtracted ? "colorize" : "hue");
-    const filterParts = [];
-    if (shadowFilter !== "none") filterParts.push(shadowFilter);
-    if (tintDeg !== 0) {
-      filterParts.push(
-        tintMode === "colorize"
+    const tintFilter =
+      tintDeg !== 0
+        ? tintMode === "colorize"
           ? `sepia(1) saturate(80) hue-rotate(${tintDeg}deg) brightness(0.95) contrast(1.1)`
           : `hue-rotate(${tintDeg}deg)`
-      );
-    }
+        : "none";
+    const filterParts = [];
+    if (shadowFilter !== "none") filterParts.push(shadowFilter);
+    if (tintFilter !== "none") filterParts.push(tintFilter);
     const combinedFilter = filterParts.length ? filterParts.join(" ") : "none";
     const unlocking = unlockingIds.includes(p.id);
     const labelScale = Number(p.scale ?? 1);
@@ -17227,7 +17260,15 @@ const portraitCanvas = React.useMemo(() => {
     const shapeWidth = Math.max(12, Math.round(shapeLength * shapeScale));
     const shapeHeight = Math.max(12, Math.round(160 * shapeScale));
     const portraitLighting = normalizeMainFaceLighting((p as any).lighting);
-    const showSubjectLighting = !isShapeGraphic && !isPortraitAsset && portraitLighting.enabled;
+    const dragTarget: MoveTarget = isLogo ? "logo" : isFlare || isSticker ? "icon" : "portrait";
+    const isDragging = dragging === dragTarget && isSelected;
+    const reduceDragEffects =
+      isMobileView &&
+      isLiveDragging &&
+      isDragging &&
+      (isLogo || isExtracted || isShapeGraphic || (!isFlare && !isSticker));
+    const showSubjectLighting =
+      !reduceDragEffects && !isShapeGraphic && !isPortraitAsset && portraitLighting.enabled;
     const portraitFilterPreset =
       !isShapeGraphic && !isPortraitAsset
         ? isBrandFace
@@ -17243,10 +17284,10 @@ const portraitCanvas = React.useMemo(() => {
     );
     const mergeCssFilters = (...parts: Array<string | null | undefined>) =>
       parts.filter((part) => !!part && part !== "none").join(" ") || "none";
-    const showPosterOverlay = portraitFilterPreset === "poster";
-    const showPopOverlay = portraitFilterPreset === "pop";
-    const showNeoOverlay = portraitFilterPreset === "neo";
-    const showComicOverlay = portraitFilterPreset === "comic";
+    const showPosterOverlay = !reduceDragEffects && portraitFilterPreset === "poster";
+    const showPopOverlay = !reduceDragEffects && portraitFilterPreset === "pop";
+    const showNeoOverlay = !reduceDragEffects && portraitFilterPreset === "neo";
+    const showComicOverlay = !reduceDragEffects && portraitFilterPreset === "comic";
     const mainFaceToneFilter =
       portraitFilterPreset === "none"
         ? ""
@@ -17336,9 +17377,9 @@ const portraitCanvas = React.useMemo(() => {
       }, 180);
     };
 
-    // ✅ 1. Determine if this specific item is moving
-    // Checking both global store state and local isSelected
-    const isDragging = dragging === "portrait" && isSelected;
+    const portraitBaseFilter = reduceDragEffects
+      ? tintFilter
+      : mergeCssFilters(showSubjectLighting ? baseFilter : combinedFilter, mainFaceToneFilter);
 
     return (
       <React.Fragment key={p.id}>
@@ -17365,6 +17406,10 @@ const portraitCanvas = React.useMemo(() => {
 
             if (locked) return;
             if (!canDrag(p)) return;
+
+            const dragStore = useFlyerState.getState();
+            dragStore.setDragging(dragTarget);
+            dragStore.setIsLiveDragging(true);
 
             recordMove({
               kind: "portrait",
@@ -17400,10 +17445,19 @@ const portraitCanvas = React.useMemo(() => {
             const el = e.currentTarget as HTMLElement;
             if (el.dataset.pdrag !== "1") return;
 
-            const startX = Number(el.dataset.px || "0");
-            const startY = Number(el.dataset.py || "0");
-            el.style.setProperty("--pdx", `${e.clientX - startX}px`);
-            el.style.setProperty("--pdy", `${e.clientY - startY}px`);
+            (el as any).__pdragX = e.clientX;
+            (el as any).__pdragY = e.clientY;
+            if ((el as any).__pdragRaf) return;
+
+            (el as any).__pdragRaf = requestAnimationFrame(() => {
+              (el as any).__pdragRaf = null;
+              const startX = Number(el.dataset.px || "0");
+              const startY = Number(el.dataset.py || "0");
+              const nextX = Number((el as any).__pdragX ?? startX);
+              const nextY = Number((el as any).__pdragY ?? startY);
+              el.style.setProperty("--pdx", `${nextX - startX}px`);
+              el.style.setProperty("--pdy", `${nextY - startY}px`);
+            });
           }}
           onPointerUp={(e) => {
             e.preventDefault();
@@ -17411,6 +17465,11 @@ const portraitCanvas = React.useMemo(() => {
             const el = e.currentTarget as HTMLElement;
             if (el.dataset.pdrag !== "1") return;
             el.dataset.pdrag = "0";
+
+            if ((el as any).__pdragRaf) {
+              cancelAnimationFrame((el as any).__pdragRaf);
+              (el as any).__pdragRaf = null;
+            }
 
             const dx = e.clientX - Number(el.dataset.px || "0");
             const dy = e.clientY - Number(el.dataset.py || "0");
@@ -17424,7 +17483,24 @@ const portraitCanvas = React.useMemo(() => {
               x: finalX,
               y: finalY,
             });
+            useFlyerState.getState().setDragging(null);
+            useFlyerState.getState().setIsLiveDragging(false);
 
+            el.style.setProperty("--pdx", "0px");
+            el.style.setProperty("--pdy", "0px");
+            try {
+              el.releasePointerCapture(e.pointerId);
+            } catch {}
+          }}
+          onPointerCancel={(e) => {
+            const el = e.currentTarget as HTMLElement;
+            el.dataset.pdrag = "0";
+            if ((el as any).__pdragRaf) {
+              cancelAnimationFrame((el as any).__pdragRaf);
+              (el as any).__pdragRaf = null;
+            }
+            useFlyerState.getState().setDragging(null);
+            useFlyerState.getState().setIsLiveDragging(false);
             el.style.setProperty("--pdx", "0px");
             el.style.setProperty("--pdy", "0px");
             try {
@@ -17490,7 +17566,7 @@ const portraitCanvas = React.useMemo(() => {
                   userSelect: "none",
                   willChange: "transform, filter, opacity",
                   mixBlendMode: ((p as any).blendMode ?? "normal") as any,
-                  filter: mergeCssFilters(showSubjectLighting ? baseFilter : combinedFilter, mainFaceToneFilter),
+                  filter: portraitBaseFilter,
                 }}
               />
               {showPosterOverlay && (
@@ -17728,7 +17804,7 @@ const portraitCanvas = React.useMemo(() => {
                   />
                 </>
               )}
-              {portraitFilterPreset === "halftone" && (
+              {!reduceDragEffects && portraitFilterPreset === "halftone" && (
                 <>
                   <img
                     src={p.url}
@@ -17856,12 +17932,12 @@ const portraitCanvas = React.useMemo(() => {
                 letterSpacing: "0.06em",
                 textTransform: "uppercase",
                 background: labelBg ? "rgba(0,0,0,0.55)" : "transparent",
-                border: labelBg ? "1px solid rgba(255,255,255,0.15)" : "none",
+                border: labelBg && !reduceDragEffects ? "1px solid rgba(255,255,255,0.15)" : "none",
                 color: labelColor,
                 whiteSpace: "pre-line",
                 textAlign: "center",
                 pointerEvents: "none",
-                opacity: 0.9,
+                opacity: reduceDragEffects ? 0.82 : 0.9,
               }}
             >
               {labelText}
