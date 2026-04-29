@@ -4131,10 +4131,11 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 </h1>
 
 
-{showDjTextEditing && !headlineHidden && (
+{showDjTextEditing && (
 <>
 
 {/* HEADLINE (BEGIN) - FIXED & THROTTLED */}
+{!headlineHidden && (
 <div
   ref={(el) => {
     canvasRefs.headline = el;
@@ -4502,6 +4503,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     );
   })()}
 </div>
+)}
 {/* HEADLINE (END) */}
 
 
@@ -6253,7 +6255,7 @@ function layoutWrappedText(opts: {
   const ascent = (m as any).actualBoundingBoxAscent ?? fontSize * 0.8;
   const descent = (m as any).actualBoundingBoxDescent ?? fontSize * 0.2;
   const fontPx = ascent + descent;
-  const lh = clamp(Number(lineHeightMultiplier) || 1.0, 0.75, 1.6);
+  const lh = clamp(Number(lineHeightMultiplier) || 1.0, 0.2, 1.6);
   const lineHeight = fontPx * lh;
 
   let widest = 0;
@@ -21642,7 +21644,7 @@ const activeTextControls = React.useMemo<ActiveTextControls | null>(() => {
         sizeMax: 300,
         sizeStep: 2,
         lineHeight,
-        lineMin: 0.8,
+        lineMin: 0.2,
         lineMax: 1.3,
         lineStep: 0.02,
         color: textFx?.color,
@@ -21694,7 +21696,7 @@ const activeTextControls = React.useMemo<ActiveTextControls | null>(() => {
         sizeMax: 120,
         sizeStep: 1,
         lineHeight: head2LineHeight,
-        lineMin: 0.8,
+        lineMin: 0.2,
         lineMax: 1.6,
         lineStep: 0.05,
         color: head2Color,
@@ -21738,7 +21740,7 @@ const activeTextControls = React.useMemo<ActiveTextControls | null>(() => {
         sizeMax: 60,
         sizeStep: 1,
         lineHeight: detailsLineHeight,
-        lineMin: 0.8,
+        lineMin: 0.2,
         lineMax: 2.2,
         lineStep: 0.05,
         color: bodyColor,
@@ -21764,7 +21766,7 @@ const activeTextControls = React.useMemo<ActiveTextControls | null>(() => {
         sizeMax: 60,
         sizeStep: 1,
         lineHeight: details2LineHeight,
-        lineMin: 0.8,
+        lineMin: 0.2,
         lineMax: 2.2,
         lineStep: 0.05,
         color: details2Color,
@@ -21790,7 +21792,7 @@ const activeTextControls = React.useMemo<ActiveTextControls | null>(() => {
         sizeMax: 96,
         sizeStep: 1,
         lineHeight: venueLineHeight,
-        lineMin: 0.8,
+        lineMin: 0.2,
         lineMax: 1.8,
         lineStep: 0.05,
         color: venueColor,
@@ -21816,7 +21818,7 @@ const activeTextControls = React.useMemo<ActiveTextControls | null>(() => {
         sizeMax: 48,
         sizeStep: 1,
         lineHeight: 1,
-        lineMin: 0.8,
+        lineMin: 0.2,
         lineMax: 1.8,
         lineStep: 0.05,
         color: subtagTextColor,
@@ -25693,7 +25695,7 @@ style={{ top: STICKY_TOP }}
           max={300}
           step={2}
         />
-        <Stepper label="Line Height" value={lineHeight} setValue={setLineHeight} min={0.8} max={1.3} step={0.02} digits={2} />
+        <Stepper label="Line Height" value={lineHeight} setValue={setLineHeight} min={0.2} max={1.3} step={0.02} digits={2} />
         <Stepper label="Col Width %" value={textColWidth} setValue={setTextColWidth} min={30} max={100} step={1} />
       </div>
 
@@ -26056,7 +26058,7 @@ style={{ top: STICKY_TOP }}
           label="Line Height"
           value={head2LineHeight}
           setValue={setHead2LineHeight}
-          min={0.8}
+          min={0.2}
           max={1.3}
           step={0.02}
           digits={2}
@@ -26199,7 +26201,7 @@ style={{ top: STICKY_TOP }}
       <div className="grid grid-cols-2 gap-3 mt-4">
         <Stepper label="Size px" value={bodySize} setValue={setBodySize} min={10} max={32} step={1} />
         <Stepper label="Track (em)" value={bodyTracking} setValue={setBodyTracking} min={0} max={0.12} step={0.01} digits={2} />
-        <Stepper label="Line Height" value={detailsLineHeight} setValue={setDetailsLineHeight} min={0.8} max={2.0} step={0.02} digits={2} />
+        <Stepper label="Line Height" value={detailsLineHeight} setValue={setDetailsLineHeight} min={0.2} max={2.0} step={0.02} digits={2} />
         <Stepper label="Rotation (°)" value={detailsRotate} setValue={(n) => setDetailsRotate(normDeg(n))} min={-360} max={360} step={1} />
       </div>
 
@@ -26303,7 +26305,7 @@ style={{ top: STICKY_TOP }}
         <div className="grid grid-cols-2 gap-3 mt-4">
           <Stepper label="Size px" value={details2Size} setValue={setDetails2Size} min={10} max={80} step={1} />
           <Stepper label="Track (em)" value={details2LetterSpacing} setValue={setDetails2LetterSpacing} min={0} max={0.15} step={0.01} digits={2} />
-          <Stepper label="Line Height" value={details2LineHeight} setValue={setDetails2LineHeight} min={0.8} max={2.5} step={0.05} digits={2} />
+          <Stepper label="Line Height" value={details2LineHeight} setValue={setDetails2LineHeight} min={0.2} max={2.5} step={0.05} digits={2} />
           <Stepper label="Rotation (°)" value={details2Rotate} setValue={(n) => setDetails2Rotate(normDeg(n))} min={-360} max={360} step={1} />
         </div>
 
@@ -26389,7 +26391,7 @@ style={{ top: STICKY_TOP }}
       {/* ---------- STEPPERS ---------- */}
       <div className="grid grid-cols-3 gap-3 mt-4">
         <Stepper label="Size px" value={venueSize} setValue={setVenueSize} min={10} max={96} step={1} />
-        <Stepper label="Line Height" value={venueLineHeight} setValue={setVenueLineHeight} min={0.8} max={1.4} step={0.02} digits={2} />
+        <Stepper label="Line Height" value={venueLineHeight} setValue={setVenueLineHeight} min={0.2} max={1.4} step={0.02} digits={2} />
         <Stepper label="Rotation (°)" value={venueRotate} setValue={(n) => setVenueRotate(normDeg(n))} min={-360} max={360} step={1} />
       </div>
 
