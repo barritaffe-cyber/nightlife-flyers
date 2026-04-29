@@ -14491,6 +14491,7 @@ const buildEdgeAwareLassoMask = (
       lineHeight,
       textColWidth,
       tallHeadline,
+      headlineHidden,
       textFx,
       // headline 2 styles
       headline2Enabled, 
@@ -14583,6 +14584,7 @@ const buildEdgeAwareLassoMask = (
       if (typeof s.tallHeadline === 'boolean') {
         // read-only in current code
       }
+      if (typeof s.headlineHidden === 'boolean') setHeadlineHidden(s.headlineHidden);
       if (s.textFx && typeof s.textFx === 'object') setTextFx((prev) => ({ ...prev, ...s.textFx }));
       if (typeof s.headSliceEnabled === 'boolean') setHeadSliceEnabled(s.headSliceEnabled);
       if (typeof s.headSliceBandCount === 'number') setHeadSliceBandCount(s.headSliceBandCount);
@@ -15836,7 +15838,7 @@ function exportDesignJSON(): string {
 
     // headline
     headline, headlineFamily, align, lineHeight, textColWidth,
-    headSizeAuto, headManualPx, headMaxPx, textFx, tallHeadline,
+    headSizeAuto, headManualPx, headMaxPx, textFx, tallHeadline, headlineHidden,
     headX, headY, headRotate, headSkew, headAlign,
 
     // details (main)
@@ -15896,7 +15898,7 @@ function buildHistorySnapshot(): string {
 
     // headline
     headline, headlineFamily, align, lineHeight, textColWidth,
-    headSizeAuto, headManualPx, headMaxPx, textFx, tallHeadline,
+    headSizeAuto, headManualPx, headMaxPx, textFx, tallHeadline, headlineHidden,
     headX, headY, headRotate, headSkew, headAlign,
 
     // details (main)
@@ -15952,7 +15954,7 @@ function buildHistorySnapshot(): string {
 const historySnapshot = React.useMemo(() => buildHistorySnapshot(), [
   format,
   headline, headlineFamily, align, lineHeight, textColWidth,
-  headSizeAuto, headManualPx, headMaxPx, textFx, tallHeadline,
+  headSizeAuto, headManualPx, headMaxPx, textFx, tallHeadline, headlineHidden,
   headX, headY, headRotate, headSkew, headAlign,
   details, bodyFamily, bodyColor, bodySize, bodyUppercase, bodyBold,
   bodyItalic, bodyUnderline, bodyTracking, detailsLineHeight,
@@ -19162,6 +19164,7 @@ const applyTemplate = React.useCallback<
     
     // --- TEXT CONTENT ---
     setHeadline(merged.headline ?? 'HEADLINE');
+    setHeadlineHidden((merged as any).headlineHidden ?? false);
     setDetails(merged.details ?? 'Event Details');
     setVenue(merged.venue ?? 'Venue Name');
     setSubtag(merged.subtag ?? 'Subtag');
