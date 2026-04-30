@@ -17493,20 +17493,20 @@ const portraitCanvas = React.useMemo(() => {
     if ((store as any).moveTarget !== target) {
       store.setMoveTarget(target);
     }
+    if (isMobileView) {
+      focusCanvasSelectionHome(panel);
+      showMobileFloat("asset");
+      return;
+    }
     if (isExtracted) {
-      if (isMobileView) {
-        setUiMode("design");
-        setMobileControlsOpen(true);
-        setMobileControlsTab("assets");
-        showMobileFloat("asset");
-      } else {
+      if (!isMobileView) {
         focusCanvasSelectionHome(panel);
         window.setTimeout(() => {
           document
             .getElementById("extract-selected-controls")
             ?.scrollIntoView({ behavior: "smooth", block: "start" });
         }, 80);
-      }
+      } 
     } else {
       focusCanvasSelectionHome(panel);
       if (!isBrandFace && !isLogo && !isFlare && !isSticker) {
@@ -17522,6 +17522,8 @@ const portraitCanvas = React.useMemo(() => {
   const selectItemForDrag = (item: any) => {
     const store = useFlyerState.getState();
     suppressCanvasSelectionHomeRef.current = true;
+    floatFocusLockRef.current = false;
+    setFloatingAssetVisible(false);
     const isBrandFace = !!item?.isBrandFace;
     const { isLogo, isFlare, isSticker, isExtracted } = classify(item);
     const target = isLogo ? "logo" : isFlare || isSticker ? "icon" : "portrait";
@@ -18481,6 +18483,9 @@ const flareCanvas = React.useMemo(() => {
                 if (!isSelected) store.setSelectedPortraitId(p.id);
                 store.setMoveTarget("icon");
                 focusCanvasSelectionHome("icons");
+                if (isMobileView) {
+                  showMobileFloat("asset");
+                }
               }}
               onPointerDown={(e) => {
                 if (redirectTransparentAssetPointer(e, e.currentTarget as HTMLElement)) return;
@@ -18490,6 +18495,8 @@ const flareCanvas = React.useMemo(() => {
 
                 const store = useFlyerState.getState();
                 suppressCanvasSelectionHomeRef.current = true;
+                floatFocusLockRef.current = false;
+                setFloatingAssetVisible(false);
                 if (!isSelected) store.setSelectedPortraitId(p.id);
                 store.setMoveTarget("icon");
 
@@ -22515,11 +22522,6 @@ const activeMobileTextFloatPanelStyle = headlineTextStyleTabsVisible
   : mobileFloatPanelStyle;
 const hasAssetControls = !!activeAssetControls;
 
-// On mobile, always show asset float when an asset is active
-React.useEffect(() => {
-  if (isMobileView && activeAssetControls) showMobileFloat("asset");
-}, [isMobileView, activeAssetControls, showMobileFloat]);
-
 React.useEffect(() => {
   if (!floatingEditorVisible) return;
   setMobileTextFloatTab("text");
@@ -22818,15 +22820,11 @@ React.useEffect(() => {
 }, [isLiveDragging, isMobileView]);
 
 React.useEffect(() => {
-  // Open when asset controls exist; close when they disappear
-  if (hasAssetControls) {
-    showMobileFloat("asset");
-  }
   if (!hasAssetControls) {
     floatFocusLockRef.current = false;
     setFloatingAssetVisible(false);
   }
-}, [hasAssetControls, showMobileFloat]);
+}, [hasAssetControls]);
 
 // If user switches to a non-asset target, clear selections and close the asset float
 React.useEffect(() => {
@@ -23901,6 +23899,8 @@ const emojiCanvas = React.useMemo(() => {
     e.preventDefault();
 
     const store = useFlyerState.getState();
+    floatFocusLockRef.current = false;
+    setFloatingAssetVisible(false);
 
     recordMove({
       kind: "emoji",
