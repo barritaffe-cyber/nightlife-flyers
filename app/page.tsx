@@ -17747,6 +17747,13 @@ const portraitCanvas = React.useMemo(() => {
           }}
           onClick={(e) => {
             if (clickThrough) return;
+            const el = e.currentTarget as HTMLElement;
+            if (el.dataset.psuppressclick === "1") {
+              el.dataset.psuppressclick = "0";
+              e.preventDefault();
+              e.stopPropagation();
+              return;
+            }
             if (ignoreTransparentAssetClick(e, e.currentTarget as HTMLElement)) return;
             e.preventDefault();
             e.stopPropagation();
@@ -17783,6 +17790,8 @@ const portraitCanvas = React.useMemo(() => {
             el.dataset.py = String(e.clientY);
             el.dataset.sx = String(p.x);
             el.dataset.sy = String(p.y);
+            el.dataset.pdragmoved = "0";
+            el.dataset.psuppressclick = "0";
 
             const root = document.getElementById("portrait-layer-root");
             if (root) {
@@ -17810,8 +17819,14 @@ const portraitCanvas = React.useMemo(() => {
               const startY = Number(el.dataset.py || "0");
               const nextX = Number((el as any).__pdragX ?? startX);
               const nextY = Number((el as any).__pdragY ?? startY);
-              el.style.setProperty("--pdx", `${nextX - startX}px`);
-              el.style.setProperty("--pdy", `${nextY - startY}px`);
+              const dx = nextX - startX;
+              const dy = nextY - startY;
+              if (el.dataset.pdragmoved !== "1" && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
+                el.dataset.pdragmoved = "1";
+                el.dataset.psuppressclick = "1";
+              }
+              el.style.setProperty("--pdx", `${dx}px`);
+              el.style.setProperty("--pdy", `${dy}px`);
             });
           }}
           onPointerUp={(e) => {
@@ -17858,6 +17873,7 @@ const portraitCanvas = React.useMemo(() => {
             useFlyerState.getState().setDragging(null);
             useFlyerState.getState().setIsLiveDragging(false);
             suppressCanvasSelectionHomeRef.current = false;
+            el.dataset.psuppressclick = "0";
             el.style.setProperty("--pdx", "0px");
             el.style.setProperty("--pdy", "0px");
             try {
@@ -18450,6 +18466,13 @@ const flareCanvas = React.useMemo(() => {
               data-portrait-area="true"
               data-portrait-id={p.id}
               onClick={(e) => {
+                const el = e.currentTarget as HTMLElement;
+                if (el.dataset.psuppressclick === "1") {
+                  el.dataset.psuppressclick = "0";
+                  e.preventDefault();
+                  e.stopPropagation();
+                  return;
+                }
                 if (ignoreTransparentAssetClick(e, e.currentTarget as HTMLElement)) return;
                 e.preventDefault();
                 e.stopPropagation();
@@ -18475,6 +18498,7 @@ const flareCanvas = React.useMemo(() => {
 
                 el.dataset.pdrag = "1";
                 el.dataset.isMoved = "0";
+                el.dataset.psuppressclick = "0";
                 el.dataset.px = String(e.clientX);
                 el.dataset.py = String(e.clientY);
                 el.dataset.sx = String(p.x);
@@ -18498,6 +18522,7 @@ const flareCanvas = React.useMemo(() => {
 
                 if (el.dataset.isMoved === "0" && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
                   el.dataset.isMoved = "1";
+                  el.dataset.psuppressclick = "1";
                 }
                 if (el.dataset.isMoved === "1") {
                   el.style.setProperty("--pdx", `${dx}px`);
@@ -18536,8 +18561,14 @@ const flareCanvas = React.useMemo(() => {
                 if (!isSelected) store.setSelectedPortraitId(p.id);
                 store.setMoveTarget("icon");
               }}
-              onPointerCancel={() => {
+              onPointerCancel={(e) => {
                 suppressCanvasSelectionHomeRef.current = false;
+                const el = e.currentTarget as HTMLElement;
+                el.dataset.pdrag = "0";
+                el.dataset.isMoved = "0";
+                el.dataset.psuppressclick = "0";
+                el.style.setProperty("--pdx", "0px");
+                el.style.setProperty("--pdy", "0px");
               }}
               style={{
                 left: `${p.x}%`,
@@ -23840,6 +23871,13 @@ const emojiCanvas = React.useMemo(() => {
   // ✅ NO ADD ON CLICK (this is what was duplicating)
   // Click should ONLY select + keep panel open
   onClick={(e) => {
+    const el = e.currentTarget as HTMLElement;
+    if (el.dataset.esuppressclick === "1") {
+      el.dataset.esuppressclick = "0";
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
 
@@ -23874,10 +23912,7 @@ const emojiCanvas = React.useMemo(() => {
     // ✅ SAME AS FLARES: select + route FIRST
     store.setSelectedEmojiId(em.id);
     setSelectedEmojiId(em.id);
-    showMobileFloat("asset");
     store.setFocus("icon", "emoji");
-    store.setSelectedPanel("icons");
-    setSelectedPanel("icons");
     store.setMoveTarget("icon");
 
     const el = e.currentTarget as unknown as HTMLElement;
@@ -23887,6 +23922,8 @@ const emojiCanvas = React.useMemo(() => {
 
     el.dataset.edrag = "1";
     el.dataset.eid = em.id;
+    el.dataset.emoved = "0";
+    el.dataset.esuppressclick = "0";
 
     el.dataset.px = String(e.clientX);
     el.dataset.py = String(e.clientY);
@@ -23912,6 +23949,10 @@ const emojiCanvas = React.useMemo(() => {
     const startY = Number(el.dataset.py || "0");
     const dx = e.clientX - startX;
     const dy = e.clientY - startY;
+    if (el.dataset.emoved !== "1" && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
+      el.dataset.emoved = "1";
+      el.dataset.esuppressclick = "1";
+    }
 
     el.style.setProperty("--edx", `${dx}px`);
     el.style.setProperty("--edy", `${dy}px`);
@@ -23944,9 +23985,18 @@ const emojiCanvas = React.useMemo(() => {
     // ✅ SAME AS FLARES: re-assert routing after drag end
     store.setSelectedEmojiId(em.id);
     setSelectedEmojiId(em.id);
-    store.setSelectedPanel("emoji");
     store.setMoveTarget("icon");
 
+    el.style.setProperty("--edx", "0px");
+    el.style.setProperty("--edy", "0px");
+    try {
+      el.releasePointerCapture(e.pointerId);
+    } catch {}
+  }}
+  onPointerCancel={(e) => {
+    const el = e.currentTarget as HTMLElement;
+    el.dataset.edrag = "0";
+    el.dataset.esuppressclick = "0";
     el.style.setProperty("--edx", "0px");
     el.style.setProperty("--edy", "0px");
     try {
