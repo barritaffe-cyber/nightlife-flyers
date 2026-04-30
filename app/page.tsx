@@ -17748,18 +17748,8 @@ const portraitCanvas = React.useMemo(() => {
             e.stopPropagation();
           }}
           onClick={(e) => {
-            if (clickThrough) return;
-            const el = e.currentTarget as HTMLElement;
-            if (el.dataset.psuppressclick === "1") {
-              el.dataset.psuppressclick = "0";
-              e.preventDefault();
-              e.stopPropagation();
-              return;
-            }
-            if (ignoreTransparentAssetClick(e, e.currentTarget as HTMLElement)) return;
             e.preventDefault();
             e.stopPropagation();
-            selectItem(p.id);
           }}
           onPointerDown={(e) => {
             if (clickThrough) return;
@@ -17847,14 +17837,20 @@ const portraitCanvas = React.useMemo(() => {
             const dy = e.clientY - Number(el.dataset.py || "0");
             const cw = Number(el.dataset.cw || "1");
             const ch = Number(el.dataset.ch || "1");
+            const moved =
+              el.dataset.pdragmoved === "1" ||
+              Math.abs(dx) > 3 ||
+              Math.abs(dy) > 3;
 
             const finalX = Number(el.dataset.sx || "0") + (dx / cw) * 100;
             const finalY = Number(el.dataset.sy || "0") + (dy / ch) * 100;
 
-            useFlyerState.getState().updatePortrait(format, p.id, {
-              x: Number.isFinite(finalX) ? clamp100(finalX) : p.x,
-              y: Number.isFinite(finalY) ? clamp100(finalY) : p.y,
-            });
+            if (moved) {
+              useFlyerState.getState().updatePortrait(format, p.id, {
+                x: Number.isFinite(finalX) ? clamp100(finalX) : p.x,
+                y: Number.isFinite(finalY) ? clamp100(finalY) : p.y,
+              });
+            }
             useFlyerState.getState().setDragging(null);
             useFlyerState.getState().setIsLiveDragging(false);
             suppressCanvasSelectionHomeRef.current = false;
@@ -17864,6 +17860,9 @@ const portraitCanvas = React.useMemo(() => {
             try {
               el.releasePointerCapture(e.pointerId);
             } catch {}
+            if (!moved && !clickThrough) {
+              selectItem(p.id);
+            }
           }}
           onPointerCancel={(e) => {
             const el = e.currentTarget as HTMLElement;
@@ -18468,24 +18467,8 @@ const flareCanvas = React.useMemo(() => {
               data-portrait-area="true"
               data-portrait-id={p.id}
               onClick={(e) => {
-                const el = e.currentTarget as HTMLElement;
-                if (el.dataset.psuppressclick === "1") {
-                  el.dataset.psuppressclick = "0";
-                  e.preventDefault();
-                  e.stopPropagation();
-                  return;
-                }
-                if (ignoreTransparentAssetClick(e, e.currentTarget as HTMLElement)) return;
                 e.preventDefault();
                 e.stopPropagation();
-                suppressCanvasSelectionHomeRef.current = false;
-                const store = useFlyerState.getState();
-                if (!isSelected) store.setSelectedPortraitId(p.id);
-                store.setMoveTarget("icon");
-                focusCanvasSelectionHome("icons");
-                if (isMobileView) {
-                  showMobileFloat("asset");
-                }
               }}
               onPointerDown={(e) => {
                 if (redirectTransparentAssetPointer(e, e.currentTarget as HTMLElement)) return;
@@ -18544,15 +18527,18 @@ const flareCanvas = React.useMemo(() => {
                 if (el.dataset.pdrag !== "1") return;
                 el.dataset.pdrag = "0";
 
-                const isMoved = el.dataset.isMoved === "1";
                 const cw = Number(el.dataset.cw || "0");
                 const ch = Number(el.dataset.ch || "0");
                 const dx = e.clientX - Number(el.dataset.px || "0");
                 const dy = e.clientY - Number(el.dataset.py || "0");
                 const startX = Number(el.dataset.sx || "0");
                 const startY = Number(el.dataset.sy || "0");
+                const moved =
+                  el.dataset.isMoved === "1" ||
+                  Math.abs(dx) > 3 ||
+                  Math.abs(dy) > 3;
 
-                if (isMoved && cw > 5 && ch > 5) {
+                if (moved && cw > 5 && ch > 5) {
                   const finalX = startX + (dx / cw) * 100;
                   const finalY = startY + (dy / ch) * 100;
                   useFlyerState.getState().updatePortrait(format, p.id, { x: finalX, y: finalY });
@@ -18567,6 +18553,12 @@ const flareCanvas = React.useMemo(() => {
                 const store = useFlyerState.getState();
                 if (!isSelected) store.setSelectedPortraitId(p.id);
                 store.setMoveTarget("icon");
+                if (!moved) {
+                  focusCanvasSelectionHome("icons");
+                  if (isMobileView) {
+                    showMobileFloat("asset");
+                  }
+                }
               }}
               onPointerCancel={(e) => {
                 suppressCanvasSelectionHomeRef.current = false;
@@ -23866,31 +23858,9 @@ const emojiCanvas = React.useMemo(() => {
           <div
   key={em.id}
   className="absolute select-none cursor-grab active:cursor-grabbing"
-  // ✅ NO ADD ON CLICK (this is what was duplicating)
-  // Click should ONLY select + keep panel open
   onClick={(e) => {
-    const el = e.currentTarget as HTMLElement;
-    if (el.dataset.esuppressclick === "1") {
-      el.dataset.esuppressclick = "0";
-      e.preventDefault();
-      e.stopPropagation();
-      return;
-    }
     e.preventDefault();
     e.stopPropagation();
-
-    const store = useFlyerState.getState();
-
-    // ✅ select existing emoji (no newId, no addEmoji)
-    store.setSelectedEmojiId(em.id);
-    setSelectedEmojiId(em.id);
-    showMobileFloat("asset");
-
-    // ✅ SAME AS FLARES: keep correct controls open
-    store.setFocus("icon", "emoji");
-    store.setSelectedPanel("icons");
-    setSelectedPanel("icons");
-    store.setMoveTarget("icon");
   }}
   // DRAG START
   onPointerDown={(e) => {
@@ -23975,14 +23945,18 @@ const emojiCanvas = React.useMemo(() => {
     const startY = Number(el.dataset.py || "0");
     const dx = e.clientX - startX;
     const dy = e.clientY - startY;
+    const moved =
+      el.dataset.emoved === "1" ||
+      Math.abs(dx) > 3 ||
+      Math.abs(dy) > 3;
 
     const finalPctX = startLeft + (dx / cw) * 100;
     const finalPctY = startTop + (dy / ch) * 100;
 
-    // ✅ MOVE ONLY (no add). Use your existing move hook.
-    onEmojiMove?.(eid, finalPctX, finalPctY);
+    if (moved) {
+      onEmojiMove?.(eid, finalPctX, finalPctY);
+    }
 
-    // ✅ SAME AS FLARES: re-assert routing after drag end
     store.setSelectedEmojiId(em.id);
     setSelectedEmojiId(em.id);
     store.setMoveTarget("icon");
@@ -23992,6 +23966,12 @@ const emojiCanvas = React.useMemo(() => {
     try {
       el.releasePointerCapture(e.pointerId);
     } catch {}
+    if (!moved) {
+      showMobileFloat("asset");
+      store.setFocus("icon", "emoji");
+      store.setSelectedPanel("icons");
+      setSelectedPanel("icons");
+    }
   }}
   onPointerCancel={(e) => {
     const el = e.currentTarget as HTMLElement;
