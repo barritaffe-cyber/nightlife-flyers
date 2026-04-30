@@ -8559,12 +8559,14 @@ function focusCanvasSelectionHome(panelOrTarget: string | null) {
   setSelectedPanel(next.panel);
 }
 
+const suppressCanvasSelectionHomeRef = React.useRef(false);
 
 useEffect(() => {
   const store = useFlyerState.getState();
 
   // ✅ if emoji is selected or emoji panel is open, NEVER auto-switch panels
   if ((store as any).selectedEmojiId || store.selectedPanel === "emoji") return;
+  if (suppressCanvasSelectionHomeRef.current || isLiveDragging) return;
 
   if (!moveTarget) return;
 
@@ -17465,6 +17467,7 @@ const portraitCanvas = React.useMemo(() => {
 
   const selectItem = (pid: string) => {
     const store = useFlyerState.getState();
+    suppressCanvasSelectionHomeRef.current = false;
     const liveList = (store as any).portraits?.[format] || [];
     const sel = liveList.find((x: any) => x.id === pid);
     const isBrandFace = !!(sel as any)?.isBrandFace;
@@ -17518,17 +17521,9 @@ const portraitCanvas = React.useMemo(() => {
 
   const selectItemForDrag = (item: any) => {
     const store = useFlyerState.getState();
+    suppressCanvasSelectionHomeRef.current = true;
     const isBrandFace = !!item?.isBrandFace;
     const { isLogo, isFlare, isSticker, isExtracted } = classify(item);
-    const panel = isBrandFace
-      ? "dj_branding"
-      : isLogo
-      ? "logo"
-      : isFlare || isSticker
-      ? "icons"
-      : isExtracted
-      ? "extract_subject"
-      : "portrait";
     const target = isLogo ? "logo" : isFlare || isSticker ? "icon" : "portrait";
 
     if ((store as any).selectedPortraitId !== item.id) {
@@ -17536,9 +17531,6 @@ const portraitCanvas = React.useMemo(() => {
     }
     if ((store as any).moveTarget !== target) {
       store.setMoveTarget(target);
-    }
-    if ((store as any).selectedPanel !== panel) {
-      store.setSelectedPanel(panel);
     }
   };
 
@@ -17848,6 +17840,7 @@ const portraitCanvas = React.useMemo(() => {
             });
             useFlyerState.getState().setDragging(null);
             useFlyerState.getState().setIsLiveDragging(false);
+            suppressCanvasSelectionHomeRef.current = false;
 
             el.style.setProperty("--pdx", "0px");
             el.style.setProperty("--pdy", "0px");
@@ -17864,6 +17857,7 @@ const portraitCanvas = React.useMemo(() => {
             }
             useFlyerState.getState().setDragging(null);
             useFlyerState.getState().setIsLiveDragging(false);
+            suppressCanvasSelectionHomeRef.current = false;
             el.style.setProperty("--pdx", "0px");
             el.style.setProperty("--pdy", "0px");
             try {
@@ -18459,6 +18453,11 @@ const flareCanvas = React.useMemo(() => {
                 if (ignoreTransparentAssetClick(e, e.currentTarget as HTMLElement)) return;
                 e.preventDefault();
                 e.stopPropagation();
+                suppressCanvasSelectionHomeRef.current = false;
+                const store = useFlyerState.getState();
+                if (!isSelected) store.setSelectedPortraitId(p.id);
+                store.setMoveTarget("icon");
+                focusCanvasSelectionHome("icons");
               }}
               onPointerDown={(e) => {
                 if (redirectTransparentAssetPointer(e, e.currentTarget as HTMLElement)) return;
@@ -18467,8 +18466,8 @@ const flareCanvas = React.useMemo(() => {
                 e.stopPropagation();
 
                 const store = useFlyerState.getState();
+                suppressCanvasSelectionHomeRef.current = true;
                 if (!isSelected) store.setSelectedPortraitId(p.id);
-                store.setSelectedPanel("icons");
                 store.setMoveTarget("icon");
 
                 const el = e.currentTarget as HTMLElement;
@@ -18527,14 +18526,18 @@ const flareCanvas = React.useMemo(() => {
                   useFlyerState.getState().updatePortrait(format, p.id, { x: finalX, y: finalY });
                 }
 
+                suppressCanvasSelectionHomeRef.current = false;
+
                 el.style.setProperty("--pdx", "0px");
                 el.style.setProperty("--pdy", "0px");
                 try { el.releasePointerCapture(e.pointerId); } catch {}
 
                 const store = useFlyerState.getState();
                 if (!isSelected) store.setSelectedPortraitId(p.id);
-                store.setSelectedPanel("icons");
                 store.setMoveTarget("icon");
+              }}
+              onPointerCancel={() => {
+                suppressCanvasSelectionHomeRef.current = false;
               }}
               style={{
                 left: `${p.x}%`,
