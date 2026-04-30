@@ -526,11 +526,12 @@ function TintedTextureImage({
   src,
   hue,
   style,
+  ...imgProps
 }: {
   src: string;
   hue: number;
   style: React.CSSProperties;
-}) {
+} & React.ImgHTMLAttributes<HTMLImageElement>) {
   const [displaySrc, setDisplaySrc] = React.useState(src);
 
   React.useEffect(() => {
@@ -601,7 +602,7 @@ function TintedTextureImage({
     };
   }, [src, hue]);
 
-  return <img src={displaySrc} alt="" draggable={false} style={style} />;
+  return <img {...imgProps} src={displaySrc} alt={imgProps.alt ?? ""} draggable={false} style={style} />;
 }
 
 async function inlineCssUrlsToData(css: string): Promise<string> {
@@ -11554,6 +11555,126 @@ const [bgBlur, setBgBlur] = useState(0);
     }
   }, [isMobileView]);
 
+  const transparentHitCacheRef = React.useRef<Map<string, HTMLCanvasElement>>(new Map());
+
+  const isOpaqueAssetHit = React.useCallback((assetEl: HTMLElement | null, sourceImg: HTMLImageElement | null, clientX: number, clientY: number) => {
+    if (!assetEl || !sourceImg) return true;
+
+    const width = assetEl.offsetWidth || sourceImg.offsetWidth || sourceImg.clientWidth;
+    const height = assetEl.offsetHeight || sourceImg.offsetHeight || sourceImg.clientHeight;
+    if (!width || !height) return true;
+
+    const rect = assetEl.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const style = window.getComputedStyle(assetEl);
+    const transform = style.transform && style.transform !== "none" ? style.transform : undefined;
+
+    let localX = clientX - rect.left;
+    let localY = clientY - rect.top;
+
+    if (transform) {
+      try {
+        const inverse = new DOMMatrixReadOnly(transform).inverse();
+        const localPoint = new DOMPoint(clientX - centerX, clientY - centerY).matrixTransform(inverse);
+        localX = localPoint.x + width / 2;
+        localY = localPoint.y + height / 2;
+      } catch {
+        localX = clientX - rect.left;
+        localY = clientY - rect.top;
+      }
+    }
+
+    if (localX < 0 || localX > width || localY < 0 || localY > height) return false;
+
+    const cacheKey = sourceImg.currentSrc || sourceImg.src || "";
+    if (!cacheKey) return true;
+
+    let alphaCanvas = transparentHitCacheRef.current.get(cacheKey) || null;
+    if (!alphaCanvas) {
+      try {
+        const naturalWidth = sourceImg.naturalWidth || width;
+        const naturalHeight = sourceImg.naturalHeight || height;
+        if (!naturalWidth || !naturalHeight) return true;
+        alphaCanvas = document.createElement("canvas");
+        alphaCanvas.width = naturalWidth;
+        alphaCanvas.height = naturalHeight;
+        const ctx = alphaCanvas.getContext("2d", { willReadFrequently: true });
+        if (!ctx) return true;
+        ctx.drawImage(sourceImg, 0, 0, naturalWidth, naturalHeight);
+        transparentHitCacheRef.current.set(cacheKey, alphaCanvas);
+      } catch {
+        return true;
+      }
+    }
+
+    try {
+      const naturalWidth = alphaCanvas.width || sourceImg.naturalWidth || width;
+      const naturalHeight = alphaCanvas.height || sourceImg.naturalHeight || height;
+      const px = Math.max(0, Math.min(naturalWidth - 1, Math.floor((localX / width) * naturalWidth)));
+      const py = Math.max(0, Math.min(naturalHeight - 1, Math.floor((localY / height) * naturalHeight)));
+      const ctx = alphaCanvas.getContext("2d", { willReadFrequently: true });
+      if (!ctx) return true;
+      const alpha = ctx.getImageData(px, py, 1, 1).data[3];
+      return alpha > 20;
+    } catch {
+      return true;
+    }
+  }, []);
+
+  const redirectTransparentAssetPointer = React.useCallback((event: React.PointerEvent<HTMLElement>, currentEl: HTMLElement) => {
+    const assetEl = (currentEl.querySelector('[data-hit-bounds="true"]') as HTMLElement | null) || currentEl;
+    const sourceImg = currentEl.querySelector('[data-hit-source="true"]') as HTMLImageElement | null;
+    if (isOpaqueAssetHit(assetEl, sourceImg, event.clientX, event.clientY)) return false;
+
+    const priorPointerEvents = currentEl.style.pointerEvents;
+    currentEl.style.pointerEvents = "none";
+    const underneath = document.elementFromPoint(event.clientX, event.clientY) as HTMLElement | null;
+    currentEl.style.pointerEvents = priorPointerEvents;
+
+    const nextTarget = underneath?.closest('[data-portrait-area="true"]') as HTMLElement | null;
+    if (!nextTarget || nextTarget === currentEl) {
+      event.preventDefault();
+      event.stopPropagation();
+      return true;
+    }
+
+    nextTarget.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+        pointerId: event.pointerId,
+        pointerType: event.pointerType,
+        isPrimary: event.isPrimary,
+        clientX: event.clientX,
+        clientY: event.clientY,
+        button: event.button,
+        buttons: event.buttons,
+        pressure: event.pressure,
+        width: event.width,
+        height: event.height,
+        ctrlKey: event.ctrlKey,
+        shiftKey: event.shiftKey,
+        altKey: event.altKey,
+        metaKey: event.metaKey,
+      })
+    );
+
+    event.preventDefault();
+    event.stopPropagation();
+    return true;
+  }, [isOpaqueAssetHit]);
+
+  const ignoreTransparentAssetClick = React.useCallback((event: React.MouseEvent<HTMLElement>, currentEl: HTMLElement) => {
+    const assetEl = (currentEl.querySelector('[data-hit-bounds="true"]') as HTMLElement | null) || currentEl;
+    const sourceImg = currentEl.querySelector('[data-hit-source="true"]') as HTMLImageElement | null;
+    if (isOpaqueAssetHit(assetEl, sourceImg, event.clientX, event.clientY)) return false;
+    event.preventDefault();
+    event.stopPropagation();
+    return true;
+  }, [isOpaqueAssetHit]);
+
 
   // === SELECT HELPERS (do not move) ===
  const selectPortrait = (target: MoveTarget = 'portrait') => {
@@ -17634,12 +17755,14 @@ const portraitCanvas = React.useMemo(() => {
           }}
           onClick={(e) => {
             if (clickThrough) return;
+            if (ignoreTransparentAssetClick(e, e.currentTarget as HTMLElement)) return;
             e.preventDefault();
             e.stopPropagation();
             selectItem(p.id);
           }}
           onPointerDown={(e) => {
             if (clickThrough) return;
+            if (redirectTransparentAssetPointer(e, e.currentTarget as HTMLElement)) return;
             e.preventDefault();
             e.stopPropagation();
             selectItemForDrag(p);
@@ -17772,6 +17895,7 @@ const portraitCanvas = React.useMemo(() => {
         >
           {p.url && (
             <div
+              data-hit-bounds="true"
               style={{
                 position: "relative",
                 display: "inline-block",
@@ -17787,6 +17911,7 @@ const portraitCanvas = React.useMemo(() => {
               }}
             >
               <img
+                data-hit-source="true"
                 src={p.url}
                 crossOrigin="anonymous"
                 alt=""
@@ -18261,7 +18386,16 @@ const portraitCanvas = React.useMemo(() => {
     </div>
   );
   // ✅ Added dragging to dependencies to ensure UI refreshes on move start/end
-}, [portraits, format, selectedPortraitId, dragging, unlockingIds, isMobileView]);
+}, [
+  portraits,
+  format,
+  selectedPortraitId,
+  dragging,
+  unlockingIds,
+  isMobileView,
+  ignoreTransparentAssetClick,
+  redirectTransparentAssetPointer,
+]);
 
 
 
@@ -18320,11 +18454,14 @@ const flareCanvas = React.useMemo(() => {
             <div
               className="absolute"
               data-portrait-area="true"
+              data-portrait-id={p.id}
               onClick={(e) => {
+                if (ignoreTransparentAssetClick(e, e.currentTarget as HTMLElement)) return;
                 e.preventDefault();
                 e.stopPropagation();
               }}
               onPointerDown={(e) => {
+                if (redirectTransparentAssetPointer(e, e.currentTarget as HTMLElement)) return;
                 if (locked) return;
                 e.preventDefault();
                 e.stopPropagation();
@@ -18418,6 +18555,8 @@ const flareCanvas = React.useMemo(() => {
             >
               {isTextureAsset ? (
                 <TintedTextureImage
+                  data-hit-bounds="true"
+                  data-hit-source="true"
                   src={p.url}
                   hue={tintDeg}
                   style={{
@@ -18434,6 +18573,8 @@ const flareCanvas = React.useMemo(() => {
               />
             ) : (
               <img
+                  data-hit-bounds="true"
+                  data-hit-source="true"
                   src={p.url}
                   alt=""
                   draggable={false}
@@ -18555,7 +18696,7 @@ const flareCanvas = React.useMemo(() => {
       })}
     </div>
   );
-}, [portraits, format, selectedPortraitId]);
+}, [portraits, format, selectedPortraitId, ignoreTransparentAssetClick, redirectTransparentAssetPointer]);
 
 
 // ===== EXPORT HELPERS (DROP THIS BLOCK RIGHT ABOVE `return (`) =====
