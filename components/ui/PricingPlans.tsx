@@ -387,7 +387,7 @@ export default function PricingPlans() {
             Pick a Plan That Matches Your Workflow
           </motion.h1>
           <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-white/72 sm:text-base">
-            Choose between DJ / Promo, Creator Studio, and on-demand passes based on how often you ship flyers.
+            Start with a Night Pass or Weekend Pass for short runs, or choose Creator or Studio for weekly production and higher-volume brand workflows.
           </p>
 
           <div className="mt-6 inline-flex items-center gap-1 rounded-full border border-white/[0.08] bg-black/35 p-1 shadow-[0_18px_48px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md">
