@@ -14377,9 +14377,6 @@ const generateSubjectForBackground = async () => {
     const handAnatomyNegatives =
       'extra fingers, missing fingers, fused fingers, malformed hands, extra hands, extra arms, duplicated limbs';
 
-    const subjectProvider =
-      genProvider === "auto" ? "nano" : (genProvider as "nano" | "openai" | "venice");
-    const isVeniceSubject = subjectProvider === "venice";
     const attirePrompt = getAttirePrompt(genGender, genAttire);
     const attireNegativePrompt = NIGHTLIFE_ATTIRE_NEGATIVES[genAttire];
 
@@ -14389,9 +14386,7 @@ const generateSubjectForBackground = async () => {
       performance: "performer stance, confident and composed",
       dj: "DJ pose, focused and professional",
     };
-    const posePrompt = isVeniceSubject
-      ? NIGHTLIFE_SUBJECT_TOKENS.pose[genPose]
-      : safePoseMap[genPose];
+    const posePrompt = safePoseMap[genPose];
     const genderPrompt =
       genGender === "any"
         ? ""
@@ -14430,9 +14425,7 @@ const generateSubjectForBackground = async () => {
       NIGHTLIFE_SUBJECT_TOKENS.energy[genEnergy],
       posePrompt,
       NIGHTLIFE_SUBJECT_TOKENS.shot[genShot],
-      isVeniceSubject
-        ? "adult subject, 21+, nightlife styling, premium partywear, avoid corporate look unless requested"
-        : "adult subject, 21+, upscale nightlife wardrobe, after-hours styling, premium partywear, never corporate or office fashion",
+      "adult subject, 21+, upscale nightlife wardrobe, after-hours styling, premium partywear, never corporate or office fashion",
       attirePrompt,
       NIGHTLIFE_SUBJECT_TOKENS.attireColor[genAttireColor],
       NIGHTLIFE_SUBJECT_TOKENS.colorway[genColorway],
@@ -14487,12 +14480,10 @@ const generateSubjectForBackground = async () => {
     const prompt = [
       "single subject on neutral dark backdrop for easy cutout",
       "clean studio background, no props, no text, no logos",
-      isVeniceSubject
-        ? "tasteful nightlife styling, no explicit nudity, no explicit sexual content"
-        : "fully dressed upscale nightlife outfit, fitted partywear, no nudity, no lingerie-only styling, no swimwear, no implied nudity",
+      "fully dressed upscale nightlife outfit, fitted partywear, no nudity, no lingerie-only styling, no swimwear, no implied nudity",
       subjectPrompt,
       safeHumanPrompt,
-      !isVeniceSubject ? nightlifeBoost : "",
+      nightlifeBoost,
       shot.camera,
       framingSafety,
       "extra headroom: leave margin above hair, full hair and forehead visible",
@@ -14501,7 +14492,7 @@ const generateSubjectForBackground = async () => {
       "high detail, cinematic nightlife styling",
       "sharp focus, crisp facial detail, no motion blur, no gaussian blur, no soft focus",
       "entire head visible, hairline intact, no crops, framing matches camera spec, anatomically correct limbs",
-      `negative prompt: suggestive content, skimpy clothing, exposed undergarments, revealing cuts, sheer fabric, explicit themes, blur, soft focus, airbrushed skin, plastic skin, doll-like, beauty filter, cgi, 3d render, illustration, cartoon, wax figure, low quality, extra people, ${shot.negatives}, ${handAnatomyNegatives}, ${attireNegativePrompt}${!isVeniceSubject ? `, ${corporateNegatives}` : ""}`,
+      `negative prompt: suggestive content, skimpy clothing, exposed undergarments, revealing cuts, sheer fabric, explicit themes, blur, soft focus, airbrushed skin, plastic skin, doll-like, beauty filter, cgi, 3d render, illustration, cartoon, wax figure, low quality, extra people, ${shot.negatives}, ${handAnatomyNegatives}, ${attireNegativePrompt}, ${corporateNegatives}`,
       "Do not change ethnicity or skin tone. Do not default to caucasian features if profile is non-white. Keep stated gender.",
     ].join(", ");
 
@@ -14538,41 +14529,12 @@ const generateSubjectForBackground = async () => {
       throw new Error("No image data returned");
     }
 
-    const isQuotaLikeError = (msg: string) =>
-      /not enough tokens|insufficient|quota|credit|payment required/i.test(msg);
-
     let rawUrl = "";
-    let usedNano = false;
     let lastErr: any = null;
-    const attempts: Array<{
-      provider: "nano" | "openai" | "venice";
-      includeReference: boolean;
-    }> = [
-      {
-        provider: subjectProvider,
-        includeReference: subjectProvider !== "venice",
-      },
-      ...(subjectProvider === "venice"
-        ? [{ provider: "nano" as const, includeReference: true }]
-        : [{ provider: "venice" as const, includeReference: false }]),
-    ];
-
-    for (const attempt of attempts) {
-      try {
-        rawUrl = await requestSubject(attempt.provider, attempt.includeReference);
-        usedNano = attempt.provider !== "venice";
-        lastErr = null;
-        break;
-      } catch (err: any) {
-        lastErr = err;
-        const msg = String(err?.message || err || "");
-        const quotaLike = isQuotaLikeError(msg);
-        // Try next provider on quota/token errors, or any primary-provider failure.
-        // This keeps subject generation resilient when one account is exhausted.
-        if (!quotaLike && attempt.provider !== subjectProvider) {
-          break;
-        }
-      }
+    try {
+      rawUrl = await requestSubject("openai", true);
+    } catch (err: any) {
+      lastErr = err;
     }
 
     if (!rawUrl) {
@@ -14596,27 +14558,11 @@ const generateSubjectForBackground = async () => {
       }
     }
 
-    // Guard against tiny/empty responses; retry with Imagine once if nano returned junk
+    // Guard against tiny/empty responses.
     const isTinyData =
       dataUrl.startsWith("data:image/") && dataUrl.length < 5000; // ~few hundred bytes → likely blank
-    if (isTinyData && usedNano) {
-      // retry with Imagine (text-only) as a fallback
-      rawUrl = await requestSubject("venice", false);
-      dataUrl = rawUrl;
-      if (!dataUrl.startsWith("data:image/")) {
-        try {
-          const blob = await (await fetch(dataUrl)).blob();
-          dataUrl = await blobToDataURL(blob);
-        } catch {
-          const proxyUrl = `/api/image-proxy?url=${encodeURIComponent(dataUrl)}`;
-          const proxyRes = await fetch(proxyUrl);
-          if (!proxyRes.ok) {
-            throw new Error("Image fetch failed. Check keys or network.");
-          }
-          const proxyBlob = await proxyRes.blob();
-          dataUrl = await blobToDataURL(proxyBlob);
-        }
-      }
+    if (isTinyData) {
+      throw new Error("OpenAI returned an empty subject image.");
     }
 
     const originalLen = dataUrl.length;
@@ -29522,8 +29468,6 @@ style={{ top: STICKY_TOP }}
     setVignetteStrength={setVignetteStrength}
     hue={hue}
     vignetteStrength={vignetteStrength}
-    genProvider={genProvider}
-    setGenProvider={setGenProvider}
     showAiTools={!isDjStartupMode}
     enableExtractSubject={isStudioPlan}
     onPlaceExtractedLayer={placeExtractedLayer}

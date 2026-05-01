@@ -86,8 +86,6 @@ type Props = {
   setSubjectEnergy?: (v: string) => void;
   subjectPose?: string;
   setSubjectPose?: (v: string) => void;
-  genProvider: 'auto' | 'nano' | 'openai' | 'venice';
-  setGenProvider: (v: 'auto' | 'nano' | 'openai' | 'venice') => void;
   showAiTools?: boolean;
   enableExtractSubject?: boolean;
   onPlaceExtractedLayer?: (src: string) => void;
@@ -146,8 +144,6 @@ function BackgroundPanels({
   setSubjectEnergy,
   subjectPose = 'hands-up',
   setSubjectPose,
-  genProvider,
-  setGenProvider,
   showAiTools = true,
   enableExtractSubject = false,
   onPlaceExtractedLayer,
@@ -552,22 +548,6 @@ function BackgroundPanels({
 
               {showAiTools && (
                 <>
-                  <div className="flex items-center gap-2 text-[11px] mt-3">
-                    <span>Provider</span>
-                    <Chip small active={genProvider === 'auto'} onClick={() => setGenProvider('auto')}>
-                      Auto
-                    </Chip>
-                    <Chip small active={genProvider === 'nano'} onClick={() => setGenProvider('nano')}>
-                      FAL
-                    </Chip>
-                    <Chip small active={genProvider === 'openai'} onClick={() => setGenProvider('openai')}>
-                      OpenAI
-                    </Chip>
-                    <Chip small active={genProvider === 'venice'} onClick={() => setGenProvider('venice')}>
-                      Imagine
-                    </Chip>
-                  </div>
-
                   <div className={`${editorSectionCardClass} mt-3`}>
                     <div className={editorSectionTitleClass}>
                       AI Subject
