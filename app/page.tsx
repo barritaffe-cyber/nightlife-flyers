@@ -11598,12 +11598,20 @@ const [bgBlur, setBgBlur] = useState(0);
         const naturalWidth = sourceImg.naturalWidth || width;
         const naturalHeight = sourceImg.naturalHeight || height;
         if (!naturalWidth || !naturalHeight) return true;
+        const maxMaskSide = 192;
+        const maskScale = Math.min(1, maxMaskSide / Math.max(naturalWidth, naturalHeight));
+        const maskWidth = Math.max(1, Math.round(naturalWidth * maskScale));
+        const maskHeight = Math.max(1, Math.round(naturalHeight * maskScale));
         alphaCanvas = document.createElement("canvas");
-        alphaCanvas.width = naturalWidth;
-        alphaCanvas.height = naturalHeight;
+        alphaCanvas.width = maskWidth;
+        alphaCanvas.height = maskHeight;
         const ctx = alphaCanvas.getContext("2d", { willReadFrequently: true });
         if (!ctx) return true;
-        ctx.drawImage(sourceImg, 0, 0, naturalWidth, naturalHeight);
+        ctx.drawImage(sourceImg, 0, 0, maskWidth, maskHeight);
+        if (transparentHitCacheRef.current.size > 80) {
+          const oldestKey = transparentHitCacheRef.current.keys().next().value;
+          if (oldestKey) transparentHitCacheRef.current.delete(oldestKey);
+        }
         transparentHitCacheRef.current.set(cacheKey, alphaCanvas);
       } catch {
         return true;
@@ -11611,10 +11619,10 @@ const [bgBlur, setBgBlur] = useState(0);
     }
 
     try {
-      const naturalWidth = alphaCanvas.width || sourceImg.naturalWidth || width;
-      const naturalHeight = alphaCanvas.height || sourceImg.naturalHeight || height;
-      const px = Math.max(0, Math.min(naturalWidth - 1, Math.floor((localX / width) * naturalWidth)));
-      const py = Math.max(0, Math.min(naturalHeight - 1, Math.floor((localY / height) * naturalHeight)));
+      const maskWidth = alphaCanvas.width || 1;
+      const maskHeight = alphaCanvas.height || 1;
+      const px = Math.max(0, Math.min(maskWidth - 1, Math.floor((localX / width) * maskWidth)));
+      const py = Math.max(0, Math.min(maskHeight - 1, Math.floor((localY / height) * maskHeight)));
       const ctx = alphaCanvas.getContext("2d", { willReadFrequently: true });
       if (!ctx) return true;
       const alpha = ctx.getImageData(px, py, 1, 1).data[3];
@@ -17520,20 +17528,16 @@ const portraitCanvas = React.useMemo(() => {
   };
 
   const selectItemForDrag = (item: any) => {
-    const store = useFlyerState.getState();
     suppressCanvasSelectionHomeRef.current = true;
     floatFocusLockRef.current = false;
     setFloatingAssetVisible(false);
-    const isBrandFace = !!item?.isBrandFace;
-    const { isLogo, isFlare, isSticker, isExtracted } = classify(item);
+    const { isLogo, isFlare, isSticker } = classify(item);
     const target = isLogo ? "logo" : isFlare || isSticker ? "icon" : "portrait";
 
-    if ((store as any).selectedPortraitId !== item.id) {
-      store.setSelectedPortraitId(item.id);
-    }
-    if ((store as any).moveTarget !== target) {
-      store.setMoveTarget(target);
-    }
+    useFlyerState.setState({
+      selectedPortraitId: item.id,
+      moveTarget: target,
+    });
   };
 
   const canDrag = (item: any) => {
@@ -17617,10 +17621,9 @@ const portraitCanvas = React.useMemo(() => {
     const dragTarget: MoveTarget = isLogo ? "logo" : isFlare || isSticker ? "icon" : "portrait";
     const isDragging = dragging === dragTarget && isSelected;
     const reduceDragEffects =
-      isMobileView &&
-      isLiveDragging &&
       isSelected &&
-      (isLogo || isExtracted || isShapeGraphic || (!isFlare && !isSticker));
+      (isDragging || (isMobileView && isLiveDragging)) &&
+      (isLogo || isFlare || isSticker || isExtracted || isShapeGraphic || (!isFlare && !isSticker));
     const showSubjectLighting =
       !reduceDragEffects && !isShapeGraphic && !isPortraitAsset && portraitLighting.enabled;
     const portraitFilterPreset =
@@ -17761,9 +17764,10 @@ const portraitCanvas = React.useMemo(() => {
             if (locked) return;
             if (!canDrag(p)) return;
 
-            const dragStore = useFlyerState.getState();
-            dragStore.setDragging(dragTarget);
-            dragStore.setIsLiveDragging(true);
+            useFlyerState.setState({
+              dragging: dragTarget,
+              isLiveDragging: true,
+            });
 
             recordMove({
               kind: "portrait",
@@ -17851,8 +17855,10 @@ const portraitCanvas = React.useMemo(() => {
                 y: Number.isFinite(finalY) ? clamp100(finalY) : p.y,
               });
             }
-            useFlyerState.getState().setDragging(null);
-            useFlyerState.getState().setIsLiveDragging(false);
+            useFlyerState.setState({
+              dragging: null,
+              isLiveDragging: false,
+            });
             suppressCanvasSelectionHomeRef.current = false;
 
             el.style.setProperty("--pdx", "0px");
@@ -17871,8 +17877,10 @@ const portraitCanvas = React.useMemo(() => {
               cancelAnimationFrame((el as any).__pdragRaf);
               (el as any).__pdragRaf = null;
             }
-            useFlyerState.getState().setDragging(null);
-            useFlyerState.getState().setIsLiveDragging(false);
+            useFlyerState.setState({
+              dragging: null,
+              isLiveDragging: false,
+            });
             suppressCanvasSelectionHomeRef.current = false;
             el.dataset.psuppressclick = "0";
             el.style.setProperty("--pdx", "0px");
@@ -18434,6 +18442,7 @@ const flareCanvas = React.useMemo(() => {
       {flares.map((p: any) => {
         const isSelected = selectedPortraitId === p.id;
         const locked = !!p.locked;
+        const isDragging = dragging === "icon" && isSelected;
         const tintDeg = Number((p as any).tint ?? 0);
         const isTextureAsset =
           !!(p as any).isTexture ||
@@ -18476,12 +18485,22 @@ const flareCanvas = React.useMemo(() => {
                 e.preventDefault();
                 e.stopPropagation();
 
-                const store = useFlyerState.getState();
                 suppressCanvasSelectionHomeRef.current = true;
                 floatFocusLockRef.current = false;
                 setFloatingAssetVisible(false);
-                if (!isSelected) store.setSelectedPortraitId(p.id);
-                store.setMoveTarget("icon");
+                useFlyerState.setState({
+                  selectedPortraitId: p.id,
+                  moveTarget: "icon",
+                  dragging: "icon",
+                  isLiveDragging: true,
+                });
+
+                recordMove({
+                  kind: "portrait",
+                  id: p.id,
+                  x: p.x,
+                  y: p.y,
+                });
 
                 const el = e.currentTarget as HTMLElement;
                 try { el.setPointerCapture(e.pointerId); } catch {}
@@ -18502,22 +18521,28 @@ const flareCanvas = React.useMemo(() => {
                 el.style.setProperty("--pdy", "0px");
               }}
               onPointerMove={(e) => {
+                e.preventDefault();
                 const el = e.currentTarget as HTMLElement;
                 if (el.dataset.pdrag !== "1") return;
 
-                const px = Number(el.dataset.px || "0");
-                const py = Number(el.dataset.py || "0");
-                const dx = e.clientX - px;
-                const dy = e.clientY - py;
+                (el as any).__pdragX = e.clientX;
+                (el as any).__pdragY = e.clientY;
+                if ((el as any).__pdragRaf) return;
 
-                if (el.dataset.isMoved === "0" && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
-                  el.dataset.isMoved = "1";
-                  el.dataset.psuppressclick = "1";
-                }
-                if (el.dataset.isMoved === "1") {
+                (el as any).__pdragRaf = requestAnimationFrame(() => {
+                  (el as any).__pdragRaf = null;
+                  const px = Number(el.dataset.px || "0");
+                  const py = Number(el.dataset.py || "0");
+                  const dx = Number((el as any).__pdragX ?? px) - px;
+                  const dy = Number((el as any).__pdragY ?? py) - py;
+
+                  if (el.dataset.isMoved === "0" && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
+                    el.dataset.isMoved = "1";
+                    el.dataset.psuppressclick = "1";
+                  }
                   el.style.setProperty("--pdx", `${dx}px`);
                   el.style.setProperty("--pdy", `${dy}px`);
-                }
+                });
               }}
               onPointerUp={(e) => {
                 e.preventDefault();
@@ -18526,6 +18551,10 @@ const flareCanvas = React.useMemo(() => {
                 const el = e.currentTarget as HTMLElement;
                 if (el.dataset.pdrag !== "1") return;
                 el.dataset.pdrag = "0";
+                if ((el as any).__pdragRaf) {
+                  cancelAnimationFrame((el as any).__pdragRaf);
+                  (el as any).__pdragRaf = null;
+                }
 
                 const cw = Number(el.dataset.cw || "0");
                 const ch = Number(el.dataset.ch || "0");
@@ -18541,9 +18570,16 @@ const flareCanvas = React.useMemo(() => {
                 if (moved && cw > 5 && ch > 5) {
                   const finalX = startX + (dx / cw) * 100;
                   const finalY = startY + (dy / ch) * 100;
-                  useFlyerState.getState().updatePortrait(format, p.id, { x: finalX, y: finalY });
+                  useFlyerState.getState().updatePortrait(format, p.id, {
+                    x: Number.isFinite(finalX) ? clamp100(finalX) : p.x,
+                    y: Number.isFinite(finalY) ? clamp100(finalY) : p.y,
+                  });
                 }
 
+                useFlyerState.setState({
+                  dragging: null,
+                  isLiveDragging: false,
+                });
                 suppressCanvasSelectionHomeRef.current = false;
 
                 el.style.setProperty("--pdx", "0px");
@@ -18564,10 +18600,19 @@ const flareCanvas = React.useMemo(() => {
                 suppressCanvasSelectionHomeRef.current = false;
                 const el = e.currentTarget as HTMLElement;
                 el.dataset.pdrag = "0";
+                if ((el as any).__pdragRaf) {
+                  cancelAnimationFrame((el as any).__pdragRaf);
+                  (el as any).__pdragRaf = null;
+                }
                 el.dataset.isMoved = "0";
                 el.dataset.psuppressclick = "0";
+                useFlyerState.setState({
+                  dragging: null,
+                  isLiveDragging: false,
+                });
                 el.style.setProperty("--pdx", "0px");
                 el.style.setProperty("--pdy", "0px");
+                try { el.releasePointerCapture(e.pointerId); } catch {}
               }}
               style={{
                 left: `${p.x}%`,
@@ -18583,7 +18628,7 @@ const flareCanvas = React.useMemo(() => {
                 pointerEvents: locked ? "none" : "auto",
                 cursor: !locked && isSelected ? "grab" : "default",
                 touchAction: locked ? "auto" : "none",
-                filter: isSelected ? "drop-shadow(0 0 10px rgba(255,255,255,0.22))" : "none",
+                filter: isSelected && !isDragging ? "drop-shadow(0 0 10px rgba(255,255,255,0.22))" : "none",
               }}
             >
               {isTextureAsset ? (
@@ -18729,7 +18774,15 @@ const flareCanvas = React.useMemo(() => {
       })}
     </div>
   );
-}, [portraits, format, selectedPortraitId, ignoreTransparentAssetClick, redirectTransparentAssetPointer]);
+}, [
+  portraits,
+  format,
+  selectedPortraitId,
+  dragging,
+  isMobileView,
+  ignoreTransparentAssetClick,
+  redirectTransparentAssetPointer,
+]);
 
 
 // ===== EXPORT HELPERS (DROP THIS BLOCK RIGHT ABOVE `return (`) =====
