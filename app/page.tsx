@@ -9236,6 +9236,153 @@ const visibleTourStepNumber = React.useMemo(() => {
   return count;
 }, [tourStep, isTourStepVisible]);
 
+const renderMobileTourVisual = React.useCallback((stepId: string) => {
+  const shellClass =
+    "relative mx-auto h-[236px] w-[174px] overflow-hidden rounded-[28px] border border-white/15 bg-[#07090f] shadow-[0_24px_70px_rgba(0,0,0,0.55)]";
+  const screenClass = "absolute inset-[10px] rounded-[20px] border border-white/10 bg-neutral-950/95 p-3";
+  const pillClass = "rounded-full border border-white/10 bg-white/[0.06]";
+
+  if (stepId === "templates" || stepId === "template_backgrounds") {
+    return (
+      <div className={shellClass}>
+        <div className={screenClass}>
+          <div className="mb-3 h-2 w-16 rounded-full bg-cyan-300/[0.60]" />
+          <div className="grid grid-cols-2 gap-2">
+            {[0, 1, 2, 3].map((idx) => (
+              <div
+                key={idx}
+                className={`aspect-[0.82] rounded-lg border ${
+                  idx === 0 ? "border-cyan-200 bg-cyan-300/[0.18]" : "border-white/10 bg-white/[0.05]"
+                } p-1.5`}
+              >
+                <div className="h-10 rounded bg-[linear-gradient(135deg,rgba(103,232,249,0.22),rgba(217,70,239,0.2))]" />
+                <div className="mt-2 h-1.5 rounded bg-white/[0.35]" />
+                <div className="mt-1 h-1 rounded bg-white/[0.15]" />
+              </div>
+            ))}
+          </div>
+          <div className="absolute bottom-4 left-3 right-3 flex gap-1.5">
+            <div className={`${pillClass} h-5 flex-1 bg-cyan-300/10`} />
+            <div className={`${pillClass} h-5 flex-1`} />
+            <div className={`${pillClass} h-5 flex-1`} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (stepId === "text_tab" || stepId === "headline" || stepId === "cinematic3d") {
+    return (
+      <div className={shellClass}>
+        <div className={screenClass}>
+          <div className="mx-auto mt-4 w-28 text-center">
+            <div className="text-2xl font-black uppercase leading-none text-white">Event</div>
+            <div className="mt-1 text-[10px] uppercase tracking-[0.28em] text-cyan-200">Tonight</div>
+          </div>
+          <div className="mt-8 space-y-2 rounded-xl border border-white/10 bg-white/[0.045] p-2.5">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-10 rounded bg-white/25" />
+              <div className="h-2 flex-1 rounded bg-cyan-300/[0.55]" />
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-10 rounded bg-white/25" />
+              <div className="h-2 flex-1 rounded bg-fuchsia-300/[0.45]" />
+            </div>
+            <div className="grid grid-cols-3 gap-1.5 pt-1">
+              <div className={`${pillClass} h-6 bg-cyan-300/[0.12]`} />
+              <div className={`${pillClass} h-6`} />
+              <div className={`${pillClass} h-6`} />
+            </div>
+          </div>
+          <div className="absolute bottom-3 left-3 right-3 grid grid-cols-2 gap-1.5">
+              <div className="rounded border border-cyan-300/50 bg-cyan-300/[0.12] py-1 text-center text-[8px] uppercase tracking-wider text-cyan-100">
+              Text
+            </div>
+            <div className="rounded border border-white/10 bg-white/[0.04] py-1 text-center text-[8px] uppercase tracking-wider text-white/[0.55]">
+              Design
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (stepId === "design_tab" || stepId === "ai_background" || stepId === "magic_blend") {
+    return (
+      <div className={shellClass}>
+        <div className={screenClass}>
+          <div className="rounded-xl border border-white/10 bg-[linear-gradient(135deg,rgba(14,165,233,0.2),rgba(168,85,247,0.18))] p-3">
+            <div className="h-20 rounded-lg bg-black/[0.35]" />
+            <div className="mt-2 flex gap-1.5">
+              <div className="h-2 flex-1 rounded bg-cyan-200/[0.55]" />
+              <div className="h-2 flex-1 rounded bg-fuchsia-200/[0.45]" />
+            </div>
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {["AI", "FX", "Blend"].map((label) => (
+              <div key={label} className="rounded-lg border border-white/10 bg-white/[0.045] py-2 text-center text-[8px] font-bold uppercase tracking-wider text-white/[0.70]">
+                {label}
+              </div>
+            ))}
+          </div>
+          <div className="absolute bottom-3 left-3 right-3 grid grid-cols-2 gap-1.5">
+            <div className="rounded border border-white/10 bg-white/[0.04] py-1 text-center text-[8px] uppercase tracking-wider text-white/[0.55]">
+              Text
+            </div>
+              <div className="rounded border border-cyan-300/50 bg-cyan-300/[0.12] py-1 text-center text-[8px] uppercase tracking-wider text-cyan-100">
+              Design
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (stepId === "artboard" || stepId === "gestures") {
+    return (
+      <div className={shellClass}>
+        <div className={screenClass}>
+          <div className="relative mx-auto mt-2 aspect-[3/4] w-[116px] overflow-hidden rounded-xl border border-cyan-300/[0.35] bg-[linear-gradient(160deg,rgba(6,182,212,0.2),rgba(217,70,239,0.16),rgba(0,0,0,0.6))]">
+            <div className="absolute left-4 top-5 h-8 w-16 rounded bg-white/[0.15]" />
+            <div className="absolute bottom-7 left-5 right-5 h-4 rounded bg-white/25" />
+            <div className="absolute right-5 top-20 h-9 w-9 rounded-full border border-white/20 bg-fuchsia-300/25" />
+            <div className="absolute left-8 top-24 h-6 w-6 rounded-full bg-cyan-300/70 shadow-[0_0_28px_rgba(103,232,249,0.65)]" />
+            <div className="absolute right-8 top-28 h-6 w-6 rounded-full bg-white/70 shadow-[0_0_28px_rgba(255,255,255,0.4)]" />
+          </div>
+          <div className="mt-3 flex items-center justify-center gap-2 text-[9px] uppercase tracking-wider text-white/[0.55]">
+            <span className="h-px w-8 bg-white/20" />
+            Drag, pinch, edit
+            <span className="h-px w-8 bg-white/20" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={shellClass}>
+      <div className={screenClass}>
+        <div className="mx-auto mt-5 h-14 w-14 rounded-full border border-cyan-300/[0.45] bg-cyan-300/10 shadow-[0_0_34px_rgba(103,232,249,0.28)]" />
+        <div className="mx-auto mt-5 h-3 w-24 rounded bg-white/25" />
+        <div className="mx-auto mt-2 h-2 w-32 rounded bg-white/[0.12]" />
+        <div className="mt-8 grid grid-cols-2 gap-2">
+          <div className="rounded-lg border border-white/10 bg-white/[0.045] p-3">
+            <div className="h-2 rounded bg-cyan-200/[0.55]" />
+            <div className="mt-2 h-2 rounded bg-white/20" />
+          </div>
+          <div className="rounded-lg border border-white/10 bg-white/[0.045] p-3">
+            <div className="h-2 rounded bg-fuchsia-200/[0.55]" />
+            <div className="mt-2 h-2 rounded bg-white/20" />
+          </div>
+        </div>
+        <div className="absolute bottom-4 left-6 right-6 rounded-lg bg-cyan-300 py-2 text-center text-[9px] font-black uppercase tracking-wider text-black">
+          Finish
+        </div>
+      </div>
+    </div>
+  );
+}, []);
+
 useEffect(() => {
   if (!showOnboard) return;
   setSelectedPanel(null); // close all collapsibles when tour starts
@@ -9258,6 +9405,11 @@ useEffect(() => {
 
 useEffect(() => {
   if (tourStep == null) return;
+  if (isMobileView) {
+    setTourRect(null);
+    setTourTip(null);
+    return;
+  }
   if (prevTourStep.current !== tourStep) {
     setSelectedPanel(null); // close panels once per step change
     useFlyerState.getState().setSelectedPanel(null); // also reset store-selected panel
@@ -9433,7 +9585,7 @@ useEffect(() => {
     cancelAnimationFrame(rafId);
     window.removeEventListener("resize", onResize);
   };
-}, [tourStep]);
+}, [tourStep, isMobileView]);
 
 // hidden file input to support "Upload background" from the strip
 const uplRef = useRef<HTMLInputElement>(null);
@@ -24774,7 +24926,106 @@ return (
 {/* ===== UI: PAGE HEADER (END) ===== */}
 
 {/* --- ONBOARDING STRIP (only after hydration, only first open) --- */}
- {hydrated && tourStep != null && (
+ {hydrated && tourStep != null && isMobileView && (() => {
+  const stepNow = TOUR_STEPS[tourStep];
+  if (!stepNow) return null;
+  const nextStep = getNextTourStep(tourStep, 1);
+  const prevStep = getNextTourStep(tourStep, -1);
+  const isLastStep = nextStep >= TOUR_STEPS.length;
+
+  return (
+    <div
+      className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/[0.92] px-4 py-5 text-white backdrop-blur-xl pointer-events-auto overscroll-contain"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Mobile studio tour"
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(6,182,212,0.14),transparent_34%),radial-gradient(circle_at_45%_92%,rgba(217,70,239,0.1),transparent_38%)]" />
+      <div className="relative flex max-h-[calc(100dvh-32px)] w-full max-w-[390px] flex-col overflow-hidden rounded-[26px] border border-white/10 bg-[#080a10]/[0.96] shadow-[0_30px_100px_rgba(0,0,0,0.7)]">
+        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-200/80">
+              Mobile Tour
+            </div>
+            <div className="mt-0.5 text-[11px] text-white/[0.45]">
+              Step {visibleTourStepNumber} / {visibleTourStepCount}
+            </div>
+          </div>
+          <button
+            type="button"
+            className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/[0.62] hover:bg-white/[0.09] hover:text-white"
+            onClick={markOnboarded}
+          >
+            Skip
+          </button>
+        </div>
+
+        <div className="overflow-y-auto px-5 py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {renderMobileTourVisual(stepNow.id)}
+          <div className="mt-5 text-center">
+            <h2 className="text-xl font-semibold leading-tight text-white">
+              {stepNow.title}
+            </h2>
+            <p className="mx-auto mt-2 max-w-[310px] text-sm leading-6 text-white/[0.68]">
+              {stepNow.body}
+            </p>
+            <div className="mt-3 text-[11px] uppercase tracking-[0.16em] text-cyan-100/[0.55]">
+              Tap Next to continue
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-white/10 px-4 py-4">
+          <div className="mb-3 flex items-center justify-center gap-1.5">
+            {TOUR_STEPS.map((step, index) =>
+              isTourStepVisible(step.id) ? (
+                <span
+                  key={step.id}
+                  className={`h-1.5 rounded-full transition-all ${
+                    index === tourStep ? "w-6 bg-cyan-200" : "w-1.5 bg-white/20"
+                  }`}
+                />
+              ) : null
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              className="min-h-11 rounded-xl border border-white/10 bg-white/[0.045] px-4 text-xs font-semibold uppercase tracking-[0.14em] text-white/[0.72] hover:bg-white/[0.08] hover:text-white"
+              onClick={() => {
+                if (prevStep < 0) {
+                  markOnboarded();
+                  return;
+                }
+                setTourStep(prevStep);
+              }}
+            >
+              {prevStep < 0 ? "Skip" : "Back"}
+            </button>
+            <button
+              type="button"
+              className="min-h-11 rounded-xl bg-cyan-300 px-4 text-xs font-black uppercase tracking-[0.14em] text-black shadow-[0_0_32px_rgba(103,232,249,0.3)] hover:bg-white"
+              onClick={() => {
+                if (isLastStep) {
+                  markOnboarded();
+                  setUiMode("design");
+                  return;
+                }
+                setTourStep(nextStep);
+              }}
+            >
+              {isLastStep ? "Finish" : "Next"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+})()}
+
+ {hydrated && tourStep != null && !isMobileView && (
   <div className="fixed inset-0 z-[2000] pointer-events-none">
     <style jsx global>{`
       @keyframes neonPulse {
