@@ -9098,27 +9098,6 @@ const TOUR_STEPS = ([
     },
   },
   {
-    id: 'magic_blend',
-    title: 'Portrait Blend',
-    body: 'Fuse your subject and background into a single cinematic photo with Portrait Blend.',
-    selector: '#magic-blend-panel',
-    onEnter: () => {
-      setUiMode("design");
-      if (isMobileView) {
-        setMobileControlsOpen(true);
-        setMobileControlsTab("assets");
-      }
-      
-      // Close all panels; keep them closed during the tour
-      setSelectedPanel(null);
-
-      setTimeout(() => {
-        const target = document.querySelector("#magic-blend-panel");
-        target?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 150);
-    },
-  },
-  {
     id: 'artboard',
     title: 'Edit on the canvas',
     body: 'Tap any text or asset to edit. Drag to position. Use Move/Snap/Guides for alignment.',
@@ -9196,7 +9175,7 @@ const TOUR_STEPS = ([
       setSelectedPanel(null); // Close side panels for export
     },
   },
-] as const).filter((step) => MAGIC_BLEND_ENABLED || step.id !== "magic_blend");
+] as const);
 
 const isTourStepVisible = React.useCallback(
   (stepId: string) => isMobileView || !MOBILE_ONLY_TOUR_STEP_IDS.has(stepId),
@@ -9237,147 +9216,173 @@ const visibleTourStepNumber = React.useMemo(() => {
 }, [tourStep, isTourStepVisible]);
 
 const renderMobileTourVisual = React.useCallback((stepId: string) => {
-  const shellClass =
-    "relative mx-auto h-[236px] w-[174px] overflow-hidden rounded-[28px] border border-white/15 bg-[#07090f] shadow-[0_24px_70px_rgba(0,0,0,0.55)]";
-  const screenClass = "absolute inset-[10px] rounded-[20px] border border-white/10 bg-neutral-950/95 p-3";
-  const pillClass = "rounded-full border border-white/10 bg-white/[0.06]";
+  const snapshot =
+    stepId === "templates"
+      ? {
+          src: "/templates/sunset-yacht.jpg",
+          alt: "Template gallery snapshot",
+          label: "Template Gallery",
+          mode: "templates" as const,
+        }
+      : stepId === "template_backgrounds"
+      ? {
+          src: "/templates/disco_mirrorball.jpg",
+          alt: "Built-in backgrounds snapshot",
+          label: "Background Picks",
+          mode: "backgrounds" as const,
+        }
+      : stepId === "text_tab" || stepId === "headline" || stepId === "cinematic3d"
+      ? {
+          src: "/templates/new-york.png",
+          alt: "Text editing snapshot",
+          label: "Text Tools",
+          mode: "text" as const,
+        }
+      : stepId === "design_tab" || stepId === "ai_background"
+      ? {
+          src: "/templates/mardi_gras.jpg",
+          alt: "Design tools snapshot",
+          label: stepId === "ai_background" ? "AI Scene" : "Design Tools",
+          mode: "design" as const,
+        }
+      : stepId === "artboard" || stepId === "gestures"
+      ? {
+          src: "/templates/sunset-yacht.jpg",
+          alt: "Canvas editing snapshot",
+          label: "Canvas",
+          mode: "canvas" as const,
+        }
+      : {
+          src: "/templates/disco_mirrorball.jpg",
+          alt: "Export and account snapshot",
+          label: stepId === "export" ? "Finish & Export" : "Account",
+          mode: "finish" as const,
+        };
 
-  if (stepId === "templates" || stepId === "template_backgrounds") {
-    return (
-      <div className={shellClass}>
-        <div className={screenClass}>
-          <div className="mb-3 h-2 w-16 rounded-full bg-cyan-300/[0.60]" />
-          <div className="grid grid-cols-2 gap-2">
-            {[0, 1, 2, 3].map((idx) => (
-              <div
-                key={idx}
-                className={`aspect-[0.82] rounded-lg border ${
-                  idx === 0 ? "border-cyan-200 bg-cyan-300/[0.18]" : "border-white/10 bg-white/[0.05]"
-                } p-1.5`}
-              >
-                <div className="h-10 rounded bg-[linear-gradient(135deg,rgba(103,232,249,0.22),rgba(217,70,239,0.2))]" />
-                <div className="mt-2 h-1.5 rounded bg-white/[0.35]" />
-                <div className="mt-1 h-1 rounded bg-white/[0.15]" />
-              </div>
-            ))}
-          </div>
-          <div className="absolute bottom-4 left-3 right-3 flex gap-1.5">
-            <div className={`${pillClass} h-5 flex-1 bg-cyan-300/10`} />
-            <div className={`${pillClass} h-5 flex-1`} />
-            <div className={`${pillClass} h-5 flex-1`} />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (stepId === "text_tab" || stepId === "headline" || stepId === "cinematic3d") {
-    return (
-      <div className={shellClass}>
-        <div className={screenClass}>
-          <div className="mx-auto mt-4 w-28 text-center">
-            <div className="text-2xl font-black uppercase leading-none text-white">Event</div>
-            <div className="mt-1 text-[10px] uppercase tracking-[0.28em] text-cyan-200">Tonight</div>
-          </div>
-          <div className="mt-8 space-y-2 rounded-xl border border-white/10 bg-white/[0.045] p-2.5">
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-10 rounded bg-white/25" />
-              <div className="h-2 flex-1 rounded bg-cyan-300/[0.55]" />
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-10 rounded bg-white/25" />
-              <div className="h-2 flex-1 rounded bg-fuchsia-300/[0.45]" />
-            </div>
-            <div className="grid grid-cols-3 gap-1.5 pt-1">
-              <div className={`${pillClass} h-6 bg-cyan-300/[0.12]`} />
-              <div className={`${pillClass} h-6`} />
-              <div className={`${pillClass} h-6`} />
-            </div>
-          </div>
-          <div className="absolute bottom-3 left-3 right-3 grid grid-cols-2 gap-1.5">
-              <div className="rounded border border-cyan-300/50 bg-cyan-300/[0.12] py-1 text-center text-[8px] uppercase tracking-wider text-cyan-100">
-              Text
-            </div>
-            <div className="rounded border border-white/10 bg-white/[0.04] py-1 text-center text-[8px] uppercase tracking-wider text-white/[0.55]">
-              Design
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (stepId === "design_tab" || stepId === "ai_background" || stepId === "magic_blend") {
-    return (
-      <div className={shellClass}>
-        <div className={screenClass}>
-          <div className="rounded-xl border border-white/10 bg-[linear-gradient(135deg,rgba(14,165,233,0.2),rgba(168,85,247,0.18))] p-3">
-            <div className="h-20 rounded-lg bg-black/[0.35]" />
-            <div className="mt-2 flex gap-1.5">
-              <div className="h-2 flex-1 rounded bg-cyan-200/[0.55]" />
-              <div className="h-2 flex-1 rounded bg-fuchsia-200/[0.45]" />
-            </div>
-          </div>
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            {["AI", "FX", "Blend"].map((label) => (
-              <div key={label} className="rounded-lg border border-white/10 bg-white/[0.045] py-2 text-center text-[8px] font-bold uppercase tracking-wider text-white/[0.70]">
-                {label}
-              </div>
-            ))}
-          </div>
-          <div className="absolute bottom-3 left-3 right-3 grid grid-cols-2 gap-1.5">
-            <div className="rounded border border-white/10 bg-white/[0.04] py-1 text-center text-[8px] uppercase tracking-wider text-white/[0.55]">
-              Text
-            </div>
-              <div className="rounded border border-cyan-300/50 bg-cyan-300/[0.12] py-1 text-center text-[8px] uppercase tracking-wider text-cyan-100">
-              Design
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (stepId === "artboard" || stepId === "gestures") {
-    return (
-      <div className={shellClass}>
-        <div className={screenClass}>
-          <div className="relative mx-auto mt-2 aspect-[3/4] w-[116px] overflow-hidden rounded-xl border border-cyan-300/[0.35] bg-[linear-gradient(160deg,rgba(6,182,212,0.2),rgba(217,70,239,0.16),rgba(0,0,0,0.6))]">
-            <div className="absolute left-4 top-5 h-8 w-16 rounded bg-white/[0.15]" />
-            <div className="absolute bottom-7 left-5 right-5 h-4 rounded bg-white/25" />
-            <div className="absolute right-5 top-20 h-9 w-9 rounded-full border border-white/20 bg-fuchsia-300/25" />
-            <div className="absolute left-8 top-24 h-6 w-6 rounded-full bg-cyan-300/70 shadow-[0_0_28px_rgba(103,232,249,0.65)]" />
-            <div className="absolute right-8 top-28 h-6 w-6 rounded-full bg-white/70 shadow-[0_0_28px_rgba(255,255,255,0.4)]" />
-          </div>
-          <div className="mt-3 flex items-center justify-center gap-2 text-[9px] uppercase tracking-wider text-white/[0.55]">
-            <span className="h-px w-8 bg-white/20" />
-            Drag, pinch, edit
-            <span className="h-px w-8 bg-white/20" />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const thumbImages = [
+    "/templates/sunset-yacht.jpg",
+    "/templates/disco_mirrorball.jpg",
+    "/templates/new-york.png",
+  ];
 
   return (
-    <div className={shellClass}>
-      <div className={screenClass}>
-        <div className="mx-auto mt-5 h-14 w-14 rounded-full border border-cyan-300/[0.45] bg-cyan-300/10 shadow-[0_0_34px_rgba(103,232,249,0.28)]" />
-        <div className="mx-auto mt-5 h-3 w-24 rounded bg-white/25" />
-        <div className="mx-auto mt-2 h-2 w-32 rounded bg-white/[0.12]" />
-        <div className="mt-8 grid grid-cols-2 gap-2">
-          <div className="rounded-lg border border-white/10 bg-white/[0.045] p-3">
-            <div className="h-2 rounded bg-cyan-200/[0.55]" />
-            <div className="mt-2 h-2 rounded bg-white/20" />
+    <div className="relative mx-auto w-[238px]">
+      <div className="rounded-[30px] border border-white/[0.15] bg-[#05070c] p-2.5 shadow-[0_28px_80px_rgba(0,0,0,0.62)]">
+        <div className="overflow-hidden rounded-[22px] border border-white/10 bg-neutral-950">
+          <div className="flex items-center justify-between border-b border-white/10 bg-black/[0.55] px-3 py-2">
+            <div className="h-1.5 w-10 rounded-full bg-white/[0.35]" />
+            <div className="text-[8px] font-bold uppercase tracking-[0.18em] text-cyan-100/75">
+              {snapshot.label}
+            </div>
+            <div className="h-1.5 w-3 rounded-full bg-cyan-200/70" />
           </div>
-          <div className="rounded-lg border border-white/10 bg-white/[0.045] p-3">
-            <div className="h-2 rounded bg-fuchsia-200/[0.55]" />
-            <div className="mt-2 h-2 rounded bg-white/20" />
+
+          <div className="relative aspect-[9/14] bg-black">
+            <img
+              src={snapshot.src}
+              alt={snapshot.alt}
+              className="absolute inset-0 h-full w-full object-cover"
+              draggable={false}
+            />
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.18),rgba(0,0,0,0.08)_42%,rgba(0,0,0,0.72))]" />
+
+            {(snapshot.mode === "templates" || snapshot.mode === "backgrounds") && (
+              <div className="absolute inset-x-3 bottom-3 rounded-2xl border border-white/[0.12] bg-black/75 p-2 backdrop-blur-md">
+                <div className="mb-2 flex items-center justify-between">
+                  <div className="text-[8px] font-bold uppercase tracking-[0.16em] text-white/[0.72]">
+                    {snapshot.mode === "templates" ? "Pick a starter" : "Choose a scene"}
+                  </div>
+                  <div className="text-[8px] font-semibold text-cyan-100/80">
+                    4 shown
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {thumbImages.map((src, index) => (
+                    <div
+                      key={src}
+                      className={`overflow-hidden rounded-lg border ${
+                        index === 0 ? "border-cyan-200" : "border-white/[0.15]"
+                      } bg-white/[0.04]`}
+                    >
+                      <img src={src} alt="" className="h-12 w-full object-cover" draggable={false} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {snapshot.mode === "text" && (
+              <div className="absolute left-3 right-3 bottom-3 rounded-2xl border border-cyan-200/25 bg-black/[0.78] p-2.5 backdrop-blur-md">
+                <div className="mb-2 text-[8px] font-bold uppercase tracking-[0.16em] text-cyan-100">
+                  Text panel
+                </div>
+                <div className="space-y-1.5">
+                  {["Headline", "Date", "Venue"].map((label, index) => (
+                    <div key={label} className="flex items-center gap-2 rounded-lg bg-white/[0.07] px-2 py-1">
+                      <span className="w-10 text-[7px] uppercase tracking-wide text-white/[0.45]">{label}</span>
+                      <span className={`h-1.5 flex-1 rounded ${index === 0 ? "bg-cyan-200/80" : "bg-white/[0.35]"}`} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {snapshot.mode === "design" && (
+              <div className="absolute left-3 right-3 bottom-3 rounded-2xl border border-fuchsia-200/20 bg-black/[0.78] p-2.5 backdrop-blur-md">
+                <div className="mb-2 text-[8px] font-bold uppercase tracking-[0.16em] text-fuchsia-100">
+                  Design panel
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {["AI Scene", "Graphics & FX", "Backgrounds", "Templates"].map((label, index) => (
+                    <div
+                      key={label}
+                      className={`rounded-lg border px-1.5 py-1.5 text-center text-[7px] font-bold uppercase leading-tight tracking-wide ${
+                        index === 0 ? "border-cyan-200/60 bg-cyan-300/[0.14] text-cyan-50" : "border-white/10 bg-white/[0.06] text-white/[0.65]"
+                      }`}
+                    >
+                      {label}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {snapshot.mode === "canvas" && (
+              <>
+                <div className="absolute left-[16%] top-[20%] rounded-lg border border-cyan-200 bg-black/[0.28] px-2 py-1 text-[15px] font-black uppercase leading-none text-white shadow-[0_0_24px_rgba(103,232,249,0.35)]">
+                  Tap text
+                </div>
+                <div className="absolute bottom-[22%] left-[18%] right-[18%] rounded-full border border-white/25 bg-black/[0.45] py-1 text-center text-[8px] font-bold uppercase tracking-[0.18em] text-white">
+                  Drag on canvas
+                </div>
+                <div className="absolute right-5 top-20 h-8 w-8 rounded-full border border-cyan-100/[0.55] bg-cyan-300/20 shadow-[0_0_22px_rgba(103,232,249,0.5)]" />
+              </>
+            )}
+
+            {snapshot.mode === "finish" && (
+              <div className="absolute left-3 right-3 bottom-3 rounded-2xl border border-white/[0.15] bg-black/[0.78] p-2.5 text-center backdrop-blur-md">
+                <div className="text-[8px] font-bold uppercase tracking-[0.18em] text-white/[0.65]">
+                  Ready to post
+                </div>
+                <div className="mt-2 rounded-xl bg-cyan-300 py-2 text-[9px] font-black uppercase tracking-[0.16em] text-black">
+                  Export
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 border-t border-white/10 text-center text-[8px] font-bold uppercase tracking-[0.16em]">
+            <div className={`py-2 ${snapshot.mode === "text" ? "bg-cyan-300/[0.16] text-cyan-100" : "text-white/[0.42]"}`}>
+              Text
+            </div>
+            <div className={`py-2 ${snapshot.mode !== "text" ? "bg-cyan-300/[0.16] text-cyan-100" : "text-white/[0.42]"}`}>
+              Design
+            </div>
           </div>
         </div>
-        <div className="absolute bottom-4 left-6 right-6 rounded-lg bg-cyan-300 py-2 text-center text-[9px] font-black uppercase tracking-wider text-black">
-          Finish
-        </div>
+      </div>
+      <div className="mt-2 text-center text-[10px] font-semibold uppercase tracking-[0.16em] text-white/[0.45]">
+        Snapshot preview
       </div>
     </div>
   );
@@ -29602,9 +29607,7 @@ style={{ top: STICKY_TOP }}
       genError={genError}
       genCandidates={genCandidates}
       hasSharedGeneratedBackground={!!sharedGeneratedBackground}
-      sharedGeneratedBackgroundSource={
-        sharedGeneratedBackground?.source === "magic_blend" ? "Legacy Blend" : "AI Scene"
-      }
+      sharedGeneratedBackgroundSource="AI Scene"
       originalBackgroundSrc={sharedGeneratedBackground?.original?.src ?? null}
       generatedBackgroundSrc={sharedGeneratedBackground?.generated?.src ?? null}
       canRestoreOriginalBackground={!!sharedGeneratedBackground?.original}
@@ -29665,9 +29668,7 @@ style={{ top: STICKY_TOP }}
       isBlending={isBlending}
       isCapturingBackground={isCapturingBlendBackground}
       hasSharedGeneratedBackground={!!sharedGeneratedBackground}
-      sharedGeneratedBackgroundSource={
-        sharedGeneratedBackground?.source === "magic_blend" ? "Legacy Blend" : "AI Scene"
-      }
+      sharedGeneratedBackgroundSource="AI Scene"
       originalBackgroundSrc={sharedGeneratedBackground?.original?.src ?? null}
       generatedBackgroundSrc={sharedGeneratedBackground?.generated?.src ?? null}
       canRestoreOriginalBackground={!!sharedGeneratedBackground?.original}
@@ -30739,7 +30740,7 @@ style={{ top: STICKY_TOP }}
         </div>
 
         <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-          <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">Flow 2: AI + Blend Hero Poster</div>
+          <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">Flow 2: AI Hero Poster</div>
           <ol className="list-decimal pl-5 space-y-1 text-neutral-300">
             <li>Open Template.</li>
             <li>Generate a new background.</li>
