@@ -22960,14 +22960,14 @@ const prepareForMobileTabSwitch = React.useCallback(() => {
 }, [setSelectedEmojiId, setSelectedPortraitId]);
 
 const mobileTabButtonClass =
-  "inline-flex h-[26px] shrink-0 items-center justify-center whitespace-nowrap border px-1.5 text-center text-[8.5px] font-semibold uppercase leading-none tracking-[0.07em]";
-const mobilePrimaryTabButtonClass = `${mobileTabButtonClass} w-[52px]`;
+  "inline-flex h-[28px] shrink-0 items-center justify-center whitespace-nowrap border px-2 text-center text-[9px] font-semibold uppercase leading-none tracking-[0.08em]";
+const mobilePrimaryTabButtonClass = `${mobileTabButtonClass} w-[58px]`;
 
 const mobileControlsTabs = (
   <div className="lg:hidden flex justify-center px-1.5 py-2">
     <div
       data-tour="mobile-tabs"
-      className="mx-auto flex w-full max-w-[360px] items-center justify-center gap-1 overflow-visible border-b border-neutral-800 bg-neutral-950/90 px-1.5 py-2"
+      className="mx-auto flex w-full max-w-[380px] items-center justify-center gap-1 overflow-visible border-b border-neutral-800 bg-neutral-950/90 px-1.5 py-2"
       onPointerDownCapture={(e) => {
         const t = e.target as Element | null;
         if (t?.closest?.('[data-mobile-float-lock="true"]')) {
