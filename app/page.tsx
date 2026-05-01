@@ -1058,6 +1058,7 @@ const DJ_STARTUP_BACKGROUNDS = [
   { id: "club12", src: "/DJ/club12.jpg", name: "Club 12" },
   { id: "club13", src: "/DJ/club13.jpg", name: "Club 13" },
 ] as const;
+const STARTER_BACKGROUND_CHOICES = DJ_STARTUP_BACKGROUNDS.slice(0, 4);
 
 const GRAPHIC_STICKERS = [
   { id: "mezcal_bottle", src: "https://cdn-icons-png.flaticon.com/512/8091/8091033.png", name: "Mezcal" },
@@ -12206,14 +12207,18 @@ const mobileFloatPanelClass =
         const textW = Math.ceil(ctx.measureText(label).width);
         const boxW = textW + padX * 2;
         const boxH = fontSize + padY * 2;
-        const x = Math.max(0, w - boxW - Math.round(fontSize * 0.8));
-        const y = Math.max(0, h - boxH - Math.round(fontSize * 0.8));
-
-        ctx.fillStyle = "rgba(0,0,0,0.56)";
-        ctx.fillRect(x, y, boxW, boxH);
-        ctx.fillStyle = "rgba(255,255,255,0.95)";
         ctx.textBaseline = "middle";
-        ctx.fillText(label, x + padX, y + boxH / 2);
+        const inset = Math.round(fontSize * 0.8);
+        const y = Math.max(0, inset);
+        const drawBadge = (x: number) => {
+          ctx.fillStyle = "rgba(0,0,0,0.56)";
+          ctx.fillRect(x, y, boxW, boxH);
+          ctx.fillStyle = "rgba(255,255,255,0.95)";
+          ctx.fillText(label, x + padX, y + boxH / 2);
+        };
+
+        drawBadge(Math.max(0, inset));
+        drawBadge(Math.max(0, w - boxW - inset));
 
         resolve(
           format === "jpg" ? c.toDataURL("image/jpeg", 0.95) : c.toDataURL("image/png")
@@ -12766,6 +12771,7 @@ const mobileFloatPanelClass =
     [starterTemplateGallery]
   );
   const visibleTemplateGallery = isStarterPlan ? starterTemplateGallery : TEMPLATE_GALLERY;
+  const visibleStartupBackgrounds = isStarterPlan ? STARTER_BACKGROUND_CHOICES : DJ_STARTUP_BACKGROUNDS;
   const isDjStartupMode = startupStudioMode === "dj";
   const normalizedAccessPlan = String(accessPlan || "").trim().toLowerCase();
   const currentPlanWordmark =
@@ -24389,7 +24395,7 @@ return (
                 setLoadingStartup(false);
               }
             }}
-            djBackgroundOptions={DJ_STARTUP_BACKGROUNDS}
+            djBackgroundOptions={visibleStartupBackgrounds}
           />
         </motion.div>
       )}
@@ -25183,7 +25189,7 @@ style={{ top: STICKY_TOP }}
   <div className={clsx("mb-3", mobilePanelClass("design", "template_backgrounds"))} id="template-backgrounds-panel">
     <div className={creatorStepPanelClass("scene")}>
       <BackgroundGalleryPanel
-        items={DJ_STARTUP_BACKGROUNDS}
+        items={visibleStartupBackgrounds}
         isOpen={selectedPanel === "template_backgrounds"}
         onToggle={() => {
           setSelectedPanel(selectedPanel === "template_backgrounds" ? null : "template_backgrounds");
@@ -29065,7 +29071,7 @@ style={{ top: STICKY_TOP }}
     <div className="mb-3" id="template-backgrounds-panel-design-tab">
       <div className={creatorStepPanelClass("scene")}>
         <BackgroundGalleryPanel
-          items={DJ_STARTUP_BACKGROUNDS}
+          items={visibleStartupBackgrounds}
           isOpen={selectedPanel === "template_backgrounds"}
           onToggle={() => {
             setSelectedPanel(selectedPanel === "template_backgrounds" ? null : "template_backgrounds");
@@ -29312,7 +29318,7 @@ style={{ top: STICKY_TOP }}
 {/* UI: MAGIC BLEND PANEL (END) */}
 <div className={clsx(creatorStepPanelClass("scene"), mobilePanelClass("assets", "background"))}>
   <BackgroundPanels
-    presetBackgrounds={isDjStartupMode ? DJ_STARTUP_BACKGROUNDS : []}
+    presetBackgrounds={isDjStartupMode ? visibleStartupBackgrounds : []}
     presetBackgroundLabel="DJ Backgrounds"
     onPresetBackgroundSelect={applyStartupBackground}
     allowUploads={!isDjStartupMode}
