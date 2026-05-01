@@ -290,7 +290,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                   </div>
                   <h2 className="mt-2 text-2xl font-semibold text-white">Pick one template to start</h2>
                   <p className="mt-2 text-sm text-neutral-400">
-                    Edit the flyer freely. DJ / Artist mode and clean exports unlock after login.
+                    Start with 4 free starter templates. Subscribe to unlock the full template library, DJ / Artist mode, and clean exports.
                   </p>
                 </div>
 
@@ -333,7 +333,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                 </div>
 
                 <div className="mx-auto mt-4 max-w-[680px] text-center text-[11px] text-neutral-500">
-                  Exports stay watermarked until you log in and choose a plan.
+                  There are more templates inside Nightlife Flyers. Choose a plan when you are ready to unlock them all.
                 </div>
               </div>
             ) : (

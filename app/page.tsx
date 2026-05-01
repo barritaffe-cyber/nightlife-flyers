@@ -1276,13 +1276,15 @@ const TemplateGalleryPanel = React.memo(({
   onApply,
   format,
   isOpen,   // 👈 NEW PROP
-  onToggle  // 👈 NEW PROP
+  onToggle,  // 👈 NEW PROP
+  limitedTemplateNotice,
 }: {
   items: TemplateSpec[];
   onApply: (tpl: TemplateSpec, opts?: { targetFormat?: Format }) => void;
   format: Format;
   isOpen?: boolean;
   onToggle?: () => void;
+  limitedTemplateNotice?: string;
 }) => {
   const INITIAL_VISIBLE_TEMPLATES = 4;
   const [q, setQ] = React.useState('');
@@ -1347,6 +1349,12 @@ const TemplateGalleryPanel = React.memo(({
           </Chip>
         ))}
       </div>
+
+      {limitedTemplateNotice && (
+        <div className="mb-3 rounded-lg border border-cyan-300/20 bg-cyan-300/[0.07] px-3 py-2 text-[11px] leading-5 text-cyan-50/80">
+          {limitedTemplateNotice}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         {visible.map(t => (
@@ -25244,6 +25252,11 @@ style={{ top: STICKY_TOP }}
         items={visibleTemplateGallery}
         format={format}
         isOpen={selectedPanel === "template"}
+        limitedTemplateNotice={
+          isStarterPlan
+            ? `Trial access includes ${STARTER_TEMPLATE_COUNT} starter templates. Subscribe to unlock the full template library.`
+            : undefined
+        }
         onToggle={() => {
 
 
@@ -29151,6 +29164,11 @@ style={{ top: STICKY_TOP }}
           items={visibleTemplateGallery}
           format={format}
           isOpen={selectedPanel === "template"}
+          limitedTemplateNotice={
+            isStarterPlan
+              ? `Trial access includes ${STARTER_TEMPLATE_COUNT} starter templates. Subscribe to unlock the full template library.`
+              : undefined
+          }
           onToggle={() => {
             setSelectedPanel(selectedPanel === "template" ? null : "template");
           }}
