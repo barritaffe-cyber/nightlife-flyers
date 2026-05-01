@@ -21,6 +21,8 @@ function LoginPageInner() {
   const billing = searchParams.get("billing");
   const next = searchParams.get("next");
   const requestedMode = searchParams.get("mode");
+  const requestedEmail = searchParams.get("email");
+  const emailPrefilledRef = React.useRef(false);
 
   const selection = resolveBillingSelection({ plan, offer, billing });
   const postAuthHref = next || (selection ? buildBillingCheckoutHref(selection) : "/");
@@ -54,6 +56,10 @@ function LoginPageInner() {
     const bootstrapRecovery = async () => {
       if (requestedMode === "reset") {
         applyResetMode();
+      } else if (requestedMode === "signup") {
+        setMode("signup");
+      } else if (requestedMode === "login") {
+        setMode("login");
       }
       if (typeof window === "undefined") return;
 
@@ -110,11 +116,21 @@ function LoginPageInner() {
     };
   }, [requestedMode]);
 
+  React.useEffect(() => {
+    if (emailPrefilledRef.current) return;
+    const nextEmail = String(requestedEmail || "").trim();
+    if (!nextEmail) return;
+    emailPrefilledRef.current = true;
+    setEmail(nextEmail);
+  }, [requestedEmail]);
+
   const intentCopy =
     offer === "night-pass"
       ? "Sign in or create an account to get a one-time Night Pass."
       : offer === "weekend-pass"
         ? "Sign in or create an account to get a one-time Weekend Pass."
+        : next === "/pricing"
+          ? "Log in or create an account, then choose the plan that fits this flyer."
         : plan === "creator"
           ? "Access your profile and start the Creator plan."
           : plan === "studio"

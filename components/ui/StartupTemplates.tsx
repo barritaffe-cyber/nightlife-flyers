@@ -21,6 +21,13 @@ export type StartupSelectPayload = {
   startupBackgroundDataUrl?: string;
 };
 
+export type StartupTemplateOption = {
+  key: string;
+  label: string;
+  desc: string;
+  preview?: string;
+};
+
 interface StartupTemplatesProps {
   onSelect: (key: string, payload?: StartupSelectPayload) => void;
   onLoadProjectFile: (file: File) => Promise<void> | void;
@@ -28,6 +35,8 @@ interface StartupTemplatesProps {
   buildForYouLoading: boolean;
   buildForYouError: string | null;
   onBuildForYou: (payload: StartupBuildPayload) => Promise<void> | void;
+  guestMode?: boolean;
+  starterTemplateOptions?: ReadonlyArray<StartupTemplateOption>;
   djBackgroundOptions: ReadonlyArray<{
     id: string;
     src: string;
@@ -149,6 +158,8 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
   buildForYouLoading,
   buildForYouError,
   onBuildForYou,
+  guestMode = false,
+  starterTemplateOptions = [],
   djBackgroundOptions,
 }) => {
   const [screen, setScreen] = React.useState<"entry" | "advanced" | "build" | "dj">("entry");
@@ -232,7 +243,9 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
   };
 
   const modalClassName =
-    screen === "entry"
+    guestMode && screen === "entry"
+      ? "w-[min(94vw,780px)] max-h-[86vh] overflow-y-auto bg-[linear-gradient(180deg,rgba(9,11,16,0.99),rgba(13,16,24,0.98))] p-5 text-center shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
+      : screen === "entry"
       ? "w-[min(92vw,420px)] max-h-[84vh] overflow-y-auto bg-[linear-gradient(180deg,rgba(10,12,18,0.99),rgba(13,16,24,0.98))] p-5 text-center shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
       : "w-[min(92vw,620px)] max-h-[84vh] overflow-y-auto bg-[linear-gradient(180deg,rgba(10,12,18,0.99),rgba(13,16,24,0.98))] p-5 text-center shadow-[0_24px_80px_rgba(0,0,0,0.55)]";
 
@@ -269,6 +282,61 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
       >
         <div className={modalClassName}>
           {screen === "entry" ? (
+            guestMode ? (
+              <div className="flex min-h-full flex-col justify-center text-left">
+                <div className="mx-auto w-full max-w-[680px] text-center">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-200/75">
+                    Try the studio
+                  </div>
+                  <h2 className="mt-2 text-2xl font-semibold text-white">Pick one template to start</h2>
+                  <p className="mt-2 text-sm text-neutral-400">
+                    Edit the flyer freely. DJ / Artist mode and clean exports unlock after login.
+                  </p>
+                </div>
+
+                <div className="mx-auto mt-5 grid w-full max-w-[680px] grid-cols-1 gap-3 sm:grid-cols-2">
+                  {starterTemplateOptions.map((template) => (
+                    <button
+                      key={template.key}
+                      type="button"
+                      disabled={buildForYouLoading}
+                      onClick={() => onSelect(template.key)}
+                      className="group overflow-hidden border border-white/10 bg-white/[0.04] text-left shadow-[0_18px_40px_rgba(0,0,0,0.22)] transition hover:border-cyan-200/35 hover:bg-white/[0.07] disabled:opacity-60"
+                    >
+                      <div className="aspect-[1.45] w-full overflow-hidden bg-black">
+                        {template.preview ? (
+                          <img
+                            src={template.preview}
+                            alt={template.label}
+                            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+                            draggable={false}
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-xs text-neutral-500">
+                            Template
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0 truncate text-sm font-semibold text-white">{template.label}</div>
+                          <div className="shrink-0 text-[10px] uppercase tracking-[0.18em] text-cyan-100/60 transition group-hover:text-cyan-100">
+                            Start
+                          </div>
+                        </div>
+                        <div className="mt-1 line-clamp-2 text-[11px] leading-4 text-neutral-300">
+                          {template.desc}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mx-auto mt-4 max-w-[680px] text-center text-[11px] text-neutral-500">
+                  Exports stay watermarked until you log in and choose a plan.
+                </div>
+              </div>
+            ) : (
             <div className="flex min-h-full flex-col justify-center">
               <h2 className="mb-1 text-xl font-semibold text-white">What are you making?</h2>
               <p className="mb-4 text-sm text-neutral-400">
@@ -338,6 +406,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                 Once you&apos;re in, you can switch the whole vibe.
               </div>
             </div>
+            )
           ) : screen === "dj" ? (
             <>
               <div className="mb-6 flex items-start justify-between gap-4 text-left">

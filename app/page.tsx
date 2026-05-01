@@ -1240,18 +1240,22 @@ const TAG_ORDER = [
 ] as const;
 const TAG_ORDER_SET = new Set<string>(TAG_ORDER);
 
-const STARTER_TEMPLATE_IDS = new Set<string>([
-  "edm_tunnel",
-  "edm_stage_co2",
-  "hiphop_lowrider",
-  "afrobeat_rooftop",
-  "ladies_pinkchrome",
-  "rnb_velvet",
-  "atlanta",
-  "bottle_service",
-  "martini",
-]);
-const STARTER_TEMPLATE_COUNT = STARTER_TEMPLATE_IDS.size;
+const STARTER_TEMPLATE_CHOICES = [
+  { ids: ["sunset_yacht", "yacht_escape"], label: "Sunset Yacht — Ocean Luxe" },
+  { ids: ["disco_mirrorball"] },
+  { ids: ["new-york"] },
+  { ids: ["mardi_gras"] },
+] as const;
+const STARTER_TEMPLATE_IDS = new Set<string>(
+  STARTER_TEMPLATE_CHOICES.flatMap((choice) => [...choice.ids])
+);
+const STARTER_TEMPLATE_COUNT = STARTER_TEMPLATE_CHOICES.length;
+
+function resolveStarterTemplateChoiceId(index: number): string {
+  const choice = STARTER_TEMPLATE_CHOICES[index];
+  if (!choice) return "";
+  return choice.ids.find((id) => TEMPLATE_GALLERY.some((template) => template.id === id)) ?? choice.ids[0] ?? "";
+}
 
 function canonicalizeTemplateTags(tags: string[]): string[] {
   const out = new Set<string>();
@@ -7202,7 +7206,7 @@ export default function Page() {
  // 1. Upload Handler (Auto-Cuts Subject)
 // 1. Upload Handler (Auto-Cuts Subject & Converts to Base64)
   const handleBlendUpload = async (type: 'subject' | 'bg', file: File) => {
-    if (isStarterPlan && type === "bg") {
+    if (isStarterPlan && hasAuthSession && type === "bg") {
       alert("Starter includes one portrait or logo upload. Background uploads still require a pass or subscription.");
       return;
     }
@@ -12069,6 +12073,7 @@ React.useEffect(() => {
   const [exportBlobUrl, setExportBlobUrl] = useState<string | null>(null);
   const [exportFilename, setExportFilename] = useState<string | null>(null);
   const [starterCleanExportUnlocked, setStarterCleanExportUnlocked] = useState(false);
+  const [exportSignupEmail, setExportSignupEmail] = useState("");
   const PRINT_EXPORT_SCALE = 6;
   const HISTORY_LIMIT = 10;
   const historyRef = React.useRef<{
@@ -12705,10 +12710,12 @@ const mobileFloatPanelClass =
 
   const [subscriptionStatus, setSubscriptionStatus] = React.useState<SubscriptionAccessState>("inactive");
   const [accessPlan, setAccessPlan] = React.useState<string | null>(null);
-  const isPaid = subscriptionStatus === "active";
-  const hasOnDemandPass = subscriptionStatus === "ondemand";
+  const [hasAuthSession, setHasAuthSession] = React.useState(false);
+  const isPaid = hasAuthSession && subscriptionStatus === "active";
+  const hasOnDemandPass = hasAuthSession && subscriptionStatus === "ondemand";
   const hasPaidAccess = isPaid || hasOnDemandPass;
   const isStarterPlan = !hasPaidAccess;
+  const isGuestTrial = !hasAuthSession;
   const isStudioPlan = isPaid && String(accessPlan || "").trim().toLowerCase() === "studio";
   const hasCreatorAutoLayoutAccess =
     isPaid &&
@@ -12723,8 +12730,30 @@ const mobileFloatPanelClass =
   } | null>(null);
   const [starterTrialQuota, setStarterTrialQuota] = React.useState<StarterTrialQuota | null>(null);
   const starterTemplateGallery = React.useMemo(
-    () => TEMPLATE_GALLERY.filter((t) => STARTER_TEMPLATE_IDS.has(t.id)),
+    () =>
+      STARTER_TEMPLATE_CHOICES.flatMap((choice) => {
+        const template = choice.ids
+          .map((id) => TEMPLATE_GALLERY.find((item) => item.id === id))
+          .find((item): item is TemplateSpec => Boolean(item));
+        if (!template) return [];
+        return [
+          {
+            ...template,
+            label: "label" in choice ? choice.label : template.label,
+          },
+        ];
+      }),
     []
+  );
+  const starterStartupTemplates = React.useMemo(
+    () =>
+      starterTemplateGallery.map((template) => ({
+        key: template.id,
+        label: template.label,
+        desc: template.tags?.slice(0, 3).join(" / ") || "Editable starter flyer",
+        preview: template.preview,
+      })),
+    [starterTemplateGallery]
   );
   const visibleTemplateGallery = isStarterPlan ? starterTemplateGallery : TEMPLATE_GALLERY;
   const isDjStartupMode = startupStudioMode === "dj";
@@ -12848,10 +12877,30 @@ const mobileFloatPanelClass =
     return data.session?.access_token ?? null;
   }, []);
 
+  React.useEffect(() => {
+    let mounted = true;
+    const supabase = supabaseBrowser();
+    supabase.auth.getSession().then(({ data }) => {
+      if (mounted) {
+        setHasAuthSession(Boolean(data.session?.access_token));
+      }
+    });
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setHasAuthSession(Boolean(session?.access_token));
+    });
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
   const refreshAccessSnapshot = React.useCallback(
     async (opts?: { includeAccount?: boolean }) => {
       const token = await getAccessToken();
       if (!token) {
+        setHasAuthSession(false);
         setSubscriptionStatus("inactive");
         setAccessPlan(null);
         setGenerationQuota(null);
@@ -12871,6 +12920,7 @@ const mobileFloatPanelClass =
         }
         return null;
       }
+      setHasAuthSession(true);
 
       try {
         try {
@@ -12923,12 +12973,11 @@ const mobileFloatPanelClass =
 
       const token = await getAccessToken();
       if (!token) {
+        if (kind === "upload") {
+          return true;
+        }
         if (!opts?.silent) {
-          alert(
-            kind === "upload"
-              ? "Sign in to claim your Starter upload."
-              : "Sign in to claim your Starter clean export."
-          );
+          alert("Sign in to claim your Starter clean export.");
         }
         return false;
       }
@@ -13051,12 +13100,15 @@ const mobileFloatPanelClass =
 
   React.useEffect(() => {
     if (!isStarterPlan) return;
+    if (startupStudioMode === "dj") {
+      setStartupStudioMode(null);
+    }
     if (
       selectedPanel === "dj_branding"
     ) {
       setSelectedPanel("template");
     }
-  }, [isStarterPlan, selectedPanel, setSelectedPanel]);
+  }, [isStarterPlan, selectedPanel, setSelectedPanel, startupStudioMode]);
 
   const handleExportStart = React.useCallback(async () => {
     if (exportStatus === 'rendering') return;
@@ -13328,6 +13380,20 @@ const mobileFloatPanelClass =
     event.preventDefault();
     await prepareResumeForReturn();
     window.location.assign(href);
+  };
+
+  const handleExportLoginSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const params = new URLSearchParams({
+      mode: "signup",
+      next: "/pricing",
+    });
+    const email = exportSignupEmail.trim();
+    if (email) {
+      params.set("email", email);
+    }
+    await prepareResumeForReturn();
+    window.location.assign(`/login?${params.toString()}`);
   };
 
   const openAccountPanel = React.useCallback(async () => {
@@ -19872,7 +19938,7 @@ const applyTemplate = React.useCallback<
 const applyTemplateFromGallery = React.useCallback(
   (tpl: TemplateSpec, opts?: { targetFormat?: Format; advanceWorkflow?: boolean }) => {
     if (isStarterPlan && !STARTER_TEMPLATE_IDS.has(tpl.id)) {
-      alert(`Starter includes ${STARTER_TEMPLATE_COUNT} editable templates. Upgrade or use a pass to unlock the full template library.`);
+      alert(`Trial access includes ${STARTER_TEMPLATE_COUNT} editable templates. Log in and choose a plan to unlock the full template library.`);
       return;
     }
     // 🔒 prevent panel auto-close during apply
@@ -20640,6 +20706,10 @@ React.useEffect(() => {
 // keep this new state near the other useStates at the top of your component
 const handleTemplateSelect = React.useCallback(
   (key: string, payload?: StartupSelectPayload) => {
+    if (isStarterPlan && (key === "dj" || key === "promoter" || key === "artist")) {
+      alert("DJ / Artist mode unlocks after login and plan selection.");
+      return;
+    }
     setLoadingStartup(true);
     setStartupBuildError(null);
     setStartupStudioMode(key === "dj" ? "dj" : null);
@@ -20695,13 +20765,13 @@ const handleTemplateSelect = React.useCallback(
         } else {
           // ✅ Map each vibe to a real template index
           const vibeToTemplateId: Record<string, string> = {
-            club: isStarterPlan ? "edm_stage_co2" : "miami2",
-            tropical: isStarterPlan ? "afrobeat_rooftop" : "latin_street_tropical",
-            luxury: isStarterPlan ? "edm_tunnel" : "atlanta",
-            urban: isStarterPlan ? "hiphop_lowrider" : "hiphop_graffiti",
+            club: isStarterPlan ? "disco_mirrorball" : "miami2",
+            tropical: isStarterPlan ? resolveStarterTemplateChoiceId(0) : "latin_street_tropical",
+            luxury: isStarterPlan ? "new-york" : "atlanta",
+            urban: isStarterPlan ? "mardi_gras" : "hiphop_graffiti",
           };
 
-          const tplId = vibeToTemplateId[key] ?? TEMPLATE_GALLERY[0]?.id;
+          const tplId = STARTER_TEMPLATE_IDS.has(key) ? key : vibeToTemplateId[key] ?? TEMPLATE_GALLERY[0]?.id;
           const tpl = TEMPLATE_GALLERY.find((t) => t.id === tplId);
           if (!tpl) throw new Error("Template not found for vibe: " + key);
           applyTemplateFromGallery(tpl, { targetFormat: startupFormat });
@@ -21822,6 +21892,10 @@ const openWorkflowHelp = React.useCallback(() => {
 const switchWorkflowStudioMode = React.useCallback(
   (next: "creator" | "dj") => {
     const nextIsDj = next === "dj";
+    if (nextIsDj && isStarterPlan) {
+      alert("DJ / Artist mode unlocks after login and plan selection.");
+      return;
+    }
     setStartupStudioMode(nextIsDj ? "dj" : null);
     setUiMode("design");
     setMobileControlsOpen(true);
@@ -24251,6 +24325,8 @@ return (
             buildForYouLoading={loadingStartup}
             buildForYouError={startupBuildError}
             onBuildForYou={handleStartupBuildForYou}
+            guestMode={isGuestTrial}
+            starterTemplateOptions={starterStartupTemplates}
             onLoadProjectFile={async (file) => {
               setLoadingStartup(true);
               try {
@@ -24899,6 +24975,34 @@ return (
                     : "Your export is ready. Starter includes a watermark unless you claim the one clean export."
                   : "Your export is ready. Download the clean file below."}
               </div>
+            )}
+            {isStarterPlan && !hasAuthSession && (
+              <form
+                onSubmit={(event) => {
+                  void handleExportLoginSubmit(event);
+                }}
+                className="rounded-xl border border-fuchsia-300/20 bg-fuchsia-500/[0.08] p-3"
+              >
+                <div className="text-sm font-semibold text-white">Ready for a clean export?</div>
+                <div className="mt-1 text-[12px] text-neutral-300">
+                  Add your email to log in, keep this design, and choose a plan.
+                </div>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="email"
+                    value={exportSignupEmail}
+                    onChange={(event) => setExportSignupEmail(event.target.value)}
+                    placeholder="Email address"
+                    className="min-w-0 flex-1 rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500 focus:border-fuchsia-300/60"
+                  />
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-fuchsia-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-fuchsia-400"
+                  >
+                    Login + choose plan
+                  </button>
+                </div>
+              </form>
             )}
             <div className="flex flex-wrap items-center gap-2 pt-2">
               {isIOS ? (
@@ -29914,7 +30018,7 @@ style={{ top: STICKY_TOP }}
               Guided step: <span className="text-white">{creatorWorkflowMeta[creatorFlowCurrentStep].label}</span>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:min-w-[260px]">
+          <div className={clsx("grid gap-2 sm:min-w-[260px]", isStarterPlan ? "grid-cols-1" : "grid-cols-2")}>
             <button
               type="button"
               onClick={() => switchWorkflowStudioMode("creator")}
@@ -29922,13 +30026,15 @@ style={{ top: STICKY_TOP }}
             >
               Creator Studio
             </button>
-            <button
-              type="button"
-              onClick={() => switchWorkflowStudioMode("dj")}
-              className="border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-200 transition hover:bg-neutral-900"
-            >
-              DJ / Artist
-            </button>
+            {!isStarterPlan && (
+              <button
+                type="button"
+                onClick={() => switchWorkflowStudioMode("dj")}
+                className="border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-200 transition hover:bg-neutral-900"
+              >
+                DJ / Artist
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -30130,7 +30236,7 @@ style={{ top: STICKY_TOP }}
             <div className="text-sm uppercase tracking-[0.2em] text-cyan-300">Workflow</div>
             <div className="mt-1 text-lg font-semibold text-white">Create a flyer in 10 minutes or less.</div>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:min-w-[260px]">
+          <div className={clsx("grid gap-2 sm:min-w-[260px]", isStarterPlan ? "grid-cols-1" : "grid-cols-2")}>
             <button
               type="button"
               onClick={() => switchWorkflowStudioMode("creator")}
@@ -30138,13 +30244,15 @@ style={{ top: STICKY_TOP }}
             >
               Creator Studio
             </button>
-            <button
-              type="button"
-              onClick={() => switchWorkflowStudioMode("dj")}
-              className="border border-white/15 bg-white/[0.08] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white"
-            >
-              DJ / Artist
-            </button>
+            {!isStarterPlan && (
+              <button
+                type="button"
+                onClick={() => switchWorkflowStudioMode("dj")}
+                className="border border-white/15 bg-white/[0.08] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white"
+              >
+                DJ / Artist
+              </button>
+            )}
           </div>
         </div>
       </div>
