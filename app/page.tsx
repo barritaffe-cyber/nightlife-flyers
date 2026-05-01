@@ -79,6 +79,7 @@ import { TEXT_SEPARATOR_GRAPHICS, buildSeparatorSvgDataUrl } from "../lib/textSe
 import { SHAPE_GRAPHICS, buildShapeSvgDataUrl, buildShapeSvgMarkup } from "../lib/shapeGraphics";
 import { getPublicLegalName, getPublicSupportEmail } from "../lib/publicIdentity";
 import { getClientTrackingPayload } from "../lib/analytics/client";
+import { getDeviceType, getOrCreateDeviceId } from "../lib/auth/device";
 
 const AiBackgroundPanel = dynamic(() => import("../components/editor/AiBackgroundPanel"), {
   ssr: false,
@@ -12083,6 +12084,12 @@ React.useEffect(() => {
   const [exportFilename, setExportFilename] = useState<string | null>(null);
   const [starterCleanExportUnlocked, setStarterCleanExportUnlocked] = useState(false);
   const [exportSignupEmail, setExportSignupEmail] = useState("");
+  const [starterRenderQuota, setStarterRenderQuota] = useState<{
+    limit: number;
+    used: number;
+    remaining: number;
+    blocked: boolean;
+  } | null>(null);
   const PRINT_EXPORT_SCALE = 6;
   const HISTORY_LIMIT = 10;
   const historyRef = React.useRef<{
@@ -12731,6 +12738,9 @@ const mobileFloatPanelClass =
   const isGuestTrial = !hasAuthSession;
   const starterMobileSaveOnly = isStarterPlan && isMobileView;
   const exportUsesLongPressSave = isIOS || starterMobileSaveOnly;
+  const starterRenderLimitReached = isStarterPlan && !!starterRenderQuota?.blocked;
+  const starterRenderLimitMessage =
+    "Free render limit reached. Sign up and choose a paid plan to render more flyers.";
   const isStudioPlan = isPaid && String(accessPlan || "").trim().toLowerCase() === "studio";
   const hasCreatorAutoLayoutAccess =
     isPaid &&
@@ -12868,6 +12878,25 @@ const mobileFloatPanelClass =
     });
   }, []);
 
+  const applyStarterRenderQuota = React.useCallback((payload: any) => {
+    const limit = Number(payload?.limit ?? 2);
+    const used = Number(payload?.used ?? 0);
+    const remaining = Number(
+      payload?.remaining ??
+        (Number.isFinite(limit)
+          ? Math.max(0, limit - (Number.isFinite(used) ? used : 0))
+          : NaN)
+    );
+    setStarterRenderQuota({
+      limit: Number.isFinite(limit) ? Math.max(0, limit) : 2,
+      used: Number.isFinite(used) ? Math.max(0, used) : 0,
+      remaining: Number.isFinite(remaining) ? Math.max(0, remaining) : 0,
+      blocked:
+        Boolean(payload?.blocked) ||
+        (Number.isFinite(remaining) && remaining <= 0),
+    });
+  }, []);
+
   const applyAccessPayload = React.useCallback(
     (payload: any) => {
       const nextStatus: SubscriptionAccessState =
@@ -12979,6 +13008,66 @@ const mobileFloatPanelClass =
     },
     [applyAccessPayload, getAccessToken]
   );
+
+  const refreshStarterRenderQuota = React.useCallback(async () => {
+    if (!isStarterPlan) {
+      setStarterRenderQuota(null);
+      return null;
+    }
+
+    try {
+      const res = await fetch("/api/auth/starter-render", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "status",
+          deviceId: getOrCreateDeviceId(),
+          deviceType: getDeviceType(),
+          tracking: getClientTrackingPayload(),
+        }),
+      });
+      const json = await res.json().catch(() => ({} as any));
+      if (json && (json.limit != null || json.used != null || json.remaining != null)) {
+        applyStarterRenderQuota(json);
+        return json;
+      }
+    } catch {}
+    return null;
+  }, [applyStarterRenderQuota, isStarterPlan]);
+
+  const consumeStarterRenderQuota = React.useCallback(async () => {
+    if (!isStarterPlan) return true;
+
+    try {
+      const res = await fetch("/api/auth/starter-render", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "consume",
+          deviceId: getOrCreateDeviceId(),
+          deviceType: getDeviceType(),
+          tracking: getClientTrackingPayload(),
+        }),
+      });
+      const json = await res.json().catch(() => ({} as any));
+      if (json && (json.limit != null || json.used != null || json.remaining != null)) {
+        applyStarterRenderQuota(json);
+      }
+      if (!res.ok) {
+        setExportError(json?.error || starterRenderLimitMessage);
+        return false;
+      }
+      return true;
+    } catch {
+      setExportError("Could not verify free render access. Please try again.");
+      return false;
+    }
+  }, [applyStarterRenderQuota, isStarterPlan, starterRenderLimitMessage]);
+
+  React.useEffect(() => {
+    if (!hydrated) return;
+    void refreshStarterRenderQuota();
+  }, [hydrated, refreshStarterRenderQuota]);
 
   const consumeStarterTrialBenefit = React.useCallback(
     async (
@@ -13132,6 +13221,19 @@ const mobileFloatPanelClass =
       alert('Artboard not ready');
       return;
     }
+
+    if (isStarterPlan) {
+      const currentQuota = starterRenderQuota ?? (await refreshStarterRenderQuota());
+      if (currentQuota?.blocked || Number(currentQuota?.remaining ?? 1) <= 0) {
+        setExportModalOpen(true);
+        setExportStatus('error');
+        setExportError(starterRenderLimitMessage);
+        setExportProgressActive(false);
+        setExportProgress(0);
+        return;
+      }
+    }
+
     setExportModalOpen(true);
     setExportStatus('rendering');
     setExportError(null);
@@ -13271,6 +13373,13 @@ const mobileFloatPanelClass =
         throw lastErr || new Error('Export failed');
       }
 
+      if (isStarterPlan) {
+        const renderAllowed = await consumeStarterRenderQuota();
+        if (!renderAllowed) {
+          throw new Error(starterRenderLimitMessage);
+        }
+      }
+
       let usedStarterCleanExport = false;
       if (isStarterPlan) {
         usedStarterCleanExport = await consumeStarterTrialBenefit("clean_export", {
@@ -13326,6 +13435,10 @@ const mobileFloatPanelClass =
     exportType,
     exportStatus,
     isStarterPlan,
+    refreshStarterRenderQuota,
+    starterRenderLimitMessage,
+    starterRenderQuota,
+    consumeStarterRenderQuota,
   ]);
 
   const triggerExportStart = React.useCallback(() => {
@@ -21277,6 +21390,10 @@ const openCreatorWorkflowTarget = React.useCallback(
     tab: "design" | "assets",
     options?: { uiMode?: "design" | "finish"; targetId?: string }
   ) => {
+    if (options?.uiMode === "finish" && starterRenderLimitReached) {
+      alert(starterRenderLimitMessage);
+      return;
+    }
     setWorkflowHelpOpen(false);
     clearTransientCanvasFocus();
     setUiMode(options?.uiMode ?? "design");
@@ -21292,7 +21409,7 @@ const openCreatorWorkflowTarget = React.useCallback(
       });
     }
   },
-  [clearTransientCanvasFocus, setSelectedPanel]
+  [clearTransientCanvasFocus, setSelectedPanel, starterRenderLimitMessage, starterRenderLimitReached]
 );
 
 const getSmartWorkflowTarget = React.useCallback(
@@ -24641,6 +24758,8 @@ return (
                 <Chip
                   small
                   className="shrink-0 whitespace-nowrap"
+                  disabled={starterRenderLimitReached}
+                  title={starterRenderLimitReached ? starterRenderLimitMessage : undefined}
                   onClick={() => {
                     openCreatorWorkflowTarget("mastergrade", "design", {
                       uiMode: "finish",
@@ -24680,8 +24799,9 @@ return (
                 <Chip
                   small
                   deferHeavy
+                  disabled={starterRenderLimitReached || exportStatus === 'rendering'}
                   onClick={triggerExportStart}
-                  title="Preview and export"
+                  title={starterRenderLimitReached ? starterRenderLimitMessage : "Preview and export"}
                 >
                   <span className="whitespace-nowrap">
                     {exportStatus === 'rendering' ? 'exporting…' : `export ${exportType}`}
@@ -24969,11 +25089,21 @@ return (
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
+                className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
                 onClick={triggerExportStart}
+                disabled={starterRenderLimitReached}
               >
                 Retry export
               </button>
+              {isStarterPlan && starterRenderLimitReached && (
+                <a
+                  href="/pricing"
+                  onClick={(event) => void handleStudioNavigation(event, "/pricing")}
+                  className="rounded-lg border border-fuchsia-400/40 bg-fuchsia-500/20 px-3 py-2 text-xs text-white hover:bg-fuchsia-500/30"
+                >
+                  View plans
+                </a>
+              )}
               <button
                 type="button"
                 className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
@@ -25095,8 +25225,9 @@ return (
               )}
               <button
                 type="button"
-                className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
+                className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
                 onClick={triggerExportStart}
+                disabled={starterRenderLimitReached}
               >
                 Re-render
               </button>
@@ -26976,6 +27107,20 @@ style={{ top: STICKY_TOP }}
     <div className="mt-2 text-[12px] text-neutral-400">
       Apply overlays, grade the flyer, then save or export the finished result.
     </div>
+    {isStarterPlan && (
+      <div
+        className={clsx(
+          "mt-2 border px-3 py-2 text-[11px]",
+          starterRenderLimitReached
+            ? "border-amber-300/35 bg-amber-400/10 text-amber-200"
+            : "border-white/10 bg-black/20 text-neutral-300"
+        )}
+      >
+        {starterRenderLimitReached
+          ? starterRenderLimitMessage
+          : `Free renders used ${starterRenderQuota?.used ?? 0}/${starterRenderQuota?.limit ?? 2}.`}
+      </div>
+    )}
   </div>
 )}
 {/* UI: CINEMATIC OVERLAYS (BEGIN) */}
@@ -29101,7 +29246,13 @@ style={{ top: STICKY_TOP }}
         <button
           type="button"
           onClick={handleCreatorWorkflowPrimaryAction}
-          className={`mt-2 w-full text-left ${editorPrimaryButtonClass}`}
+          disabled={starterRenderLimitReached && creatorFlowCurrentStep === "finish"}
+          title={
+            starterRenderLimitReached && creatorFlowCurrentStep === "finish"
+              ? starterRenderLimitMessage
+              : undefined
+          }
+          className={`mt-2 w-full text-left ${editorPrimaryButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
         >
           {creatorWorkflowGuide.buttonLabel}
         </button>
@@ -30290,14 +30441,18 @@ style={{ top: STICKY_TOP }}
             <button
               type="button"
               onClick={() => openCreatorWorkflowTarget("mastergrade", "design", { uiMode: "finish" })}
-              className="w-full border border-white/15 bg-white/[0.06] px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-white transition hover:bg-white/[0.09]"
+              disabled={starterRenderLimitReached}
+              title={starterRenderLimitReached ? starterRenderLimitMessage : undefined}
+              className="w-full border border-white/15 bg-white/[0.06] px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-white transition hover:bg-white/[0.09] disabled:cursor-not-allowed disabled:opacity-40"
             >
               Open Finish Mode
             </button>
             <button
               type="button"
               onClick={() => openCreatorWorkflowTarget("mastergrade", "design", { uiMode: "finish" })}
-              className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900"
+              disabled={starterRenderLimitReached}
+              title={starterRenderLimitReached ? starterRenderLimitMessage : undefined}
+              className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Open Master Color Grade
             </button>

@@ -9,6 +9,7 @@ export type AnalyticsEventName =
   | "login_started"
   | "login_succeeded"
   | "starter_trial_benefit_used"
+  | "starter_export_render_used"
   | "ai_generation_started"
   | "ai_generation_succeeded"
   | "ai_generation_failed"
