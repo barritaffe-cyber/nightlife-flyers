@@ -22666,6 +22666,11 @@ const activeAssetControls = React.useMemo(() => {
                   Number((sel as any).separatorOffset ?? 0)
                 ),
               })
+          : isShapeGraphic
+          ? (v: number) =>
+              useFlyerState.getState().updatePortrait(format, sel.id, {
+                shapeLength: v,
+              })
           : undefined,
         onSeparatorOffset: isSeparator
           ? (v: number) =>
@@ -22677,11 +22682,6 @@ const activeAssetControls = React.useMemo(() => {
                   Number((sel as any).separatorWidth ?? 180),
                   v
                 ),
-              })
-          : isShapeGraphic
-          ? (v: number) =>
-              useFlyerState.getState().updatePortrait(format, sel.id, {
-                shapeLength: v,
               })
           : undefined,
         onShapeSkew: isShapeGraphic
