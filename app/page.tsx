@@ -17077,6 +17077,9 @@ async function renderExportDataUrl(
     (document.getElementById('export-root') as HTMLElement) ||
     art;
   const wrapper = artWrapRef.current || exportRoot;
+  const captureNode = art;
+  const exportWidth = canvasSize.w;
+  const exportHeight = canvasSize.h;
   let originalStyle: {
     transform: string;
     position: string;
@@ -17086,12 +17089,16 @@ async function renderExportDataUrl(
     width: string;
     height: string;
     transition: string;
+    exportRootWidth: string;
+    exportRootHeight: string;
     exportRootBorderRadius: string;
     exportRootOverflow: string;
     backgroundImage: string;
     backgroundSize: string;
     backgroundPosition: string;
     backgroundRepeat: string;
+    artWidth: string;
+    artHeight: string;
     artBorderRadius: string;
     artOverflow: string;
     artBoxShadow: string;
@@ -17126,12 +17133,16 @@ async function renderExportDataUrl(
       width: wrapper.style.width,
       height: wrapper.style.height,
       transition: wrapper.style.transition,
+      exportRootWidth: exportRoot.style.width,
+      exportRootHeight: exportRoot.style.height,
       exportRootBorderRadius: exportRoot.style.borderRadius,
       exportRootOverflow: exportRoot.style.overflow,
       backgroundImage: exportRoot.style.backgroundImage,
       backgroundSize: exportRoot.style.backgroundSize,
       backgroundPosition: exportRoot.style.backgroundPosition,
       backgroundRepeat: exportRoot.style.backgroundRepeat,
+      artWidth: art.style.width,
+      artHeight: art.style.height,
       artBorderRadius: art.style.borderRadius,
       artOverflow: art.style.overflow,
       artBoxShadow: art.style.boxShadow,
@@ -17142,9 +17153,15 @@ async function renderExportDataUrl(
     wrapper.style.left = "0";
     wrapper.style.top = "0";
     wrapper.style.margin = "0";
+    wrapper.style.width = `${exportWidth}px`;
+    wrapper.style.height = `${exportHeight}px`;
     wrapper.style.transition = "none";
+    exportRoot.style.width = `${exportWidth}px`;
+    exportRoot.style.height = `${exportHeight}px`;
     exportRoot.style.borderRadius = "0px";
     exportRoot.style.overflow = "hidden";
+    art.style.width = `${exportWidth}px`;
+    art.style.height = `${exportHeight}px`;
     art.style.borderRadius = "0px";
     art.style.overflow = "hidden";
     art.style.boxShadow = "none";
@@ -17227,12 +17244,12 @@ async function renderExportDataUrl(
       img.style.objectFit = "cover";
       img.style.display = "block";
       tempBgEl.appendChild(img);
-      exportRoot.insertBefore(tempBgEl, exportRoot.firstChild);
+      captureNode.insertBefore(tempBgEl, captureNode.firstChild);
       await waitForImageUrl(bgSrcForExport);
     }
     onProgress?.(55);
 
-    const exportStyle = getComputedStyle(exportRoot);
+    const exportStyle = getComputedStyle(captureNode);
     const forcedStyle: any = {
       filter: exportStyle.filter,
       webkitFilter: exportStyle.filter,
@@ -17246,6 +17263,47 @@ async function renderExportDataUrl(
       margin: "0",
       position: "relative",
       borderRadius: "0px",
+      boxShadow: "none",
+      overflow: "hidden",
+      width: `${exportWidth}px`,
+      height: `${exportHeight}px`,
+      maxWidth: "none",
+      maxHeight: "none",
+    };
+    const captureOptions = {
+      cacheBust: true,
+      imagePlaceholder: EXPORT_TRANSPARENT_PIXEL,
+      backgroundColor: '#000',
+      pixelRatio: scale,
+      width: exportWidth,
+      height: exportHeight,
+      canvasWidth: exportWidth,
+      canvasHeight: exportHeight,
+      skipAutoScale: true,
+      style: forcedStyle,
+      filter: (node: HTMLElement) => {
+        const el = node as HTMLElement;
+        if (!el) return true;
+        const skip =
+          el.dataset?.nonexport === 'true' ||
+          el.classList?.contains('debug-grid') ||
+          el.classList?.contains('bounding-box') ||
+          el.classList?.contains('text-bounding') ||
+          el.classList?.contains('text-outline') ||
+          el.classList?.contains('highlight-box') ||
+          el.classList?.contains('drag-handle') ||
+          el.classList?.contains('resize-handle') ||
+          el.classList?.contains('portrait-handle') ||
+          el.classList?.contains('portrait-bounding') ||
+          el.classList?.contains('portrait-outline') ||
+          el.classList?.contains('portrait-border') ||
+          el.classList?.contains('portrait-slot') ||
+          el.classList?.contains('overlay-grid') ||
+          el.tagName === 'BUTTON' ||
+          el.tagName === 'INPUT' ||
+          el.tagName === 'TEXTAREA';
+        return !skip;
+      },
     };
 
     const dataUrl = await withExternalStylesDisabled(async () => {
@@ -17257,90 +17315,35 @@ async function renderExportDataUrl(
       let missingBgInline: string[] = [];
       try {
         await forceFontRender(families);
-        const injectedFonts = await injectGoogleFontsForExport(exportRoot, families);
+        const injectedFonts = await injectGoogleFontsForExport(captureNode, families);
         restoreExportFonts = injectedFonts.restore;
         if (isMobileExport) {
-          restoreTextShadowFallback = applyTextShadowFallbackForExport(exportRoot);
+          restoreTextShadowFallback = applyTextShadowFallbackForExport(captureNode);
         }
         await waitForImageUrl(bgUploadUrl || bgUrl);
         await waitForImageUrl(logoUrl);
         if (shouldInlineProxy) {
-          const inlineImgs = await inlineImagesForExport(exportRoot, { forceProxy: true });
+          const inlineImgs = await inlineImagesForExport(captureNode, { forceProxy: true });
           restoreInlineImages = inlineImgs.restore;
           missingInline = inlineImgs.missing;
-          const inlineBg = await inlineBackgroundImagesForExport(exportRoot, { forceProxy: true });
+          const inlineBg = await inlineBackgroundImagesForExport(captureNode, { forceProxy: true });
           restoreInlineBg = inlineBg.restore;
           missingBgInline = inlineBg.missing;
           const missingAll = [...missingInline, ...missingBgInline];
         }
-        await waitForImages(exportRoot);
-        await waitForBackgroundImages(exportRoot);
+        await waitForImages(captureNode);
+        await waitForBackgroundImages(captureNode);
         onProgress?.(70);
 
         const capture = async () => {
           if (format === 'jpg') {
-            return await htmlToImage.toJpeg(exportRoot, {
-              cacheBust: true,
-              imagePlaceholder: EXPORT_TRANSPARENT_PIXEL,
-              backgroundColor: '#000',
-              pixelRatio: scale,
-              style: forcedStyle,
-              filter: (node: HTMLElement) => {
-                const el = node as HTMLElement;
-                if (!el) return true;
-                const skip =
-                  el.dataset?.nonexport === 'true' ||
-                  el.classList?.contains('debug-grid') ||
-                  el.classList?.contains('bounding-box') ||
-                  el.classList?.contains('text-bounding') ||
-                  el.classList?.contains('text-outline') ||
-                  el.classList?.contains('highlight-box') ||
-                  el.classList?.contains('drag-handle') ||
-                  el.classList?.contains('resize-handle') ||
-                  el.classList?.contains('portrait-handle') ||
-                  el.classList?.contains('portrait-bounding') ||
-                  el.classList?.contains('portrait-outline') ||
-                  el.classList?.contains('portrait-border') ||
-                  el.classList?.contains('portrait-slot') ||
-                  el.classList?.contains('overlay-grid') ||
-                  el.tagName === 'BUTTON' ||
-                  el.tagName === 'INPUT' ||
-                  el.tagName === 'TEXTAREA';
-                return !skip;
-              },
+            return await htmlToImage.toJpeg(captureNode, {
+              ...captureOptions,
+              quality: 0.95,
             });
           }
 
-          return await htmlToImage.toPng(exportRoot, {
-            cacheBust: true,
-            imagePlaceholder: EXPORT_TRANSPARENT_PIXEL,
-            backgroundColor: '#000',
-            pixelRatio: scale,
-            style: forcedStyle,
-            filter: (node: HTMLElement) => {
-              const el = node as HTMLElement;
-              if (!el) return true;
-              const skip =
-                el.dataset?.nonexport === 'true' ||
-                el.classList?.contains('debug-grid') ||
-                el.classList?.contains('bounding-box') ||
-                el.classList?.contains('text-bounding') ||
-                el.classList?.contains('text-outline') ||
-                el.classList?.contains('highlight-box') ||
-                el.classList?.contains('drag-handle') ||
-                el.classList?.contains('resize-handle') ||
-                el.classList?.contains('portrait-handle') ||
-                el.classList?.contains('portrait-bounding') ||
-                el.classList?.contains('portrait-outline') ||
-                el.classList?.contains('portrait-border') ||
-                el.classList?.contains('portrait-slot') ||
-                el.classList?.contains('overlay-grid') ||
-                el.tagName === 'BUTTON' ||
-                el.tagName === 'INPUT' ||
-                el.tagName === 'TEXTAREA';
-              return !skip;
-            },
-          });
+          return await htmlToImage.toPng(captureNode, captureOptions);
         };
 
         const needsWarmup = format !== 'jpg' && !!(bgUploadUrl || bgUrl || logoUrl);
@@ -17371,12 +17374,16 @@ async function renderExportDataUrl(
     wrapper.style.width = originalStyle.width;
     wrapper.style.height = originalStyle.height;
     wrapper.style.transition = originalStyle.transition;
+    exportRoot.style.width = originalStyle.exportRootWidth;
+    exportRoot.style.height = originalStyle.exportRootHeight;
     exportRoot.style.borderRadius = originalStyle.exportRootBorderRadius;
     exportRoot.style.overflow = originalStyle.exportRootOverflow;
     exportRoot.style.backgroundImage = originalStyle.backgroundImage;
     exportRoot.style.backgroundSize = originalStyle.backgroundSize;
     exportRoot.style.backgroundPosition = originalStyle.backgroundPosition;
     exportRoot.style.backgroundRepeat = originalStyle.backgroundRepeat;
+    art.style.width = originalStyle.artWidth;
+    art.style.height = originalStyle.artHeight;
     art.style.borderRadius = originalStyle.artBorderRadius;
     art.style.overflow = originalStyle.artOverflow;
     art.style.boxShadow = originalStyle.artBoxShadow;
@@ -17406,12 +17413,16 @@ async function renderExportDataUrl(
       wrapper.style.width = originalStyle.width;
       wrapper.style.height = originalStyle.height;
       wrapper.style.transition = originalStyle.transition;
+      exportRoot.style.width = originalStyle.exportRootWidth;
+      exportRoot.style.height = originalStyle.exportRootHeight;
       exportRoot.style.borderRadius = originalStyle.exportRootBorderRadius;
       exportRoot.style.overflow = originalStyle.exportRootOverflow;
       exportRoot.style.backgroundImage = originalStyle.backgroundImage;
       exportRoot.style.backgroundSize = originalStyle.backgroundSize;
       exportRoot.style.backgroundPosition = originalStyle.backgroundPosition;
       exportRoot.style.backgroundRepeat = originalStyle.backgroundRepeat;
+      art.style.width = originalStyle.artWidth;
+      art.style.height = originalStyle.artHeight;
       art.style.borderRadius = originalStyle.artBorderRadius;
       art.style.overflow = originalStyle.artOverflow;
       art.style.boxShadow = originalStyle.artBoxShadow;
