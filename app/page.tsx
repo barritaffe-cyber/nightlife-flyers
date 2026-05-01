@@ -22959,12 +22959,15 @@ const prepareForMobileTabSwitch = React.useCallback(() => {
   setFloatingLightingVisible(false);
 }, [setSelectedEmojiId, setSelectedPortraitId]);
 
+const mobileTabButtonClass =
+  "inline-flex h-[26px] shrink-0 items-center justify-center whitespace-nowrap border px-1.5 text-center text-[8.5px] font-semibold uppercase leading-none tracking-[0.07em]";
+const mobilePrimaryTabButtonClass = `${mobileTabButtonClass} w-[52px]`;
+
 const mobileControlsTabs = (
-  <div className="lg:hidden flex justify-center px-3 py-2">
+  <div className="lg:hidden flex justify-center px-1.5 py-2">
     <div
       data-tour="mobile-tabs"
-      className="flex items-center justify-start gap-1.5 overflow-x-auto border-b border-neutral-800 bg-neutral-950/90 px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      style={{ width: scaledCanvasW, maxWidth: "100%" }}
+      className="mx-auto flex w-full max-w-[360px] items-center justify-center gap-1 overflow-visible border-b border-neutral-800 bg-neutral-950/90 px-1.5 py-2"
       onPointerDownCapture={(e) => {
         const t = e.target as Element | null;
         if (t?.closest?.('[data-mobile-float-lock="true"]')) {
@@ -22999,7 +23002,7 @@ const mobileControlsTabs = (
         }}
         data-tour="mobile-text-tab"
         data-mobile-float-lock="true"
-        className={`w-[62px] px-2 py-[3px] text-center text-[9px] font-semibold uppercase tracking-[0.12em] border shrink-0 whitespace-nowrap ${
+        className={`${mobilePrimaryTabButtonClass} ${
           mobileControlsTab === "design"
             ? "border-blue-400 text-blue-300 bg-blue-500/10"
             : "border-neutral-700 text-neutral-300 bg-neutral-900/60"
@@ -23030,7 +23033,7 @@ const mobileControlsTabs = (
         }}
         data-tour="mobile-design-tab"
         data-mobile-float-lock="true"
-        className={`w-[62px] px-2 py-[3px] text-center text-[9px] font-semibold uppercase tracking-[0.12em] border shrink-0 whitespace-nowrap ${
+        className={`${mobilePrimaryTabButtonClass} ${
           mobileControlsTab === "assets"
             ? "border-blue-400 text-blue-300 bg-blue-500/10"
             : "border-neutral-700 text-neutral-300 bg-neutral-900/60"
@@ -23043,7 +23046,7 @@ const mobileControlsTabs = (
         onClick={undoAssetPosition}
         data-mobile-float-lock="true"
         disabled={!lastMoveStack.length}
-        className={`px-2 py-[3px] text-[9px] font-semibold uppercase tracking-[0.12em] border shrink-0 whitespace-nowrap ${
+        className={`${mobileTabButtonClass} ${
           lastMoveStack.length
             ? "border-emerald-400 text-emerald-200 bg-emerald-500/10"
             : "border-neutral-700 text-neutral-500 bg-neutral-900/60 cursor-not-allowed"
@@ -23055,7 +23058,7 @@ const mobileControlsTabs = (
       <button
         type="button"
         onClick={startTour}
-        className="px-2 py-[3px] text-[9px] font-semibold uppercase tracking-[0.12em] border border-fuchsia-400/70 text-fuchsia-100 bg-fuchsia-500/20 hover:bg-fuchsia-500/30 shrink-0 whitespace-nowrap"
+        className={`${mobileTabButtonClass} border-fuchsia-400/70 text-fuchsia-100 bg-fuchsia-500/20 hover:bg-fuchsia-500/30`}
         title="Start Tour"
       >
         Start Tour
@@ -23063,7 +23066,7 @@ const mobileControlsTabs = (
       <Link
         href="/pricing"
         onClick={(event) => void handleStudioNavigation(event, "/pricing")}
-        className="px-2 py-[3px] text-[9px] font-semibold uppercase tracking-[0.12em] border border-cyan-400/70 text-cyan-100 bg-cyan-500/15 hover:bg-cyan-500/25 shrink-0 whitespace-nowrap"
+        className={`${mobileTabButtonClass} border-cyan-400/70 text-cyan-100 bg-cyan-500/15 hover:bg-cyan-500/25`}
         aria-label="View Pricing"
       >
         Pricing
