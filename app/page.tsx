@@ -3486,7 +3486,10 @@ return (
     }
     canvasRefs.root = el;
   }}
-  className="relative rounded-2xl overflow-hidden shadow-2xl select-none"
+  className={clsx(
+    "relative overflow-hidden select-none",
+    hideUiForExport ? "rounded-none shadow-none" : "rounded-2xl shadow-2xl"
+  )}
 
   // ✅ CLICK EMPTY STAGE => BACKGROUND MODE + CLEAR HALO
   onClick={(e) => {
@@ -5299,7 +5302,12 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
       )}
 
       {/* Frame guide */}
-      <div className="absolute inset-0 border-2 border-neutral-700/40 pointer-events-none rounded-2xl" />
+      {!hideUiForExport && (
+        <div
+          data-nonexport="true"
+          className="absolute inset-0 border-2 border-neutral-700/40 pointer-events-none rounded-2xl"
+        />
+      )}
 {/* ✅ PASTE THIS BLOCK HERE: ATMOSPHERE & TEXTURE LAYER */}
       <div className="absolute inset-0 pointer-events-none z-[50]">
 
@@ -12716,6 +12724,8 @@ const mobileFloatPanelClass =
   const hasPaidAccess = isPaid || hasOnDemandPass;
   const isStarterPlan = !hasPaidAccess;
   const isGuestTrial = !hasAuthSession;
+  const starterMobileSaveOnly = isStarterPlan && isMobileView;
+  const exportUsesLongPressSave = isIOS || starterMobileSaveOnly;
   const isStudioPlan = isPaid && String(accessPlan || "").trim().toLowerCase() === "studio";
   const hasCreatorAutoLayoutAccess =
     isPaid &&
@@ -17076,10 +17086,15 @@ async function renderExportDataUrl(
     width: string;
     height: string;
     transition: string;
+    exportRootBorderRadius: string;
+    exportRootOverflow: string;
     backgroundImage: string;
     backgroundSize: string;
     backgroundPosition: string;
     backgroundRepeat: string;
+    artBorderRadius: string;
+    artOverflow: string;
+    artBoxShadow: string;
   } | null = null;
   let bgBlobUrl: string | null = null;
   let tempBgEl: HTMLDivElement | null = null;
@@ -17111,10 +17126,15 @@ async function renderExportDataUrl(
       width: wrapper.style.width,
       height: wrapper.style.height,
       transition: wrapper.style.transition,
+      exportRootBorderRadius: exportRoot.style.borderRadius,
+      exportRootOverflow: exportRoot.style.overflow,
       backgroundImage: exportRoot.style.backgroundImage,
       backgroundSize: exportRoot.style.backgroundSize,
       backgroundPosition: exportRoot.style.backgroundPosition,
       backgroundRepeat: exportRoot.style.backgroundRepeat,
+      artBorderRadius: art.style.borderRadius,
+      artOverflow: art.style.overflow,
+      artBoxShadow: art.style.boxShadow,
     };
 
     wrapper.style.transform = "none";
@@ -17123,6 +17143,11 @@ async function renderExportDataUrl(
     wrapper.style.top = "0";
     wrapper.style.margin = "0";
     wrapper.style.transition = "none";
+    exportRoot.style.borderRadius = "0px";
+    exportRoot.style.overflow = "hidden";
+    art.style.borderRadius = "0px";
+    art.style.overflow = "hidden";
+    art.style.boxShadow = "none";
 
     await new Promise((r) => setTimeout(r, 100));
     await twoRaf();
@@ -17346,10 +17371,15 @@ async function renderExportDataUrl(
     wrapper.style.width = originalStyle.width;
     wrapper.style.height = originalStyle.height;
     wrapper.style.transition = originalStyle.transition;
+    exportRoot.style.borderRadius = originalStyle.exportRootBorderRadius;
+    exportRoot.style.overflow = originalStyle.exportRootOverflow;
     exportRoot.style.backgroundImage = originalStyle.backgroundImage;
     exportRoot.style.backgroundSize = originalStyle.backgroundSize;
     exportRoot.style.backgroundPosition = originalStyle.backgroundPosition;
     exportRoot.style.backgroundRepeat = originalStyle.backgroundRepeat;
+    art.style.borderRadius = originalStyle.artBorderRadius;
+    art.style.overflow = originalStyle.artOverflow;
+    art.style.boxShadow = originalStyle.artBoxShadow;
     if (tempBgEl && tempBgEl.parentNode) {
       try { tempBgEl.parentNode.removeChild(tempBgEl); } catch {}
       tempBgEl = null;
@@ -17376,10 +17406,15 @@ async function renderExportDataUrl(
       wrapper.style.width = originalStyle.width;
       wrapper.style.height = originalStyle.height;
       wrapper.style.transition = originalStyle.transition;
+      exportRoot.style.borderRadius = originalStyle.exportRootBorderRadius;
+      exportRoot.style.overflow = originalStyle.exportRootOverflow;
       exportRoot.style.backgroundImage = originalStyle.backgroundImage;
       exportRoot.style.backgroundSize = originalStyle.backgroundSize;
       exportRoot.style.backgroundPosition = originalStyle.backgroundPosition;
       exportRoot.style.backgroundRepeat = originalStyle.backgroundRepeat;
+      art.style.borderRadius = originalStyle.artBorderRadius;
+      art.style.overflow = originalStyle.artOverflow;
+      art.style.boxShadow = originalStyle.artBoxShadow;
       if (tempBgEl && tempBgEl.parentNode) {
         try { tempBgEl.parentNode.removeChild(tempBgEl); } catch {}
         tempBgEl = null;
@@ -24935,11 +24970,12 @@ return (
 
         {!exportProgressActive && exportStatus === "ready" && exportDataUrl && exportMeta && exportBlobUrl && (
           <>
-            <div className="rounded-lg overflow-hidden border border-neutral-800 bg-black">
+            <div className="overflow-hidden border border-neutral-800 bg-black">
               <img
                 src={exportDataUrl}
                 alt="Export preview"
-                className="w-full h-auto block"
+                className="block h-auto w-full rounded-none bg-black"
+                style={{ borderRadius: 0 }}
               />
             </div>
             <div className="grid grid-cols-2 gap-2 text-[12px] text-neutral-300">
@@ -24955,9 +24991,9 @@ return (
                 Print export enabled. PNG includes 300 DPI metadata and the highest clean raster size in the app.
               </div>
             )}
-            {isIOS ? (
+            {exportUsesLongPressSave ? (
               <div className="text-[12px] text-neutral-300 space-y-1">
-                <div>Hold down on the image and tap <b>Save to Photos</b>.</div>
+                <div>Hold down on the image and save it to Photos or Gallery.</div>
                 <div className="text-[11px] text-neutral-400">
                   Tip: If the background doesn’t render, hit <b>Rerender</b> — data might be slow.
                 </div>
@@ -25007,7 +25043,7 @@ return (
               </form>
             )}
             <div className="flex flex-wrap items-center gap-2 pt-2">
-              {isIOS ? (
+              {starterMobileSaveOnly ? null : isIOS ? (
                 <button
                   type="button"
                   className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
