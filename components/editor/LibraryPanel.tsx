@@ -928,6 +928,8 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
             iconColor: '#ffffff',
             label: item.label,
             showLabel: true,
+            hitTestMode: 'alpha-bounds',
+            isNightlifeGraphic: true,
             isSticker: true,
           } as any);
           setSelectedPortraitId(id);

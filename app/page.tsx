@@ -11557,9 +11557,17 @@ const [bgBlur, setBgBlur] = useState(0);
     }
   }, [isMobileView]);
 
-  const transparentHitCacheRef = React.useRef<Map<string, HTMLCanvasElement>>(new Map());
+  const transparentHitCacheRef = React.useRef<
+    Map<
+      string,
+      {
+        canvas: HTMLCanvasElement;
+        bounds: { minX: number; minY: number; maxX: number; maxY: number } | null;
+      }
+    >
+  >(new Map());
 
-  const isOpaqueAssetHit = React.useCallback((assetEl: HTMLElement | null, sourceImg: HTMLImageElement | null, clientX: number, clientY: number) => {
+  const isOpaqueAssetHit = React.useCallback((assetEl: HTMLElement | null, sourceImg: HTMLImageElement | null, clientX: number, clientY: number, hitMode: "pixel" | "alpha-bounds" = "pixel") => {
     if (!assetEl || !sourceImg) return true;
 
     const width = assetEl.offsetWidth || sourceImg.offsetWidth || sourceImg.clientWidth;
@@ -11592,8 +11600,8 @@ const [bgBlur, setBgBlur] = useState(0);
     const cacheKey = sourceImg.currentSrc || sourceImg.src || "";
     if (!cacheKey) return true;
 
-    let alphaCanvas = transparentHitCacheRef.current.get(cacheKey) || null;
-    if (!alphaCanvas) {
+    let cacheEntry = transparentHitCacheRef.current.get(cacheKey) || null;
+    if (!cacheEntry) {
       try {
         const naturalWidth = sourceImg.naturalWidth || width;
         const naturalHeight = sourceImg.naturalHeight || height;
@@ -11602,27 +11610,50 @@ const [bgBlur, setBgBlur] = useState(0);
         const maskScale = Math.min(1, maxMaskSide / Math.max(naturalWidth, naturalHeight));
         const maskWidth = Math.max(1, Math.round(naturalWidth * maskScale));
         const maskHeight = Math.max(1, Math.round(naturalHeight * maskScale));
-        alphaCanvas = document.createElement("canvas");
+        const alphaCanvas = document.createElement("canvas");
         alphaCanvas.width = maskWidth;
         alphaCanvas.height = maskHeight;
         const ctx = alphaCanvas.getContext("2d", { willReadFrequently: true });
         if (!ctx) return true;
         ctx.drawImage(sourceImg, 0, 0, maskWidth, maskHeight);
+        const alphaData = ctx.getImageData(0, 0, maskWidth, maskHeight).data;
+        let minX = maskWidth;
+        let minY = maskHeight;
+        let maxX = -1;
+        let maxY = -1;
+        for (let y = 0; y < maskHeight; y += 1) {
+          for (let x = 0; x < maskWidth; x += 1) {
+            if (alphaData[(y * maskWidth + x) * 4 + 3] <= 20) continue;
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x > maxX) maxX = x;
+            if (y > maxY) maxY = y;
+          }
+        }
+        cacheEntry = {
+          canvas: alphaCanvas,
+          bounds: maxX >= minX && maxY >= minY ? { minX, minY, maxX, maxY } : null,
+        };
         if (transparentHitCacheRef.current.size > 80) {
           const oldestKey = transparentHitCacheRef.current.keys().next().value;
           if (oldestKey) transparentHitCacheRef.current.delete(oldestKey);
         }
-        transparentHitCacheRef.current.set(cacheKey, alphaCanvas);
+        transparentHitCacheRef.current.set(cacheKey, cacheEntry);
       } catch {
         return true;
       }
     }
 
     try {
+      const alphaCanvas = cacheEntry.canvas;
       const maskWidth = alphaCanvas.width || 1;
       const maskHeight = alphaCanvas.height || 1;
       const px = Math.max(0, Math.min(maskWidth - 1, Math.floor((localX / width) * maskWidth)));
       const py = Math.max(0, Math.min(maskHeight - 1, Math.floor((localY / height) * maskHeight)));
+      if (hitMode === "alpha-bounds") {
+        const bounds = cacheEntry.bounds;
+        return !!bounds && px >= bounds.minX && px <= bounds.maxX && py >= bounds.minY && py <= bounds.maxY;
+      }
       const ctx = alphaCanvas.getContext("2d", { willReadFrequently: true });
       if (!ctx) return true;
       const alpha = ctx.getImageData(px, py, 1, 1).data[3];
@@ -11635,7 +11666,13 @@ const [bgBlur, setBgBlur] = useState(0);
   const redirectTransparentAssetPointer = React.useCallback((event: React.PointerEvent<HTMLElement>, currentEl: HTMLElement) => {
     const assetEl = (currentEl.querySelector('[data-hit-bounds="true"]') as HTMLElement | null) || currentEl;
     const sourceImg = currentEl.querySelector('[data-hit-source="true"]') as HTMLImageElement | null;
-    if (isOpaqueAssetHit(assetEl, sourceImg, event.clientX, event.clientY)) return false;
+    const hitMode =
+      currentEl.dataset.hitMode === "alpha-bounds" ||
+      assetEl?.dataset.hitMode === "alpha-bounds" ||
+      sourceImg?.dataset.hitMode === "alpha-bounds"
+        ? "alpha-bounds"
+        : "pixel";
+    if (isOpaqueAssetHit(assetEl, sourceImg, event.clientX, event.clientY, hitMode)) return false;
 
     const priorPointerEvents = currentEl.style.pointerEvents;
     currentEl.style.pointerEvents = "none";
@@ -11679,7 +11716,13 @@ const [bgBlur, setBgBlur] = useState(0);
   const ignoreTransparentAssetClick = React.useCallback((event: React.MouseEvent<HTMLElement>, currentEl: HTMLElement) => {
     const assetEl = (currentEl.querySelector('[data-hit-bounds="true"]') as HTMLElement | null) || currentEl;
     const sourceImg = currentEl.querySelector('[data-hit-source="true"]') as HTMLImageElement | null;
-    if (isOpaqueAssetHit(assetEl, sourceImg, event.clientX, event.clientY)) return false;
+    const hitMode =
+      currentEl.dataset.hitMode === "alpha-bounds" ||
+      assetEl?.dataset.hitMode === "alpha-bounds" ||
+      sourceImg?.dataset.hitMode === "alpha-bounds"
+        ? "alpha-bounds"
+        : "pixel";
+    if (isOpaqueAssetHit(assetEl, sourceImg, event.clientX, event.clientY, hitMode)) return false;
     event.preventDefault();
     event.stopPropagation();
     return true;
@@ -17562,6 +17605,10 @@ const portraitCanvas = React.useMemo(() => {
     const locked = !!p.locked;
     const { isLogo, isFlare, isSticker, isExtracted } = classify(p);
     const isImageSticker = isSticker && typeof (p as any).svgTemplate !== "string" && !!p.url;
+    const useAlphaBoundsHit =
+      (p as any).hitTestMode === "alpha-bounds" ||
+      !!(p as any).isNightlifeGraphic ||
+      (isSticker && typeof (p as any).svgTemplate === "string" && !isExtracted);
     const clickThrough = locked;
     const shadowBlur = Number((p as any).shadowBlur ?? 0);
     const shadowAlpha = Number((p as any).shadowAlpha ?? 0.5);
@@ -17915,6 +17962,7 @@ const portraitCanvas = React.useMemo(() => {
           {p.url && (
             <div
               data-hit-bounds="true"
+              data-hit-mode={useAlphaBoundsHit ? "alpha-bounds" : undefined}
               style={{
                 position: "relative",
                 display: "inline-block",
@@ -17931,6 +17979,7 @@ const portraitCanvas = React.useMemo(() => {
             >
               <img
                 data-hit-source="true"
+                data-hit-mode={useAlphaBoundsHit ? "alpha-bounds" : undefined}
                 src={p.url}
                 crossOrigin="anonymous"
                 alt=""
