@@ -9155,8 +9155,8 @@ const TOUR_STEPS = ([
   },
  {
   id: 'account',
-  title: 'Account & logout',
-  body: 'Tap the circle to view your account info and log out.',
+  title: 'Click the logo',
+  body: 'Click the NF logo to view your account info or log out.',
   selector: '#account-logo-button, #account-logo-button-mobile',
   onEnter: () => {
     setUiMode("design");
@@ -9252,6 +9252,13 @@ const renderMobileTourVisual = React.useCallback((stepId: string) => {
           label: "Canvas",
           mode: "canvas" as const,
         }
+      : stepId === "account"
+      ? {
+          src: "/templates/disco_mirrorball.jpg",
+          alt: "Account logo snapshot",
+          label: "Click Logo",
+          mode: "account" as const,
+        }
       : {
           src: "/templates/disco_mirrorball.jpg",
           alt: "Export and account snapshot",
@@ -9270,7 +9277,16 @@ const renderMobileTourVisual = React.useCallback((stepId: string) => {
       <div className="rounded-[30px] border border-white/[0.15] bg-[#05070c] p-2.5 shadow-[0_28px_80px_rgba(0,0,0,0.62)]">
         <div className="overflow-hidden rounded-[22px] border border-white/10 bg-neutral-950">
           <div className="flex items-center justify-between border-b border-white/10 bg-black/[0.55] px-3 py-2">
-            <div className="h-1.5 w-10 rounded-full bg-white/[0.35]" />
+            {snapshot.mode === "account" ? (
+              <img
+                src="/branding/nf-logo.png"
+                alt="Nightlife Flyers logo"
+                className="h-5 w-5"
+                draggable={false}
+              />
+            ) : (
+              <div className="h-1.5 w-10 rounded-full bg-white/[0.35]" />
+            )}
             <div className="text-[8px] font-bold uppercase tracking-[0.18em] text-cyan-100/75">
               {snapshot.label}
             </div>
@@ -9369,6 +9385,30 @@ const renderMobileTourVisual = React.useCallback((stepId: string) => {
                 </div>
               </div>
             )}
+
+            {snapshot.mode === "account" && (
+              <>
+                <div className="absolute left-3 top-3 flex items-center gap-2 rounded-full border border-cyan-100/35 bg-black/[0.58] px-2.5 py-1.5 shadow-[0_0_28px_rgba(103,232,249,0.24)] backdrop-blur-md">
+                  <img
+                    src="/branding/nf-logo.png"
+                    alt="Nightlife Flyers logo"
+                    className="h-7 w-7"
+                    draggable={false}
+                  />
+                  <span className="text-[8px] font-black uppercase tracking-[0.16em] text-cyan-50">
+                    Click logo
+                  </span>
+                </div>
+                <div className="absolute left-3 right-3 bottom-3 rounded-2xl border border-white/[0.15] bg-black/[0.78] p-2.5 text-center backdrop-blur-md">
+                  <div className="text-[8px] font-bold uppercase tracking-[0.18em] text-cyan-100">
+                    Account & logout
+                  </div>
+                  <div className="mt-2 rounded-xl border border-white/10 bg-white/[0.08] py-2 text-[8px] font-bold uppercase tracking-[0.14em] text-white/[0.76]">
+                    Profile panel opens
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="grid grid-cols-2 border-t border-white/10 text-center text-[8px] font-bold uppercase tracking-[0.16em]">
@@ -9380,9 +9420,6 @@ const renderMobileTourVisual = React.useCallback((stepId: string) => {
             </div>
           </div>
         </div>
-      </div>
-      <div className="mt-2 text-center text-[10px] font-semibold uppercase tracking-[0.16em] text-white/[0.45]">
-        Snapshot preview
       </div>
     </div>
   );
