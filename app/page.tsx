@@ -22899,6 +22899,8 @@ const mobileControlsTabs = (
           setMobileControlsOpen(true);
           setMobileControlsTab("assets");
           if (
+            selectedPanel !== "template" &&
+            selectedPanel !== "template_backgrounds" &&
             selectedPanel !== "dj_branding" &&
             selectedPanel !== "ai_background" &&
             selectedPanel !== "magic_blend" &&
@@ -28985,6 +28987,50 @@ style={{ top: STICKY_TOP }}
     />
   )}
 </div>
+)}
+
+{!isDjStartupMode && (
+  <div className="lg:hidden space-y-3">
+    <div className="mb-3" id="template-panel-design-tab">
+      <div
+        className={clsx(
+          selectedPanel === "template"
+            ? "relative rounded-xl ring-1 ring-inset ring-[#00FFF0]/70 transition-all"
+            : "relative rounded-xl transition-all",
+          creatorStepPanelClass("scene")
+        )}
+      >
+        <TemplateGalleryPanel
+          items={visibleTemplateGallery}
+          format={format}
+          isOpen={selectedPanel === "template"}
+          onToggle={() => {
+            setSelectedPanel(selectedPanel === "template" ? null : "template");
+          }}
+          onApply={(t) => {
+            applyTemplateFromGallery(t, { advanceWorkflow: true });
+            window.setTimeout(scrollToArtboard, 180);
+          }}
+        />
+      </div>
+    </div>
+
+    <div className="mb-3" id="template-backgrounds-panel-design-tab">
+      <div className={creatorStepPanelClass("scene")}>
+        <BackgroundGalleryPanel
+          items={DJ_STARTUP_BACKGROUNDS}
+          isOpen={selectedPanel === "template_backgrounds"}
+          onToggle={() => {
+            setSelectedPanel(selectedPanel === "template_backgrounds" ? null : "template_backgrounds");
+          }}
+          onApply={(src) => {
+            applyStartupBackground(src, { advanceWorkflow: true });
+            window.setTimeout(scrollToArtboard, 180);
+          }}
+        />
+      </div>
+    </div>
+  </div>
 )}
 
 {!isDjStartupMode && !isMobileView && (
