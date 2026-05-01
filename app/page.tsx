@@ -9231,18 +9231,32 @@ const renderMobileTourVisual = React.useCallback((stepId: string) => {
           label: "Background Picks",
           mode: "backgrounds" as const,
         }
-      : stepId === "text_tab" || stepId === "headline" || stepId === "cinematic3d"
+      : stepId === "cinematic3d"
+      ? {
+          src: "/templates/new-york.png",
+          alt: "3D cinematic text snapshot",
+          label: "3D Text",
+          mode: "cinematic" as const,
+        }
+      : stepId === "text_tab" || stepId === "headline"
       ? {
           src: "/templates/new-york.png",
           alt: "Text editing snapshot",
           label: "Text Tools",
           mode: "text" as const,
         }
-      : stepId === "design_tab" || stepId === "ai_background"
+      : stepId === "ai_background"
+      ? {
+          src: "/tour/ai-scene.png",
+          alt: "AI Scene controls snapshot",
+          label: "AI Scene",
+          mode: "panel_image" as const,
+        }
+      : stepId === "design_tab"
       ? {
           src: "/templates/mardi_gras.jpg",
           alt: "Design tools snapshot",
-          label: stepId === "ai_background" ? "AI Scene" : "Design Tools",
+          label: "Design Tools",
           mode: "design" as const,
         }
       : stepId === "artboard" || stepId === "gestures"
@@ -9271,6 +9285,14 @@ const renderMobileTourVisual = React.useCallback((stepId: string) => {
     "/templates/disco_mirrorball.jpg",
     "/templates/new-york.png",
   ];
+  const cinematicTextImages = [
+    "/cinematic-refs/neon-red.png",
+    "/cinematic-refs/gold-drip.png",
+    "/cinematic-refs/spicy.png",
+    "/cinematic-refs/pink-diamond.png",
+    "/cinematic-refs/luxe-gold.png",
+    "/cinematic-refs/lines.png",
+  ];
 
   return (
     <div className="relative mx-auto w-[238px]">
@@ -9297,10 +9319,14 @@ const renderMobileTourVisual = React.useCallback((stepId: string) => {
             <img
               src={snapshot.src}
               alt={snapshot.alt}
-              className="absolute inset-0 h-full w-full object-cover"
+              className={`absolute inset-0 h-full w-full object-cover ${
+                snapshot.mode === "panel_image" ? "object-top" : ""
+              }`}
               draggable={false}
             />
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.18),rgba(0,0,0,0.08)_42%,rgba(0,0,0,0.72))]" />
+            {snapshot.mode !== "panel_image" && (
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.18),rgba(0,0,0,0.08)_42%,rgba(0,0,0,0.72))]" />
+            )}
 
             {(snapshot.mode === "templates" || snapshot.mode === "backgrounds") && (
               <div className="absolute inset-x-3 bottom-3 rounded-2xl border border-white/[0.12] bg-black/75 p-2 backdrop-blur-md">
@@ -9341,6 +9367,41 @@ const renderMobileTourVisual = React.useCallback((stepId: string) => {
                   ))}
                 </div>
               </div>
+            )}
+
+            {snapshot.mode === "cinematic" && (
+              <>
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(1,6,14,0.2),rgba(6,8,24,0.5)_45%,rgba(8,11,35,0.94))]" />
+                <div className="absolute inset-x-3 top-10 text-center text-[29px] font-black uppercase leading-none tracking-[0.03em] text-white">
+                  Cinematic
+                </div>
+                <div className="absolute left-5 right-5 top-[31%] rounded-lg bg-[linear-gradient(90deg,#5a4df6,#d22bd2)] py-2 text-center text-[8px] font-black text-white shadow-[0_10px_28px_rgba(168,85,247,0.34)]">
+                  Create Cinematic Text
+                </div>
+                <div className="absolute left-5 top-[48%] flex items-center gap-2">
+                  <img
+                    src="/branding/nf-logo.png"
+                    alt="Nightlife Flyers logo"
+                    className="h-8 w-8"
+                    draggable={false}
+                  />
+                  <div className="text-[14px] font-black uppercase leading-[0.9] tracking-[0.08em] text-white">
+                    Instant<br />Styles
+                  </div>
+                </div>
+                <div className="absolute inset-x-6 bottom-8 grid grid-cols-2 gap-x-5 gap-y-2.5">
+                  {cinematicTextImages.map((src) => (
+                    <div key={src} className="flex h-6 items-center justify-center">
+                      <img
+                        src={src}
+                        alt=""
+                        className="max-h-8 w-full object-contain drop-shadow-[0_8px_10px_rgba(0,0,0,0.5)]"
+                        draggable={false}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
 
             {snapshot.mode === "design" && (
