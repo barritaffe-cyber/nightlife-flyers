@@ -9285,6 +9285,7 @@ const renderMobileTourVisual = React.useCallback((stepId: string) => {
     "/templates/disco_mirrorball.jpg",
     "/templates/new-york.png",
   ];
+  const isTextTabSnapshot = snapshot.mode === "text" || snapshot.mode === "full_image";
   return (
     <div className="relative mx-auto w-[238px]">
       <div className="rounded-[30px] border border-white/[0.15] bg-[#05070c] p-2.5 shadow-[0_28px_80px_rgba(0,0,0,0.62)]">
@@ -9429,10 +9430,10 @@ const renderMobileTourVisual = React.useCallback((stepId: string) => {
           </div>
 
           <div className="grid grid-cols-2 border-t border-white/10 text-center text-[8px] font-bold uppercase tracking-[0.16em]">
-            <div className={`py-2 ${snapshot.mode === "text" ? "bg-cyan-300/[0.16] text-cyan-100" : "text-white/[0.42]"}`}>
+            <div className={`py-2 ${isTextTabSnapshot ? "bg-cyan-300/[0.16] text-cyan-100" : "text-white/[0.42]"}`}>
               Text
             </div>
-            <div className={`py-2 ${snapshot.mode !== "text" ? "bg-cyan-300/[0.16] text-cyan-100" : "text-white/[0.42]"}`}>
+            <div className={`py-2 ${!isTextTabSnapshot ? "bg-cyan-300/[0.16] text-cyan-100" : "text-white/[0.42]"}`}>
               Design
             </div>
           </div>
