@@ -72,42 +72,35 @@ export default function LandingPage() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#050608] text-white">
       <div className="pointer-events-none absolute inset-0">
-        <div className="relative h-[430px] overflow-hidden sm:h-[500px] lg:h-[540px]">
+        <div className="relative h-[330px] overflow-hidden sm:h-[390px] lg:h-[430px]">
           <Image
             src="/DJ/club01.jpg"
             alt="Packed nightlife party with stage lights and crowd energy"
             fill
             priority
             sizes="100vw"
-            className="object-cover object-[center_42%] opacity-[0.92] brightness-[0.72] saturate-[1.08]"
+            className="object-cover object-[center_42%] opacity-[0.9] brightness-[0.74] saturate-[1.04]"
           />
         </div>
-        <div className="absolute inset-x-0 top-0 h-[640px] bg-[linear-gradient(180deg,rgba(5,6,8,0.08)_0%,rgba(5,6,8,0.36)_46%,#050608_92%)]" />
-        <div className="absolute inset-x-0 top-[300px] h-[360px] bg-gradient-to-b from-transparent via-[#050608]/90 to-[#050608]" />
-        <div className="absolute inset-y-0 left-0 w-full bg-[linear-gradient(90deg,rgba(5,6,8,0.96)_0%,rgba(5,6,8,0.76)_44%,rgba(5,6,8,0.34)_100%)]" />
-        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/70 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-[500px] bg-[linear-gradient(180deg,rgba(5,6,8,0.05)_0%,rgba(5,6,8,0.16)_44%,#050608_86%)]" />
+        <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-black/72 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-[430px] bg-[linear-gradient(90deg,rgba(5,6,8,0.34)_0%,rgba(5,6,8,0.06)_46%,rgba(5,6,8,0.24)_100%)]" />
       </div>
 
       <div className="relative z-10">
-        <header className="border-b border-white/10 bg-black/20 backdrop-blur-md">
-          <Link
-            href="/billing/checkout?plan=creator&billing=monthly"
-            className="block border-b border-cyan-200/15 bg-cyan-300/[0.11] px-4 py-2 text-center text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-50 transition hover:bg-cyan-300/[0.16]"
-          >
-            {foundingStatus} Secure lifetime prestige access.
-          </Link>
+        <header className="absolute inset-x-0 top-0 z-20">
           <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-            <Link href="/" className="inline-flex items-center gap-2.5">
+            <Link href="/" className="inline-flex items-center gap-2.5 drop-shadow-[0_2px_18px_rgba(0,0,0,0.75)]">
               <Image
                 src="/branding/nf-logo.png"
                 alt="Nightlife Flyers"
-                width={34}
-                height={34}
+                width={40}
+                height={40}
                 className="rounded-md"
                 priority
               />
               <span
-                className="text-sm tracking-[0.2em] text-white"
+                className="hidden text-sm tracking-[0.2em] text-white sm:inline"
                 style={{ fontFamily: '"LEMONMILK-Bold", "Segoe UI", sans-serif' }}
               >
                 NIGHTLIFE FLYERS
@@ -117,7 +110,7 @@ export default function LandingPage() {
             <div className="flex items-center gap-2">
               <Link
                 href="/pricing"
-                className="rounded-lg border border-white/18 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-white/86 transition hover:border-white/35 hover:bg-white/[0.08]"
+                className="rounded-lg border border-white/18 bg-black/24 px-3 py-2 text-xs font-semibold text-white/86 backdrop-blur-md transition hover:border-white/35 hover:bg-black/34"
               >
                 Pricing
               </Link>
@@ -131,41 +124,46 @@ export default function LandingPage() {
           </div>
         </header>
 
-        <section className="mx-auto w-full max-w-7xl px-4 pb-12 pt-[170px] sm:px-6 sm:pb-14 sm:pt-[210px] lg:pt-[245px]">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-100">
-              <span className="h-1.5 w-1.5 rounded-full bg-cyan-300 shadow-[0_0_16px_rgba(103,232,249,0.9)]" />
-              Advanced neural flyer workstation
-            </div>
-
-            <h1
-              className="mt-5 max-w-2xl text-5xl leading-[0.94] text-white sm:text-6xl lg:text-7xl"
-              style={{ fontFamily: '"Nexa-Heavy", "Segoe UI", sans-serif' }}
-            >
-              The Evolution of the Flyer Starts Here.
-            </h1>
-
-            <p className="mt-5 max-w-xl text-base leading-7 text-white/76 sm:text-lg">
-              Make the flyer look as expensive as the night. Remove the pain from flyer design, do it your way, on your own time.
-            </p>
-
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+        <section className="mx-auto w-full max-w-7xl px-4 pb-12 pt-[350px] sm:px-6 sm:pb-14 sm:pt-[410px] lg:pt-[450px]">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,0.96fr)_320px] lg:items-end">
+            <div className="max-w-3xl">
               <Link
                 href="/billing/checkout?plan=creator&billing=monthly"
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-cyan-300 px-5 text-sm font-black text-black shadow-[0_0_34px_rgba(103,232,249,0.34)] transition hover:bg-white"
+                className="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 border border-cyan-200/20 bg-cyan-300/[0.08] px-3 py-1.5 text-[10px] font-semibold uppercase leading-5 tracking-[0.12em] text-cyan-100 transition hover:border-cyan-100/40 hover:bg-cyan-300/[0.12] sm:text-[11px] sm:tracking-[0.16em]"
               >
-                Secure My Founding Spot
-                <ArrowRight className="h-4 w-4" />
+                <span className="h-1.5 w-1.5 rounded-full bg-cyan-300 shadow-[0_0_16px_rgba(103,232,249,0.9)]" />
+                {foundingStatus} Secure lifetime prestige access.
               </Link>
-              <Link
-                href="/?studio=1"
-                className="inline-flex min-h-12 items-center justify-center rounded-lg border border-white/18 bg-white/[0.06] px-5 text-sm font-semibold text-white transition hover:border-white/35 hover:bg-white/[0.1]"
+
+              <h1
+                className="mt-5 max-w-3xl text-5xl leading-[0.94] text-white sm:text-6xl lg:text-7xl"
+                style={{ fontFamily: '"Nexa-Heavy", "Segoe UI", sans-serif' }}
               >
-                Enter the Studio
-              </Link>
+                The Evolution of the Flyer Starts Here.
+              </h1>
+
+              <p className="mt-5 max-w-2xl text-base leading-7 text-white/76 sm:text-lg">
+                Make the flyer look as expensive as the night. Remove the pain from flyer design, do it your way, on your own time.
+              </p>
+
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                <Link
+                  href="/billing/checkout?plan=creator&billing=monthly"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-cyan-300 px-5 text-sm font-black text-black shadow-[0_0_34px_rgba(103,232,249,0.24)] transition hover:bg-white"
+                >
+                  Secure My Founding Spot
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  href="/?studio=1"
+                  className="inline-flex min-h-12 items-center justify-center rounded-lg border border-white/18 bg-white/[0.05] px-5 text-sm font-semibold text-white transition hover:border-white/35 hover:bg-white/[0.09]"
+                >
+                  Enter the Studio
+                </Link>
+              </div>
             </div>
 
-            <div className="mt-7 grid max-w-xl gap-2 text-sm text-white/82 sm:grid-cols-3">
+            <div className="grid gap-3 border-y border-white/10 py-4 text-sm text-white/78 lg:mb-1">
               {outcomes.map((item) => (
                 <div key={item} className="flex items-center gap-2">
                   <Check className="h-4 w-4 shrink-0 text-cyan-200" />
@@ -174,18 +172,6 @@ export default function LandingPage() {
               ))}
             </div>
           </div>
-        </section>
-
-        <section className="mx-auto hidden w-[min(92vw,1180px)] grid-cols-4 border-y border-white/10 bg-black/28 text-white/78 backdrop-blur-md lg:grid">
-          {premiumPoints.map((item) => (
-            <div key={item.title} className="border-r border-white/10 px-5 py-4 last:border-r-0">
-              <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                <item.icon className="h-4 w-4 text-cyan-200" />
-                {item.title}
-              </div>
-              <p className="mt-1 text-xs leading-5 text-white/62">{item.body}</p>
-            </div>
-          ))}
         </section>
       </div>
 
