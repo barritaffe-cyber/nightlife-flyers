@@ -95,6 +95,7 @@ const LibraryPanel = dynamic(() => import("../components/editor/LibraryPanel"), 
 });
 
 const MAGIC_BLEND_ENABLED = false;
+const LANDING_SEEN_KEY = "nf:landing-seen:v1";
 
 
 
@@ -12951,6 +12952,8 @@ const mobileFloatPanelClass =
   const [subscriptionStatus, setSubscriptionStatus] = React.useState<SubscriptionAccessState>("inactive");
   const [accessPlan, setAccessPlan] = React.useState<string | null>(null);
   const [hasAuthSession, setHasAuthSession] = React.useState(false);
+  const [authSessionChecked, setAuthSessionChecked] = React.useState(false);
+  const [redirectingToLanding, setRedirectingToLanding] = React.useState(false);
   const isPaid = hasAuthSession && subscriptionStatus === "active";
   const hasOnDemandPass = hasAuthSession && subscriptionStatus === "ondemand";
   const hasPaidAccess = isPaid || hasOnDemandPass;
@@ -13144,22 +13147,67 @@ const mobileFloatPanelClass =
 
   React.useEffect(() => {
     let mounted = true;
-    const supabase = supabaseBrowser();
-    supabase.auth.getSession().then(({ data }) => {
-      if (mounted) {
-        setHasAuthSession(Boolean(data.session?.access_token));
-      }
-    });
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setHasAuthSession(Boolean(session?.access_token));
-    });
+    let subscription: { unsubscribe: () => void } | null = null;
+    try {
+      const supabase = supabaseBrowser();
+      supabase.auth
+        .getSession()
+        .then(({ data }) => {
+          if (mounted) {
+            setHasAuthSession(Boolean(data.session?.access_token));
+            setAuthSessionChecked(true);
+          }
+        })
+        .catch(() => {
+          if (mounted) {
+            setHasAuthSession(false);
+            setAuthSessionChecked(true);
+          }
+        });
+      const listener = supabase.auth.onAuthStateChange((_event, session) => {
+        setHasAuthSession(Boolean(session?.access_token));
+        setAuthSessionChecked(true);
+      });
+      subscription = listener.data.subscription;
+    } catch {
+      setHasAuthSession(false);
+      setAuthSessionChecked(true);
+    }
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      subscription?.unsubscribe();
     };
   }, []);
+
+  React.useEffect(() => {
+    if (!hydrated || !authSessionChecked || hasAuthSession || redirectingToLanding) return;
+    if (typeof window === "undefined") return;
+
+    const currentUrl = new URL(window.location.href);
+    const shouldOpenStudio =
+      currentUrl.searchParams.get("studio") === "1" ||
+      currentUrl.searchParams.get("guest") === "1" ||
+      currentUrl.searchParams.get("skipLanding") === "1";
+
+    if (shouldOpenStudio) {
+      try {
+        window.localStorage.setItem(LANDING_SEEN_KEY, "1");
+      } catch {}
+      return;
+    }
+
+    try {
+      if (window.localStorage.getItem(LANDING_SEEN_KEY) === "1") return;
+      window.localStorage.setItem(LANDING_SEEN_KEY, "1");
+    } catch {}
+
+    const landingUrl = new URL("/landing", window.location.origin);
+    currentUrl.searchParams.forEach((value, key) => {
+      landingUrl.searchParams.set(key, value);
+    });
+    setRedirectingToLanding(true);
+    window.location.replace(landingUrl.toString());
+  }, [authSessionChecked, hasAuthSession, hydrated, redirectingToLanding]);
 
   const refreshAccessSnapshot = React.useCallback(
     async (opts?: { includeAccount?: boolean }) => {
@@ -24580,7 +24628,15 @@ const emojiCanvas = React.useMemo(() => {
     </div>
   );
 }, [emojis, format, onEmojiMove, recordMove]);
-
+if (redirectingToLanding) {
+  return (
+    <main className="min-h-screen bg-[#050608] text-white" aria-label="Opening Nightlife Flyers">
+      <div className="flex min-h-screen items-center justify-center text-xs uppercase tracking-[0.24em] text-white/45">
+        Opening Nightlife Flyers
+      </div>
+    </main>
+  );
+}
 
 return (
   <>
