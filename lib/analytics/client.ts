@@ -199,3 +199,17 @@ export async function trackClientEvent(
     });
   } catch {}
 }
+
+declare global {
+  interface Window {
+    fbq?: (command: string, event: string, parameters?: Record<string, unknown>) => void;
+  }
+}
+
+export function trackMetaPixelEvent(event: string, parameters: Record<string, unknown> = {}) {
+  if (typeof window === "undefined" || typeof window.fbq !== "function") return;
+
+  try {
+    window.fbq("track", event, parameters);
+  } catch {}
+}

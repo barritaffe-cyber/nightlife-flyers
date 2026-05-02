@@ -13184,12 +13184,21 @@ const mobileFloatPanelClass =
     if (typeof window === "undefined") return;
 
     const currentUrl = new URL(window.location.href);
+    const explicitStudioOpen = currentUrl.searchParams.get("studio") === "1";
     const shouldOpenStudio =
-      currentUrl.searchParams.get("studio") === "1" ||
+      explicitStudioOpen ||
       currentUrl.searchParams.get("guest") === "1" ||
       currentUrl.searchParams.get("skipLanding") === "1";
 
     if (shouldOpenStudio) {
+      if (explicitStudioOpen) {
+        const loginUrl = new URL("/login", window.location.origin);
+        loginUrl.searchParams.set("intent", "studio-preview");
+        loginUrl.searchParams.set("next", "/?studio=1");
+        setRedirectingToLanding(true);
+        window.location.replace(loginUrl.toString());
+        return;
+      }
       try {
         window.localStorage.setItem(LANDING_SEEN_KEY, "1");
       } catch {}

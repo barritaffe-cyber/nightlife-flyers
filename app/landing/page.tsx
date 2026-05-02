@@ -40,6 +40,8 @@ const premiumPoints = [
   },
 ];
 
+const studioPreviewLoginHref = "/login?intent=studio-preview&next=%2F%3Fstudio%3D1";
+
 export default function LandingPage() {
   const supportPhone = getPublicSupportPhone();
   const currency = getPublicTransactionCurrency();
@@ -99,7 +101,7 @@ export default function LandingPage() {
                 Pricing
               </Link>
               <Link
-                href="/?studio=1"
+                href={studioPreviewLoginHref}
                 className="rounded-lg bg-white px-3 py-2 text-xs font-bold text-black transition hover:bg-cyan-100"
               >
                 Enter Studio
@@ -162,7 +164,7 @@ export default function LandingPage() {
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
-                  href="/?studio=1"
+                  href={studioPreviewLoginHref}
                   className="inline-flex min-h-12 items-center justify-center rounded-lg border border-white/18 bg-white/[0.05] px-5 text-sm font-semibold text-white transition hover:border-white/35 hover:bg-white/[0.09]"
                 >
                   Enter the Studio

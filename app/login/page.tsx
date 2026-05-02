@@ -2,8 +2,9 @@
 
 import React from "react";
 import Link from "next/link";
+import Script from "next/script";
 import { useSearchParams } from "next/navigation";
-import { trackClientEvent } from "../../lib/analytics/client";
+import { trackClientEvent, trackMetaPixelEvent } from "../../lib/analytics/client";
 import { supabaseBrowser } from "../../lib/supabase/client";
 import { buildBillingCheckoutHref, resolveBillingSelection } from "../../lib/billing/catalog";
 import PublicSiteFooter from "../../components/ui/PublicSiteFooter";
@@ -20,6 +21,7 @@ function LoginPageInner() {
   const offer = searchParams.get("offer");
   const billing = searchParams.get("billing");
   const next = searchParams.get("next");
+  const intent = searchParams.get("intent");
   const requestedMode = searchParams.get("mode");
   const requestedEmail = searchParams.get("email");
   const emailPrefilledRef = React.useRef(false);
@@ -27,6 +29,8 @@ function LoginPageInner() {
   const selection = resolveBillingSelection({ plan, offer, billing });
   const postAuthHref = next || (selection ? buildBillingCheckoutHref(selection) : "/");
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://nightlife-flyers.com";
+  const metaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID || "";
+  const isStudioPreviewIntent = intent === "studio-preview";
 
   React.useEffect(() => {
     let active = true;
@@ -77,7 +81,27 @@ function LoginPageInner() {
           if (active) setMsg(error.message);
           return;
         }
-        recovered = true;
+        recovered = recoveryType === "recovery" || requestedMode === "reset";
+
+        if (!recovered) {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          if (!session) {
+            if (active) setMsg("Could not complete login. Try again.");
+            return;
+          }
+          await trackClientEvent("login_succeeded", {
+            properties: {
+              destination: postAuthHref,
+              method: "oauth",
+              intent: intent || null,
+            },
+          });
+          cleanupRecoveryUrl();
+          window.location.href = postAuthHref;
+          return;
+        }
       } else if (recoveryType === "recovery" && tokenHash) {
         const { error } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
@@ -114,7 +138,7 @@ function LoginPageInner() {
       active = false;
       subscription.unsubscribe();
     };
-  }, [requestedMode]);
+  }, [intent, postAuthHref, requestedMode]);
 
   React.useEffect(() => {
     if (emailPrefilledRef.current) return;
@@ -125,17 +149,65 @@ function LoginPageInner() {
   }, [requestedEmail]);
 
   const intentCopy =
-    offer === "night-pass"
-      ? "Sign in or create an account to get a one-time Night Pass."
-      : offer === "weekend-pass"
-        ? "Sign in or create an account to get a one-time Weekend Pass."
-        : next === "/pricing"
-          ? "Log in or create an account, then choose the plan that fits this flyer."
-        : plan === "creator"
-          ? "Access your profile and start the Creator plan."
-          : plan === "studio"
-            ? "Access your profile and start the Studio plan."
-            : "Access your profile, subscription, or on-demand pass.";
+    isStudioPreviewIntent
+      ? "Create your workstation profile to start your preview."
+      : offer === "night-pass"
+        ? "Sign in or create an account to get a one-time Night Pass."
+        : offer === "weekend-pass"
+          ? "Sign in or create an account to get a one-time Weekend Pass."
+          : next === "/pricing"
+            ? "Log in or create an account, then choose the plan that fits this flyer."
+            : plan === "creator"
+              ? "Access your profile and start the Creator plan."
+              : plan === "studio"
+                ? "Access your profile and start the Studio plan."
+                : "Access your profile, subscription, or on-demand pass.";
+
+  const oauthRedirectTo = React.useMemo(() => {
+    const redirectUrl = new URL("/login", siteUrl);
+    if (next) redirectUrl.searchParams.set("next", next);
+    if (intent) redirectUrl.searchParams.set("intent", intent);
+    if (plan) redirectUrl.searchParams.set("plan", plan);
+    if (offer) redirectUrl.searchParams.set("offer", offer);
+    if (billing) redirectUrl.searchParams.set("billing", billing);
+    return redirectUrl.toString();
+  }, [billing, intent, next, offer, plan, siteUrl]);
+
+  const startOAuth = async (provider: "google" | "facebook") => {
+    setMsg(null);
+    setBusy(true);
+    try {
+      trackMetaPixelEvent("CompleteRegistration", {
+        method: provider,
+        intent: intent || "auth",
+      });
+      void trackClientEvent("signup_started", {
+        properties: {
+          method: provider,
+          intent: intent || null,
+          destination: postAuthHref,
+          plan: selection?.kind === "plan" ? selection.plan : null,
+          offer: selection?.kind === "offer" ? selection.offer : null,
+          billing: selection?.kind === "plan" ? selection.billing : null,
+        },
+      });
+
+      const supabase = supabaseBrowser();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: oauthRedirectTo,
+        },
+      });
+      if (error) {
+        setMsg(error.message);
+        setBusy(false);
+      }
+    } catch (error) {
+      setMsg(error instanceof Error ? error.message : "Could not start login.");
+      setBusy(false);
+    }
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -240,16 +312,38 @@ function LoginPageInner() {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
+      {metaPixelId ? (
+        <Script
+          id="meta-pixel-login"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              !function(f,b,e,v,n,t,s)
+              {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+              n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+              if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+              n.queue=[];t=b.createElement(e);t.async=!0;
+              t.src=v;s=b.getElementsByTagName(e)[0];
+              s.parentNode.insertBefore(t,s)}(window, document,'script',
+              'https://connect.facebook.net/en_US/fbevents.js');
+              fbq('init', '${metaPixelId}');
+              fbq('track', 'PageView');
+            `,
+          }}
+        />
+      ) : null}
       <Link
-        href="/"
+        href={isStudioPreviewIntent ? "/landing" : "/"}
         className="absolute left-6 top-6 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
       >
-        Back to Studio
+        {isStudioPreviewIntent ? "Back to Landing" : "Back to Studio"}
       </Link>
       <div className="flex min-h-screen items-center justify-center p-6 pb-28">
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-neutral-900 p-6">
         <h1 className="text-xl font-semibold mb-2">
-          {mode === "login"
+          {isStudioPreviewIntent && mode !== "forgot" && mode !== "reset"
+            ? "Create your workstation profile"
+            : mode === "login"
             ? "Login"
             : mode === "signup"
               ? "Create account"
@@ -264,6 +358,31 @@ function LoginPageInner() {
               ? "Choose a new password for your account."
               : intentCopy}
         </p>
+        {mode !== "forgot" && mode !== "reset" && (
+          <div className="mb-4 space-y-2">
+            <button
+              type="button"
+              className="flex w-full items-center justify-center rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-cyan-100 disabled:opacity-60"
+              disabled={busy}
+              onClick={() => void startOAuth("google")}
+            >
+              Continue with Google
+            </button>
+            <button
+              type="button"
+              className="flex w-full items-center justify-center rounded-lg bg-[#1877f2] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0f66d8] disabled:opacity-60"
+              disabled={busy}
+              onClick={() => void startOAuth("facebook")}
+            >
+              Continue with Facebook
+            </button>
+            <div className="flex items-center gap-3 pt-1 text-[10px] uppercase tracking-[0.18em] text-white/35">
+              <span className="h-px flex-1 bg-white/10" />
+              Email
+              <span className="h-px flex-1 bg-white/10" />
+            </div>
+          </div>
+        )}
         <form onSubmit={submit} className="space-y-3">
           {mode !== "reset" && (
             <input
@@ -388,14 +507,16 @@ function LoginPageInner() {
             </button>
           </div>
         )}
-        <div className="mt-4 border-t border-white/10 pt-4">
-          <Link
-            href="/"
-            className="inline-flex text-xs text-white/65 underline underline-offset-4 hover:text-white"
-          >
-            Continue without logging in
-          </Link>
-        </div>
+        {!isStudioPreviewIntent && (
+          <div className="mt-4 border-t border-white/10 pt-4">
+            <Link
+              href="/"
+              className="inline-flex text-xs text-white/65 underline underline-offset-4 hover:text-white"
+            >
+              Continue without logging in
+            </Link>
+          </div>
+        )}
       </div>
       </div>
       <PublicSiteFooter />
