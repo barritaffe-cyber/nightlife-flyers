@@ -3,7 +3,7 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Check, Shield, Sparkles, Zap } from "lucide-react";
 import PaymentMarks from "../../components/ui/PaymentMarks";
 import PublicSiteFooter from "../../components/ui/PublicSiteFooter";
 import {
@@ -11,155 +11,280 @@ import {
   getPublicTransactionCurrency,
 } from "../../lib/publicIdentity";
 
-export default function LandingPage() {
-  const [format, setFormat] = React.useState<"square" | "story">("story");
-  const [glow, setGlow] = React.useState(58);
+const outcomes = [
+  "Advanced Neural Workstation",
+  "No subscription required",
+  "Clean square and story exports",
+];
 
-  const glowAlpha = Math.min(0.6, 0.16 + glow / 180);
+const premiumPoints = [
+  {
+    title: "Real-time studio feel",
+    body: "Fast editing, live canvas previews, and export-ready flyer layouts built for tonight's promo cycle.",
+    icon: Zap,
+  },
+  {
+    title: "Nightlife-grade visuals",
+    body: "Neon type, club lighting, artist-forward compositions, and templates that feel made for flyers.",
+    icon: Sparkles,
+  },
+  {
+    title: "Total Creative Autonomy",
+    body: "No more waiting on designers. No more back-and-forth emails. You own the engine and control the output.",
+    icon: ArrowRight,
+  },
+  {
+    title: "No subscription required",
+    body: "Start with Night Pass for one-off work, then move into Creator or Studio when volume picks up.",
+    icon: Shield,
+  },
+];
+
+export default function LandingPage() {
   const supportPhone = getPublicSupportPhone();
   const currency = getPublicTransactionCurrency();
+  const [foundingRemaining, setFoundingRemaining] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    const loadFoundingOffer = async () => {
+      try {
+        const res = await fetch("/api/billing/founding-offer");
+        const json = await res.json().catch(() => null);
+        const remaining = Number(json?.remaining_slots);
+        if (!cancelled && res.ok && Number.isFinite(remaining)) {
+          setFoundingRemaining(Math.max(0, remaining));
+        }
+      } catch {}
+    };
+
+    void loadFoundingOffer();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const foundingStatus =
+    foundingRemaining == null
+      ? "Founding 50 Status: limited spots remaining."
+      : `Founding 50 Status: ${foundingRemaining} spots remaining.`;
 
   return (
-    <main className="nf-landing relative min-h-screen overflow-hidden bg-neutral-950 text-white">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_14%,rgba(217,70,239,0.2),transparent_40%),radial-gradient(circle_at_84%_10%,rgba(6,182,212,0.18),transparent_42%),radial-gradient(circle_at_52%_86%,rgba(99,102,241,0.12),transparent_44%)]" />
-      <div className="pointer-events-none absolute inset-0 opacity-[0.06] [background:linear-gradient(to_right,white_1px,transparent_1px),linear-gradient(to_bottom,white_1px,transparent_1px)] [background-size:52px_52px]" />
+    <main className="min-h-screen bg-[#050608] text-white">
+      <section className="relative min-h-[92svh] overflow-hidden bg-[#050608]">
+        <Image
+          src="/tour/3d.jpg"
+          alt="Nightlife Flyers cinematic 3D text styles"
+          fill
+          priority
+          sizes="100vw"
+          className="absolute inset-0 object-cover object-[72%_center] opacity-[0.7] brightness-[0.72] saturate-[0.92]"
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,6,8,0.99)_0%,rgba(5,6,8,0.9)_40%,rgba(5,6,8,0.56)_68%,rgba(5,6,8,0.76)_100%)]" />
+        <div className="absolute inset-0 bg-[#050608]/18" />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#050608] to-transparent" />
 
-      <header className="relative z-20 border-b border-white/10 bg-neutral-950/70 backdrop-blur-xl">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-          <Link href="/" className="inline-flex items-center gap-2.5">
-            <Image src="/branding/nf-logo.png" alt="Nightlife Flyers" width={30} height={30} className="rounded-md" />
-            <span
-              className="text-sm tracking-[0.18em] text-white/90"
-              style={{ fontFamily: '"LEMONMILK-Bold", "Segoe UI", sans-serif' }}
-            >
-              NIGHTLIFE FLYERS
-            </span>
-          </Link>
-
-          <div className="flex items-center gap-2">
-            <Link
-              href="/pricing"
-              className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-white/85 transition hover:border-white/30 hover:text-white"
-            >
-              Pricing
-            </Link>
-            <Link
-              href="/"
-              className="rounded-lg bg-fuchsia-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-fuchsia-400"
-            >
-              Enter Studio
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <section className="relative z-10 mx-auto flex min-h-[calc(100vh-57px)] w-full max-w-6xl flex-col justify-center px-4 pb-12 pt-10 sm:px-6">
-        <div className="mx-auto w-full max-w-4xl text-center nf-fade-in-up">
-          <h1
-            className="text-3xl leading-tight sm:text-5xl"
-            style={{ fontFamily: '"Nexa-Heavy", "Segoe UI", sans-serif' }}
+        <header className="relative z-20 border-b border-white/10 bg-black/25 backdrop-blur-md">
+          <Link
+            href="/billing/checkout?plan=creator&billing=monthly"
+            className="block border-b border-cyan-200/15 bg-cyan-300/[0.11] px-4 py-2 text-center text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-50 transition hover:bg-cyan-300/[0.16]"
           >
-            Watch It. Open Studio. Post Tonight.
-          </h1>
-
-          <p className="mx-auto mt-3 max-w-xl text-sm text-white/72 sm:text-base">
-            Template to AI background to blend to export, all in one flow.
-          </p>
-
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-            <div className="inline-flex rounded-lg border border-white/15 bg-white/[0.04] p-1 text-[11px]">
-              <button
-                type="button"
-                onClick={() => setFormat("square")}
-                className={`rounded-md px-2.5 py-1 transition ${format === "square" ? "bg-white text-black" : "text-white/75"}`}
-              >
-                Square
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormat("story")}
-                className={`rounded-md px-2.5 py-1 transition ${format === "story" ? "bg-white text-black" : "text-white/75"}`}
-              >
-                Story
-              </button>
-            </div>
-
-            <div className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/[0.04] px-2 py-1 text-[11px]">
-              <span className="text-white/70">Glow</span>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={glow}
-                onChange={(e) => setGlow(Number(e.target.value))}
-                className="w-24 accent-fuchsia-400"
+            {foundingStatus} Secure lifetime prestige access.
+          </Link>
+          <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
+            <Link href="/" className="inline-flex items-center gap-2.5">
+              <Image
+                src="/branding/nf-logo.png"
+                alt="Nightlife Flyers"
+                width={34}
+                height={34}
+                className="rounded-md"
+                priority
               />
-              <span className="w-7 text-right text-white">{glow}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="relative mx-auto mt-7 w-full max-w-4xl nf-fade-in-up [animation-delay:150ms]">
-          <div className="nf-slow-strobe pointer-events-none absolute -left-16 -top-14 h-40 w-40 rounded-full bg-fuchsia-500/35 blur-3xl" />
-          <div className="nf-slow-strobe-cyan pointer-events-none absolute -bottom-10 -right-12 h-36 w-36 rounded-full bg-cyan-400/30 blur-3xl" />
-
-          <div className="relative rounded-3xl border border-white/15 bg-[#10141b]/90 p-3 shadow-[0_35px_90px_rgba(0,0,0,0.65)] sm:p-4">
-            <div
-              className={`overflow-hidden rounded-2xl border border-white/15 bg-black/60 ${
-                format === "square" ? "aspect-square" : "aspect-[4/5] sm:aspect-video"
-              }`}
-              style={{
-                boxShadow: `0 0 ${16 + glow * 0.75}px rgba(217,70,239,${glowAlpha}), 0 0 ${24 + glow * 0.48}px rgba(6,182,212,${
-                  glowAlpha * 0.68
-                })`,
-              }}
-            >
-              <div className="relative h-full w-full">
-                <video
-                  className="h-full w-full object-cover"
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  preload="metadata"
-                  poster="/templates/edm_stage_co2.jpg"
-                >
-                  <source src="/landing/hero-demo.mp4" type="video/mp4" />
-                </video>
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_22%_18%,rgba(217,70,239,0.32),transparent_45%),radial-gradient(circle_at_84%_14%,rgba(6,182,212,0.3),transparent_42%)]" />
-                <div className="pointer-events-none absolute left-2 top-2 rounded-md border border-white/20 bg-black/45 px-2 py-1 text-[10px] uppercase tracking-wider text-white/85">
-                  Live Studio Demo
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-              <div className="text-[11px] text-white/65">
-                Video path: <code className="rounded bg-white/10 px-1 py-0.5 text-white">public/landing/hero-demo.mp4</code>
-              </div>
-              <Link
-                href="/"
-                className="inline-flex items-center gap-2 rounded-lg bg-fuchsia-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-fuchsia-400"
+              <span
+                className="text-sm tracking-[0.2em] text-white"
+                style={{ fontFamily: '"LEMONMILK-Bold", "Segoe UI", sans-serif' }}
               >
-                Open Studio
-                <ArrowRight className="h-3.5 w-3.5" />
+                NIGHTLIFE FLYERS
+              </span>
+            </Link>
+
+            <div className="flex items-center gap-2">
+              <Link
+                href="/pricing"
+                className="rounded-lg border border-white/18 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-white/86 transition hover:border-white/35 hover:bg-white/[0.08]"
+              >
+                Pricing
+              </Link>
+              <Link
+                href="/?studio=1"
+                className="rounded-lg bg-white px-3 py-2 text-xs font-bold text-black transition hover:bg-cyan-100"
+              >
+                Enter Studio
               </Link>
             </div>
           </div>
+        </header>
+
+        <div className="relative z-10 mx-auto flex min-h-[calc(92svh-94px)] w-full max-w-7xl items-center px-4 pb-20 pt-12 sm:px-6 lg:pb-24">
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-100">
+              <span className="h-1.5 w-1.5 rounded-full bg-cyan-300 shadow-[0_0_16px_rgba(103,232,249,0.9)]" />
+              Advanced neural flyer workstation
+            </div>
+
+            <h1
+              className="mt-5 max-w-2xl text-5xl leading-[0.94] text-white sm:text-6xl lg:text-7xl"
+              style={{ fontFamily: '"Nexa-Heavy", "Segoe UI", sans-serif' }}
+            >
+              The Evolution of the Flyer Starts Here.
+            </h1>
+
+            <p className="mt-5 max-w-xl text-base leading-7 text-white/76 sm:text-lg">
+              Make the flyer look as expensive as the night. Remove the pain from flyer design, do it your way, on your own time.
+            </p>
+
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <Link
+                href="/billing/checkout?plan=creator&billing=monthly"
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-cyan-300 px-5 text-sm font-black text-black shadow-[0_0_34px_rgba(103,232,249,0.34)] transition hover:bg-white"
+              >
+                Secure My Founding Spot
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                href="/?studio=1"
+                className="inline-flex min-h-12 items-center justify-center rounded-lg border border-white/18 bg-white/[0.06] px-5 text-sm font-semibold text-white transition hover:border-white/35 hover:bg-white/[0.1]"
+              >
+                Enter the Studio
+              </Link>
+            </div>
+
+            <div className="mt-7 grid max-w-xl gap-2 text-sm text-white/82 sm:grid-cols-3">
+              {outcomes.map((item) => (
+                <div key={item} className="flex items-center gap-2">
+                  <Check className="h-4 w-4 shrink-0 text-cyan-200" />
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
-        <div className="mx-auto mt-6 w-full max-w-4xl border border-white/10 bg-white/[0.03] p-4 text-sm text-white/72">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-2">
-              <div className="text-xs uppercase tracking-[0.22em] text-white/45">Accepted Payments</div>
+        <div className="absolute bottom-4 left-1/2 z-10 hidden w-[min(92vw,1180px)] -translate-x-1/2 grid-cols-4 border-y border-white/10 bg-black/28 text-white/78 backdrop-blur-md lg:grid">
+          {premiumPoints.map((item) => (
+            <div key={item.title} className="border-r border-white/10 px-5 py-4 last:border-r-0">
+              <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                <item.icon className="h-4 w-4 text-cyan-200" />
+                {item.title}
+              </div>
+              <p className="mt-1 text-xs leading-5 text-white/62">{item.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="border-y border-white/10 bg-[#080a0f] px-4 py-10 sm:px-6">
+        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-200/80">
+              From idea to post
+            </div>
+            <h2
+              className="mt-3 text-3xl leading-tight sm:text-4xl"
+              style={{ fontFamily: '"Nexa-Heavy", "Segoe UI", sans-serif' }}
+            >
+              Keep the same premium energy from upload to export.
+            </h2>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {premiumPoints.map((item) => (
+              <div key={item.title} className="border border-white/10 bg-white/[0.035] p-4">
+                <item.icon className="h-5 w-5 text-cyan-200" />
+                <h3 className="mt-3 text-sm font-semibold text-white">{item.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-white/64">{item.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="px-4 py-12 sm:px-6">
+        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1fr_0.8fr] lg:items-start">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-fuchsia-200/80">
+              Access
+            </div>
+            <h2
+              className="mt-3 max-w-3xl text-3xl leading-tight sm:text-4xl"
+              style={{ fontFamily: '"Nexa-Heavy", "Segoe UI", sans-serif' }}
+            >
+              Start small for tonight. Upgrade when flyers become weekly.
+            </h2>
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              {[
+                {
+                  name: "Night Pass",
+                  price: "$12",
+                  body: "24-hour paid workflow for one-off flyers. No subscription required.",
+                  href: "/billing/checkout?offer=night-pass",
+                  founding: false,
+                },
+                {
+                  name: "Creator",
+                  price: "$19/mo",
+                  body: "Weekly flyer production with clean exports.",
+                  href: "/billing/checkout?plan=creator&billing=monthly",
+                  founding: true,
+                },
+                {
+                  name: "Studio",
+                  price: "$39/mo",
+                  body: "Higher volume, more headroom, and multi-brand tools.",
+                  href: "/billing/checkout?plan=studio&billing=monthly",
+                  founding: true,
+                },
+              ].map(({ name, price, body, href, founding }) => (
+                <Link
+                  key={name}
+                  href={href}
+                  className="border border-white/10 bg-white/[0.035] p-4 transition hover:border-cyan-200/40 hover:bg-white/[0.06]"
+                >
+                  <div className="flex min-h-6 items-start justify-between gap-2">
+                    <div className="text-sm font-semibold text-white">{name}</div>
+                    {founding ? (
+                      <div className="rounded-full border border-cyan-200/25 bg-cyan-300/[0.12] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-cyan-100">
+                        Founding 50
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="mt-3 text-3xl font-black text-white">{price}</div>
+                  {founding ? (
+                    <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-100/80">
+                      {foundingRemaining == null
+                        ? "20% founding access available"
+                        : `${foundingRemaining} founder spots remain`}
+                    </div>
+                  ) : null}
+                  <p className="mt-2 text-sm leading-6 text-white/64">{body}</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="border border-white/10 bg-white/[0.035] p-5">
+            <div className="text-xs uppercase tracking-[0.2em] text-white/45">Accepted Payments</div>
+            <div className="mt-3">
               <PaymentMarks compact />
             </div>
-            <div className="max-w-xl space-y-1 text-xs text-white/62">
+            <div className="mt-5 space-y-2 text-xs leading-5 text-white/62">
               <div>Digital flyer-design service with instant account access after successful payment.</div>
               <div>Transaction currency: {currency}.</div>
-              <div>Refunds, cancellation, privacy, and delivery terms are posted in Terms and Privacy.</div>
               <div>
-                Support: <Link href="/contact" className="text-white underline underline-offset-4">Contact us</Link>
+                Support:{" "}
+                <Link href="/contact" className="text-white underline underline-offset-4">
+                  Contact us
+                </Link>
                 {supportPhone ? <span>{` · ${supportPhone}`}</span> : null}
               </div>
             </div>
@@ -167,9 +292,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <div className="relative z-10">
-        <PublicSiteFooter />
-      </div>
+      <PublicSiteFooter />
     </main>
   );
 }
