@@ -95,7 +95,6 @@ const LibraryPanel = dynamic(() => import("../components/editor/LibraryPanel"), 
 });
 
 const MAGIC_BLEND_ENABLED = false;
-const LANDING_SEEN_KEY = "nf:landing-seen:v1";
 
 
 
@@ -13184,31 +13183,19 @@ const mobileFloatPanelClass =
     if (typeof window === "undefined") return;
 
     const currentUrl = new URL(window.location.href);
-    const explicitStudioOpen = currentUrl.searchParams.get("studio") === "1";
     const shouldOpenStudio =
-      explicitStudioOpen ||
+      currentUrl.searchParams.get("studio") === "1" ||
       currentUrl.searchParams.get("guest") === "1" ||
       currentUrl.searchParams.get("skipLanding") === "1";
 
     if (shouldOpenStudio) {
-      if (explicitStudioOpen) {
-        const loginUrl = new URL("/login", window.location.origin);
-        loginUrl.searchParams.set("intent", "studio-preview");
-        loginUrl.searchParams.set("next", "/?studio=1");
-        setRedirectingToLanding(true);
-        window.location.replace(loginUrl.toString());
-        return;
-      }
-      try {
-        window.localStorage.setItem(LANDING_SEEN_KEY, "1");
-      } catch {}
+      const loginUrl = new URL("/login", window.location.origin);
+      loginUrl.searchParams.set("intent", "studio-preview");
+      loginUrl.searchParams.set("next", "/?studio=1");
+      setRedirectingToLanding(true);
+      window.location.replace(loginUrl.toString());
       return;
     }
-
-    try {
-      if (window.localStorage.getItem(LANDING_SEEN_KEY) === "1") return;
-      window.localStorage.setItem(LANDING_SEEN_KEY, "1");
-    } catch {}
 
     const landingUrl = new URL("/landing", window.location.origin);
     currentUrl.searchParams.forEach((value, key) => {
