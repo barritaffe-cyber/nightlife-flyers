@@ -145,7 +145,7 @@ export default function LandingPage() {
                 className="mt-5 max-w-3xl text-5xl leading-[0.94] text-white sm:text-6xl lg:text-7xl"
                 style={{ fontFamily: '"Nexa-Heavy", "Segoe UI", sans-serif' }}
               >
-                The Evolution of the Flyer Starts Here.
+                The New Standard for Professional Flyer Design.
               </h1>
 
               <p className="mt-5 max-w-2xl text-base leading-7 text-white/76 sm:text-lg">
