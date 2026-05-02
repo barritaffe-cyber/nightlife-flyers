@@ -72,7 +72,7 @@ export default function LandingPage() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#050608] text-white">
       <div className="pointer-events-none absolute inset-0">
-        <div className="relative h-[430px] overflow-hidden sm:h-[500px] lg:h-[560px]">
+        <div className="relative h-[560px] overflow-hidden [mask-image:linear-gradient(to_bottom,black_0%,black_58%,transparent_100%)] sm:h-[640px] lg:h-[720px]">
           <Image
             src="/landing/bg1.webp"
             alt="Vibrant nightclub crowd dancing under blue and pink lights"
@@ -82,9 +82,10 @@ export default function LandingPage() {
             className="object-cover object-center opacity-[0.94] brightness-[0.82] saturate-[1.16]"
           />
         </div>
-        <div className="absolute inset-x-0 top-0 h-[640px] bg-[linear-gradient(180deg,rgba(5,6,8,0.03)_0%,rgba(5,6,8,0.08)_48%,#050608_92%)]" />
+        <div className="absolute inset-x-0 top-0 h-[760px] bg-[linear-gradient(180deg,rgba(5,6,8,0.02)_0%,rgba(5,6,8,0.06)_38%,rgba(5,6,8,0.68)_72%,#050608_96%)]" />
         <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/58 to-transparent" />
-        <div className="absolute inset-x-0 top-0 h-[560px] bg-[radial-gradient(circle_at_center,rgba(5,6,8,0.08)_0%,rgba(5,6,8,0.28)_68%,rgba(5,6,8,0.54)_100%)]" />
+        <div className="absolute inset-x-0 top-[320px] h-[420px] bg-gradient-to-b from-transparent via-[#050608]/70 to-[#050608]" />
+        <div className="absolute inset-x-0 top-0 h-[720px] bg-[radial-gradient(circle_at_center,rgba(5,6,8,0.08)_0%,rgba(5,6,8,0.26)_68%,rgba(5,6,8,0.54)_100%)]" />
       </div>
 
       <div className="relative z-10">
