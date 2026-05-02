@@ -70,21 +70,26 @@ export default function LandingPage() {
       : `Founding 50 Status: ${foundingRemaining} spots remaining.`;
 
   return (
-    <main className="min-h-screen bg-[#050608] text-white">
-      <section className="relative min-h-[92svh] overflow-hidden bg-[#050608]">
-        <Image
-          src="/tour/3d.jpg"
-          alt="Nightlife Flyers cinematic 3D text styles"
-          fill
-          priority
-          sizes="100vw"
-          className="absolute inset-0 object-cover object-[72%_center] opacity-[0.7] brightness-[0.72] saturate-[0.92]"
-        />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,6,8,0.99)_0%,rgba(5,6,8,0.9)_40%,rgba(5,6,8,0.56)_68%,rgba(5,6,8,0.76)_100%)]" />
-        <div className="absolute inset-0 bg-[#050608]/18" />
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#050608] to-transparent" />
+    <main className="relative min-h-screen overflow-hidden bg-[#050608] text-white">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="relative h-[430px] overflow-hidden sm:h-[500px] lg:h-[540px]">
+          <Image
+            src="/DJ/club01.jpg"
+            alt="Packed nightlife party with stage lights and crowd energy"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-[center_42%] opacity-[0.92] brightness-[0.72] saturate-[1.08]"
+          />
+        </div>
+        <div className="absolute inset-x-0 top-0 h-[640px] bg-[linear-gradient(180deg,rgba(5,6,8,0.08)_0%,rgba(5,6,8,0.36)_46%,#050608_92%)]" />
+        <div className="absolute inset-x-0 top-[300px] h-[360px] bg-gradient-to-b from-transparent via-[#050608]/90 to-[#050608]" />
+        <div className="absolute inset-y-0 left-0 w-full bg-[linear-gradient(90deg,rgba(5,6,8,0.96)_0%,rgba(5,6,8,0.76)_44%,rgba(5,6,8,0.34)_100%)]" />
+        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/70 to-transparent" />
+      </div>
 
-        <header className="relative z-20 border-b border-white/10 bg-black/25 backdrop-blur-md">
+      <div className="relative z-10">
+        <header className="border-b border-white/10 bg-black/20 backdrop-blur-md">
           <Link
             href="/billing/checkout?plan=creator&billing=monthly"
             className="block border-b border-cyan-200/15 bg-cyan-300/[0.11] px-4 py-2 text-center text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-50 transition hover:bg-cyan-300/[0.16]"
@@ -126,7 +131,7 @@ export default function LandingPage() {
           </div>
         </header>
 
-        <div className="relative z-10 mx-auto flex min-h-[calc(92svh-94px)] w-full max-w-7xl items-center px-4 pb-20 pt-12 sm:px-6 lg:pb-24">
+        <section className="mx-auto w-full max-w-7xl px-4 pb-12 pt-[170px] sm:px-6 sm:pb-14 sm:pt-[210px] lg:pt-[245px]">
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-100">
               <span className="h-1.5 w-1.5 rounded-full bg-cyan-300 shadow-[0_0_16px_rgba(103,232,249,0.9)]" />
@@ -169,9 +174,9 @@ export default function LandingPage() {
               ))}
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="absolute bottom-4 left-1/2 z-10 hidden w-[min(92vw,1180px)] -translate-x-1/2 grid-cols-4 border-y border-white/10 bg-black/28 text-white/78 backdrop-blur-md lg:grid">
+        <section className="mx-auto hidden w-[min(92vw,1180px)] grid-cols-4 border-y border-white/10 bg-black/28 text-white/78 backdrop-blur-md lg:grid">
           {premiumPoints.map((item) => (
             <div key={item.title} className="border-r border-white/10 px-5 py-4 last:border-r-0">
               <div className="flex items-center gap-2 text-sm font-semibold text-white">
@@ -181,8 +186,8 @@ export default function LandingPage() {
               <p className="mt-1 text-xs leading-5 text-white/62">{item.body}</p>
             </div>
           ))}
-        </div>
-      </section>
+        </section>
+      </div>
 
       <section className="border-y border-white/10 bg-[#080a0f] px-4 py-10 sm:px-6">
         <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
