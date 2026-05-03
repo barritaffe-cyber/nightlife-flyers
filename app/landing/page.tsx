@@ -4,7 +4,6 @@ import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Check, Shield, Sparkles, Zap } from "lucide-react";
-import PaymentMarks from "../../components/ui/PaymentMarks";
 import PublicSiteFooter from "../../components/ui/PublicSiteFooter";
 import {
   getPublicSupportPhone,
@@ -222,13 +221,6 @@ export default function LandingPage() {
               >
                 Start small for tonight. Upgrade when flyers become weekly.
               </h2>
-            </div>
-
-            <div className="border border-white/10 bg-white/[0.035] p-5 lg:mt-0">
-              <div className="text-xs uppercase tracking-[0.2em] text-white/45">Accepted Payments</div>
-              <div className="mt-3">
-                <PaymentMarks compact />
-              </div>
             </div>
           </div>
 
