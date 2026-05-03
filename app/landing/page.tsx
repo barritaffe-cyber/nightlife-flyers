@@ -210,18 +210,30 @@ export default function LandingPage() {
       </section>
 
       <section className="px-4 py-12 sm:px-6">
-        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1fr_0.8fr] lg:items-start">
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-fuchsia-200/80">
-              Access
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.76fr)] lg:items-start">
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-fuchsia-200/80">
+                Access
+              </div>
+              <h2
+                className="mt-3 max-w-3xl text-3xl leading-tight sm:text-4xl"
+                style={{ fontFamily: '"Nexa-Heavy", "Segoe UI", sans-serif' }}
+              >
+                Start small for tonight. Upgrade when flyers become weekly.
+              </h2>
             </div>
-            <h2
-              className="mt-3 max-w-3xl text-3xl leading-tight sm:text-4xl"
-              style={{ fontFamily: '"Nexa-Heavy", "Segoe UI", sans-serif' }}
-            >
-              Start small for tonight. Upgrade when flyers become weekly.
-            </h2>
-            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+
+            <div className="border border-white/10 bg-white/[0.035] p-5 lg:mt-0">
+              <div className="text-xs uppercase tracking-[0.2em] text-white/45">Accepted Payments</div>
+              <div className="mt-3">
+                <PaymentMarks compact />
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.76fr)] lg:items-start">
+            <div className="grid gap-3 sm:grid-cols-3">
               {[
                 {
                   name: "Night Pass",
@@ -270,22 +282,18 @@ export default function LandingPage() {
                 </Link>
               ))}
             </div>
-          </div>
 
-          <div className="border border-white/10 bg-white/[0.035] p-5">
-            <div className="text-xs uppercase tracking-[0.2em] text-white/45">Accepted Payments</div>
-            <div className="mt-3">
-              <PaymentMarks compact />
-            </div>
-            <div className="mt-5 space-y-2 text-xs leading-5 text-white/62">
-              <div>Digital flyer-design service with instant account access after successful payment.</div>
-              <div>Transaction currency: {currency}.</div>
-              <div>
-                Support:{" "}
-                <Link href="/contact" className="text-white underline underline-offset-4">
-                  Contact us
-                </Link>
-                {supportPhone ? <span>{` · ${supportPhone}`}</span> : null}
+            <div className="border border-white/10 bg-white/[0.025] p-5 text-sm text-white/68">
+              <div className="space-y-3 leading-6">
+                <div>Digital flyer-design service with instant account access after successful payment.</div>
+                <div>Transaction currency: {currency}.</div>
+                <div>
+                  Support:{" "}
+                  <Link href="/contact" className="text-white underline underline-offset-4">
+                    Contact us
+                  </Link>
+                  {supportPhone ? <span>{` · ${supportPhone}`}</span> : null}
+                </div>
               </div>
             </div>
           </div>
