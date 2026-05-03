@@ -368,14 +368,6 @@ function LoginPageInner() {
             >
               Continue with Google
             </button>
-            <button
-              type="button"
-              className="flex w-full items-center justify-center rounded-lg bg-[#1877f2] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0f66d8] disabled:opacity-60"
-              disabled={busy}
-              onClick={() => void startOAuth("facebook")}
-            >
-              Continue with Facebook
-            </button>
             <div className="flex items-center gap-3 pt-1 text-[10px] uppercase tracking-[0.18em] text-white/35">
               <span className="h-px flex-1 bg-white/10" />
               Email
