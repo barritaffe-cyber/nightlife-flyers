@@ -95,6 +95,9 @@ const LibraryPanel = dynamic(() => import("../components/editor/LibraryPanel"), 
 });
 
 const MAGIC_BLEND_ENABLED = false;
+const HEADLINE_EXTRUDE_REFERENCE_DEPTH = 28;
+const HEADLINE_EXTRUDE_MAX_DEPTH = 72;
+const HEADLINE_EXTRUDE_MAX_DISTANCE = 90;
 
 
 
@@ -4283,11 +4286,16 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
   }}
 >
   {(() => {
-    const extrudeDepth = Math.max(0, Math.round(headExtrudeDepth));
+    const extrudeDepth = Math.min(
+      HEADLINE_EXTRUDE_MAX_DEPTH,
+      Math.max(0, Math.round(headExtrudeDepth))
+    );
     const extrudeDistance = Math.max(0, Number(headExtrudeDistance) || 0);
     const extrudeAngleRad = (Number(headExtrudeAngle) || 0) * (Math.PI / 180);
-    const extrudeStepX = extrudeDepth > 0 ? (Math.cos(extrudeAngleRad) * extrudeDistance) / extrudeDepth : 0;
-    const extrudeStepY = extrudeDepth > 0 ? (Math.sin(extrudeAngleRad) * extrudeDistance) / extrudeDepth : 0;
+    const extrudeStepDistance =
+      extrudeDepth > 0 ? extrudeDistance / HEADLINE_EXTRUDE_REFERENCE_DEPTH : 0;
+    const extrudeStepX = Math.cos(extrudeAngleRad) * extrudeStepDistance;
+    const extrudeStepY = Math.sin(extrudeAngleRad) * extrudeStepDistance;
     const headlineText = textFx.uppercase ? headline.toUpperCase() : headline;
     const explicitLineCount = Math.max(1, headlineText.split("\n").length);
     const estimatedTextHeight = Math.max(headDisplayPx, headDisplayPx * lineHeight * explicitLineCount);
@@ -26650,7 +26658,7 @@ style={{ top: STICKY_TOP }}
           value={headExtrudeDepth}
           setValue={setHeadExtrudeDepth}
           min={0}
-          max={40}
+          max={HEADLINE_EXTRUDE_MAX_DEPTH}
           step={1}
         />
         <Stepper
@@ -26666,7 +26674,7 @@ style={{ top: STICKY_TOP }}
           value={headExtrudeDistance}
           setValue={setHeadExtrudeDistance}
           min={0}
-          max={60}
+          max={HEADLINE_EXTRUDE_MAX_DISTANCE}
           step={1}
         />
       </div>
@@ -28444,7 +28452,7 @@ style={{ top: STICKY_TOP }}
                         label="3D Depth"
                         value={headExtrudeDepth}
                         min={0}
-                        max={40}
+                        max={HEADLINE_EXTRUDE_MAX_DEPTH}
                         step={1}
                         precision={0}
                         onChange={setHeadExtrudeDepth}
@@ -28469,7 +28477,7 @@ style={{ top: STICKY_TOP }}
                         label="3D Distance"
                         value={headExtrudeDistance}
                         min={0}
-                        max={60}
+                        max={HEADLINE_EXTRUDE_MAX_DISTANCE}
                         step={1}
                         precision={0}
                         onChange={setHeadExtrudeDistance}
