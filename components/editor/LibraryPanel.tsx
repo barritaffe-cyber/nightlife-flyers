@@ -35,6 +35,10 @@ const railActionClass = 'border border-neutral-700 bg-neutral-900/60 px-2 py-1.5
 const railActionTallClass = 'border border-neutral-700 bg-neutral-800 px-2 py-2 text-[11px] uppercase tracking-[0.08em] text-neutral-200 transition hover:bg-neutral-700';
 const railDangerClass = 'border border-red-800 bg-red-950/30 px-2 py-2 text-[11px] uppercase tracking-[0.08em] text-red-200 transition hover:bg-red-950/45';
 const librarySectionClass = 'border-t border-neutral-800 pt-5';
+const SHAPE_GRAPHIC_SCALE_UI_MAX = 3;
+const SHAPE_GRAPHIC_SCALE_STEP = 0.005;
+const SHAPE_GRAPHIC_LENGTH_UI_MAX = 1600;
+const SHAPE_GRAPHIC_LENGTH_STEP = 1;
 
 type LibrarySectionProps = {
   title: string;
@@ -696,10 +700,10 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                 label="Scale"
                 value={Number(sel.scale ?? 1)}
                 min={0.01}
-                max={6}
-                step={0.01}
+                max={Math.max(SHAPE_GRAPHIC_SCALE_UI_MAX, Number(sel.scale ?? 1))}
+                step={SHAPE_GRAPHIC_SCALE_STEP}
                 displayScale={100}
-                precision={0}
+                precision={1}
                 suffix="%"
                 disabled={locked}
                 onChange={(next) =>
@@ -736,8 +740,8 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                 label="Length"
                 value={Number((sel as any).shapeLength ?? 160)}
                 min={48}
-                max={12000}
-                step={24}
+                max={Math.max(SHAPE_GRAPHIC_LENGTH_UI_MAX, Number((sel as any).shapeLength ?? 160))}
+                step={SHAPE_GRAPHIC_LENGTH_STEP}
                 precision={0}
                 disabled={locked}
                 onChange={(nextLength) => {

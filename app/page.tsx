@@ -98,6 +98,10 @@ const MAGIC_BLEND_ENABLED = false;
 const HEADLINE_EXTRUDE_REFERENCE_DEPTH = 28;
 const HEADLINE_EXTRUDE_MAX_DEPTH = 72;
 const HEADLINE_EXTRUDE_MAX_DISTANCE = 90;
+const SHAPE_GRAPHIC_SCALE_UI_MAX = 3;
+const SHAPE_GRAPHIC_SCALE_STEP = 0.005;
+const SHAPE_GRAPHIC_LENGTH_UI_MAX = 1600;
+const SHAPE_GRAPHIC_LENGTH_STEP = 1;
 
 
 
@@ -22846,8 +22850,11 @@ const activeAssetControls = React.useMemo(() => {
         showScale: true,
         scaleLabel: "Scale",
         scaleMin: 0.01,
-        scaleMax: isShapeGraphic ? 6 : 5,
-        scaleStep: 0.01,
+        scaleMax: isShapeGraphic
+          ? Math.max(SHAPE_GRAPHIC_SCALE_UI_MAX, Number(sel.scale ?? 1))
+          : 5,
+        scaleStep: isShapeGraphic ? SHAPE_GRAPHIC_SCALE_STEP : 0.01,
+        scalePrecision: isShapeGraphic ? 1 : 0,
         opacity: sel.opacity ?? 1,
         locked: !!sel.locked,
         showColor: hasIconColor,
@@ -22864,8 +22871,10 @@ const activeAssetControls = React.useMemo(() => {
         shapeSkew: isShapeGraphic ? Number((sel as any).shapeSkew ?? 0) : undefined,
         lengthLabel: "Length",
         lengthMin: isShapeGraphic ? 48 : 128,
-        lengthMax: isShapeGraphic ? 12000 : 720,
-        lengthStep: isShapeGraphic ? 24 : 4,
+        lengthMax: isShapeGraphic
+          ? Math.max(SHAPE_GRAPHIC_LENGTH_UI_MAX, Number((sel as any).shapeLength ?? 160))
+          : 720,
+        lengthStep: isShapeGraphic ? SHAPE_GRAPHIC_LENGTH_STEP : 4,
         separatorOffset: isSeparator ? Number((sel as any).separatorOffset ?? 0) : undefined,
         // Main Face should stay clean; keep tint off for this asset type.
         tint:
@@ -28775,7 +28784,7 @@ style={{ top: STICKY_TOP }}
                 step={Number(activeAssetControls.scaleStep ?? 0.05)}
                 value={Number(activeAssetControls.scale || 0)}
                 displayScale={100}
-                precision={0}
+                precision={Number(activeAssetControls.scalePrecision ?? 0)}
                 suffix="%"
                 onChange={(next) => activeAssetControls.onScale(next)}
                 rangeClassName="flex-1 accent-fuchsia-500"
