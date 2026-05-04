@@ -27,10 +27,11 @@ function LoginPageInner() {
   const emailPrefilledRef = React.useRef(false);
 
   const selection = resolveBillingSelection({ plan, offer, billing });
-  const postAuthHref = next || (selection ? buildBillingCheckoutHref(selection) : "/");
+  const isStudioPreviewIntent = intent === "studio-preview";
+  const postAuthHref =
+    next || (isStudioPreviewIntent ? "/?studio=1" : selection ? buildBillingCheckoutHref(selection) : "/");
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://nightlife-flyers.com";
   const metaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID || "";
-  const isStudioPreviewIntent = intent === "studio-preview";
 
   React.useEffect(() => {
     let active = true;
