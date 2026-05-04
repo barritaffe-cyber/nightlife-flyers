@@ -22068,7 +22068,6 @@ const applyHeadlineSportsPreset = React.useCallback(() => {
     shadowEnabled: false,
   };
 
-  setHeadlineFamily("Nexa-Heavy");
   setTextFx(nextFx);
   setSessionValue(format, "textFx", nextFx);
   setHeadSkew(-12);
@@ -22152,7 +22151,6 @@ const applyHeadlineRetroSlicePreset = React.useCallback(() => {
     shadowEnabled: false,
   };
 
-  setHeadlineFamily("Nexa-Heavy");
   setTextFx(nextFx);
   setSessionValue(format, "textFx", nextFx);
   setHeadAlign("center");
@@ -23088,6 +23086,7 @@ const hasAssetControls = !!activeAssetControls;
 
 React.useEffect(() => {
   if (!floatingEditorVisible) return;
+  if (activeTextTarget === "headline") return;
   setMobileTextFloatTab("text");
   setMobileHeadlineStyleFocus(null);
 }, [activeTextTarget, floatingEditorVisible]);
