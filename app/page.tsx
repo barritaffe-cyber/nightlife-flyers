@@ -16450,6 +16450,10 @@ function exportDesignJSON(): string {
     headline, headlineFamily, align, lineHeight, textColWidth,
     headSizeAuto, headManualPx, headMaxPx, textFx, tallHeadline, headlineHidden,
     headX, headY, headRotate, headSkew, headAlign,
+    headSliceEnabled, headSliceBandCount, headSliceBandGap, headSliceEchoDistance,
+    headSliceTopColor, headSliceMidColor, headSliceBottomColor,
+    headSliceBlur, headSliceFade, headSliceShadowStrength,
+    headExtrudeDepth, headExtrudeAngle, headExtrudeDistance, headExtrudeColor,
 
     // details (main)
     details, bodyFamily, bodyColor, bodySize, bodyUppercase, bodyBold,
@@ -16542,6 +16546,10 @@ function buildHistoryState() {
     headline, headlineFamily, align, lineHeight, textColWidth,
     headSizeAuto, headManualPx, headMaxPx, textFx, tallHeadline, headlineHidden,
     headX, headY, headRotate, headSkew, headAlign,
+    headSliceEnabled, headSliceBandCount, headSliceBandGap, headSliceEchoDistance,
+    headSliceTopColor, headSliceMidColor, headSliceBottomColor,
+    headSliceBlur, headSliceFade, headSliceShadowStrength,
+    headExtrudeDepth, headExtrudeAngle, headExtrudeDistance, headExtrudeColor,
 
     // details (main)
     details, bodyFamily, bodyColor, bodySize, bodyUppercase, bodyBold,
@@ -16606,6 +16614,10 @@ const historySignature = React.useMemo(() => buildHistorySignature(), [
   headline, headlineFamily, align, lineHeight, textColWidth,
   headSizeAuto, headManualPx, headMaxPx, textFx, tallHeadline, headlineHidden,
   headX, headY, headRotate, headSkew, headAlign,
+  headSliceEnabled, headSliceBandCount, headSliceBandGap, headSliceEchoDistance,
+  headSliceTopColor, headSliceMidColor, headSliceBottomColor,
+  headSliceBlur, headSliceFade, headSliceShadowStrength,
+  headExtrudeDepth, headExtrudeAngle, headExtrudeDistance, headExtrudeColor,
   details, bodyFamily, bodyColor, bodySize, bodyUppercase, bodyBold,
   bodyItalic, bodyUnderline, bodyTracking, detailsLineHeight,
   detailsAlign, detailsX, detailsY, detailsRotate, detailsFamily,
@@ -21081,6 +21093,98 @@ const [showStartup, setShowStartup] = React.useState(true);
 const [loadingStartup, setLoadingStartup] = React.useState(false);
 const didInitCleanRef = React.useRef(false);
 
+const syncHeadlineStyleToSession = React.useCallback(() => {
+  const currentData = {
+    headline,
+    headlineFamily,
+    headColor: textFx.color,
+    align,
+    headAlign,
+    lineHeight,
+    headlineLineHeight: lineHeight,
+    textColWidth,
+    headSize: headManualPx,
+    headlineSize: headManualPx,
+    headSizeAuto,
+    headMaxPx,
+    headlineItalic: textFx.italic,
+    headlineBold: textFx.bold,
+    headlineUppercase: textFx.uppercase,
+    headlineHidden,
+    headX,
+    headY,
+    headRotate,
+    headSkew,
+    headSliceEnabled,
+    headSliceBandCount,
+    headSliceBandGap,
+    headSliceEchoDistance,
+    headSliceTopColor,
+    headSliceMidColor,
+    headSliceBottomColor,
+    headSliceBlur,
+    headSliceFade,
+    headSliceShadowStrength,
+    headExtrudeDepth,
+    headExtrudeAngle,
+    headExtrudeDistance,
+    headExtrudeColor,
+    textFx: { ...textFx, shadowEnabled: headShadow, shadow: headShadowStrength },
+    headShadow,
+    headShadowStrength,
+  };
+
+  useFlyerState.getState().setSession((prev) => ({
+    ...prev,
+    [format]: {
+      ...(prev?.[format] || {}),
+      ...currentData,
+    },
+  }));
+  useFlyerState.getState().setSessionDirty((prev) => ({
+    ...prev,
+    [format]: true,
+  }));
+}, [
+  align,
+  format,
+  headAlign,
+  headExtrudeAngle,
+  headExtrudeColor,
+  headExtrudeDepth,
+  headExtrudeDistance,
+  headManualPx,
+  headMaxPx,
+  headRotate,
+  headShadow,
+  headShadowStrength,
+  headSizeAuto,
+  headSkew,
+  headSliceBandCount,
+  headSliceBandGap,
+  headSliceBlur,
+  headSliceBottomColor,
+  headSliceEchoDistance,
+  headSliceEnabled,
+  headSliceFade,
+  headSliceMidColor,
+  headSliceShadowStrength,
+  headSliceTopColor,
+  headX,
+  headY,
+  headline,
+  headlineFamily,
+  headlineHidden,
+  lineHeight,
+  textColWidth,
+  textFx,
+]);
+
+React.useEffect(() => {
+  if (!storageReady || showStartup || loadingStartup) return;
+  syncHeadlineStyleToSession();
+}, [loadingStartup, showStartup, storageReady, syncHeadlineStyleToSession]);
+
 React.useEffect(() => {
   if (didInitCleanRef.current) return;
   didInitCleanRef.current = true;
@@ -23073,12 +23177,25 @@ const showMobileTextFloatBasics =
   !headlineTextStyleTabsVisible || mobileTextFloatTab === "text";
 const showMobileHeadlineStyleControls =
   headlineTextStyleTabsVisible && mobileTextFloatTab === "style";
+const headline3dStyleActive = headExtrudeDepth > 0 || headExtrudeDistance > 0;
+const headlineEchoStyleActive = !!headSliceEnabled;
+const headlineGradientStyleActive = !!textFx.gradient;
+const inferredMobileHeadlineStyleFocus: "3d" | "gradient" | "echo" | null =
+  headlineEchoStyleActive
+    ? "echo"
+    : headline3dStyleActive
+      ? "3d"
+      : headlineGradientStyleActive
+        ? "gradient"
+        : null;
+const activeMobileHeadlineStyleFocus =
+  mobileHeadlineStyleFocus ?? inferredMobileHeadlineStyleFocus;
 const showMobileHeadline3dControls =
-  showMobileHeadlineStyleControls && mobileHeadlineStyleFocus === "3d";
+  showMobileHeadlineStyleControls && activeMobileHeadlineStyleFocus === "3d";
 const showMobileHeadlineGradientControls =
-  showMobileHeadlineStyleControls && mobileHeadlineStyleFocus === "gradient";
+  showMobileHeadlineStyleControls && activeMobileHeadlineStyleFocus === "gradient";
 const showMobileHeadlineEchoControls =
-  showMobileHeadlineStyleControls && mobileHeadlineStyleFocus === "echo";
+  showMobileHeadlineStyleControls && activeMobileHeadlineStyleFocus === "echo";
 const activeMobileTextFloatPanelStyle = headlineTextStyleTabsVisible
   ? mobileHeadlineFloatPanelStyle
   : mobileFloatPanelStyle;
@@ -23086,10 +23203,17 @@ const hasAssetControls = !!activeAssetControls;
 
 React.useEffect(() => {
   if (!floatingEditorVisible) return;
-  if (activeTextTarget === "headline") return;
-  setMobileTextFloatTab("text");
-  setMobileHeadlineStyleFocus(null);
-}, [activeTextTarget, floatingEditorVisible]);
+  if (activeTextTarget !== "headline") return;
+  if (mobileTextFloatTab !== "style") return;
+  if (mobileHeadlineStyleFocus || !inferredMobileHeadlineStyleFocus) return;
+  setMobileHeadlineStyleFocus(inferredMobileHeadlineStyleFocus);
+}, [
+  activeTextTarget,
+  floatingEditorVisible,
+  inferredMobileHeadlineStyleFocus,
+  mobileHeadlineStyleFocus,
+  mobileTextFloatTab,
+]);
 
 const activeBgControls = React.useMemo(() => {
   if (selectedPanel !== "background" && moveTarget !== "background") return null;
@@ -28370,27 +28494,31 @@ style={{ top: STICKY_TOP }}
                 <div className="flex min-w-max items-center gap-2 px-1 whitespace-nowrap">
                   <Chip
                     small
-                    active={mobileHeadlineStyleFocus === "3d"}
+                    active={activeMobileHeadlineStyleFocus === "3d"}
                     onClick={() => {
                       setMobileHeadlineStyleFocus("3d");
-                      applyHeadlineSportsPreset();
+                      if (!headline3dStyleActive) {
+                        applyHeadlineSportsPreset();
+                      }
                     }}
                   >
                     Flat 3D
                   </Chip>
                   <Chip
                     small
-                    active={mobileHeadlineStyleFocus === "echo"}
+                    active={activeMobileHeadlineStyleFocus === "echo"}
                     onClick={() => {
                       setMobileHeadlineStyleFocus("echo");
-                      applyHeadlineRetroSlicePreset();
+                      if (!headlineEchoStyleActive) {
+                        applyHeadlineRetroSlicePreset();
+                      }
                     }}
                   >
                     Retro Slice
                   </Chip>
                   <Chip
                     small
-                    active={mobileHeadlineStyleFocus === "gradient"}
+                    active={activeMobileHeadlineStyleFocus === "gradient"}
                     onClick={() => {
                       if (!headlinePresetBaselineRef.current) {
                         headlinePresetBaselineRef.current = {
@@ -28420,9 +28548,11 @@ style={{ top: STICKY_TOP }}
                         };
                       }
                       setMobileHeadlineStyleFocus("gradient");
-                      const next = { ...textFx, gradient: true };
-                      setTextFx(next);
-                      setSessionValue(format, "textFx", next);
+                      if (!headlineGradientStyleActive) {
+                        const next = { ...textFx, gradient: true };
+                        setTextFx(next);
+                        setSessionValue(format, "textFx", next);
+                      }
                     }}
                   >
                     Gradient
@@ -28430,13 +28560,13 @@ style={{ top: STICKY_TOP }}
                   <Chip
                     small
                     onClick={resetHeadlinePresetStyles}
-                    active={!mobileHeadlineStyleFocus}
+                    active={!activeMobileHeadlineStyleFocus}
                   >
                     Reset
                   </Chip>
                 </div>
               </div>
-              {!mobileHeadlineStyleFocus && (
+              {!activeMobileHeadlineStyleFocus && (
                 <div className="rounded border border-white/10 bg-black/20 px-3 py-2 text-[11px] text-neutral-400">
                   Choose a preset above. Reset returns the headline to its pre-preset state.
                 </div>
