@@ -368,6 +368,13 @@ function LoginPageInner() {
             >
               Continue with Google
             </button>
+            <button
+              type="button"
+              className="block w-full text-center text-[11px] text-white/55 underline underline-offset-4 transition hover:text-cyan-100"
+              onClick={() => setMode("signup")}
+            >
+              Other login options coming soon&mdash;Sign up in 5 seconds.
+            </button>
             <div className="flex items-center gap-3 pt-1 text-[10px] uppercase tracking-[0.18em] text-white/35">
               <span className="h-px flex-1 bg-white/10" />
               Email
