@@ -12330,6 +12330,8 @@ React.useEffect(() => {
     last: string | null;
     lastSignature: string | null;
   }>({ undo: [], redo: [], last: null, lastSignature: null });
+  const historyAssetCacheRef = React.useRef<Map<string, string>>(new Map());
+  const historyAssetTokenByValueRef = React.useRef<Map<string, string>>(new Map());
   const historyPauseRef = React.useRef(false);
   const historyDebounceRef = React.useRef<number | null>(null);
   const [designName, setDesignName] = useState('');
@@ -13724,7 +13726,7 @@ const mobileFloatPanelClass =
   }, [handleExportStart]);
 
   const buildResumeSnapshot = async () => {
-    const historyJson = buildHistorySnapshot();
+    const historyJson = expandHistorySnapshot(buildHistorySnapshot());
     const historyState = (() => {
       try {
         const parsed = JSON.parse(historyJson);
@@ -16415,6 +16417,8 @@ function writeIndex(names: string[]) {
 }
 
 const MAX_PERSISTED_DATA_URL_LEN = 220_000;
+const HISTORY_ASSET_TOKEN_PREFIX = "__nf_history_asset__:";
+const HISTORY_ASSET_CACHE_LIMIT = 40;
 
 function sanitizeDesignForStorage<T>(value: T): T {
   const walk = (node: any): any => {
@@ -16505,13 +16509,91 @@ function exportDesignJSON(): string {
   return JSON.stringify({ v: 1, state: safeState }, null, 2);
 }
 
+function isHistoryAssetString(value: string) {
+  return /^data:image\//i.test(value) && value.length > 4096;
+}
+
+function createHistoryAssetToken(value: string) {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `${HISTORY_ASSET_TOKEN_PREFIX}${value.length}:${(hash >>> 0).toString(36)}`;
+}
+
+function rememberHistoryAsset(value: string) {
+  const existing = historyAssetTokenByValueRef.current.get(value);
+  if (existing) return existing;
+
+  const token = createHistoryAssetToken(value);
+  historyAssetCacheRef.current.set(token, value);
+  historyAssetTokenByValueRef.current.set(value, token);
+
+  while (historyAssetCacheRef.current.size > HISTORY_ASSET_CACHE_LIMIT) {
+    const oldestToken = historyAssetCacheRef.current.keys().next().value as string | undefined;
+    if (!oldestToken) break;
+    const oldestValue = historyAssetCacheRef.current.get(oldestToken);
+    historyAssetCacheRef.current.delete(oldestToken);
+    if (oldestValue) historyAssetTokenByValueRef.current.delete(oldestValue);
+  }
+
+  return token;
+}
+
+function tokenizeHistoryAssets(value: unknown): unknown {
+  if (typeof value === "string") {
+    return isHistoryAssetString(value) ? rememberHistoryAsset(value) : value;
+  }
+  if (Array.isArray(value)) return value.map(tokenizeHistoryAssets);
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+      out[key] = tokenizeHistoryAssets(child);
+    }
+    return out;
+  }
+  return value;
+}
+
+function expandHistoryAssets(value: unknown): unknown {
+  if (typeof value === "string") {
+    if (!value.startsWith(HISTORY_ASSET_TOKEN_PREFIX)) return value;
+    return historyAssetCacheRef.current.get(value) || "";
+  }
+  if (Array.isArray(value)) return value.map(expandHistoryAssets);
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+      out[key] = expandHistoryAssets(child);
+    }
+    return out;
+  }
+  return value;
+}
+
+function expandHistorySnapshot(snapshot: string): string {
+  try {
+    const parsed = JSON.parse(snapshot) as { v?: number; state?: unknown };
+    return JSON.stringify({
+      ...parsed,
+      v: parsed?.v ?? 1,
+      state: expandHistoryAssets(parsed?.state ?? {}),
+    });
+  } catch {
+    return snapshot;
+  }
+}
+
 function summarizeHistoryValue(value: unknown): unknown {
   if (typeof value === "string") {
+    if (value.startsWith(HISTORY_ASSET_TOKEN_PREFIX)) return value;
     const looksHeavy =
       /^data:image\//i.test(value) ||
       /^blob:/i.test(value) ||
       value.length > 4096;
     if (!looksHeavy) return value;
+    if (isHistoryAssetString(value)) return createHistoryAssetToken(value);
     return `${value.slice(0, 72)}…(${value.length})`;
   }
   if (Array.isArray(value)) return value.map(summarizeHistoryValue);
@@ -16602,7 +16684,7 @@ function buildHistoryState() {
 }
 
 function buildHistorySnapshot(): string {
-  return JSON.stringify({ v: 1, state: buildHistoryState() });
+  return JSON.stringify({ v: 1, state: tokenizeHistoryAssets(buildHistoryState()) });
 }
 
 function buildHistorySignature(): string {
@@ -19805,7 +19887,7 @@ const applyHistorySnapshot = React.useCallback(
     const store = useFlyerState.getState();
   const prevPanel = store.selectedPanel;
   historyPauseRef.current = true;
-  importDesignJSON(snapshot, { preservePanel: true, skipTemplateOpen: true });
+  importDesignJSON(expandHistorySnapshot(snapshot), { preservePanel: true, skipTemplateOpen: true });
     if (prevPanel !== null) {
       store.setSelectedPanel(prevPanel);
     }
