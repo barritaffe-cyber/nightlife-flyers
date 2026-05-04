@@ -24,8 +24,8 @@ type AnalyticsRow = {
 };
 
 function clampDays(value: string | null) {
-  const parsed = Number.parseInt(String(value || "30"), 10);
-  if (!Number.isFinite(parsed)) return 30;
+  const parsed = Number.parseInt(String(value || "1"), 10);
+  if (!Number.isFinite(parsed)) return 1;
   return Math.max(1, Math.min(180, parsed));
 }
 

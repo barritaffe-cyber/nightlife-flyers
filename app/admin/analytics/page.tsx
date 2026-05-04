@@ -38,9 +38,16 @@ function formatDate(value: string) {
   }
 }
 
+const RANGE_OPTIONS = [
+  { days: 1, label: "Daily" },
+  { days: 7, label: "7d" },
+  { days: 30, label: "30d" },
+  { days: 90, label: "90d" },
+];
+
 export default function AdminAnalyticsPage() {
   const [payload, setPayload] = React.useState<DashboardPayload | null>(null);
-  const [days, setDays] = React.useState(30);
+  const [days, setDays] = React.useState(1);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -89,18 +96,18 @@ export default function AdminAnalyticsPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {[7, 30, 90].map((option) => (
+            {RANGE_OPTIONS.map((option) => (
               <button
-                key={option}
+                key={option.days}
                 type="button"
-                onClick={() => setDays(option)}
+                onClick={() => setDays(option.days)}
                 className={`rounded-lg px-3 py-2 text-sm ${
-                  days === option
+                  days === option.days
                     ? "bg-fuchsia-600 text-white"
                     : "border border-white/10 bg-white/5 text-white/75 hover:bg-white/10"
                 }`}
               >
-                {option}d
+                {option.label}
               </button>
             ))}
             <Link
@@ -124,6 +131,7 @@ export default function AdminAnalyticsPage() {
           <>
             <div className="rounded-2xl border border-white/10 bg-neutral-900 p-5 text-sm text-white/65">
               <div>Admin email: {payload.admin_email || "-"}</div>
+              <div>Range: {payload.days === 1 ? "Daily / last 24 hours" : `${payload.days} days`}</div>
               <div>Range start: {formatDate(payload.range_start)}</div>
               <div>
                 Events loaded: {payload.sampled_events} of {payload.total_events}
