@@ -275,6 +275,12 @@ export interface TemplateBase {
   headOpticalMargin?: boolean;
   headKerningFix?: boolean;
   headAlpha?: number;
+  headRushEnabled?: boolean;
+  headRushDotColor?: string;
+  headRushContrastColor?: string;
+  headRushDotSize?: number;
+  headRushDotSpacing?: number;
+  headRushShadowOffset?: number;
   
 
   // -----------------------------------------------------

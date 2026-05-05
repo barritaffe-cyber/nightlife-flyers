@@ -2507,7 +2507,7 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
   bgLocked: boolean;
   setBgLocked: (v: boolean) => void;
 
-  headRotate: number; headSkew: number; headSliceEnabled: boolean; headSliceBandCount: number; headSliceBandGap: number; headSliceEchoDistance: number; headSliceTopColor: string; headSliceMidColor: string; headSliceBottomColor: string; headSliceBlur: number; headSliceFade: number; headSliceShadowStrength: number; headExtrudeDepth: number; headExtrudeAngle: number; headExtrudeDistance: number; headExtrudeColor: string; head2Rotate: number; head2Skew: number; detailsRotate: number; details2Rotate: number; venueRotate: number; subtagRotate: number; logoRotate: number;
+  headRotate: number; headSkew: number; headSliceEnabled: boolean; headSliceBandCount: number; headSliceBandGap: number; headSliceEchoDistance: number; headSliceTopColor: string; headSliceMidColor: string; headSliceBottomColor: string; headSliceBlur: number; headSliceFade: number; headSliceShadowStrength: number; headRushEnabled: boolean; headRushDotColor: string; headRushContrastColor: string; headRushDotSize: number; headRushDotSpacing: number; headRushShadowOffset: number; headExtrudeDepth: number; headExtrudeAngle: number; headExtrudeDistance: number; headExtrudeColor: string; head2Rotate: number; head2Skew: number; detailsRotate: number; details2Rotate: number; venueRotate: number; subtagRotate: number; logoRotate: number;
   portraitBoxW: number; portraitBoxH: number; portraitLocked?: boolean; hideUiForExport?: boolean; headAlign: Align;
   onTogglePortraitLock: () => void;
   details2Uppercase?: boolean;
@@ -2606,7 +2606,7 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
 }>((p, ref) => {
   // ✅ CLEAN DESTRUCTURE — do NOT put type annotations here.
   const {
-    headRotate, headSkew, headSliceEnabled, headSliceBandCount, headSliceBandGap, headSliceEchoDistance, headSliceTopColor, headSliceMidColor, headSliceBottomColor, headSliceBlur, headSliceFade, headSliceShadowStrength, headExtrudeDepth, headExtrudeAngle, headExtrudeDistance, headExtrudeColor, head2Rotate, head2Skew, detailsRotate, details2Rotate, venueRotate, subtagRotate, logoRotate, headAlign,
+    headRotate, headSkew, headSliceEnabled, headSliceBandCount, headSliceBandGap, headSliceEchoDistance, headSliceTopColor, headSliceMidColor, headSliceBottomColor, headSliceBlur, headSliceFade, headSliceShadowStrength, headRushEnabled, headRushDotColor, headRushContrastColor, headRushDotSize, headRushDotSpacing, headRushShadowOffset, headExtrudeDepth, headExtrudeAngle, headExtrudeDistance, headExtrudeColor, head2Rotate, head2Skew, detailsRotate, details2Rotate, venueRotate, subtagRotate, logoRotate, headAlign,
     palette, format, portraitUrl, bgUrl, bgUploadUrl, logoUrl, hue, haze, grade, leak, vignette, bgPosX, bgPosY,
     portraitScale, subtagUppercase, opticalMargin, leadTrackDelta, lastTrackDelta, kerningFix, headBehindPortrait,
     headlineLayerZ, head2LayerZ, detailsLayerZ, details2LayerZ, venueLayerZ, subtagLayerZ,
@@ -4319,6 +4319,63 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
       headSliceEnabled && headSliceShadowStrength > 0
         ? `0 ${Math.round(12 * headSliceShadowStrength)}px 0 rgba(0,0,0,${Math.min(0.45, 0.18 + headSliceShadowStrength * 0.4)})`
         : "none";
+    const rushActive = !!headRushEnabled;
+    const rushFillColor =
+      textFx.color && textFx.color !== "transparent" && textFx.color !== "none"
+        ? textFx.color
+        : "#ef2a2a";
+    const rushDotPx = Math.max(0.8, Math.min(9, Number(headRushDotSize) || 2.4));
+    const rushDotGap = Math.max(rushDotPx * 2 + 1, Math.min(28, Number(headRushDotSpacing) || 8.5));
+    const rushShadowPx = Math.max(0, Math.min(42, Number(headRushShadowOffset) || 0));
+    const rushDepthPx = rushShadowPx * 1.75;
+    const rushLayerBase: React.CSSProperties = {
+      position: "absolute",
+      inset: 0,
+      fontFamily: headlineFamily,
+      fontSize: headDisplayPx,
+      lineHeight,
+      whiteSpace: "pre-wrap",
+      display: "block",
+      width: "100%",
+      letterSpacing: `${textFx.tracking}em`,
+      textTransform: textFx.uppercase ? "uppercase" : "none",
+      fontWeight: textFx.bold ? 900 : 700,
+      fontStyle: textFx.italic ? "italic" : "normal",
+      textDecorationLine: textFx.underline ? "underline" : "none",
+      pointerEvents: "none",
+      userSelect: "none",
+      textShadow: "none",
+    };
+    const renderRushTextContent = (lineStyle: React.CSSProperties = {}) =>
+      exportTextMode
+        ? renderWithDoubleBreaks(headlineText)
+        : renderHeadlineRich(headlineText, {
+            baseTrackEm: textFx.tracking,
+            leadDeltaEm: leadTrackDelta,
+            lastDeltaEm: lastTrackDelta,
+            opticalMargin,
+            kerningFix,
+            lineHeight,
+            lineStyle: {
+              display: "block",
+              width: "100%",
+              ...lineStyle,
+            },
+          });
+    const renderRushTextLayer = (
+      key: string,
+      style: React.CSSProperties,
+      lineStyle: React.CSSProperties
+    ) => (
+      <h1
+        key={key}
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 font-black select-none"
+        style={{ ...rushLayerBase, ...style }}
+      >
+        {renderRushTextContent(lineStyle)}
+      </h1>
+    );
 
     return (
       <div
@@ -4458,6 +4515,43 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
             );
           })}
 
+        {rushActive && (
+          <>
+            {renderRushTextLayer(
+              "headline-rush-red-depth",
+              {
+                color: rushFillColor,
+                WebkitTextFillColor: rushFillColor,
+                opacity: Math.min(0.62, Math.max(0.2, textFx.alpha * 0.48)),
+                transform: `translate(${rushDepthPx.toFixed(1)}px, ${(rushDepthPx * 0.68).toFixed(1)}px)`,
+                zIndex: 0,
+              },
+              {
+                color: rushFillColor,
+                WebkitTextFillColor: rushFillColor,
+              }
+            )}
+            {renderRushTextLayer(
+              "headline-rush-dark-cutout",
+              {
+                color: "#050812",
+                WebkitTextFillColor: "#050812",
+                WebkitTextStrokeWidth: textFx.strokeWidth ? `${Math.max(1, textFx.strokeWidth)}px` : undefined,
+                WebkitTextStrokeColor: "#050812",
+                opacity: Math.min(0.98, Math.max(0.3, textFx.alpha * 0.9)),
+                transform: `translate(${rushShadowPx.toFixed(1)}px, ${(rushShadowPx * 0.72).toFixed(1)}px)`,
+                zIndex: 1,
+              },
+              {
+                color: "#050812",
+                WebkitTextFillColor: "#050812",
+                WebkitTextStrokeWidth: textFx.strokeWidth ? `${Math.max(1, textFx.strokeWidth)}px` : undefined,
+                WebkitTextStrokeColor: "#050812",
+              }
+            )}
+          </>
+        )}
+
         <h1
           key={`headline-${headlineFamily}-${headlineFontTick}`}
           className="relative font-black"
@@ -4477,10 +4571,12 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
             opacity: textFx.alpha,
             color: exportTextMode
               ? headlineExportColor
+              : rushActive
+              ? rushFillColor
               : textFx.gradient
               ? 'transparent'
               : textFx.color,
-            WebkitTextFillColor: exportTextMode ? headlineExportColor : undefined,
+            WebkitTextFillColor: exportTextMode ? headlineExportColor : rushActive ? rushFillColor : undefined,
             textShadow: dragging
               ? 'none'
               : headSliceEnabled
@@ -4493,7 +4589,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
               : isActive('headline')
               ? { filter: 'drop-shadow(0 0 8px rgba(147,197,253,0.9))' }
               : {}),
-            zIndex: 1,
+            zIndex: rushActive ? 3 : 1,
           }}
         >
           {exportTextMode
@@ -4514,7 +4610,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
                       ? `${textFx.strokeWidth}px`
                       : undefined,
                     WebkitTextStrokeColor: textFx.strokeColor,
-                    ...(textFx.gradient
+                    ...(textFx.gradient && !rushActive
                       ? {
                           backgroundImage: `linear-gradient(180deg, ${textFx.gradFrom}, ${textFx.gradTo})`,
                           backgroundSize: '100% 100%',
@@ -4529,6 +4625,122 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
                 }
               )}
         </h1>
+
+        {rushActive && (
+          <>
+            {renderRushTextLayer(
+              "headline-rush-white-stripe",
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                backgroundImage: `linear-gradient(102deg, transparent 0 31%, ${headRushContrastColor} 36%, ${headRushContrastColor} 55%, rgba(255,255,255,0.42) 58%, transparent 64% 100%)`,
+                backgroundSize: "100% 100%",
+                backgroundRepeat: "no-repeat",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                opacity: Math.min(0.95, Math.max(0.32, textFx.alpha * 0.88)),
+                mixBlendMode: "screen",
+                zIndex: 4,
+              },
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                backgroundImage: `linear-gradient(102deg, transparent 0 31%, ${headRushContrastColor} 36%, ${headRushContrastColor} 55%, rgba(255,255,255,0.42) 58%, transparent 64% 100%)`,
+                backgroundSize: "100% 100%",
+                backgroundRepeat: "no-repeat",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+              }
+            )}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0"
+              style={{ zIndex: 5, overflow: "hidden" }}
+            >
+              {[
+                { left: 0, width: 36, scale: 0.72, opacity: 0.58 },
+                { left: 28, width: 38, scale: 0.96, opacity: 0.68 },
+                { left: 58, width: 42, scale: 1.24, opacity: 0.78 },
+              ].map((segment, idx) => {
+                const dotPx = rushDotPx * segment.scale;
+                const dotGap = rushDotGap * (0.9 + segment.scale * 0.18);
+                const childWidth = 10000 / segment.width;
+                const childLeft = -(segment.left / segment.width) * 100;
+                const dotBackground = `radial-gradient(circle, ${headRushDotColor} 0 ${dotPx.toFixed(2)}px, transparent ${(dotPx + 0.65).toFixed(2)}px)`;
+                const dotStyle: React.CSSProperties = {
+                  color: "transparent",
+                  WebkitTextFillColor: "transparent",
+                  backgroundImage: dotBackground,
+                  backgroundSize: `${dotGap.toFixed(2)}px ${dotGap.toFixed(2)}px`,
+                  backgroundPosition: `${(idx * 2.1).toFixed(1)}px ${(idx * 1.4).toFixed(1)}px`,
+                  backgroundRepeat: "repeat",
+                  WebkitBackgroundClip: "text",
+                  backgroundClip: "text",
+                };
+
+                return (
+                  <div
+                    key={`headline-rush-dots-${idx}`}
+                    className="absolute top-0 h-full overflow-hidden"
+                    style={{
+                      left: `${segment.left}%`,
+                      width: `${segment.width}%`,
+                      opacity: Math.min(0.9, segment.opacity * textFx.alpha),
+                    }}
+                  >
+                    <h1
+                      className="pointer-events-none absolute top-0 font-black select-none"
+                      style={{
+                        ...rushLayerBase,
+                        ...dotStyle,
+                        left: `${childLeft}%`,
+                        right: "auto",
+                        width: `${childWidth}%`,
+                        inset: undefined,
+                      }}
+                    >
+                      {renderRushTextContent(dotStyle)}
+                    </h1>
+                  </div>
+                );
+              })}
+            </div>
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute left-1/2 whitespace-nowrap font-black uppercase"
+              style={{
+                top: -Math.max(18, headDisplayPx * 0.22),
+                transform: "translateX(-50%)",
+                color: headRushContrastColor,
+                fontSize: Math.max(9, Math.min(18, headDisplayPx * 0.13)),
+                letterSpacing: "0.58em",
+                lineHeight: 1,
+                opacity: 0.88,
+                textShadow: `0 2px 0 rgba(0,0,0,0.78), ${Math.max(2, rushShadowPx * 0.28)}px ${Math.max(2, rushShadowPx * 0.18)}px 0 #050812`,
+                zIndex: 6,
+              }}
+            >
+              TYPEFACE
+            </div>
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute left-1/2 whitespace-nowrap font-black uppercase"
+              style={{
+                top: estimatedTextHeight + Math.max(8, headDisplayPx * 0.08),
+                transform: "translateX(-50%)",
+                color: rushFillColor,
+                fontSize: Math.max(8, Math.min(16, headDisplayPx * 0.105)),
+                letterSpacing: "0.18em",
+                lineHeight: 1,
+                opacity: 0.92,
+                textShadow: `${Math.max(1, rushShadowPx * 0.22)}px ${Math.max(1, rushShadowPx * 0.16)}px 0 #050812`,
+                zIndex: 6,
+              }}
+            >
+              ABCDEFGHIJKLM NOPQRSTUVWXYZ 0123456789
+            </div>
+          </>
+        )}
       </div>
     );
   })()}
@@ -10391,6 +10603,12 @@ function removeFromLogoLibrary(url: string) {
   const [headSliceBlur, setHeadSliceBlur] = useState<number>(6);
   const [headSliceFade, setHeadSliceFade] = useState<number>(0.5);
   const [headSliceShadowStrength, setHeadSliceShadowStrength] = useState<number>(0.35);
+  const [headRushEnabled, setHeadRushEnabled] = useState<boolean>(false);
+  const [headRushDotColor, setHeadRushDotColor] = useState<string>("#10131b");
+  const [headRushContrastColor, setHeadRushContrastColor] = useState<string>("#f4f4ef");
+  const [headRushDotSize, setHeadRushDotSize] = useState<number>(2.4);
+  const [headRushDotSpacing, setHeadRushDotSpacing] = useState<number>(8.5);
+  const [headRushShadowOffset, setHeadRushShadowOffset] = useState<number>(9);
   const [headExtrudeDepth, setHeadExtrudeDepth] = useState<number>(0);
   const [headExtrudeAngle, setHeadExtrudeAngle] = useState<number>(135);
   const [headExtrudeDistance, setHeadExtrudeDistance] = useState<number>(0);
@@ -15093,6 +15311,8 @@ const buildEdgeAwareLassoMask = (
       headSliceEnabled, headSliceBandCount, headSliceBandGap, headSliceEchoDistance,
       headSliceTopColor, headSliceMidColor, headSliceBottomColor,
       headSliceBlur, headSliceFade, headSliceShadowStrength,
+      headRushEnabled, headRushDotColor, headRushContrastColor,
+      headRushDotSize, headRushDotSpacing, headRushShadowOffset,
       headExtrudeDepth, headExtrudeAngle, headExtrudeDistance, headExtrudeColor,
       textLayerOffset,
 
@@ -15208,6 +15428,12 @@ const buildEdgeAwareLassoMask = (
       if (typeof s.headSliceBlur === 'number') setHeadSliceBlur(s.headSliceBlur);
       if (typeof s.headSliceFade === 'number') setHeadSliceFade(s.headSliceFade);
       if (typeof s.headSliceShadowStrength === 'number') setHeadSliceShadowStrength(s.headSliceShadowStrength);
+      if (typeof s.headRushEnabled === 'boolean') setHeadRushEnabled(s.headRushEnabled);
+      if (typeof s.headRushDotColor === 'string') setHeadRushDotColor(s.headRushDotColor);
+      if (typeof s.headRushContrastColor === 'string') setHeadRushContrastColor(s.headRushContrastColor);
+      if (typeof s.headRushDotSize === 'number') setHeadRushDotSize(s.headRushDotSize);
+      if (typeof s.headRushDotSpacing === 'number') setHeadRushDotSpacing(s.headRushDotSpacing);
+      if (typeof s.headRushShadowOffset === 'number') setHeadRushShadowOffset(s.headRushShadowOffset);
       if (typeof s.headExtrudeDepth === 'number') setHeadExtrudeDepth(s.headExtrudeDepth);
       if (typeof s.headExtrudeAngle === 'number') setHeadExtrudeAngle(s.headExtrudeAngle);
       if (typeof s.headExtrudeDistance === 'number') setHeadExtrudeDistance(s.headExtrudeDistance);
@@ -16457,6 +16683,8 @@ function exportDesignJSON(): string {
     headSliceEnabled, headSliceBandCount, headSliceBandGap, headSliceEchoDistance,
     headSliceTopColor, headSliceMidColor, headSliceBottomColor,
     headSliceBlur, headSliceFade, headSliceShadowStrength,
+    headRushEnabled, headRushDotColor, headRushContrastColor,
+    headRushDotSize, headRushDotSpacing, headRushShadowOffset,
     headExtrudeDepth, headExtrudeAngle, headExtrudeDistance, headExtrudeColor,
 
     // details (main)
@@ -16631,6 +16859,8 @@ function buildHistoryState() {
     headSliceEnabled, headSliceBandCount, headSliceBandGap, headSliceEchoDistance,
     headSliceTopColor, headSliceMidColor, headSliceBottomColor,
     headSliceBlur, headSliceFade, headSliceShadowStrength,
+    headRushEnabled, headRushDotColor, headRushContrastColor,
+    headRushDotSize, headRushDotSpacing, headRushShadowOffset,
     headExtrudeDepth, headExtrudeAngle, headExtrudeDistance, headExtrudeColor,
 
     // details (main)
@@ -16699,6 +16929,8 @@ const historySignature = React.useMemo(() => buildHistorySignature(), [
   headSliceEnabled, headSliceBandCount, headSliceBandGap, headSliceEchoDistance,
   headSliceTopColor, headSliceMidColor, headSliceBottomColor,
   headSliceBlur, headSliceFade, headSliceShadowStrength,
+  headRushEnabled, headRushDotColor, headRushContrastColor,
+  headRushDotSize, headRushDotSpacing, headRushShadowOffset,
   headExtrudeDepth, headExtrudeAngle, headExtrudeDistance, headExtrudeColor,
   details, bodyFamily, bodyColor, bodySize, bodyUppercase, bodyBold,
   bodyItalic, bodyUnderline, bodyTracking, detailsLineHeight,
@@ -19722,6 +19954,12 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       applyIfDefined(data.headSliceBlur, setHeadSliceBlur);
       applyIfDefined(data.headSliceFade, setHeadSliceFade);
       applyIfDefined(data.headSliceShadowStrength, setHeadSliceShadowStrength);
+      applyIfDefined(data.headRushEnabled, setHeadRushEnabled);
+      applyIfDefined(data.headRushDotColor, setHeadRushDotColor);
+      applyIfDefined(data.headRushContrastColor, setHeadRushContrastColor);
+      applyIfDefined(data.headRushDotSize, setHeadRushDotSize);
+      applyIfDefined(data.headRushDotSpacing, setHeadRushDotSpacing);
+      applyIfDefined(data.headRushShadowOffset, setHeadRushShadowOffset);
       applyIfDefined(data.headExtrudeDepth, setHeadExtrudeDepth);
       applyIfDefined(data.headExtrudeAngle, setHeadExtrudeAngle);
       applyIfDefined(data.headExtrudeDistance, setHeadExtrudeDistance);
@@ -20084,6 +20322,12 @@ const applyTemplate = React.useCallback<
     // --- SCALES & ROTATIONS ---
     setHeadRotate(merged.headRotate ?? 0);
     setHeadSkew((merged as any).headSkew ?? 0);
+    setHeadRushEnabled((merged as any).headRushEnabled ?? false);
+    setHeadRushDotColor((merged as any).headRushDotColor ?? "#10131b");
+    setHeadRushContrastColor((merged as any).headRushContrastColor ?? "#f4f4ef");
+    setHeadRushDotSize((merged as any).headRushDotSize ?? 2.4);
+    setHeadRushDotSpacing((merged as any).headRushDotSpacing ?? 8.5);
+    setHeadRushShadowOffset((merged as any).headRushShadowOffset ?? 9);
     setHead2Rotate(merged.head2Rotate ?? 0);
     setHead2Skew((merged as any).head2Skew ?? 0);
     setDetailsRotate(merged.detailsRotate ?? 0);
@@ -20972,6 +21216,12 @@ const syncCurrentStateToSession = () => {
     headSliceBlur,
     headSliceFade,
     headSliceShadowStrength,
+    headRushEnabled,
+    headRushDotColor,
+    headRushContrastColor,
+    headRushDotSize,
+    headRushDotSpacing,
+    headRushShadowOffset,
     headExtrudeDepth,
     headExtrudeAngle,
     headExtrudeDistance,
@@ -21207,6 +21457,12 @@ const syncHeadlineStyleToSession = React.useCallback(() => {
     headSliceBlur,
     headSliceFade,
     headSliceShadowStrength,
+    headRushEnabled,
+    headRushDotColor,
+    headRushContrastColor,
+    headRushDotSize,
+    headRushDotSpacing,
+    headRushShadowOffset,
     headExtrudeDepth,
     headExtrudeAngle,
     headExtrudeDistance,
@@ -21252,6 +21508,12 @@ const syncHeadlineStyleToSession = React.useCallback(() => {
   headSliceMidColor,
   headSliceShadowStrength,
   headSliceTopColor,
+  headRushContrastColor,
+  headRushDotColor,
+  headRushDotSize,
+  headRushDotSpacing,
+  headRushEnabled,
+  headRushShadowOffset,
   headX,
   headY,
   headline,
@@ -21394,7 +21656,7 @@ const [floatingAssetVisible, setFloatingAssetVisible] = React.useState(false);
 const [floatingBgVisible, setFloatingBgVisible] = React.useState(false);
 const [floatingLightingVisible, setFloatingLightingVisible] = React.useState(false);
 const [mobileTextFloatTab, setMobileTextFloatTab] = React.useState<"text" | "style">("text");
-const [mobileHeadlineStyleFocus, setMobileHeadlineStyleFocus] = React.useState<"3d" | "gradient" | "echo" | null>(null);
+const [mobileHeadlineStyleFocus, setMobileHeadlineStyleFocus] = React.useState<"3d" | "gradient" | "echo" | "rush" | null>(null);
 const [mobileLightingSlide, setMobileLightingSlide] = React.useState<0 | 1 | 2>(0);
 const [projectHelpOpen, setProjectHelpOpen] = React.useState(false);
 const [workflowHelpOpen, setWorkflowHelpOpen] = React.useState(false);
@@ -21430,6 +21692,12 @@ const headlinePresetBaselineRef = React.useRef<null | {
   headSliceBlur: number;
   headSliceFade: number;
   headSliceShadowStrength: number;
+  headRushEnabled: boolean;
+  headRushDotColor: string;
+  headRushContrastColor: string;
+  headRushDotSize: number;
+  headRushDotSpacing: number;
+  headRushShadowOffset: number;
   headShadow: boolean;
   headShadowStrength: number;
   headExtrudeDepth: number;
@@ -22227,6 +22495,12 @@ const applyHeadlineSportsPreset = React.useCallback(() => {
       headSliceBlur,
       headSliceFade,
       headSliceShadowStrength,
+      headRushEnabled,
+      headRushDotColor,
+      headRushContrastColor,
+      headRushDotSize,
+      headRushDotSpacing,
+      headRushShadowOffset,
       headShadow,
       headShadowStrength,
       headExtrudeDepth,
@@ -22258,6 +22532,7 @@ const applyHeadlineSportsPreset = React.useCallback(() => {
   setSessionValue(format, "textFx", nextFx);
   setHeadSkew(-12);
   setHeadSliceEnabled(false);
+  setHeadRushEnabled(false);
   setHeadShadow(false);
   setHeadShadowStrength(0);
   setHeadExtrudeDepth(28);
@@ -22289,6 +22564,12 @@ const applyHeadlineSportsPreset = React.useCallback(() => {
   headSliceMidColor,
   headSliceShadowStrength,
   headSliceTopColor,
+  headRushContrastColor,
+  headRushDotColor,
+  headRushDotSize,
+  headRushDotSpacing,
+  headRushEnabled,
+  headRushShadowOffset,
   headlineFamily,
   lineHeight,
   setSessionValue,
@@ -22312,6 +22593,12 @@ const applyHeadlineRetroSlicePreset = React.useCallback(() => {
       headSliceBlur,
       headSliceFade,
       headSliceShadowStrength,
+      headRushEnabled,
+      headRushDotColor,
+      headRushContrastColor,
+      headRushDotSize,
+      headRushDotSpacing,
+      headRushShadowOffset,
       headShadow,
       headShadowStrength,
       headExtrudeDepth,
@@ -22348,6 +22635,7 @@ const applyHeadlineRetroSlicePreset = React.useCallback(() => {
   setHeadShadowStrength(0);
   setHeadExtrudeDepth(0);
   setHeadExtrudeDistance(0);
+  setHeadRushEnabled(false);
   setHeadSliceEnabled(true);
   setHeadSliceBandCount(7);
   setHeadSliceBandGap(10);
@@ -22380,9 +22668,127 @@ const applyHeadlineRetroSlicePreset = React.useCallback(() => {
   headSliceMidColor,
   headSliceShadowStrength,
   headSliceTopColor,
+  headRushContrastColor,
+  headRushDotColor,
+  headRushDotSize,
+  headRushDotSpacing,
+  headRushEnabled,
+  headRushShadowOffset,
   headlineFamily,
   lineHeight,
   setSessionValue,
+  textFx,
+]);
+
+const applyHeadlineRushHalftonePreset = React.useCallback(() => {
+  if (!headlinePresetBaselineRef.current) {
+    headlinePresetBaselineRef.current = {
+      headlineFamily,
+      textFx,
+      headSkew,
+      headRotate,
+      headSliceEnabled,
+      headSliceBandCount,
+      headSliceBandGap,
+      headSliceEchoDistance,
+      headSliceTopColor,
+      headSliceMidColor,
+      headSliceBottomColor,
+      headSliceBlur,
+      headSliceFade,
+      headSliceShadowStrength,
+      headRushEnabled,
+      headRushDotColor,
+      headRushContrastColor,
+      headRushDotSize,
+      headRushDotSpacing,
+      headRushShadowOffset,
+      headShadow,
+      headShadowStrength,
+      headExtrudeDepth,
+      headExtrudeAngle,
+      headExtrudeDistance,
+      headExtrudeColor,
+      headAlign,
+      align,
+      lineHeight,
+    };
+  }
+
+  const rushFont = HEADLINE_FONTS_LOCAL.includes("Coolvetica Hv Comp")
+    ? "Coolvetica Hv Comp"
+    : "Nexa-Heavy";
+  const nextFx: TextFx = {
+    ...textFx,
+    uppercase: true,
+    bold: true,
+    italic: false,
+    tracking: -0.055,
+    gradient: false,
+    color: "#ef2b2d",
+    gradFrom: "#ef2b2d",
+    gradTo: "#ff5a38",
+    strokeWidth: 1.4,
+    strokeColor: "#050812",
+    glow: 0,
+    shadowEnabled: false,
+  };
+
+  setHeadlineFamily(rushFont);
+  setTextStyle("headline", format, { family: rushFont, align: "center" });
+  setTextFx(nextFx);
+  setSessionValue(format, "textFx", nextFx);
+  setHeadRushEnabled(true);
+  setHeadRushDotColor("#11141d");
+  setHeadRushContrastColor("#f4f1e7");
+  setHeadRushDotSize(2.4);
+  setHeadRushDotSpacing(8.5);
+  setHeadRushShadowOffset(10);
+  setHeadSkew(-14);
+  setHeadRotate(-2);
+  setHeadSliceEnabled(false);
+  setHeadShadow(false);
+  setHeadShadowStrength(0);
+  setHeadExtrudeDepth(16);
+  setHeadExtrudeAngle(32);
+  setHeadExtrudeDistance(22);
+  setHeadExtrudeColor("#050812");
+  setHeadAlign("center");
+  setAlign("center");
+  setLineHeight(0.78);
+  setMobileHeadlineStyleFocus("rush");
+}, [
+  align,
+  format,
+  headAlign,
+  headExtrudeAngle,
+  headExtrudeColor,
+  headExtrudeDepth,
+  headExtrudeDistance,
+  headRotate,
+  headRushContrastColor,
+  headRushDotColor,
+  headRushDotSize,
+  headRushDotSpacing,
+  headRushEnabled,
+  headRushShadowOffset,
+  headShadow,
+  headShadowStrength,
+  headSkew,
+  headSliceBandCount,
+  headSliceBandGap,
+  headSliceBlur,
+  headSliceBottomColor,
+  headSliceEchoDistance,
+  headSliceEnabled,
+  headSliceFade,
+  headSliceMidColor,
+  headSliceShadowStrength,
+  headSliceTopColor,
+  headlineFamily,
+  lineHeight,
+  setSessionValue,
+  setTextStyle,
   textFx,
 ]);
 
@@ -22399,6 +22805,7 @@ const resetHeadlinePresetStyles = React.useCallback(() => {
     setSessionValue(format, "textFx", nextFx);
     setHeadSkew(0);
     setHeadSliceEnabled(false);
+    setHeadRushEnabled(false);
     setHeadExtrudeDepth(0);
     setHeadExtrudeDistance(0);
     setMobileHeadlineStyleFocus(null);
@@ -22420,6 +22827,12 @@ const resetHeadlinePresetStyles = React.useCallback(() => {
   setHeadSliceBlur(baseline.headSliceBlur);
   setHeadSliceFade(baseline.headSliceFade);
   setHeadSliceShadowStrength(baseline.headSliceShadowStrength);
+  setHeadRushEnabled(baseline.headRushEnabled);
+  setHeadRushDotColor(baseline.headRushDotColor);
+  setHeadRushContrastColor(baseline.headRushContrastColor);
+  setHeadRushDotSize(baseline.headRushDotSize);
+  setHeadRushDotSpacing(baseline.headRushDotSpacing);
+  setHeadRushShadowOffset(baseline.headRushShadowOffset);
   setHeadShadow(baseline.headShadow);
   setHeadShadowStrength(baseline.headShadowStrength);
   setHeadExtrudeDepth(baseline.headExtrudeDepth);
@@ -23262,8 +23675,11 @@ const showMobileHeadlineStyleControls =
 const headline3dStyleActive = headExtrudeDepth > 0 || headExtrudeDistance > 0;
 const headlineEchoStyleActive = !!headSliceEnabled;
 const headlineGradientStyleActive = !!textFx.gradient;
-const inferredMobileHeadlineStyleFocus: "3d" | "gradient" | "echo" | null =
-  headlineEchoStyleActive
+const headlineRushStyleActive = !!headRushEnabled;
+const inferredMobileHeadlineStyleFocus: "3d" | "gradient" | "echo" | "rush" | null =
+  headlineRushStyleActive
+    ? "rush"
+    : headlineEchoStyleActive
     ? "echo"
     : headline3dStyleActive
       ? "3d"
@@ -23278,6 +23694,8 @@ const showMobileHeadlineGradientControls =
   showMobileHeadlineStyleControls && activeMobileHeadlineStyleFocus === "gradient";
 const showMobileHeadlineEchoControls =
   showMobileHeadlineStyleControls && activeMobileHeadlineStyleFocus === "echo";
+const showMobileHeadlineRushControls =
+  showMobileHeadlineStyleControls && activeMobileHeadlineStyleFocus === "rush";
 const activeMobileTextFloatPanelStyle = headlineTextStyleTabsVisible
   ? mobileHeadlineFloatPanelStyle
   : mobileFloatPanelStyle;
@@ -26757,8 +27175,11 @@ style={{ top: STICKY_TOP }}
         <Chip small onClick={applyHeadlineRetroSlicePreset}>
           Retro Slice
         </Chip>
+        <Chip small active={headRushEnabled} onClick={applyHeadlineRushHalftonePreset}>
+          Rush Halftone 3D
+        </Chip>
         <span className="text-[11px] text-neutral-500">
-          Flat 3D adds extrusion. Retro Slice adds clipped echo bands.
+          Flat 3D adds extrusion. Retro Slice adds clipped echo bands. Rush adds halftone poster layers.
         </span>
       </div>
 
@@ -26829,6 +27250,7 @@ style={{ top: STICKY_TOP }}
           Gradient
         </Chip>
         <Chip small active={headSliceEnabled} onClick={() => setHeadSliceEnabled((v) => !v)}>Echo Bands</Chip>
+        <Chip small active={headRushEnabled} onClick={() => setHeadRushEnabled((v) => !v)}>Rush FX</Chip>
         <Chip
           small
           active={textFx.strokeWidth > 0}
@@ -26954,6 +27376,37 @@ style={{ top: STICKY_TOP }}
         </>
       )}
 
+      {headRushEnabled && (
+        <div className="grid grid-cols-3 gap-3 mt-2">
+          <Stepper
+            label="Dot Size"
+            value={headRushDotSize}
+            setValue={setHeadRushDotSize}
+            min={0.8}
+            max={9}
+            step={0.1}
+            digits={1}
+          />
+          <Stepper
+            label="Dot Space"
+            value={headRushDotSpacing}
+            setValue={setHeadRushDotSpacing}
+            min={4}
+            max={28}
+            step={0.5}
+            digits={1}
+          />
+          <Stepper
+            label="Shadow Offset"
+            value={headRushShadowOffset}
+            setValue={setHeadRushShadowOffset}
+            min={0}
+            max={42}
+            step={1}
+          />
+        </div>
+      )}
+
       <div className="flex items-end mt-2 flex-wrap w-full">
         <div className="ml-auto flex flex-wrap items-center gap-3 justify-end text-[11px]">
           <span className="opacity-80">Fill</span>
@@ -26997,6 +27450,14 @@ style={{ top: STICKY_TOP }}
               <ColorDot value={headSliceMidColor} onChange={setHeadSliceMidColor} />
               <span className="opacity-80">Bottom</span>
               <ColorDot value={headSliceBottomColor} onChange={setHeadSliceBottomColor} />
+            </>
+          )}
+          {headRushEnabled && (
+            <>
+              <span className="opacity-80">Dots</span>
+              <ColorDot value={headRushDotColor} onChange={setHeadRushDotColor} />
+              <span className="opacity-80">Stripe</span>
+              <ColorDot value={headRushContrastColor} onChange={setHeadRushContrastColor} />
             </>
           )}
           <span className="opacity-80">Stroke</span>
@@ -28270,6 +28731,12 @@ style={{ top: STICKY_TOP }}
             headSliceBlur={headSliceBlur}
             headSliceFade={headSliceFade}
             headSliceShadowStrength={headSliceShadowStrength}
+            headRushEnabled={headRushEnabled}
+            headRushDotColor={headRushDotColor}
+            headRushContrastColor={headRushContrastColor}
+            headRushDotSize={headRushDotSize}
+            headRushDotSpacing={headRushDotSpacing}
+            headRushShadowOffset={headRushShadowOffset}
             headExtrudeDepth={headExtrudeDepth}
             headExtrudeAngle={headExtrudeAngle}
             headExtrudeDistance={headExtrudeDistance}
@@ -28600,6 +29067,18 @@ style={{ top: STICKY_TOP }}
                   </Chip>
                   <Chip
                     small
+                    active={activeMobileHeadlineStyleFocus === "rush"}
+                    onClick={() => {
+                      setMobileHeadlineStyleFocus("rush");
+                      if (!headlineRushStyleActive) {
+                        applyHeadlineRushHalftonePreset();
+                      }
+                    }}
+                  >
+                    Rush
+                  </Chip>
+                  <Chip
+                    small
                     active={activeMobileHeadlineStyleFocus === "gradient"}
                     onClick={() => {
                       if (!headlinePresetBaselineRef.current) {
@@ -28618,6 +29097,12 @@ style={{ top: STICKY_TOP }}
                           headSliceBlur,
                           headSliceFade,
                           headSliceShadowStrength,
+                          headRushEnabled,
+                          headRushDotColor,
+                          headRushContrastColor,
+                          headRushDotSize,
+                          headRushDotSpacing,
+                          headRushShadowOffset,
                           headShadow,
                           headShadowStrength,
                           headExtrudeDepth,
@@ -28730,6 +29215,102 @@ style={{ top: STICKY_TOP }}
                     )}
                     <span className="text-[10px] uppercase tracking-wider text-neutral-400">3D</span>
                     <ColorDot value={headExtrudeColor} onChange={setHeadExtrudeColor} />
+                  </div>
+                </>
+              )}
+              {showMobileHeadlineRushControls && (
+                <>
+                  {activeTextControls.color && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[10px] uppercase tracking-wider text-neutral-400">Fill</span>
+                      <ColorDot
+                        value={activeTextControls.color}
+                        allowNone={!!activeTextControls.allowNoFill}
+                        noneTitle="No fill"
+                        onChange={(v) => activeTextControls.onColor?.(v)}
+                      />
+                      <span className="text-[10px] uppercase tracking-wider text-neutral-400">Dots</span>
+                      <ColorDot value={headRushDotColor} onChange={setHeadRushDotColor} />
+                      <span className="text-[10px] uppercase tracking-wider text-neutral-400">Stripe</span>
+                      <ColorDot value={headRushContrastColor} onChange={setHeadRushContrastColor} />
+                      <span className="text-[10px] uppercase tracking-wider text-neutral-400">3D</span>
+                      <ColorDot value={headExtrudeColor} onChange={setHeadExtrudeColor} />
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
+                    <div>
+                      <InlineSliderInput
+                        label="Dot Size"
+                        value={headRushDotSize}
+                        min={0.8}
+                        max={9}
+                        step={0.1}
+                        precision={1}
+                        onChange={setHeadRushDotSize}
+                        rangeClassName="flex-1 accent-red-400"
+                      />
+                    </div>
+                    <div>
+                      <InlineSliderInput
+                        label="Dot Spacing"
+                        value={headRushDotSpacing}
+                        min={4}
+                        max={28}
+                        step={0.5}
+                        precision={1}
+                        onChange={setHeadRushDotSpacing}
+                        rangeClassName="flex-1 accent-orange-400"
+                      />
+                    </div>
+                    <div>
+                      <InlineSliderInput
+                        label="Shadow Offset"
+                        value={headRushShadowOffset}
+                        min={0}
+                        max={42}
+                        step={1}
+                        precision={0}
+                        onChange={setHeadRushShadowOffset}
+                        rangeClassName="flex-1 accent-slate-400"
+                      />
+                    </div>
+                    <div>
+                      <InlineSliderInput
+                        label="Slant"
+                        value={headSkew}
+                        min={-45}
+                        max={45}
+                        step={1}
+                        precision={0}
+                        suffix="°"
+                        onChange={setHeadSkew}
+                        rangeClassName="flex-1 accent-emerald-400"
+                      />
+                    </div>
+                    <div>
+                      <InlineSliderInput
+                        label="3D Depth"
+                        value={headExtrudeDepth}
+                        min={0}
+                        max={HEADLINE_EXTRUDE_MAX_DEPTH}
+                        step={1}
+                        precision={0}
+                        onChange={setHeadExtrudeDepth}
+                        rangeClassName="flex-1 accent-cyan-400"
+                      />
+                    </div>
+                    <div>
+                      <InlineSliderInput
+                        label="3D Distance"
+                        value={headExtrudeDistance}
+                        min={0}
+                        max={HEADLINE_EXTRUDE_MAX_DISTANCE}
+                        step={1}
+                        precision={0}
+                        onChange={setHeadExtrudeDistance}
+                        rangeClassName="flex-1 accent-amber-400"
+                      />
+                    </div>
                   </div>
                 </>
               )}
