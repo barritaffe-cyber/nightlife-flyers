@@ -1558,18 +1558,6 @@ type TextFx = {
   shadowEnabled: boolean;   // <— ADD THIS LINE
 };
 
-type GlitchSegment = {
-  top: number;
-  left: number;
-  width: number;
-  height: number;
-  x: number;
-  y: number;
-  color: string;
-  opacity?: number;
-  z?: number;
-};
-
 type HalftoneHeadlineSvgProps = {
   text: string;
   align: Align;
@@ -1857,14 +1845,6 @@ function mulberry32(a: number) {
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-}
-function stableStringSeed(value: string) {
-  let hash = 2166136261;
-  for (let i = 0; i < value.length; i += 1) {
-    hash ^= value.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-  return hash >>> 0;
 }
 function pickN<T>(arr: T[], n: number, rng: () => number): T[] {
   const a = [...arr];
@@ -2876,7 +2856,6 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
     onToggleLock,
     onSelectIcon,
   } = p;
-  const reduceHeadlineEffects = useFlyerState((st) => st.isLiveDragging) && !hideUiForExport;
 
 // === LOCK UI (single source) ===
 const NEON = 'rgba(167,139,250,0.95)';
@@ -4524,100 +4503,39 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     const sliceAreaHeight = estimatedTextHeight + sliceEchoDistance * 2;
     const sliceBandSlotHeight = sliceAreaHeight / sliceBandCount;
     const sliceClipHeight = Math.max(2, sliceBandSlotHeight - Math.max(0, Number(headSliceBandGap) || 0));
-    const mainSliceShadow =
-      headSliceEnabled && headSliceShadowStrength > 0
-        ? `0 ${Math.round(12 * headSliceShadowStrength)}px 0 rgba(0,0,0,${Math.min(0.45, 0.18 + headSliceShadowStrength * 0.4)})`
-        : "none";
-    const glitchActive = !!headGlitchEnabled;
-    const liveGlitchPreview = reduceHeadlineEffects && glitchActive && !exportTextMode;
-    const rushActive = !!headRushEnabled && !glitchActive;
-    const rushFillColor =
-      textFx.color && textFx.color !== "transparent" && textFx.color !== "none"
-        ? textFx.color
-        : "#ef2a2a";
-    const glitchBaseColor =
-      textFx.color && textFx.color !== "transparent" && textFx.color !== "none"
-        ? textFx.color
-        : "#12fff7";
-    const glitchIntensity = Math.max(0, Math.min(1, Number(headGlitchIntensity) || 0));
-    const glitchRgbSplit = Math.max(0, Math.min(32, Number(headGlitchRgbSplit) || 0));
-    const glitchNoise = Math.max(0, Math.min(1, Number(headGlitchNoise) || 0));
-    const glitchGlow = Math.max(0, Math.min(1, Number(headGlitchGlow) || 0));
-    const glitchLayerScale = glitchRgbSplit > 0 ? glitchRgbSplit / 18 : 0;
-    const chromaScale = Math.max(0.65, glitchLayerScale);
-    const glitchChromaScale = chromaScale * (0.55 + glitchIntensity * 0.9);
-    const glitchMaskScale = chromaScale * (0.35 + glitchIntensity * 0.95);
-    const glitchDepthDistance = glitchActive
-      ? Math.max(0, Math.min(HEADLINE_EXTRUDE_MAX_DISTANCE, Math.max(extrudeDistance, extrudeDepth * 0.65)))
-      : 0;
-    const glitchDepthX = Math.cos(extrudeAngleRad) * glitchDepthDistance;
-    const glitchDepthY = Math.sin(extrudeAngleRad) * glitchDepthDistance;
-    const glitchDepthOpacity = Math.min(0.82, 0.28 + extrudeDepth * 0.035 + glitchDepthDistance * 0.015);
-    const glitchDepthStroke = Math.max(1, Math.min(5, 1 + extrudeDepth * 0.12));
-    const glitchRedColor = headGlitchRedColor || "#ff1d25";
-    const glitchMagentaColor = headGlitchMagentaColor || "#ff18d8";
-    const glitchBlueColor = headGlitchBlueColor || "#004bff";
-    const glitchYellowColor = headGlitchYellowColor || "#d8ff25";
-    const liveGlitchTextShadow = [
-      glitchDepthDistance > 0 || extrudeDepth > 0
-        ? `${glitchDepthX.toFixed(1)}px ${glitchDepthY.toFixed(1)}px 0 ${headExtrudeColor || "#050812"}`
-        : null,
-      `${(10 * glitchChromaScale).toFixed(1)}px ${(-10 * glitchChromaScale).toFixed(1)}px 0 ${glitchRedColor}`,
-      `${(-8 * glitchChromaScale).toFixed(1)}px ${(11 * glitchChromaScale).toFixed(1)}px 0 ${glitchMagentaColor}`,
-      `${(8 * glitchChromaScale).toFixed(1)}px ${(3 * glitchChromaScale).toFixed(1)}px 0 ${glitchBlueColor}`,
-      `0 0 ${(4 + glitchGlow * 10).toFixed(1)}px rgba(18,255,247,0.68)`,
-    ]
-      .filter(Boolean)
-      .join(", ");
-    const glitchSeed = stableStringSeed(
-      [
-        headlineText,
-        headlineFamily,
-        Math.round(headDisplayPx),
-        textFx.tracking.toFixed(3),
-        glitchIntensity.toFixed(2),
-        glitchRgbSplit.toFixed(0),
-      ].join("|")
-    );
-    const glitchLineRng = mulberry32(glitchSeed ^ 0x52c8e9);
-    const glitchLineColors = [glitchRedColor, glitchMagentaColor, glitchBlueColor, "#12fff7", "#ffffff"];
-    const scaleGlitchSegments = (segments: GlitchSegment[]): GlitchSegment[] =>
-      segments.map((seg) => ({
-        ...seg,
-        x: seg.x * glitchMaskScale,
-        y: seg.y * glitchMaskScale,
-        opacity: (seg.opacity ?? 1) * (0.35 + glitchIntensity * 0.75),
-      }));
-    const redGlitchSegments = liveGlitchPreview ? [] : scaleGlitchSegments([
-      { top: 0.03, left: 0.08, width: 0.15, height: 0.12, x: 18, y: -10, color: glitchRedColor, opacity: 1, z: 2 },
-      { top: 0.04, left: 0.34, width: 0.2, height: 0.1, x: 16, y: -9, color: glitchRedColor, opacity: 1, z: 2 },
-      { top: 0.07, left: 0.64, width: 0.18, height: 0.1, x: 15, y: -8, color: glitchRedColor, opacity: 1, z: 2 },
-    ]);
-    const magentaGlitchSegments = liveGlitchPreview ? [] : scaleGlitchSegments([
-      { top: 0.54, left: 0.02, width: 0.16, height: 0.13, x: -15, y: 10, color: glitchMagentaColor, opacity: 0.95, z: 4 },
-      { top: 0.66, left: 0.3, width: 0.18, height: 0.11, x: -13, y: 9, color: glitchMagentaColor, opacity: 0.95, z: 4 },
-      { top: 0.58, left: 0.72, width: 0.16, height: 0.12, x: -14, y: 10, color: glitchMagentaColor, opacity: 0.95, z: 4 },
-    ]);
-    const blueGlitchSegments = liveGlitchPreview ? [] : scaleGlitchSegments([
-      { top: 0.3, left: 0.12, width: 0.13, height: 0.08, x: 13, y: 3, color: glitchBlueColor, opacity: 0.9, z: 6 },
-      { top: 0.38, left: 0.42, width: 0.16, height: 0.075, x: 12, y: 2, color: glitchBlueColor, opacity: 0.9, z: 6 },
-      { top: 0.44, left: 0.7, width: 0.15, height: 0.08, x: 13, y: 3, color: glitchBlueColor, opacity: 0.9, z: 6 },
-    ]);
-    const microAccentSegments = liveGlitchPreview ? [] : scaleGlitchSegments([
-      { top: 0.36, left: 0.16, width: 0.08, height: 0.035, x: 5, y: 2, color: glitchYellowColor, opacity: 0.9, z: 8 },
-      { top: 0.52, left: 0.57, width: 0.07, height: 0.03, x: -4, y: 2, color: glitchYellowColor, opacity: 0.85, z: 8 },
-    ]);
-    const glitchLines = liveGlitchPreview ? [] : Array.from({ length: 3 + Math.floor(glitchLineRng() * 3) }, (_, idx) => {
-      const fromLeftEdge = glitchLineRng() > 0.5;
-      const left = fromLeftEdge ? -8 + glitchLineRng() * 34 : 66 + glitchLineRng() * 28;
-      return {
-        top: `${Math.round(14 + glitchLineRng() * 68)}%`,
-        left: `${left.toFixed(1)}%`,
-        width: `${(4 + glitchLineRng() * 8).toFixed(1)}%`,
-        color: glitchLineColors[(idx + Math.floor(glitchLineRng() * glitchLineColors.length)) % glitchLineColors.length],
-        height: glitchLineRng() > 0.72 ? 3 : 2,
-      };
-    });
+	    const mainSliceShadow =
+	      headSliceEnabled && headSliceShadowStrength > 0
+	        ? `0 ${Math.round(12 * headSliceShadowStrength)}px 0 rgba(0,0,0,${Math.min(0.45, 0.18 + headSliceShadowStrength * 0.4)})`
+	        : "none";
+	    const glitchActive = !!headGlitchEnabled;
+	    const rushActive = !!headRushEnabled && !glitchActive;
+	    const rushFillColor =
+	      textFx.color && textFx.color !== "transparent" && textFx.color !== "none"
+	        ? textFx.color
+	        : "#ef2a2a";
+	    const glitchIntensity = Math.max(0, Math.min(1, Number(headGlitchIntensity) || 0));
+	    const glitchRgbSplit = Math.max(0, Math.min(32, Number(headGlitchRgbSplit) || 0));
+	    const glitchNoise = Math.max(0, Math.min(1, Number(headGlitchNoise) || 0));
+	    const glitchGlow = Math.max(0, Math.min(1, Number(headGlitchGlow) || 0));
+	    const glitchChannelOffset = glitchRgbSplit * (0.45 + glitchIntensity * 0.75);
+	    const glitchDepthDistance = glitchActive
+	      ? Math.max(0, Math.min(HEADLINE_EXTRUDE_MAX_DISTANCE, Math.max(extrudeDistance, extrudeDepth * 0.65)))
+	      : 0;
+	    const glitchDepthX = Math.cos(extrudeAngleRad) * glitchDepthDistance;
+	    const glitchDepthY = Math.sin(extrudeAngleRad) * glitchDepthDistance;
+	    const glitchDepthOpacity = Math.min(0.82, 0.28 + extrudeDepth * 0.035 + glitchDepthDistance * 0.015);
+	    const glitchDepthStroke = Math.max(1, Math.min(5, 1 + extrudeDepth * 0.12));
+	    const glitchRedColor = headGlitchRedColor || "#ff1d25";
+	    const savedGreenColor = String(headGlitchMagentaColor || "").trim().toLowerCase();
+	    const glitchGreenColor = savedGreenColor && savedGreenColor !== "#ff18d8" ? headGlitchMagentaColor : "#00ff66";
+	    const glitchBlueColor = headGlitchBlueColor || "#004bff";
+	    const glitchRedTransform = `translate(${(-glitchChannelOffset).toFixed(1)}px, ${(-glitchChannelOffset * 0.08).toFixed(1)}px)`;
+	    const glitchBlueTransform = `translate(${glitchChannelOffset.toFixed(1)}px, ${(glitchChannelOffset * 0.08).toFixed(1)}px)`;
+	    const glitchChannelStrokeWidth = Math.max(0, textFx.strokeWidth || 0);
+	    const glitchGlowFilter =
+	      glitchGlow > 0
+	        ? `drop-shadow(0 0 ${(2 + glitchGlow * 10).toFixed(1)}px rgba(255,255,255,${(0.08 + glitchGlow * 0.22).toFixed(2)}))`
+	        : "none";
     const rushMaxDotPx = Math.max(1.2, Math.min(14, Number(headRushDotSize) || 7.8));
     const rushShadowPx = Math.max(0, Math.min(42, Number(headRushShadowOffset) || 0));
     const rushDepthDistance = Math.max(
@@ -4669,53 +4587,22 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
               ...lineStyle,
             },
           });
-    const renderRushTextLayer = (
-      key: string,
-      style: React.CSSProperties,
-      lineStyle: React.CSSProperties
-    ) => (
+	    const renderRushTextLayer = (
+	      key: string,
+	      style: React.CSSProperties,
+	      lineStyle: React.CSSProperties
+	    ) => (
       <h1
         key={key}
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 font-black select-none"
         style={{ ...rushLayerBase, ...style }}
       >
-        {renderRushTextContent(lineStyle)}
-      </h1>
-    );
-    const renderMaskedGlitchSegment = (seg: GlitchSegment, idx: number) => {
-      const right = Math.max(0, 1 - seg.left - seg.width);
-      const bottom = Math.max(0, 1 - seg.top - seg.height);
-      const clipPath = `inset(${(seg.top * 100).toFixed(2)}% ${(right * 100).toFixed(2)}% ${(bottom * 100).toFixed(2)}% ${(seg.left * 100).toFixed(2)}%)`;
-      const segmentStyle: React.CSSProperties = {
-        color: seg.color,
-        WebkitTextFillColor: seg.color,
-        WebkitTextStrokeWidth: "1.2px",
-        WebkitTextStrokeColor: seg.color,
-        paintOrder: "stroke fill",
-      };
-
-      return (
-        <h1
-          key={`masked-glitch-seg-${idx}`}
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 font-black select-none"
-          style={{
-            ...rushLayerBase,
-            clipPath,
-            WebkitClipPath: clipPath,
-            ...segmentStyle,
-            transform: `translate(${seg.x.toFixed(1)}px, ${seg.y.toFixed(1)}px)`,
-            opacity: seg.opacity ?? 0.9,
-            zIndex: seg.z ?? 2,
-          }}
-        >
-          {renderRushTextContent(segmentStyle)}
-        </h1>
-      );
-    };
-
-    return (
+	        {renderRushTextContent(lineStyle)}
+	      </h1>
+	    );
+	
+	    return (
       <div
         className="relative"
         style={{
@@ -4857,145 +4744,27 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
             );
           })}
 
-        {glitchActive && !liveGlitchPreview && (
-          <>
-            {(glitchDepthDistance > 0 || extrudeDepth > 0) &&
-              renderRushTextLayer(
-                "headline-glitch-depth",
-                {
-                  color: headExtrudeColor || "#050812",
-                  WebkitTextFillColor: headExtrudeColor || "#050812",
-                  WebkitTextStrokeWidth: `${glitchDepthStroke.toFixed(1)}px`,
-                  WebkitTextStrokeColor: headExtrudeColor || "#050812",
-                  paintOrder: "stroke fill",
-                  transform: `translate(${glitchDepthX.toFixed(1)}px, ${glitchDepthY.toFixed(1)}px)`,
-                  opacity: glitchDepthOpacity,
-                  zIndex: 0,
-                },
-                {
-                  color: headExtrudeColor || "#050812",
-                  WebkitTextFillColor: headExtrudeColor || "#050812",
-                  WebkitTextStrokeWidth: `${glitchDepthStroke.toFixed(1)}px`,
-                  WebkitTextStrokeColor: headExtrudeColor || "#050812",
-                }
-              )}
-            {renderRushTextLayer(
-              "headline-glitch-soft-cyan-glow",
-              {
-                color: "#12fff7",
-                WebkitTextFillColor: "#12fff7",
-                filter: `blur(${(6 + glitchGlow * 18).toFixed(1)}px)`,
-                opacity: 0.16 + glitchIntensity * 0.22,
-                zIndex: 1,
-              },
-              {
-                color: "#12fff7",
-                WebkitTextFillColor: "#12fff7",
-              }
-            )}
-            {renderRushTextLayer(
-              "headline-glitch-red-full-duplicate",
-              {
-                color: glitchRedColor,
-                WebkitTextFillColor: glitchRedColor,
-                WebkitTextStrokeWidth: "1.2px",
-                WebkitTextStrokeColor: glitchRedColor,
-                paintOrder: "stroke fill",
-                transform: `translate(${(10 * glitchChromaScale).toFixed(1)}px, ${(-10 * glitchChromaScale).toFixed(1)}px)`,
-                opacity: 0.28 + glitchIntensity * 0.62,
-                zIndex: 1,
-              },
-              {
-                color: glitchRedColor,
-                WebkitTextFillColor: glitchRedColor,
-                WebkitTextStrokeWidth: "1.2px",
-                WebkitTextStrokeColor: glitchRedColor,
-              }
-            )}
-            {redGlitchSegments.map(renderMaskedGlitchSegment)}
-            {renderRushTextLayer(
-              "headline-glitch-magenta-full-duplicate",
-              {
-                color: glitchMagentaColor,
-                WebkitTextFillColor: glitchMagentaColor,
-                WebkitTextStrokeWidth: "1.2px",
-                WebkitTextStrokeColor: glitchMagentaColor,
-                paintOrder: "stroke fill",
-                transform: `translate(${(-8 * glitchChromaScale).toFixed(1)}px, ${(11 * glitchChromaScale).toFixed(1)}px)`,
-                opacity: 0.24 + glitchIntensity * 0.52,
-                zIndex: 3,
-              },
-              {
-                color: glitchMagentaColor,
-                WebkitTextFillColor: glitchMagentaColor,
-                WebkitTextStrokeWidth: "1.2px",
-                WebkitTextStrokeColor: glitchMagentaColor,
-              }
-            )}
-            {magentaGlitchSegments.map(renderMaskedGlitchSegment)}
-            {renderRushTextLayer(
-              "headline-glitch-blue-full-duplicate",
-              {
-                color: glitchBlueColor,
-                WebkitTextFillColor: glitchBlueColor,
-                WebkitTextStrokeWidth: "1.2px",
-                WebkitTextStrokeColor: glitchBlueColor,
-                paintOrder: "stroke fill",
-                transform: `translate(${(8 * glitchChromaScale).toFixed(1)}px, ${(3 * glitchChromaScale).toFixed(1)}px)`,
-                opacity: 0.22 + glitchIntensity * 0.45,
-                zIndex: 5,
-              },
-              {
-                color: glitchBlueColor,
-                WebkitTextFillColor: glitchBlueColor,
-                WebkitTextStrokeWidth: "1.2px",
-                WebkitTextStrokeColor: glitchBlueColor,
-              }
-            )}
-            {blueGlitchSegments.map(renderMaskedGlitchSegment)}
-            {renderRushTextLayer(
-              "headline-glitch-yellow-full-duplicate",
-              {
-                color: glitchYellowColor,
-                WebkitTextFillColor: glitchYellowColor,
-                WebkitTextStrokeWidth: "1px",
-                WebkitTextStrokeColor: glitchYellowColor,
-                paintOrder: "stroke fill",
-                transform: `translate(${(-10 * glitchChromaScale).toFixed(1)}px, ${(2 * glitchChromaScale).toFixed(1)}px)`,
-                opacity: 0.16 + glitchIntensity * 0.34,
-                zIndex: 7,
-              },
-              {
-                color: glitchYellowColor,
-                WebkitTextFillColor: glitchYellowColor,
-                WebkitTextStrokeWidth: "1px",
-                WebkitTextStrokeColor: glitchYellowColor,
-              }
-            )}
-            {microAccentSegments.map(renderMaskedGlitchSegment)}
-            {renderRushTextLayer(
-              "headline-glitch-offset-white-stroke",
-              {
-                color: "transparent",
-                WebkitTextFillColor: "transparent",
-                WebkitTextStrokeWidth: `${Math.max(1.8, (textFx.strokeWidth || 1.6) + 0.8)}px`,
-                WebkitTextStrokeColor: "#f2ffff",
-                opacity: 0.68,
-                paintOrder: "stroke fill",
-                transform: `translate(${(7 * chromaScale).toFixed(1)}px, 0)`,
-                transformOrigin: "50% 50%",
-                zIndex: 8,
-              },
-              {
-                color: "transparent",
-                WebkitTextFillColor: "transparent",
-                WebkitTextStrokeWidth: `${Math.max(1.8, (textFx.strokeWidth || 1.6) + 0.8)}px`,
-                WebkitTextStrokeColor: "#f2ffff",
-                paintOrder: "stroke fill",
-              }
-            )}
-          </>
-        )}
+	        {glitchActive &&
+	          (glitchDepthDistance > 0 || extrudeDepth > 0) &&
+	          renderRushTextLayer(
+	            "headline-glitch-depth",
+	            {
+	              color: headExtrudeColor || "#050812",
+	              WebkitTextFillColor: headExtrudeColor || "#050812",
+	              WebkitTextStrokeWidth: `${glitchDepthStroke.toFixed(1)}px`,
+	              WebkitTextStrokeColor: headExtrudeColor || "#050812",
+	              paintOrder: "stroke fill",
+	              transform: `translate(${glitchDepthX.toFixed(1)}px, ${glitchDepthY.toFixed(1)}px)`,
+	              opacity: glitchDepthOpacity,
+	              zIndex: 0,
+	            },
+	            {
+	              color: headExtrudeColor || "#050812",
+	              WebkitTextFillColor: headExtrudeColor || "#050812",
+	              WebkitTextStrokeWidth: `${glitchDepthStroke.toFixed(1)}px`,
+	              WebkitTextStrokeColor: headExtrudeColor || "#050812",
+	            }
+	          )}
 
         {rushActive ? (
           <div className="relative" style={{ zIndex: 3 }}>
@@ -5040,31 +4809,29 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
             fontStretch: glitchActive ? "normal" : undefined,
             textDecorationLine: textFx.underline ? 'underline' : 'none',
             opacity: textFx.alpha,
-            color: exportTextMode
-              ? headlineExportColor
-              : glitchActive
-              ? glitchBaseColor
-              : rushActive
-              ? rushFillColor
-              : textFx.gradient
-              ? 'transparent'
-              : textFx.color,
-            WebkitTextFillColor: exportTextMode
-              ? headlineExportColor
-              : glitchActive
-              ? glitchBaseColor
-              : rushActive
-              ? rushFillColor
-              : undefined,
-            WebkitTextStrokeWidth: glitchActive ? `${textFx.strokeWidth || 1.6}px` : undefined,
-            WebkitTextStrokeColor: glitchActive ? textFx.strokeColor || "#f2ffff" : undefined,
-            paintOrder: glitchActive ? "stroke fill" : undefined,
-            textShadow: dragging
-              ? 'none'
-              : glitchActive
-              ? liveGlitchPreview
-                ? liveGlitchTextShadow
-                : "0 0 12px rgba(18,255,247,.75)"
+	            color: glitchActive
+	              ? glitchGreenColor
+	              : exportTextMode
+	              ? headlineExportColor
+	              : rushActive
+	              ? rushFillColor
+	              : textFx.gradient
+	              ? 'transparent'
+	              : textFx.color,
+	            WebkitTextFillColor: glitchActive
+	              ? glitchGreenColor
+	              : exportTextMode
+	              ? headlineExportColor
+	              : rushActive
+	              ? rushFillColor
+	              : undefined,
+	            WebkitTextStrokeWidth: glitchActive ? `${textFx.strokeWidth || 1.6}px` : undefined,
+	            WebkitTextStrokeColor: glitchActive ? glitchGreenColor : undefined,
+	            paintOrder: glitchActive ? "stroke fill" : undefined,
+	            textShadow: dragging
+	              ? 'none'
+	              : glitchActive
+	              ? 'none'
               : headSliceEnabled
               ? mainSliceShadow
               : headShadow
@@ -5092,11 +4859,17 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
                     lineStyle: {
                       display: 'block',
                       width: '100%',
-                      WebkitTextStrokeWidth: textFx.strokeWidth
-                        ? `${textFx.strokeWidth}px`
-                        : undefined,
-                      WebkitTextStrokeColor: textFx.strokeColor,
-                      paintOrder: glitchActive ? "stroke fill" : undefined,
+	                      WebkitTextStrokeWidth: textFx.strokeWidth
+	                        ? `${textFx.strokeWidth}px`
+	                        : undefined,
+	                      WebkitTextStrokeColor: glitchActive ? glitchGreenColor : textFx.strokeColor,
+	                      ...(glitchActive
+	                        ? {
+	                            color: glitchGreenColor,
+	                            WebkitTextFillColor: glitchGreenColor,
+	                          }
+	                        : {}),
+	                      paintOrder: glitchActive ? "stroke fill" : undefined,
                       ...(textFx.gradient && !rushActive && !glitchActive
                         ? {
                             backgroundImage: `linear-gradient(180deg, ${textFx.gradFrom}, ${textFx.gradTo})`,
@@ -5114,45 +4887,68 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
           </h1>
         )}
 
-        {glitchActive && !liveGlitchPreview && (
-          <>
-            {glitchNoise > 0 && (
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-x-0 top-0"
-                style={{
-                  height: estimatedTextHeight,
-                  backgroundImage:
-                    "repeating-linear-gradient(180deg, rgba(255,255,255,0.72) 0 1px, transparent 1px 5px), repeating-linear-gradient(90deg, rgba(255,24,216,0.22) 0 2px, transparent 2px 8px)",
-                  opacity: Math.min(0.18, glitchNoise * (0.08 + glitchIntensity * 0.18)),
-                  mixBlendMode: "screen",
-                  zIndex: 8,
-                }}
-              />
-            )}
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-x-0 top-0"
-              style={{ height: estimatedTextHeight, zIndex: 10 }}
-            >
-              {glitchLines.map((line, idx) => (
-                <span
-                  key={`headline-glitch-line-${idx}`}
-                  className="absolute block"
-                  style={{
-                    top: line.top,
-                    left: line.left,
-                    width: line.width,
-                    height: line.height,
-                    backgroundColor: line.color,
-                    opacity: 0.92,
-                    boxShadow: `0 0 ${Math.round(1 + glitchGlow * 4)}px ${line.color}`,
-                  }}
-                />
-              ))}
-            </div>
-          </>
-        )}
+	        {glitchActive && (
+	          <>
+	            {renderRushTextLayer(
+	              "headline-glitch-red-screen",
+	              {
+	                color: glitchRedColor,
+	                WebkitTextFillColor: glitchRedColor,
+	                WebkitTextStrokeWidth: glitchChannelStrokeWidth ? `${glitchChannelStrokeWidth}px` : undefined,
+	                WebkitTextStrokeColor: glitchRedColor,
+	                paintOrder: "stroke fill",
+	                transform: glitchRedTransform,
+	                mixBlendMode: "screen",
+	                filter: glitchGlowFilter,
+	                opacity: textFx.alpha,
+	                zIndex: 10,
+	              },
+	              {
+	                color: glitchRedColor,
+	                WebkitTextFillColor: glitchRedColor,
+	                WebkitTextStrokeWidth: glitchChannelStrokeWidth ? `${glitchChannelStrokeWidth}px` : undefined,
+	                WebkitTextStrokeColor: glitchRedColor,
+	                paintOrder: "stroke fill",
+	              }
+	            )}
+	            {renderRushTextLayer(
+	              "headline-glitch-blue-screen",
+	              {
+	                color: glitchBlueColor,
+	                WebkitTextFillColor: glitchBlueColor,
+	                WebkitTextStrokeWidth: glitchChannelStrokeWidth ? `${glitchChannelStrokeWidth}px` : undefined,
+	                WebkitTextStrokeColor: glitchBlueColor,
+	                paintOrder: "stroke fill",
+	                transform: glitchBlueTransform,
+	                mixBlendMode: "screen",
+	                filter: glitchGlowFilter,
+	                opacity: textFx.alpha,
+	                zIndex: 11,
+	              },
+	              {
+	                color: glitchBlueColor,
+	                WebkitTextFillColor: glitchBlueColor,
+	                WebkitTextStrokeWidth: glitchChannelStrokeWidth ? `${glitchChannelStrokeWidth}px` : undefined,
+	                WebkitTextStrokeColor: glitchBlueColor,
+	                paintOrder: "stroke fill",
+	              }
+	            )}
+	            {glitchNoise > 0 && (
+	              <div
+	                aria-hidden="true"
+	                className="pointer-events-none absolute inset-x-0 top-0"
+	                style={{
+	                  height: estimatedTextHeight,
+	                  backgroundImage:
+	                    "repeating-linear-gradient(180deg, rgba(255,255,255,0.64) 0 1px, transparent 1px 6px)",
+	                  opacity: Math.min(0.16, glitchNoise * (0.08 + glitchIntensity * 0.12)),
+	                  mixBlendMode: "screen",
+	                  zIndex: 12,
+	                }}
+	              />
+	            )}
+	          </>
+	        )}
 
       </div>
     );
@@ -11039,12 +10835,12 @@ function removeFromLogoLibrary(url: string) {
   const [headGlitchEnabled, setHeadGlitchEnabled] = useState<boolean>(false);
   const [headGlitchIntensity, setHeadGlitchIntensity] = useState<number>(0.55);
   const [headGlitchRgbSplit, setHeadGlitchRgbSplit] = useState<number>(18);
-  const [headGlitchNoise, setHeadGlitchNoise] = useState<number>(0.04);
-  const [headGlitchGlow, setHeadGlitchGlow] = useState<number>(0.42);
-  const [headGlitchRedColor, setHeadGlitchRedColor] = useState<string>("#ff1d25");
-  const [headGlitchMagentaColor, setHeadGlitchMagentaColor] = useState<string>("#ff18d8");
-  const [headGlitchBlueColor, setHeadGlitchBlueColor] = useState<string>("#004bff");
-  const [headGlitchYellowColor, setHeadGlitchYellowColor] = useState<string>("#d8ff25");
+	  const [headGlitchNoise, setHeadGlitchNoise] = useState<number>(0.04);
+	  const [headGlitchGlow, setHeadGlitchGlow] = useState<number>(0.42);
+	  const [headGlitchRedColor, setHeadGlitchRedColor] = useState<string>("#ff1d25");
+	  const [headGlitchMagentaColor, setHeadGlitchMagentaColor] = useState<string>("#00ff66");
+	  const [headGlitchBlueColor, setHeadGlitchBlueColor] = useState<string>("#004bff");
+	  const [headGlitchYellowColor, setHeadGlitchYellowColor] = useState<string>("#d8ff25");
   const [headExtrudeDepth, setHeadExtrudeDepth] = useState<number>(0);
   const [headExtrudeAngle, setHeadExtrudeAngle] = useState<number>(135);
   const [headExtrudeDistance, setHeadExtrudeDistance] = useState<number>(0);
@@ -20809,7 +20605,7 @@ const applyTemplate = React.useCallback<
     setHeadGlitchNoise((merged as any).headGlitchNoise ?? 0.04);
     setHeadGlitchGlow((merged as any).headGlitchGlow ?? 0.42);
     setHeadGlitchRedColor((merged as any).headGlitchRedColor ?? "#ff1d25");
-    setHeadGlitchMagentaColor((merged as any).headGlitchMagentaColor ?? "#ff18d8");
+    setHeadGlitchMagentaColor((merged as any).headGlitchMagentaColor ?? "#00ff66");
     setHeadGlitchBlueColor((merged as any).headGlitchBlueColor ?? "#004bff");
     setHeadGlitchYellowColor((merged as any).headGlitchYellowColor ?? "#d8ff25");
     setHead2Rotate(merged.head2Rotate ?? 0);
@@ -23435,9 +23231,9 @@ const applyHeadlineGlitchPreset = React.useCallback(() => {
     italic: true,
     tracking: 0.17,
     gradient: false,
-    color: "#12fff7",
-    gradFrom: "#12fff7",
-    gradTo: "#ff18d8",
+	    color: "#00ff66",
+	    gradFrom: "#ff1d25",
+	    gradTo: "#004bff",
     strokeWidth: 1.6,
     strokeColor: "#f2ffff",
     glow: 0,
@@ -23452,12 +23248,12 @@ const applyHeadlineGlitchPreset = React.useCallback(() => {
   setHeadGlitchEnabled(true);
   setHeadGlitchIntensity(0.55);
   setHeadGlitchRgbSplit(18);
-  setHeadGlitchNoise(0.04);
-  setHeadGlitchGlow(0.42);
-  setHeadGlitchRedColor("#ff1d25");
-  setHeadGlitchMagentaColor("#ff18d8");
-  setHeadGlitchBlueColor("#004bff");
-  setHeadGlitchYellowColor("#d8ff25");
+	  setHeadGlitchNoise(0.04);
+	  setHeadGlitchGlow(0.42);
+	  setHeadGlitchRedColor("#ff1d25");
+	  setHeadGlitchMagentaColor("#00ff66");
+	  setHeadGlitchBlueColor("#004bff");
+	  setHeadGlitchYellowColor("#d8ff25");
   setHeadRushEnabled(false);
   setHeadSliceEnabled(false);
   setHeadShadow(false);
@@ -28187,24 +27983,20 @@ style={{ top: STICKY_TOP }}
               digits={2}
             />
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
-              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Red</span>
-              <ColorDot value={headGlitchRedColor} onChange={setHeadGlitchRedColor} />
-            </div>
-            <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
-              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Mag</span>
-              <ColorDot value={headGlitchMagentaColor} onChange={setHeadGlitchMagentaColor} />
-            </div>
-            <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
-              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Blue</span>
-              <ColorDot value={headGlitchBlueColor} onChange={setHeadGlitchBlueColor} />
-            </div>
-            <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
-              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Yellow</span>
-              <ColorDot value={headGlitchYellowColor} onChange={setHeadGlitchYellowColor} />
-            </div>
-          </div>
+	          <div className="mt-2 grid grid-cols-3 gap-2">
+	            <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+	              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Red</span>
+	              <ColorDot value={headGlitchRedColor} onChange={setHeadGlitchRedColor} />
+	            </div>
+	            <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+	              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Green</span>
+	              <ColorDot value={headGlitchMagentaColor} onChange={setHeadGlitchMagentaColor} />
+	            </div>
+	            <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+	              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Blue</span>
+	              <ColorDot value={headGlitchBlueColor} onChange={setHeadGlitchBlueColor} />
+	            </div>
+	          </div>
         </>
       )}
 
@@ -30220,24 +30012,20 @@ style={{ top: STICKY_TOP }}
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/20 px-2.5 text-[10px] uppercase tracking-wider text-neutral-400">
-                      <span className="min-w-0 truncate">Red</span>
-                      <ColorDot value={headGlitchRedColor} onChange={setHeadGlitchRedColor} />
-                    </div>
-                    <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/20 px-2.5 text-[10px] uppercase tracking-wider text-neutral-400">
-                      <span className="min-w-0 truncate">Mag</span>
-                      <ColorDot value={headGlitchMagentaColor} onChange={setHeadGlitchMagentaColor} />
-                    </div>
-                    <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/20 px-2.5 text-[10px] uppercase tracking-wider text-neutral-400">
-                      <span className="min-w-0 truncate">Blue</span>
-                      <ColorDot value={headGlitchBlueColor} onChange={setHeadGlitchBlueColor} />
-                    </div>
-                    <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/20 px-2.5 text-[10px] uppercase tracking-wider text-neutral-400">
-                      <span className="min-w-0 truncate">Yellow</span>
-                      <ColorDot value={headGlitchYellowColor} onChange={setHeadGlitchYellowColor} />
-                    </div>
-                  </div>
+	                  <div className="grid grid-cols-3 gap-2">
+	                    <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/20 px-2.5 text-[10px] uppercase tracking-wider text-neutral-400">
+	                      <span className="min-w-0 truncate">Red</span>
+	                      <ColorDot value={headGlitchRedColor} onChange={setHeadGlitchRedColor} />
+	                    </div>
+	                    <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/20 px-2.5 text-[10px] uppercase tracking-wider text-neutral-400">
+	                      <span className="min-w-0 truncate">Green</span>
+	                      <ColorDot value={headGlitchMagentaColor} onChange={setHeadGlitchMagentaColor} />
+	                    </div>
+	                    <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/20 px-2.5 text-[10px] uppercase tracking-wider text-neutral-400">
+	                      <span className="min-w-0 truncate">Blue</span>
+	                      <ColorDot value={headGlitchBlueColor} onChange={setHeadGlitchBlueColor} />
+	                    </div>
+	                  </div>
                 </>
               )}
               {showMobileHeadlineGradientControls && (
