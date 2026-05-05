@@ -1558,6 +1558,187 @@ type TextFx = {
   shadowEnabled: boolean;   // <— ADD THIS LINE
 };
 
+type GlitchSegment = {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+  color: string;
+  opacity?: number;
+  z?: number;
+};
+
+type HalftoneHeadlineSvgProps = {
+  text: string;
+  align: Align;
+  fontFamily: string;
+  fontSize: number;
+  lineHeight: number;
+  letterSpacingEm: number;
+  fontStyle?: React.CSSProperties["fontStyle"];
+  color: string;
+  accentColor: string;
+  shadowColor: string;
+  shadowOffsetX: number;
+  shadowOffsetY: number;
+  alpha: number;
+  maxDot?: number;
+  minDot?: number;
+  strokeWidth?: number;
+};
+
+function escapeSvgAttr(value: string) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+const HalftoneHeadlineSvg = React.memo(function HalftoneHeadlineSvg({
+  text,
+  align,
+  fontFamily,
+  fontSize,
+  lineHeight,
+  letterSpacingEm,
+  fontStyle = "normal",
+  color,
+  accentColor,
+  shadowColor,
+  shadowOffsetX,
+  shadowOffsetY,
+  alpha,
+  maxDot = 7.8,
+  minDot = 1.2,
+  strokeWidth = 0,
+}: HalftoneHeadlineSvgProps) {
+  const reactId = React.useId().replace(/:/g, "");
+  const maskId = `halftone-text-mask-${reactId}`;
+  const centerClipId = `halftone-center-clip-${reactId}`;
+  const safeText = String(text || "").trim() ? String(text) : "HEADLINE";
+  const lines = safeText.split("\n");
+  const dotRows = 38;
+  const dotCols = 95;
+  const safeFontSize = Math.max(8, Number(fontSize) || 72);
+  const safeLineHeight = Math.max(0.52, Math.min(1.4, Number(lineHeight) || 0.84));
+  const safeMaxDot = Math.max(minDot, Math.min(14, Number(maxDot) || 7.8));
+  const letterSpacing = Number.isFinite(letterSpacingEm) ? letterSpacingEm : -0.075;
+  const letterSpacingPx = letterSpacing * safeFontSize;
+  const padX = Math.max(28, safeFontSize * 0.28);
+  const topPad = Math.max(10, safeFontSize * 0.14);
+  const bottomPad = Math.max(10, safeFontSize * 0.14);
+  const lineStep = safeFontSize * safeLineHeight;
+  const textBlockHeight = safeFontSize + Math.max(0, lines.length - 1) * lineStep;
+  const estimatedLineWidth = (line: string) => {
+    const count = Math.max(1, line.length);
+    const base = count * safeFontSize * 0.72;
+    const tracking = letterSpacingPx * Math.max(0, count - 1);
+    return Math.max(safeFontSize * 1.8, base + tracking);
+  };
+  const textWidth = Math.max(...lines.map(estimatedLineWidth));
+  const width = Math.max(safeFontSize * 3.2, textWidth + padX * 2);
+  const height = topPad + textBlockHeight + bottomPad;
+  const textX = align === "left" ? padX : align === "right" ? width - padX : width / 2;
+  const textAnchor = align === "left" ? "start" : align === "right" ? "end" : "middle";
+  const firstLineY = topPad + safeFontSize * 0.5;
+  const dotFieldTop = Math.max(0, topPad - safeFontSize * 0.04);
+  const dotFieldHeight = textBlockHeight + safeFontSize * 0.08;
+  const alphaValue = Number(alpha);
+  const textOpacity = Math.max(0, Math.min(1, Number.isFinite(alphaValue) ? alphaValue : 1));
+
+  const dotPath = React.useMemo(() => {
+    const commands: string[] = [];
+
+    for (let y = 0; y < dotRows; y++) {
+      for (let x = 0; x < dotCols; x++) {
+        const px = ((x + 0.5) / dotCols) * width;
+        const py = dotFieldTop + ((y + 0.5) / dotRows) * dotFieldHeight;
+        const horizontalFalloff = 1 - x / dotCols;
+        const r = Math.max(minDot, safeMaxDot * horizontalFalloff);
+        const d = (r * 2).toFixed(2);
+
+        commands.push(
+          `M${(px - r).toFixed(2)},${py.toFixed(2)}a${r.toFixed(2)},${r.toFixed(2)} 0 1,0 ${d},0a${r.toFixed(2)},${r.toFixed(2)} 0 1,0 -${d},0`
+        );
+      }
+    }
+
+    return commands.join(" ");
+  }, [dotFieldHeight, dotFieldTop, minDot, safeMaxDot, width]);
+
+  const dotFieldHref = React.useMemo(() => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}"><path d="${dotPath}" fill="${escapeSvgAttr(color)}"/></svg>`;
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  }, [color, dotPath, height, width]);
+
+  const accentDotFieldHref = React.useMemo(() => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}"><path d="${dotPath}" fill="${escapeSvgAttr(accentColor)}"/></svg>`;
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  }, [accentColor, dotPath, height, width]);
+
+  const renderSvgText = (fill: string, extraProps: React.SVGProps<SVGTextElement> = {}) => (
+    <text
+      x={textX}
+      textAnchor={textAnchor}
+      dominantBaseline="middle"
+      fontFamily={fontFamily}
+      fontSize={safeFontSize}
+      fontWeight={900}
+      fontStyle={fontStyle}
+      letterSpacing={`${letterSpacing}em`}
+      fill={fill}
+      {...extraProps}
+    >
+      {lines.map((line, idx) => (
+        <tspan key={`line-${idx}`} x={textX} y={firstLineY + idx * lineStep}>
+          {line || " "}
+        </tspan>
+      ))}
+    </text>
+  );
+
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      width={width}
+      height={height}
+      className="pointer-events-none block select-none overflow-visible"
+      style={{
+        opacity: textOpacity,
+      }}
+      aria-hidden="true"
+    >
+      <defs>
+        <mask id={maskId} maskUnits="userSpaceOnUse" x={0} y={0} width={width} height={height}>
+          <rect width={width} height={height} fill="black" />
+          {renderSvgText("white")}
+        </mask>
+        <clipPath id={centerClipId}>
+          <rect x={width * 0.37} y={0} width={width * 0.21} height={height} />
+        </clipPath>
+      </defs>
+
+      <g transform={`translate(${shadowOffsetX.toFixed(1)} ${shadowOffsetY.toFixed(1)})`}>
+        {renderSvgText(shadowColor, {
+          stroke: shadowColor,
+          strokeWidth: Math.max(0, strokeWidth),
+          paintOrder: "stroke fill",
+        })}
+      </g>
+
+      <g mask={`url(#${maskId})`}>
+        <image href={dotFieldHref} x={0} y={0} width={width} height={height} preserveAspectRatio="none" />
+      </g>
+      <g mask={`url(#${maskId})`} clipPath={`url(#${centerClipId})`}>
+        <image href={accentDotFieldHref} x={0} y={0} width={width} height={height} preserveAspectRatio="none" />
+      </g>
+    </svg>
+  );
+});
+
 // === TEMPLATE DEFAULTS (auto-format-ready) ================================
 const TEMPLATE = {
   square: {},
@@ -1657,6 +1838,14 @@ function mulberry32(a: number) {
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+}
+function stableStringSeed(value: string) {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
 }
 function pickN<T>(arr: T[], n: number, rng: () => number): T[] {
   const a = [...arr];
@@ -2507,7 +2696,7 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
   bgLocked: boolean;
   setBgLocked: (v: boolean) => void;
 
-  headRotate: number; headSkew: number; headSliceEnabled: boolean; headSliceBandCount: number; headSliceBandGap: number; headSliceEchoDistance: number; headSliceTopColor: string; headSliceMidColor: string; headSliceBottomColor: string; headSliceBlur: number; headSliceFade: number; headSliceShadowStrength: number; headRushEnabled: boolean; headRushDotColor: string; headRushContrastColor: string; headRushDotSize: number; headRushDotSpacing: number; headRushShadowOffset: number; headGlitchEnabled: boolean; headGlitchIntensity: number; headGlitchRgbSplit: number; headGlitchNoise: number; headGlitchGlow: number; headExtrudeDepth: number; headExtrudeAngle: number; headExtrudeDistance: number; headExtrudeColor: string; head2Rotate: number; head2Skew: number; detailsRotate: number; details2Rotate: number; venueRotate: number; subtagRotate: number; logoRotate: number;
+  headRotate: number; headSkew: number; headSliceEnabled: boolean; headSliceBandCount: number; headSliceBandGap: number; headSliceEchoDistance: number; headSliceTopColor: string; headSliceMidColor: string; headSliceBottomColor: string; headSliceBlur: number; headSliceFade: number; headSliceShadowStrength: number; headRushEnabled: boolean; headRushDotColor: string; headRushContrastColor: string; headRushDotSize: number; headRushDotSpacing: number; headRushShadowOffset: number; headGlitchEnabled: boolean; headGlitchIntensity: number; headGlitchRgbSplit: number; headGlitchNoise: number; headGlitchGlow: number; headGlitchRedColor: string; headGlitchMagentaColor: string; headGlitchBlueColor: string; headGlitchYellowColor: string; headExtrudeDepth: number; headExtrudeAngle: number; headExtrudeDistance: number; headExtrudeColor: string; head2Rotate: number; head2Skew: number; detailsRotate: number; details2Rotate: number; venueRotate: number; subtagRotate: number; logoRotate: number;
   portraitBoxW: number; portraitBoxH: number; portraitLocked?: boolean; hideUiForExport?: boolean; headAlign: Align;
   onTogglePortraitLock: () => void;
   details2Uppercase?: boolean;
@@ -2606,7 +2795,7 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
 }>((p, ref) => {
   // ✅ CLEAN DESTRUCTURE — do NOT put type annotations here.
   const {
-    headRotate, headSkew, headSliceEnabled, headSliceBandCount, headSliceBandGap, headSliceEchoDistance, headSliceTopColor, headSliceMidColor, headSliceBottomColor, headSliceBlur, headSliceFade, headSliceShadowStrength, headRushEnabled, headRushDotColor, headRushContrastColor, headRushDotSize, headRushDotSpacing, headRushShadowOffset, headGlitchEnabled, headGlitchIntensity, headGlitchRgbSplit, headGlitchNoise, headGlitchGlow, headExtrudeDepth, headExtrudeAngle, headExtrudeDistance, headExtrudeColor, head2Rotate, head2Skew, detailsRotate, details2Rotate, venueRotate, subtagRotate, logoRotate, headAlign,
+    headRotate, headSkew, headSliceEnabled, headSliceBandCount, headSliceBandGap, headSliceEchoDistance, headSliceTopColor, headSliceMidColor, headSliceBottomColor, headSliceBlur, headSliceFade, headSliceShadowStrength, headRushEnabled, headRushDotColor, headRushContrastColor, headRushDotSize, headRushDotSpacing, headRushShadowOffset, headGlitchEnabled, headGlitchIntensity, headGlitchRgbSplit, headGlitchNoise, headGlitchGlow, headGlitchRedColor, headGlitchMagentaColor, headGlitchBlueColor, headGlitchYellowColor, headExtrudeDepth, headExtrudeAngle, headExtrudeDistance, headExtrudeColor, head2Rotate, head2Skew, detailsRotate, details2Rotate, venueRotate, subtagRotate, logoRotate, headAlign,
     palette, format, portraitUrl, bgUrl, bgUploadUrl, logoUrl, hue, haze, grade, leak, vignette, bgPosX, bgPosY,
     portraitScale, subtagUppercase, opticalMargin, leadTrackDelta, lastTrackDelta, kerningFix, headBehindPortrait,
     headlineLayerZ, head2LayerZ, detailsLayerZ, details2LayerZ, venueLayerZ, subtagLayerZ,
@@ -2668,6 +2857,7 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
     onToggleLock,
     onSelectIcon,
   } = p;
+  const reduceHeadlineEffects = useFlyerState((st) => st.isLiveDragging) && !hideUiForExport;
 
 // === LOCK UI (single source) ===
 const NEON = 'rgba(167,139,250,0.95)';
@@ -4320,6 +4510,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
         ? `0 ${Math.round(12 * headSliceShadowStrength)}px 0 rgba(0,0,0,${Math.min(0.45, 0.18 + headSliceShadowStrength * 0.4)})`
         : "none";
     const glitchActive = !!headGlitchEnabled;
+    const liveGlitchPreview = reduceHeadlineEffects && glitchActive && !exportTextMode;
     const rushActive = !!headRushEnabled && !glitchActive;
     const rushFillColor =
       textFx.color && textFx.color !== "transparent" && textFx.color !== "none"
@@ -4328,47 +4519,95 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     const glitchBaseColor =
       textFx.color && textFx.color !== "transparent" && textFx.color !== "none"
         ? textFx.color
-        : "#10f7ef";
+        : "#12fff7";
     const glitchIntensity = Math.max(0, Math.min(1, Number(headGlitchIntensity) || 0));
     const glitchRgbSplit = Math.max(0, Math.min(32, Number(headGlitchRgbSplit) || 0));
     const glitchNoise = Math.max(0, Math.min(1, Number(headGlitchNoise) || 0));
     const glitchGlow = Math.max(0, Math.min(1, Number(headGlitchGlow) || 0));
-    const glitchSliceCount = Math.max(3, Math.min(6, Math.round(3 + glitchIntensity * 3)));
-    const glitchSliceOffset = 8 + glitchIntensity * 24;
-    const glitchColors = ["#10f7ef", "#ff18d8", "#ff2a2a", "#d8ff25", "#2457ff", "#ffffff"];
-    const glitchSlicePlan = [
-      { top: 0.12, height: 0.08, dir: -0.65, color: 1, scale: 1.02 },
-      { top: 0.27, height: 0.045, dir: 0.95, color: 2, scale: 1.04 },
-      { top: 0.42, height: 0.065, dir: -1.2, color: 0, scale: 1.01 },
-      { top: 0.56, height: 0.055, dir: 1.35, color: 4, scale: 1.05 },
-      { top: 0.7, height: 0.05, dir: -0.9, color: 3, scale: 1.03 },
-      { top: 0.82, height: 0.04, dir: 1.05, color: 1, scale: 1.02 },
-    ];
-    const glitchFragments = [
-      { left: 4, top: 0.18, width: 11, height: 3, color: "#ff2a2a", dir: -0.6 },
-      { left: 15, top: 0.72, width: 9, height: 3, color: "#ff18d8", dir: 0.8 },
-      { left: 31, top: 0.33, width: 7, height: 4, color: "#d8ff25", dir: 0.5 },
-      { left: 48, top: 0.2, width: 13, height: 3, color: "#2457ff", dir: -0.7 },
-      { left: 62, top: 0.62, width: 8, height: 4, color: "#10f7ef", dir: 0.9 },
-      { left: 78, top: 0.36, width: 12, height: 3, color: "#ff18d8", dir: 0.6 },
-      { left: 90, top: 0.75, width: 10, height: 2, color: "#ffffff", dir: -0.8 },
-    ];
-    const rushDotPx = Math.max(0.8, Math.min(9, Number(headRushDotSize) || 1.8));
-    const rushDotGap = Math.max(rushDotPx * 2 + 1, Math.min(28, Number(headRushDotSpacing) || 9));
+    const glitchLayerScale = glitchRgbSplit > 0 ? glitchRgbSplit / 18 : 0;
+    const chromaScale = Math.max(0.65, glitchLayerScale);
+    const glitchChromaScale = chromaScale * (0.55 + glitchIntensity * 0.9);
+    const glitchMaskScale = chromaScale * (0.35 + glitchIntensity * 0.95);
+    const glitchDepthDistance = glitchActive
+      ? Math.max(0, Math.min(HEADLINE_EXTRUDE_MAX_DISTANCE, Math.max(extrudeDistance, extrudeDepth * 0.65)))
+      : 0;
+    const glitchDepthX = Math.cos(extrudeAngleRad) * glitchDepthDistance;
+    const glitchDepthY = Math.sin(extrudeAngleRad) * glitchDepthDistance;
+    const glitchDepthOpacity = Math.min(0.82, 0.28 + extrudeDepth * 0.035 + glitchDepthDistance * 0.015);
+    const glitchDepthStroke = Math.max(1, Math.min(5, 1 + extrudeDepth * 0.12));
+    const glitchRedColor = headGlitchRedColor || "#ff1d25";
+    const glitchMagentaColor = headGlitchMagentaColor || "#ff18d8";
+    const glitchBlueColor = headGlitchBlueColor || "#004bff";
+    const glitchYellowColor = headGlitchYellowColor || "#d8ff25";
+    const liveGlitchTextShadow = [
+      glitchDepthDistance > 0 || extrudeDepth > 0
+        ? `${glitchDepthX.toFixed(1)}px ${glitchDepthY.toFixed(1)}px 0 ${headExtrudeColor || "#050812"}`
+        : null,
+      `${(10 * glitchChromaScale).toFixed(1)}px ${(-10 * glitchChromaScale).toFixed(1)}px 0 ${glitchRedColor}`,
+      `${(-8 * glitchChromaScale).toFixed(1)}px ${(11 * glitchChromaScale).toFixed(1)}px 0 ${glitchMagentaColor}`,
+      `${(8 * glitchChromaScale).toFixed(1)}px ${(3 * glitchChromaScale).toFixed(1)}px 0 ${glitchBlueColor}`,
+      `0 0 ${(4 + glitchGlow * 10).toFixed(1)}px rgba(18,255,247,0.68)`,
+    ]
+      .filter(Boolean)
+      .join(", ");
+    const glitchSeed = stableStringSeed(
+      [
+        headlineText,
+        headlineFamily,
+        Math.round(headDisplayPx),
+        textFx.tracking.toFixed(3),
+        glitchIntensity.toFixed(2),
+        glitchRgbSplit.toFixed(0),
+      ].join("|")
+    );
+    const glitchLineRng = mulberry32(glitchSeed ^ 0x52c8e9);
+    const glitchLineColors = [glitchRedColor, glitchMagentaColor, glitchBlueColor, "#12fff7", "#ffffff"];
+    const scaleGlitchSegments = (segments: GlitchSegment[]): GlitchSegment[] =>
+      segments.map((seg) => ({
+        ...seg,
+        x: seg.x * glitchMaskScale,
+        y: seg.y * glitchMaskScale,
+        opacity: (seg.opacity ?? 1) * (0.35 + glitchIntensity * 0.75),
+      }));
+    const redGlitchSegments = liveGlitchPreview ? [] : scaleGlitchSegments([
+      { top: 0.03, left: 0.08, width: 0.15, height: 0.12, x: 18, y: -10, color: glitchRedColor, opacity: 1, z: 2 },
+      { top: 0.04, left: 0.34, width: 0.2, height: 0.1, x: 16, y: -9, color: glitchRedColor, opacity: 1, z: 2 },
+      { top: 0.07, left: 0.64, width: 0.18, height: 0.1, x: 15, y: -8, color: glitchRedColor, opacity: 1, z: 2 },
+    ]);
+    const magentaGlitchSegments = liveGlitchPreview ? [] : scaleGlitchSegments([
+      { top: 0.54, left: 0.02, width: 0.16, height: 0.13, x: -15, y: 10, color: glitchMagentaColor, opacity: 0.95, z: 4 },
+      { top: 0.66, left: 0.3, width: 0.18, height: 0.11, x: -13, y: 9, color: glitchMagentaColor, opacity: 0.95, z: 4 },
+      { top: 0.58, left: 0.72, width: 0.16, height: 0.12, x: -14, y: 10, color: glitchMagentaColor, opacity: 0.95, z: 4 },
+    ]);
+    const blueGlitchSegments = liveGlitchPreview ? [] : scaleGlitchSegments([
+      { top: 0.3, left: 0.12, width: 0.13, height: 0.08, x: 13, y: 3, color: glitchBlueColor, opacity: 0.9, z: 6 },
+      { top: 0.38, left: 0.42, width: 0.16, height: 0.075, x: 12, y: 2, color: glitchBlueColor, opacity: 0.9, z: 6 },
+      { top: 0.44, left: 0.7, width: 0.15, height: 0.08, x: 13, y: 3, color: glitchBlueColor, opacity: 0.9, z: 6 },
+    ]);
+    const microAccentSegments = liveGlitchPreview ? [] : scaleGlitchSegments([
+      { top: 0.36, left: 0.16, width: 0.08, height: 0.035, x: 5, y: 2, color: glitchYellowColor, opacity: 0.9, z: 8 },
+      { top: 0.52, left: 0.57, width: 0.07, height: 0.03, x: -4, y: 2, color: glitchYellowColor, opacity: 0.85, z: 8 },
+    ]);
+    const glitchLines = liveGlitchPreview ? [] : Array.from({ length: 3 + Math.floor(glitchLineRng() * 3) }, (_, idx) => {
+      const fromLeftEdge = glitchLineRng() > 0.5;
+      const left = fromLeftEdge ? -8 + glitchLineRng() * 34 : 66 + glitchLineRng() * 28;
+      return {
+        top: `${Math.round(14 + glitchLineRng() * 68)}%`,
+        left: `${left.toFixed(1)}%`,
+        width: `${(4 + glitchLineRng() * 8).toFixed(1)}%`,
+        color: glitchLineColors[(idx + Math.floor(glitchLineRng() * glitchLineColors.length)) % glitchLineColors.length],
+        height: glitchLineRng() > 0.72 ? 3 : 2,
+      };
+    });
+    const rushMaxDotPx = Math.max(1.2, Math.min(14, Number(headRushDotSize) || 7.8));
     const rushShadowPx = Math.max(0, Math.min(42, Number(headRushShadowOffset) || 0));
     const rushDepthAngleRad = ((Number(headExtrudeAngle) || 28) * Math.PI) / 180;
     const rushDepthDistance = Math.max(
       rushShadowPx * 1.15,
       Math.min(30, (Number(headExtrudeDistance) || 0) * 0.72)
     );
-    const rushCutoutDistance = Math.min(
-      24,
-      rushShadowPx * 0.85 + Math.min(8, (Number(headExtrudeDepth) || 0) * 0.12)
-    );
     const rushDepthX = Math.cos(rushDepthAngleRad) * rushDepthDistance;
     const rushDepthY = Math.sin(rushDepthAngleRad) * rushDepthDistance;
-    const rushCutoutX = Math.cos(rushDepthAngleRad) * rushCutoutDistance;
-    const rushCutoutY = Math.sin(rushDepthAngleRad) * rushCutoutDistance;
     const rushDarkColor = headExtrudeColor || "#050812";
     const rushLayerBase: React.CSSProperties = {
       position: "absolute",
@@ -4383,6 +4622,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
       textTransform: textFx.uppercase ? "uppercase" : "none",
       fontWeight: textFx.bold ? 900 : 700,
       fontStyle: textFx.italic ? "italic" : "normal",
+      fontStretch: glitchActive ? "normal" : undefined,
       textDecorationLine: textFx.underline ? "underline" : "none",
       pointerEvents: "none",
       userSelect: "none",
@@ -4418,6 +4658,37 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
         {renderRushTextContent(lineStyle)}
       </h1>
     );
+    const renderMaskedGlitchSegment = (seg: GlitchSegment, idx: number) => {
+      const right = Math.max(0, 1 - seg.left - seg.width);
+      const bottom = Math.max(0, 1 - seg.top - seg.height);
+      const clipPath = `inset(${(seg.top * 100).toFixed(2)}% ${(right * 100).toFixed(2)}% ${(bottom * 100).toFixed(2)}% ${(seg.left * 100).toFixed(2)}%)`;
+      const segmentStyle: React.CSSProperties = {
+        color: seg.color,
+        WebkitTextFillColor: seg.color,
+        WebkitTextStrokeWidth: "1.2px",
+        WebkitTextStrokeColor: seg.color,
+        paintOrder: "stroke fill",
+      };
+
+      return (
+        <h1
+          key={`masked-glitch-seg-${idx}`}
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 font-black select-none"
+          style={{
+            ...rushLayerBase,
+            clipPath,
+            WebkitClipPath: clipPath,
+            ...segmentStyle,
+            transform: `translate(${seg.x.toFixed(1)}px, ${seg.y.toFixed(1)}px)`,
+            opacity: seg.opacity ?? 0.9,
+            zIndex: seg.z ?? 2,
+          }}
+        >
+          {renderRushTextContent(segmentStyle)}
+        </h1>
+      );
+    };
 
     return (
       <div
@@ -4427,6 +4698,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
           minWidth: "fit-content",
           maxWidth: "100%",
           overflow: "visible",
+          transform: glitchActive ? "scaleX(0.88)" : undefined,
+          transformOrigin: "50% 50%",
         }}
       >
         {!exportTextMode && headSliceEnabled && (
@@ -4559,95 +4832,172 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
             );
           })}
 
-        {rushActive && (
+        {glitchActive && !liveGlitchPreview && (
           <>
+            {(glitchDepthDistance > 0 || extrudeDepth > 0) &&
+              renderRushTextLayer(
+                "headline-glitch-depth",
+                {
+                  color: headExtrudeColor || "#050812",
+                  WebkitTextFillColor: headExtrudeColor || "#050812",
+                  WebkitTextStrokeWidth: `${glitchDepthStroke.toFixed(1)}px`,
+                  WebkitTextStrokeColor: headExtrudeColor || "#050812",
+                  paintOrder: "stroke fill",
+                  transform: `translate(${glitchDepthX.toFixed(1)}px, ${glitchDepthY.toFixed(1)}px)`,
+                  opacity: glitchDepthOpacity,
+                  zIndex: 0,
+                },
+                {
+                  color: headExtrudeColor || "#050812",
+                  WebkitTextFillColor: headExtrudeColor || "#050812",
+                  WebkitTextStrokeWidth: `${glitchDepthStroke.toFixed(1)}px`,
+                  WebkitTextStrokeColor: headExtrudeColor || "#050812",
+                }
+              )}
             {renderRushTextLayer(
-              "headline-rush-red-depth",
+              "headline-glitch-soft-cyan-glow",
               {
-                color: rushFillColor,
-                WebkitTextFillColor: rushFillColor,
-                opacity: Math.min(0.5, Math.max(0.14, textFx.alpha * 0.36)),
-                transform: `translate(${rushDepthX.toFixed(1)}px, ${rushDepthY.toFixed(1)}px)`,
-                zIndex: 0,
-              },
-              {
-                color: rushFillColor,
-                WebkitTextFillColor: rushFillColor,
-              }
-            )}
-            {renderRushTextLayer(
-              "headline-rush-dark-cutout",
-              {
-                color: rushDarkColor,
-                WebkitTextFillColor: rushDarkColor,
-                WebkitTextStrokeWidth: textFx.strokeWidth ? `${Math.max(1, textFx.strokeWidth)}px` : undefined,
-                WebkitTextStrokeColor: rushDarkColor,
-                opacity: Math.min(0.9, Math.max(0.26, textFx.alpha * 0.78)),
-                transform: `translate(${rushCutoutX.toFixed(1)}px, ${rushCutoutY.toFixed(1)}px)`,
+                color: "#12fff7",
+                WebkitTextFillColor: "#12fff7",
+                filter: `blur(${(6 + glitchGlow * 18).toFixed(1)}px)`,
+                opacity: 0.16 + glitchIntensity * 0.22,
                 zIndex: 1,
               },
               {
-                color: rushDarkColor,
-                WebkitTextFillColor: rushDarkColor,
-                WebkitTextStrokeWidth: textFx.strokeWidth ? `${Math.max(1, textFx.strokeWidth)}px` : undefined,
-                WebkitTextStrokeColor: rushDarkColor,
+                color: "#12fff7",
+                WebkitTextFillColor: "#12fff7",
+              }
+            )}
+            {renderRushTextLayer(
+              "headline-glitch-red-full-duplicate",
+              {
+                color: glitchRedColor,
+                WebkitTextFillColor: glitchRedColor,
+                WebkitTextStrokeWidth: "1.2px",
+                WebkitTextStrokeColor: glitchRedColor,
+                paintOrder: "stroke fill",
+                transform: `translate(${(10 * glitchChromaScale).toFixed(1)}px, ${(-10 * glitchChromaScale).toFixed(1)}px)`,
+                opacity: 0.28 + glitchIntensity * 0.62,
+                zIndex: 1,
+              },
+              {
+                color: glitchRedColor,
+                WebkitTextFillColor: glitchRedColor,
+                WebkitTextStrokeWidth: "1.2px",
+                WebkitTextStrokeColor: glitchRedColor,
+              }
+            )}
+            {redGlitchSegments.map(renderMaskedGlitchSegment)}
+            {renderRushTextLayer(
+              "headline-glitch-magenta-full-duplicate",
+              {
+                color: glitchMagentaColor,
+                WebkitTextFillColor: glitchMagentaColor,
+                WebkitTextStrokeWidth: "1.2px",
+                WebkitTextStrokeColor: glitchMagentaColor,
+                paintOrder: "stroke fill",
+                transform: `translate(${(-8 * glitchChromaScale).toFixed(1)}px, ${(11 * glitchChromaScale).toFixed(1)}px)`,
+                opacity: 0.24 + glitchIntensity * 0.52,
+                zIndex: 3,
+              },
+              {
+                color: glitchMagentaColor,
+                WebkitTextFillColor: glitchMagentaColor,
+                WebkitTextStrokeWidth: "1.2px",
+                WebkitTextStrokeColor: glitchMagentaColor,
+              }
+            )}
+            {magentaGlitchSegments.map(renderMaskedGlitchSegment)}
+            {renderRushTextLayer(
+              "headline-glitch-blue-full-duplicate",
+              {
+                color: glitchBlueColor,
+                WebkitTextFillColor: glitchBlueColor,
+                WebkitTextStrokeWidth: "1.2px",
+                WebkitTextStrokeColor: glitchBlueColor,
+                paintOrder: "stroke fill",
+                transform: `translate(${(8 * glitchChromaScale).toFixed(1)}px, ${(3 * glitchChromaScale).toFixed(1)}px)`,
+                opacity: 0.22 + glitchIntensity * 0.45,
+                zIndex: 5,
+              },
+              {
+                color: glitchBlueColor,
+                WebkitTextFillColor: glitchBlueColor,
+                WebkitTextStrokeWidth: "1.2px",
+                WebkitTextStrokeColor: glitchBlueColor,
+              }
+            )}
+            {blueGlitchSegments.map(renderMaskedGlitchSegment)}
+            {renderRushTextLayer(
+              "headline-glitch-yellow-full-duplicate",
+              {
+                color: glitchYellowColor,
+                WebkitTextFillColor: glitchYellowColor,
+                WebkitTextStrokeWidth: "1px",
+                WebkitTextStrokeColor: glitchYellowColor,
+                paintOrder: "stroke fill",
+                transform: `translate(${(-10 * glitchChromaScale).toFixed(1)}px, ${(2 * glitchChromaScale).toFixed(1)}px)`,
+                opacity: 0.16 + glitchIntensity * 0.34,
+                zIndex: 7,
+              },
+              {
+                color: glitchYellowColor,
+                WebkitTextFillColor: glitchYellowColor,
+                WebkitTextStrokeWidth: "1px",
+                WebkitTextStrokeColor: glitchYellowColor,
+              }
+            )}
+            {microAccentSegments.map(renderMaskedGlitchSegment)}
+            {renderRushTextLayer(
+              "headline-glitch-offset-white-stroke",
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${Math.max(1.8, (textFx.strokeWidth || 1.6) + 0.8)}px`,
+                WebkitTextStrokeColor: "#f2ffff",
+                opacity: 0.68,
+                paintOrder: "stroke fill",
+                transform: `translate(${(7 * chromaScale).toFixed(1)}px, 0)`,
+                transformOrigin: "50% 50%",
+                zIndex: 8,
+              },
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${Math.max(1.8, (textFx.strokeWidth || 1.6) + 0.8)}px`,
+                WebkitTextStrokeColor: "#f2ffff",
+                paintOrder: "stroke fill",
               }
             )}
           </>
         )}
 
-        {glitchActive && (
-          <>
-            {renderRushTextLayer(
-              "headline-glitch-magenta-offset",
-              {
-                color: "#ff18d8",
-                WebkitTextFillColor: "#ff18d8",
-                opacity: Math.min(0.82, 0.38 + glitchIntensity * 0.36),
-                transform: `translate(${(-glitchRgbSplit * 0.46).toFixed(1)}px, ${(glitchRgbSplit * 0.18).toFixed(1)}px)`,
-                filter: "blur(0.2px)",
-                zIndex: 0,
-              },
-              {
-                color: "#ff18d8",
-                WebkitTextFillColor: "#ff18d8",
-              }
-            )}
-            {renderRushTextLayer(
-              "headline-glitch-lime-offset",
-              {
-                color: "#d8ff25",
-                WebkitTextFillColor: "#d8ff25",
-                opacity: Math.min(0.68, 0.26 + glitchIntensity * 0.3),
-                transform: `translate(${(glitchRgbSplit * 0.36).toFixed(1)}px, ${(-glitchRgbSplit * 0.2).toFixed(1)}px)`,
-                zIndex: 0,
-              },
-              {
-                color: "#d8ff25",
-                WebkitTextFillColor: "#d8ff25",
-              }
-            )}
-            {renderRushTextLayer(
-              "headline-glitch-red-offset",
-              {
-                color: "#ff272d",
-                WebkitTextFillColor: "#ff272d",
-                opacity: Math.min(0.74, 0.34 + glitchIntensity * 0.3),
-                transform: `translate(${(glitchRgbSplit * 0.82).toFixed(1)}px, 0)`,
-                zIndex: 0,
-              },
-              {
-                color: "#ff272d",
-                WebkitTextFillColor: "#ff272d",
-              }
-            )}
-          </>
-        )}
-
-        <h1
-          key={`headline-${headlineFamily}-${headlineFontTick}`}
-          className="relative font-black"
-          style={{
+        {rushActive ? (
+          <div className="relative" style={{ zIndex: 3 }}>
+            <HalftoneHeadlineSvg
+              text={headlineText}
+              align={headAlign}
+              fontFamily={headlineFamily}
+              fontSize={headDisplayPx}
+              lineHeight={lineHeight}
+              letterSpacingEm={Number.isFinite(textFx.tracking) ? textFx.tracking : -0.075}
+              fontStyle={textFx.italic ? "italic" : "normal"}
+              color={headRushDotColor || rushFillColor}
+              accentColor={headRushContrastColor || "#ffffff"}
+              shadowColor={rushDarkColor}
+              shadowOffsetX={rushDepthX}
+              shadowOffsetY={rushDepthY}
+              alpha={textFx.alpha}
+              maxDot={rushMaxDotPx}
+              minDot={1.2}
+              strokeWidth={Math.max(0, textFx.strokeWidth || 0)}
+            />
+          </div>
+        ) : (
+          <h1
+            key={`headline-${headlineFamily}-${headlineFontTick}`}
+            className="relative font-black"
+            style={{
             fontFamily: headlineFamily,
             fontSize: headDisplayPx,
             lineHeight,
@@ -4659,6 +5009,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
             textTransform: textFx.uppercase ? 'uppercase' : 'none',
             fontWeight: textFx.bold ? 900 : 700,
             fontStyle: textFx.italic ? 'italic' : 'normal',
+            fontStretch: glitchActive ? "normal" : undefined,
             textDecorationLine: textFx.underline ? 'underline' : 'none',
             opacity: textFx.alpha,
             color: exportTextMode
@@ -4677,10 +5028,15 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
               : rushActive
               ? rushFillColor
               : undefined,
+            WebkitTextStrokeWidth: glitchActive ? `${textFx.strokeWidth || 1.6}px` : undefined,
+            WebkitTextStrokeColor: glitchActive ? textFx.strokeColor || "#f2ffff" : undefined,
+            paintOrder: glitchActive ? "stroke fill" : undefined,
             textShadow: dragging
               ? 'none'
               : glitchActive
-              ? `0 0 ${Math.round(5 + glitchGlow * 14)}px rgba(16,247,239,${(0.32 + glitchGlow * 0.46).toFixed(2)}), 0 0 ${Math.round(14 + glitchGlow * 30)}px rgba(255,24,216,${(0.16 + glitchGlow * 0.18).toFixed(2)})`
+              ? liveGlitchPreview
+                ? liveGlitchTextShadow
+                : "0 0 12px rgba(18,255,247,.75)"
               : headSliceEnabled
               ? mainSliceShadow
               : headShadow
@@ -4688,100 +5044,50 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
               : 'none',
             ...(dragging
               ? {}
-              : isActive('headline')
+              : !glitchActive && isActive('headline')
               ? { filter: 'drop-shadow(0 0 8px rgba(147,197,253,0.9))' }
               : {}),
-            zIndex: rushActive || glitchActive ? 3 : 1,
-          }}
-        >
-          {exportTextMode
-            ? renderWithDoubleBreaks(headlineText)
-            : renderHeadlineRich(
-                headlineText,
-                {
-                  baseTrackEm: textFx.tracking,
-                  leadDeltaEm: leadTrackDelta,
-                  lastDeltaEm: lastTrackDelta,
-                  opticalMargin,
-                  kerningFix,
-                  lineHeight: lineHeight,
-                  lineStyle: {
-                    display: 'block',
-                    width: '100%',
-                    WebkitTextStrokeWidth: textFx.strokeWidth
-                      ? `${textFx.strokeWidth}px`
-                      : undefined,
-                    WebkitTextStrokeColor: textFx.strokeColor,
-                    ...(textFx.gradient && !rushActive && !glitchActive
-                      ? {
-                          backgroundImage: `linear-gradient(180deg, ${textFx.gradFrom}, ${textFx.gradTo})`,
-                          backgroundSize: '100% 100%',
-                          backgroundRepeat: 'no-repeat',
-                          WebkitBackgroundClip: 'text',
-                          backgroundClip: 'text',
-                          WebkitTextFillColor: 'transparent',
-                          color: 'transparent',
-                        }
-                      : {}),
-                  },
-                }
-              )}
-        </h1>
+            zIndex: glitchActive ? 9 : rushActive ? 3 : 1,
+            }}
+          >
+            {exportTextMode
+              ? renderWithDoubleBreaks(headlineText)
+              : renderHeadlineRich(
+                  headlineText,
+                  {
+                    baseTrackEm: textFx.tracking,
+                    leadDeltaEm: leadTrackDelta,
+                    lastDeltaEm: lastTrackDelta,
+                    opticalMargin,
+                    kerningFix,
+                    lineHeight: lineHeight,
+                    lineStyle: {
+                      display: 'block',
+                      width: '100%',
+                      WebkitTextStrokeWidth: textFx.strokeWidth
+                        ? `${textFx.strokeWidth}px`
+                        : undefined,
+                      WebkitTextStrokeColor: textFx.strokeColor,
+                      paintOrder: glitchActive ? "stroke fill" : undefined,
+                      ...(textFx.gradient && !rushActive && !glitchActive
+                        ? {
+                            backgroundImage: `linear-gradient(180deg, ${textFx.gradFrom}, ${textFx.gradTo})`,
+                            backgroundSize: '100% 100%',
+                            backgroundRepeat: 'no-repeat',
+                            WebkitBackgroundClip: 'text',
+                            backgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            color: 'transparent',
+                          }
+                        : {}),
+                    },
+                  }
+                )}
+          </h1>
+        )}
 
-        {glitchActive && (
+        {glitchActive && !liveGlitchPreview && (
           <>
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-x-0 top-0"
-              style={{
-                height: estimatedTextHeight,
-                overflow: "hidden",
-                zIndex: 5,
-              }}
-            >
-              {glitchSlicePlan.slice(0, glitchSliceCount).map((slice, idx) => {
-                const bandTop = Math.max(0, estimatedTextHeight * slice.top);
-                const bandHeight = Math.max(3, estimatedTextHeight * slice.height);
-                const shift = slice.dir * glitchSliceOffset * (0.72 + idx * 0.08);
-                const color = glitchColors[slice.color % glitchColors.length];
-                const sliceStyle: React.CSSProperties = {
-                  color,
-                  WebkitTextFillColor: color,
-                  WebkitTextStrokeWidth: textFx.strokeWidth ? `${Math.max(0.6, textFx.strokeWidth * 0.65)}px` : undefined,
-                  WebkitTextStrokeColor: "rgba(0,0,0,0.82)",
-                  textShadow: `0 0 ${Math.round(4 + glitchGlow * 12)}px ${color}`,
-                };
-
-                return (
-                  <div
-                    key={`headline-glitch-slice-${idx}`}
-                    className="absolute left-0 right-0 overflow-hidden"
-                    style={{
-                      top: bandTop,
-                      height: bandHeight,
-                      opacity: Math.min(0.92, 0.48 + glitchIntensity * 0.42),
-                    }}
-                  >
-                    <h1
-                      className="pointer-events-none absolute font-black select-none"
-                      style={{
-                        ...rushLayerBase,
-                        ...sliceStyle,
-                        inset: undefined,
-                        top: -bandTop,
-                        left: shift,
-                        right: "auto",
-                        width: `calc(100% + ${Math.abs(shift) + 28}px)`,
-                        transform: `scaleX(${slice.scale})`,
-                        transformOrigin: "50% 50%",
-                      }}
-                    >
-                      {renderRushTextContent(sliceStyle)}
-                    </h1>
-                  </div>
-                );
-              })}
-            </div>
             {glitchNoise > 0 && (
               <div
                 aria-hidden="true"
@@ -4790,30 +5096,29 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
                   height: estimatedTextHeight,
                   backgroundImage:
                     "repeating-linear-gradient(180deg, rgba(255,255,255,0.72) 0 1px, transparent 1px 5px), repeating-linear-gradient(90deg, rgba(255,24,216,0.22) 0 2px, transparent 2px 8px)",
-                  opacity: Math.min(0.24, glitchNoise * 0.32),
+                  opacity: Math.min(0.18, glitchNoise * (0.08 + glitchIntensity * 0.18)),
                   mixBlendMode: "screen",
-                  zIndex: 6,
+                  zIndex: 8,
                 }}
               />
             )}
             <div
               aria-hidden="true"
               className="pointer-events-none absolute inset-x-0 top-0"
-              style={{ height: estimatedTextHeight, zIndex: 7 }}
+              style={{ height: estimatedTextHeight, zIndex: 10 }}
             >
-              {glitchFragments.map((fragment, idx) => (
+              {glitchLines.map((line, idx) => (
                 <span
-                  key={`headline-glitch-fragment-${idx}`}
+                  key={`headline-glitch-line-${idx}`}
                   className="absolute block"
                   style={{
-                    left: `${fragment.left}%`,
-                    top: estimatedTextHeight * fragment.top,
-                    width: `${Math.max(4, fragment.width * (0.65 + glitchIntensity * 0.55))}%`,
-                    height: Math.max(2, fragment.height),
-                    backgroundColor: fragment.color,
-                    opacity: Math.min(0.86, 0.28 + glitchIntensity * 0.5),
-                    transform: `translateX(${(fragment.dir * glitchRgbSplit * 0.72).toFixed(1)}px)`,
-                    boxShadow: `0 0 ${Math.round(4 + glitchGlow * 12)}px ${fragment.color}`,
+                    top: line.top,
+                    left: line.left,
+                    width: line.width,
+                    height: line.height,
+                    backgroundColor: line.color,
+                    opacity: 0.92,
+                    boxShadow: `0 0 ${Math.round(1 + glitchGlow * 4)}px ${line.color}`,
                   }}
                 />
               ))}
@@ -4821,88 +5126,6 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
           </>
         )}
 
-        {rushActive && (
-          <>
-            {renderRushTextLayer(
-              "headline-rush-white-stripe",
-              {
-                color: "transparent",
-                WebkitTextFillColor: "transparent",
-                backgroundImage: `linear-gradient(102deg, transparent 0 33%, rgba(255,255,255,0.16) 37%, ${headRushContrastColor} 42%, ${headRushContrastColor} 54%, rgba(255,255,255,0.24) 58%, transparent 65% 100%)`,
-                backgroundSize: "100% 100%",
-                backgroundRepeat: "no-repeat",
-                WebkitBackgroundClip: "text",
-                backgroundClip: "text",
-                opacity: Math.min(0.86, Math.max(0.28, textFx.alpha * 0.76)),
-                mixBlendMode: "normal",
-                zIndex: 4,
-              },
-              {
-                color: "transparent",
-                WebkitTextFillColor: "transparent",
-                backgroundImage: `linear-gradient(102deg, transparent 0 33%, rgba(255,255,255,0.16) 37%, ${headRushContrastColor} 42%, ${headRushContrastColor} 54%, rgba(255,255,255,0.24) 58%, transparent 65% 100%)`,
-                backgroundSize: "100% 100%",
-                backgroundRepeat: "no-repeat",
-                WebkitBackgroundClip: "text",
-                backgroundClip: "text",
-              }
-            )}
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0"
-              style={{ zIndex: 5, overflow: "hidden" }}
-            >
-              {[
-                { left: 0, width: 34, scale: 0.68, opacity: 0.42 },
-                { left: 24, width: 34, scale: 0.86, opacity: 0.5 },
-                { left: 48, width: 34, scale: 1.03, opacity: 0.58 },
-                { left: 72, width: 28, scale: 1.18, opacity: 0.64 },
-              ].map((segment, idx) => {
-                const dotPx = rushDotPx * segment.scale;
-                const dotGap = rushDotGap * (0.9 + segment.scale * 0.18);
-                const childWidth = 10000 / segment.width;
-                const childLeft = -(segment.left / segment.width) * 100;
-                const dotBackground = `radial-gradient(circle, ${headRushDotColor} 0 ${dotPx.toFixed(2)}px, transparent ${(dotPx + 0.65).toFixed(2)}px)`;
-                const dotStyle: React.CSSProperties = {
-                  color: "transparent",
-                  WebkitTextFillColor: "transparent",
-                  backgroundImage: dotBackground,
-                  backgroundSize: `${dotGap.toFixed(2)}px ${dotGap.toFixed(2)}px`,
-                  backgroundPosition: `${(idx * 2.1).toFixed(1)}px ${(idx * 1.4).toFixed(1)}px`,
-                  backgroundRepeat: "repeat",
-                  WebkitBackgroundClip: "text",
-                  backgroundClip: "text",
-                };
-
-                return (
-                  <div
-                    key={`headline-rush-dots-${idx}`}
-                    className="absolute top-0 h-full overflow-hidden"
-                    style={{
-                      left: `${segment.left}%`,
-                      width: `${segment.width}%`,
-                      opacity: Math.min(0.72, segment.opacity * textFx.alpha),
-                    }}
-                  >
-                    <h1
-                      className="pointer-events-none absolute top-0 font-black select-none"
-                      style={{
-                        ...rushLayerBase,
-                        ...dotStyle,
-                        left: `${childLeft}%`,
-                        right: "auto",
-                        width: `${childWidth}%`,
-                        inset: undefined,
-                      }}
-                    >
-                      {renderRushTextContent(dotStyle)}
-                    </h1>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
       </div>
     );
   })()}
@@ -8652,6 +8875,11 @@ const cleanupTimerRef = useRef<number | null>(null);
 const cleanupBusyRef = useRef(false);
 const cleanupBaseUrlRef = useRef<Record<string, string>>({});
 const cleanupJobRef = useRef(0); // cancels stale async runs
+const cleanupParamsRef = useRef<CleanupParams>(DEFAULT_CLEANUP);
+
+useEffect(() => {
+  cleanupParamsRef.current = cleanupParams;
+}, [cleanupParams]);
 
 // current portrait selection
 const selectedPortrait = React.useMemo(() => {
@@ -8746,17 +8974,26 @@ useEffect(() => {
   setCleanupParams(DEFAULT_CLEANUP);
 }, [selectedPortraitId, selectedPortraitIsAsset, cleanupById, portraits, format]);
 
-// ✅ Call this from slider handlers: it updates UI cache AND triggers cleanup
-function setCleanupAndRun(next: CleanupParams) {
+function setCleanupPreview(next: CleanupParams) {
   if (!selectedPortrait || selectedPortraitIsAsset) return;
 
   const portraitId = selectedPortrait.id;
 
   // store per-image settings so toggling portraits restores sliders instantly
+  cleanupParamsRef.current = next;
   setCleanupById((prev) => ({ ...prev, [portraitId]: next }));
   setCleanupParams(next);
+}
 
-  runCleanupDebounced(portraitId, next);
+// ✅ Call this from commit handlers: live slider moves update UI, cleanup runs on release.
+function commitCleanupRun(next: CleanupParams) {
+  if (!selectedPortrait || selectedPortraitIsAsset) return;
+  setCleanupPreview(next);
+  runCleanupDebounced(selectedPortrait.id, next);
+}
+
+function nextCleanupParams(patch: Partial<CleanupParams>) {
+  return { ...cleanupParamsRef.current, ...patch };
 }
 
 // ✅ FIX: Robust cleanup runner with better error logging
@@ -10766,16 +11003,20 @@ function removeFromLogoLibrary(url: string) {
   const [headSliceFade, setHeadSliceFade] = useState<number>(0.5);
   const [headSliceShadowStrength, setHeadSliceShadowStrength] = useState<number>(0.35);
   const [headRushEnabled, setHeadRushEnabled] = useState<boolean>(false);
-  const [headRushDotColor, setHeadRushDotColor] = useState<string>("#10131b");
-  const [headRushContrastColor, setHeadRushContrastColor] = useState<string>("#f4f4ef");
-  const [headRushDotSize, setHeadRushDotSize] = useState<number>(2.4);
+  const [headRushDotColor, setHeadRushDotColor] = useState<string>("#ff2a45");
+  const [headRushContrastColor, setHeadRushContrastColor] = useState<string>("#ffffff");
+  const [headRushDotSize, setHeadRushDotSize] = useState<number>(7.8);
   const [headRushDotSpacing, setHeadRushDotSpacing] = useState<number>(8.5);
   const [headRushShadowOffset, setHeadRushShadowOffset] = useState<number>(9);
   const [headGlitchEnabled, setHeadGlitchEnabled] = useState<boolean>(false);
-  const [headGlitchIntensity, setHeadGlitchIntensity] = useState<number>(0.62);
-  const [headGlitchRgbSplit, setHeadGlitchRgbSplit] = useState<number>(10);
-  const [headGlitchNoise, setHeadGlitchNoise] = useState<number>(0.18);
-  const [headGlitchGlow, setHeadGlitchGlow] = useState<number>(0.72);
+  const [headGlitchIntensity, setHeadGlitchIntensity] = useState<number>(0.55);
+  const [headGlitchRgbSplit, setHeadGlitchRgbSplit] = useState<number>(18);
+  const [headGlitchNoise, setHeadGlitchNoise] = useState<number>(0.04);
+  const [headGlitchGlow, setHeadGlitchGlow] = useState<number>(0.42);
+  const [headGlitchRedColor, setHeadGlitchRedColor] = useState<string>("#ff1d25");
+  const [headGlitchMagentaColor, setHeadGlitchMagentaColor] = useState<string>("#ff18d8");
+  const [headGlitchBlueColor, setHeadGlitchBlueColor] = useState<string>("#004bff");
+  const [headGlitchYellowColor, setHeadGlitchYellowColor] = useState<string>("#d8ff25");
   const [headExtrudeDepth, setHeadExtrudeDepth] = useState<number>(0);
   const [headExtrudeAngle, setHeadExtrudeAngle] = useState<number>(135);
   const [headExtrudeDistance, setHeadExtrudeDistance] = useState<number>(0);
@@ -12671,10 +12912,14 @@ React.useEffect(() => {
 
   window.addEventListener('mouseup', up);
   window.addEventListener('touchend', up);
+  window.addEventListener('pointerup', up);
+  window.addEventListener('pointercancel', up);
 
   return () => {
     window.removeEventListener('mouseup', up);
     window.removeEventListener('touchend', up);
+    window.removeEventListener('pointerup', up);
+    window.removeEventListener('pointercancel', up);
   };
 }, []);
 
@@ -15488,6 +15733,7 @@ const buildEdgeAwareLassoMask = (
       headRushDotSize, headRushDotSpacing, headRushShadowOffset,
       headGlitchEnabled, headGlitchIntensity, headGlitchRgbSplit,
       headGlitchNoise, headGlitchGlow,
+      headGlitchRedColor, headGlitchMagentaColor, headGlitchBlueColor, headGlitchYellowColor,
       headExtrudeDepth, headExtrudeAngle, headExtrudeDistance, headExtrudeColor,
       textLayerOffset,
 
@@ -15614,6 +15860,10 @@ const buildEdgeAwareLassoMask = (
       if (typeof s.headGlitchRgbSplit === 'number') setHeadGlitchRgbSplit(s.headGlitchRgbSplit);
       if (typeof s.headGlitchNoise === 'number') setHeadGlitchNoise(s.headGlitchNoise);
       if (typeof s.headGlitchGlow === 'number') setHeadGlitchGlow(s.headGlitchGlow);
+      if (typeof s.headGlitchRedColor === 'string') setHeadGlitchRedColor(s.headGlitchRedColor);
+      if (typeof s.headGlitchMagentaColor === 'string') setHeadGlitchMagentaColor(s.headGlitchMagentaColor);
+      if (typeof s.headGlitchBlueColor === 'string') setHeadGlitchBlueColor(s.headGlitchBlueColor);
+      if (typeof s.headGlitchYellowColor === 'string') setHeadGlitchYellowColor(s.headGlitchYellowColor);
       if (typeof s.headExtrudeDepth === 'number') setHeadExtrudeDepth(s.headExtrudeDepth);
       if (typeof s.headExtrudeAngle === 'number') setHeadExtrudeAngle(s.headExtrudeAngle);
       if (typeof s.headExtrudeDistance === 'number') setHeadExtrudeDistance(s.headExtrudeDistance);
@@ -16867,6 +17117,7 @@ function exportDesignJSON(): string {
     headRushDotSize, headRushDotSpacing, headRushShadowOffset,
     headGlitchEnabled, headGlitchIntensity, headGlitchRgbSplit,
     headGlitchNoise, headGlitchGlow,
+    headGlitchRedColor, headGlitchMagentaColor, headGlitchBlueColor, headGlitchYellowColor,
     headExtrudeDepth, headExtrudeAngle, headExtrudeDistance, headExtrudeColor,
 
     // details (main)
@@ -17045,6 +17296,7 @@ function buildHistoryState() {
     headRushDotSize, headRushDotSpacing, headRushShadowOffset,
     headGlitchEnabled, headGlitchIntensity, headGlitchRgbSplit,
     headGlitchNoise, headGlitchGlow,
+    headGlitchRedColor, headGlitchMagentaColor, headGlitchBlueColor, headGlitchYellowColor,
     headExtrudeDepth, headExtrudeAngle, headExtrudeDistance, headExtrudeColor,
 
     // details (main)
@@ -17105,7 +17357,13 @@ function buildHistorySignature(): string {
   return JSON.stringify({ v: 1, state: summarizeHistoryValue(buildHistoryState()) });
 }
 
-const historySignature = React.useMemo(() => buildHistorySignature(), [
+const historySignature = React.useMemo(() => {
+  if (isLiveDragging) {
+    return historyRef.current.lastSignature ?? "__live_drag__";
+  }
+  return buildHistorySignature();
+}, [
+  isLiveDragging,
   format,
   headline, headlineFamily, align, lineHeight, textColWidth,
   headSizeAuto, headManualPx, headMaxPx, textFx, tallHeadline, headlineHidden,
@@ -17117,6 +17375,7 @@ const historySignature = React.useMemo(() => buildHistorySignature(), [
   headRushDotSize, headRushDotSpacing, headRushShadowOffset,
   headGlitchEnabled, headGlitchIntensity, headGlitchRgbSplit,
   headGlitchNoise, headGlitchGlow,
+  headGlitchRedColor, headGlitchMagentaColor, headGlitchBlueColor, headGlitchYellowColor,
   headExtrudeDepth, headExtrudeAngle, headExtrudeDistance, headExtrudeColor,
   details, bodyFamily, bodyColor, bodySize, bodyUppercase, bodyBold,
   bodyItalic, bodyUnderline, bodyTracking, detailsLineHeight,
@@ -17143,11 +17402,12 @@ const historySignature = React.useMemo(() => buildHistorySignature(), [
 ]);
 
 React.useEffect(() => {
+  if (isLiveDragging) return;
   if (!historyRef.current.last) {
     historyRef.current.last = buildHistorySnapshot();
     historyRef.current.lastSignature = historySignature;
   }
-}, [historySignature]);
+}, [historySignature, isLiveDragging]);
 
 React.useEffect(() => {
   if (historyPauseRef.current) return;
@@ -18867,10 +19127,8 @@ const portraitCanvas = React.useMemo(() => {
                 y: Number.isFinite(finalY) ? clamp100(finalY) : p.y,
               });
             }
-            useFlyerState.setState({
-              dragging: null,
-              isLiveDragging: false,
-            });
+            useFlyerState.setState({ dragging: null });
+            useFlyerState.getState().setIsLiveDragging(false);
             suppressCanvasSelectionHomeRef.current = false;
 
             el.style.setProperty("--pdx", "0px");
@@ -18889,10 +19147,8 @@ const portraitCanvas = React.useMemo(() => {
               cancelAnimationFrame((el as any).__pdragRaf);
               (el as any).__pdragRaf = null;
             }
-            useFlyerState.setState({
-              dragging: null,
-              isLiveDragging: false,
-            });
+            useFlyerState.setState({ dragging: null });
+            useFlyerState.getState().setIsLiveDragging(false);
             suppressCanvasSelectionHomeRef.current = false;
             el.dataset.psuppressclick = "0";
             el.style.setProperty("--pdx", "0px");
@@ -19590,10 +19846,8 @@ const flareCanvas = React.useMemo(() => {
                   });
                 }
 
-                useFlyerState.setState({
-                  dragging: null,
-                  isLiveDragging: false,
-                });
+                useFlyerState.setState({ dragging: null });
+                useFlyerState.getState().setIsLiveDragging(false);
                 suppressCanvasSelectionHomeRef.current = false;
 
                 el.style.setProperty("--pdx", "0px");
@@ -19620,10 +19874,8 @@ const flareCanvas = React.useMemo(() => {
                 }
                 el.dataset.isMoved = "0";
                 el.dataset.psuppressclick = "0";
-                useFlyerState.setState({
-                  dragging: null,
-                  isLiveDragging: false,
-                });
+                useFlyerState.setState({ dragging: null });
+                useFlyerState.getState().setIsLiveDragging(false);
                 el.style.setProperty("--pdx", "0px");
                 el.style.setProperty("--pdy", "0px");
                 try { el.releasePointerCapture(e.pointerId); } catch {}
@@ -20151,6 +20403,10 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       applyIfDefined(data.headGlitchRgbSplit, setHeadGlitchRgbSplit);
       applyIfDefined(data.headGlitchNoise, setHeadGlitchNoise);
       applyIfDefined(data.headGlitchGlow, setHeadGlitchGlow);
+      applyIfDefined(data.headGlitchRedColor, setHeadGlitchRedColor);
+      applyIfDefined(data.headGlitchMagentaColor, setHeadGlitchMagentaColor);
+      applyIfDefined(data.headGlitchBlueColor, setHeadGlitchBlueColor);
+      applyIfDefined(data.headGlitchYellowColor, setHeadGlitchYellowColor);
       applyIfDefined(data.headExtrudeDepth, setHeadExtrudeDepth);
       applyIfDefined(data.headExtrudeAngle, setHeadExtrudeAngle);
       applyIfDefined(data.headExtrudeDistance, setHeadExtrudeDistance);
@@ -20514,16 +20770,20 @@ const applyTemplate = React.useCallback<
     setHeadRotate(merged.headRotate ?? 0);
     setHeadSkew((merged as any).headSkew ?? 0);
     setHeadRushEnabled((merged as any).headRushEnabled ?? false);
-    setHeadRushDotColor((merged as any).headRushDotColor ?? "#10131b");
-    setHeadRushContrastColor((merged as any).headRushContrastColor ?? "#f4f4ef");
-    setHeadRushDotSize((merged as any).headRushDotSize ?? 2.4);
+    setHeadRushDotColor((merged as any).headRushDotColor ?? "#ff2a45");
+    setHeadRushContrastColor((merged as any).headRushContrastColor ?? "#ffffff");
+    setHeadRushDotSize((merged as any).headRushDotSize ?? 7.8);
     setHeadRushDotSpacing((merged as any).headRushDotSpacing ?? 8.5);
     setHeadRushShadowOffset((merged as any).headRushShadowOffset ?? 9);
     setHeadGlitchEnabled((merged as any).headGlitchEnabled ?? false);
-    setHeadGlitchIntensity((merged as any).headGlitchIntensity ?? 0.62);
-    setHeadGlitchRgbSplit((merged as any).headGlitchRgbSplit ?? 10);
-    setHeadGlitchNoise((merged as any).headGlitchNoise ?? 0.18);
-    setHeadGlitchGlow((merged as any).headGlitchGlow ?? 0.72);
+    setHeadGlitchIntensity((merged as any).headGlitchIntensity ?? 0.55);
+    setHeadGlitchRgbSplit((merged as any).headGlitchRgbSplit ?? 18);
+    setHeadGlitchNoise((merged as any).headGlitchNoise ?? 0.04);
+    setHeadGlitchGlow((merged as any).headGlitchGlow ?? 0.42);
+    setHeadGlitchRedColor((merged as any).headGlitchRedColor ?? "#ff1d25");
+    setHeadGlitchMagentaColor((merged as any).headGlitchMagentaColor ?? "#ff18d8");
+    setHeadGlitchBlueColor((merged as any).headGlitchBlueColor ?? "#004bff");
+    setHeadGlitchYellowColor((merged as any).headGlitchYellowColor ?? "#d8ff25");
     setHead2Rotate(merged.head2Rotate ?? 0);
     setHead2Skew((merged as any).head2Skew ?? 0);
     setDetailsRotate(merged.detailsRotate ?? 0);
@@ -21423,6 +21683,10 @@ const syncCurrentStateToSession = () => {
     headGlitchRgbSplit,
     headGlitchNoise,
     headGlitchGlow,
+    headGlitchRedColor,
+    headGlitchMagentaColor,
+    headGlitchBlueColor,
+    headGlitchYellowColor,
     headExtrudeDepth,
     headExtrudeAngle,
     headExtrudeDistance,
@@ -21625,6 +21889,7 @@ const applySessionForFormat = (fmt: Format) => {
 const [showStartup, setShowStartup] = React.useState(true);
 const [loadingStartup, setLoadingStartup] = React.useState(false);
 const didInitCleanRef = React.useRef(false);
+const lastHeadlineSessionSignatureRef = React.useRef("");
 
 const syncHeadlineStyleToSession = React.useCallback(() => {
   const currentData = {
@@ -21669,6 +21934,10 @@ const syncHeadlineStyleToSession = React.useCallback(() => {
     headGlitchRgbSplit,
     headGlitchNoise,
     headGlitchGlow,
+    headGlitchRedColor,
+    headGlitchMagentaColor,
+    headGlitchBlueColor,
+    headGlitchYellowColor,
     headExtrudeDepth,
     headExtrudeAngle,
     headExtrudeDistance,
@@ -21677,6 +21946,10 @@ const syncHeadlineStyleToSession = React.useCallback(() => {
     headShadow,
     headShadowStrength,
   };
+
+  const currentSignature = JSON.stringify(currentData);
+  if (lastHeadlineSessionSignatureRef.current === currentSignature) return;
+  lastHeadlineSessionSignatureRef.current = currentSignature;
 
   useFlyerState.getState().setSession((prev) => ({
     ...prev,
@@ -21725,6 +21998,10 @@ const syncHeadlineStyleToSession = React.useCallback(() => {
   headGlitchRgbSplit,
   headGlitchNoise,
   headGlitchGlow,
+  headGlitchRedColor,
+  headGlitchMagentaColor,
+  headGlitchBlueColor,
+  headGlitchYellowColor,
   headX,
   headY,
   headline,
@@ -21737,8 +22014,9 @@ const syncHeadlineStyleToSession = React.useCallback(() => {
 
 React.useEffect(() => {
   if (!storageReady || showStartup || loadingStartup) return;
+  if (isLiveDragging) return;
   syncHeadlineStyleToSession();
-}, [loadingStartup, showStartup, storageReady, syncHeadlineStyleToSession]);
+}, [isLiveDragging, loadingStartup, showStartup, storageReady, syncHeadlineStyleToSession]);
 
 React.useEffect(() => {
   if (didInitCleanRef.current) return;
@@ -21914,6 +22192,10 @@ const headlinePresetBaselineRef = React.useRef<null | {
   headGlitchRgbSplit: number;
   headGlitchNoise: number;
   headGlitchGlow: number;
+  headGlitchRedColor: string;
+  headGlitchMagentaColor: string;
+  headGlitchBlueColor: string;
+  headGlitchYellowColor: string;
   headShadow: boolean;
   headShadowStrength: number;
   headExtrudeDepth: number;
@@ -21978,6 +22260,18 @@ const floatRecentInteractionAtRef = React.useRef(0);
 
 function markFloatInteraction() {
   floatRecentInteractionAtRef.current = Date.now();
+}
+
+function isSliderControlTarget(target: EventTarget | null) {
+  const el = target as Element | null;
+  return !!el?.closest?.('input[type="range"]');
+}
+
+function handleFloatInteractionCapture(e: React.SyntheticEvent) {
+  markFloatInteraction();
+  floatFocusLockRef.current = true;
+  if (isSliderControlTarget(e.target)) return;
+  e.stopPropagation();
 }
 
 function floatRecentlyInteracted() {
@@ -22722,6 +23016,10 @@ const applyHeadlineSportsPreset = React.useCallback(() => {
       headGlitchRgbSplit,
       headGlitchNoise,
       headGlitchGlow,
+      headGlitchRedColor,
+      headGlitchMagentaColor,
+      headGlitchBlueColor,
+      headGlitchYellowColor,
       headShadow,
       headShadowStrength,
       headExtrudeDepth,
@@ -22797,6 +23095,10 @@ const applyHeadlineSportsPreset = React.useCallback(() => {
   headGlitchRgbSplit,
   headGlitchNoise,
   headGlitchGlow,
+  headGlitchRedColor,
+  headGlitchMagentaColor,
+  headGlitchBlueColor,
+  headGlitchYellowColor,
   headlineFamily,
   lineHeight,
   setSessionValue,
@@ -22831,6 +23133,10 @@ const applyHeadlineRetroSlicePreset = React.useCallback(() => {
       headGlitchRgbSplit,
       headGlitchNoise,
       headGlitchGlow,
+      headGlitchRedColor,
+      headGlitchMagentaColor,
+      headGlitchBlueColor,
+      headGlitchYellowColor,
       headShadow,
       headShadowStrength,
       headExtrudeDepth,
@@ -22912,6 +23218,10 @@ const applyHeadlineRetroSlicePreset = React.useCallback(() => {
   headGlitchRgbSplit,
   headGlitchNoise,
   headGlitchGlow,
+  headGlitchRedColor,
+  headGlitchMagentaColor,
+  headGlitchBlueColor,
+  headGlitchYellowColor,
   headlineFamily,
   lineHeight,
   setSessionValue,
@@ -22946,6 +23256,10 @@ const applyHeadlineRushHalftonePreset = React.useCallback(() => {
       headGlitchRgbSplit,
       headGlitchNoise,
       headGlitchGlow,
+      headGlitchRedColor,
+      headGlitchMagentaColor,
+      headGlitchBlueColor,
+      headGlitchYellowColor,
       headShadow,
       headShadowStrength,
       headExtrudeDepth,
@@ -22963,13 +23277,13 @@ const applyHeadlineRushHalftonePreset = React.useCallback(() => {
     uppercase: true,
     bold: true,
     italic: false,
-    tracking: -0.035,
+    tracking: -0.075,
     gradient: false,
-    color: "#ef2b2d",
-    gradFrom: "#ef2b2d",
-    gradTo: "#ff5a38",
-    strokeWidth: 1,
-    strokeColor: "#050812",
+    color: "#ff2a45",
+    gradFrom: "#ff2a45",
+    gradTo: "#ff2a45",
+    strokeWidth: 0,
+    strokeColor: "#080d13",
     glow: 0,
     shadowEnabled: false,
   };
@@ -22979,20 +23293,20 @@ const applyHeadlineRushHalftonePreset = React.useCallback(() => {
   setSessionValue(format, "textFx", nextFx);
   setHeadRushEnabled(true);
   setHeadGlitchEnabled(false);
-  setHeadRushDotColor("#11141d");
-  setHeadRushContrastColor("#f4f1e7");
-  setHeadRushDotSize(1.8);
+  setHeadRushDotColor("#ff2a45");
+  setHeadRushContrastColor("#ffffff");
+  setHeadRushDotSize(7.8);
   setHeadRushDotSpacing(9);
-  setHeadRushShadowOffset(7);
-  setHeadSkew(-11);
-  setHeadRotate(-1);
+  setHeadRushShadowOffset(9);
+  setHeadSkew(0);
+  setHeadRotate(0);
   setHeadSliceEnabled(false);
   setHeadShadow(false);
   setHeadShadowStrength(0);
   setHeadExtrudeDepth(8);
-  setHeadExtrudeAngle(28);
-  setHeadExtrudeDistance(14);
-  setHeadExtrudeColor("#050812");
+  setHeadExtrudeAngle(38);
+  setHeadExtrudeDistance(18);
+  setHeadExtrudeColor("#080d13");
   setHeadAlign("center");
   setAlign("center");
   setLineHeight(0.84);
@@ -23017,6 +23331,10 @@ const applyHeadlineRushHalftonePreset = React.useCallback(() => {
   headGlitchRgbSplit,
   headGlitchNoise,
   headGlitchGlow,
+  headGlitchRedColor,
+  headGlitchMagentaColor,
+  headGlitchBlueColor,
+  headGlitchYellowColor,
   headShadow,
   headShadowStrength,
   headSkew,
@@ -23065,6 +23383,10 @@ const applyHeadlineGlitchPreset = React.useCallback(() => {
       headGlitchRgbSplit,
       headGlitchNoise,
       headGlitchGlow,
+      headGlitchRedColor,
+      headGlitchMagentaColor,
+      headGlitchBlueColor,
+      headGlitchYellowColor,
       headShadow,
       headShadowStrength,
       headExtrudeDepth,
@@ -23077,42 +23399,49 @@ const applyHeadlineGlitchPreset = React.useCallback(() => {
     };
   }
 
+  const glitchPresetFont = "Doctor Glitch";
   const nextFx: TextFx = {
     ...textFx,
     uppercase: true,
     bold: true,
     italic: true,
-    tracking: -0.035,
+    tracking: 0.17,
     gradient: false,
-    color: "#10f7ef",
-    gradFrom: "#10f7ef",
+    color: "#12fff7",
+    gradFrom: "#12fff7",
     gradTo: "#ff18d8",
-    strokeWidth: 0.8,
-    strokeColor: "#050812",
+    strokeWidth: 1.6,
+    strokeColor: "#f2ffff",
     glow: 0,
     shadowEnabled: false,
   };
 
-  setTextStyle("headline", format, { align: "center" });
+  setHeadlineFamily(glitchPresetFont);
+  setTextStyle("headline", format, { align: "center", family: glitchPresetFont });
+  setSessionValue(format, "headlineFamily", glitchPresetFont);
   setTextFx(nextFx);
   setSessionValue(format, "textFx", nextFx);
   setHeadGlitchEnabled(true);
-  setHeadGlitchIntensity(0.68);
-  setHeadGlitchRgbSplit(12);
-  setHeadGlitchNoise(0.2);
-  setHeadGlitchGlow(0.78);
+  setHeadGlitchIntensity(0.55);
+  setHeadGlitchRgbSplit(18);
+  setHeadGlitchNoise(0.04);
+  setHeadGlitchGlow(0.42);
+  setHeadGlitchRedColor("#ff1d25");
+  setHeadGlitchMagentaColor("#ff18d8");
+  setHeadGlitchBlueColor("#004bff");
+  setHeadGlitchYellowColor("#d8ff25");
   setHeadRushEnabled(false);
   setHeadSliceEnabled(false);
   setHeadShadow(false);
   setHeadShadowStrength(0);
-  setHeadSkew(-8);
+  setHeadSkew(-11);
   setHeadRotate(0);
   setHeadExtrudeDepth(0);
   setHeadExtrudeDistance(0);
   setHeadExtrudeColor("#050812");
   setHeadAlign("center");
   setAlign("center");
-  setLineHeight(0.84);
+  setLineHeight(0.76);
   setMobileHeadlineStyleFocus("glitch");
 }, [
   align,
@@ -23127,6 +23456,10 @@ const applyHeadlineGlitchPreset = React.useCallback(() => {
   headGlitchIntensity,
   headGlitchNoise,
   headGlitchRgbSplit,
+  headGlitchRedColor,
+  headGlitchMagentaColor,
+  headGlitchBlueColor,
+  headGlitchYellowColor,
   headRotate,
   headRushContrastColor,
   headRushDotColor,
@@ -23201,6 +23534,10 @@ const resetHeadlinePresetStyles = React.useCallback(() => {
   setHeadGlitchRgbSplit(baseline.headGlitchRgbSplit);
   setHeadGlitchNoise(baseline.headGlitchNoise);
   setHeadGlitchGlow(baseline.headGlitchGlow);
+  setHeadGlitchRedColor(baseline.headGlitchRedColor);
+  setHeadGlitchMagentaColor(baseline.headGlitchMagentaColor);
+  setHeadGlitchBlueColor(baseline.headGlitchBlueColor);
+  setHeadGlitchYellowColor(baseline.headGlitchYellowColor);
   setHeadShadow(baseline.headShadow);
   setHeadShadowStrength(baseline.headShadowStrength);
   setHeadExtrudeDepth(baseline.headExtrudeDepth);
@@ -27307,8 +27644,8 @@ style={{ top: STICKY_TOP }}
       id="logo-selected-controls"
       className="mt-4 pt-4 border-t border-white/10"
       data-portrait-area="true"
-      onMouseDownCapture={(e) => e.stopPropagation()}
-      onPointerDownCapture={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
     >
       <div className={editorSectionEyebrowClass}>Logo Controls</div>
       <div className={`${editorHelperTextClass} mb-3`}>
@@ -27372,30 +27709,33 @@ style={{ top: STICKY_TOP }}
         </div>
 
         <div className="space-y-3">
-          <SliderRow
-            label="Shrink Edge"
-            value={cleanupParams.shrinkPx}
-            min={0}
-            max={10}
-            step={0.5}
-            onChange={(v) => setCleanupAndRun({ ...cleanupParams, shrinkPx: v })}
-          />
-          <SliderRow
-            label="Feather"
-            value={cleanupParams.featherPx}
-            min={0}
-            max={10}
-            step={0.5}
-            onChange={(v) => setCleanupAndRun({ ...cleanupParams, featherPx: v })}
-          />
-          <SliderRow
-            label="Decontaminate"
-            value={cleanupParams.decontaminate}
-            min={0}
-            max={1}
-            step={0.05}
-            onChange={(v) => setCleanupAndRun({ ...cleanupParams, decontaminate: v })}
-          />
+	          <SliderRow
+	            label="Shrink Edge"
+	            value={cleanupParams.shrinkPx}
+	            min={0}
+	            max={10}
+	            step={0.5}
+	            onChange={(v) => setCleanupPreview(nextCleanupParams({ shrinkPx: v }))}
+	            onCommit={(v) => commitCleanupRun(nextCleanupParams({ shrinkPx: v }))}
+	          />
+	          <SliderRow
+	            label="Feather"
+	            value={cleanupParams.featherPx}
+	            min={0}
+	            max={10}
+	            step={0.5}
+	            onChange={(v) => setCleanupPreview(nextCleanupParams({ featherPx: v }))}
+	            onCommit={(v) => commitCleanupRun(nextCleanupParams({ featherPx: v }))}
+	          />
+	          <SliderRow
+	            label="Decontaminate"
+	            value={cleanupParams.decontaminate}
+	            min={0}
+	            max={1}
+	            step={0.05}
+	            onChange={(v) => setCleanupPreview(nextCleanupParams({ decontaminate: v }))}
+	            onCommit={(v) => commitCleanupRun(nextCleanupParams({ decontaminate: v }))}
+	          />
         </div>
       </div>
 
@@ -27547,14 +27887,14 @@ style={{ top: STICKY_TOP }}
         <Chip small onClick={applyHeadlineSportsPreset}>
           Flat 3D
         </Chip>
-        <Chip small onClick={applyHeadlineRetroSlicePreset}>
-          Retro Slice
-        </Chip>
         <Chip small active={headRushEnabled} onClick={applyHeadlineRushHalftonePreset}>
           Halftone
         </Chip>
         <Chip small active={headGlitchEnabled} onClick={applyHeadlineGlitchPreset}>
           Glitch
+        </Chip>
+        <Chip small active={headSliceEnabled} onClick={applyHeadlineRetroSlicePreset}>
+          Echo
         </Chip>
       </div>
 
@@ -27624,7 +27964,6 @@ style={{ top: STICKY_TOP }}
         >
           Gradient
         </Chip>
-        <Chip small active={headSliceEnabled} onClick={() => setHeadSliceEnabled((v) => !v)}>Echo Bands</Chip>
         <Chip
           small
           active={textFx.strokeWidth > 0}
@@ -27782,43 +28121,63 @@ style={{ top: STICKY_TOP }}
       )}
 
       {headGlitchEnabled && (
-        <div className="grid grid-cols-2 gap-3 mt-2">
-          <Stepper
-            label="Intensity"
-            value={headGlitchIntensity}
-            setValue={setHeadGlitchIntensity}
-            min={0}
-            max={1}
-            step={0.05}
-            digits={2}
-          />
-          <Stepper
-            label="RGB Split"
-            value={headGlitchRgbSplit}
-            setValue={setHeadGlitchRgbSplit}
-            min={0}
-            max={32}
-            step={1}
-          />
-          <Stepper
-            label="Noise"
-            value={headGlitchNoise}
-            setValue={setHeadGlitchNoise}
-            min={0}
-            max={1}
-            step={0.05}
-            digits={2}
-          />
-          <Stepper
-            label="Glow"
-            value={headGlitchGlow}
-            setValue={setHeadGlitchGlow}
-            min={0}
-            max={1}
-            step={0.05}
-            digits={2}
-          />
-        </div>
+        <>
+          <div className="grid grid-cols-2 gap-3 mt-2">
+            <Stepper
+              label="Intensity"
+              value={headGlitchIntensity}
+              setValue={setHeadGlitchIntensity}
+              min={0}
+              max={1}
+              step={0.05}
+              digits={2}
+            />
+            <Stepper
+              label="RGB Split"
+              value={headGlitchRgbSplit}
+              setValue={setHeadGlitchRgbSplit}
+              min={0}
+              max={32}
+              step={1}
+            />
+            <Stepper
+              label="Noise"
+              value={headGlitchNoise}
+              setValue={setHeadGlitchNoise}
+              min={0}
+              max={1}
+              step={0.05}
+              digits={2}
+            />
+            <Stepper
+              label="Glow"
+              value={headGlitchGlow}
+              setValue={setHeadGlitchGlow}
+              min={0}
+              max={1}
+              step={0.05}
+              digits={2}
+            />
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Red</span>
+              <ColorDot value={headGlitchRedColor} onChange={setHeadGlitchRedColor} />
+            </div>
+            <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Mag</span>
+              <ColorDot value={headGlitchMagentaColor} onChange={setHeadGlitchMagentaColor} />
+            </div>
+            <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Blue</span>
+              <ColorDot value={headGlitchBlueColor} onChange={setHeadGlitchBlueColor} />
+            </div>
+            <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Yellow</span>
+              <ColorDot value={headGlitchYellowColor} onChange={setHeadGlitchYellowColor} />
+            </div>
+          </div>
+        </>
       )}
 
       <div className="mt-3 grid grid-cols-2 gap-2 min-[420px]:grid-cols-3">
@@ -29174,6 +29533,10 @@ style={{ top: STICKY_TOP }}
             headGlitchRgbSplit={headGlitchRgbSplit}
             headGlitchNoise={headGlitchNoise}
             headGlitchGlow={headGlitchGlow}
+            headGlitchRedColor={headGlitchRedColor}
+            headGlitchMagentaColor={headGlitchMagentaColor}
+            headGlitchBlueColor={headGlitchBlueColor}
+            headGlitchYellowColor={headGlitchYellowColor}
             headExtrudeDepth={headExtrudeDepth}
             headExtrudeAngle={headExtrudeAngle}
             headExtrudeDistance={headExtrudeDistance}
@@ -29270,21 +29633,9 @@ style={{ top: STICKY_TOP }}
           style={activeMobileTextFloatPanelStyle}
           ref={floatingTextRef}
           data-floating-controls="text"
-          onPointerDownCapture={(e) => {
-            markFloatInteraction();
-            floatFocusLockRef.current = true;
-            e.stopPropagation();
-          }}
-          onTouchStartCapture={(e) => {
-            markFloatInteraction();
-            floatFocusLockRef.current = true;
-            e.stopPropagation();
-          }}
-          onTouchMoveCapture={(e) => {
-            markFloatInteraction();
-            floatFocusLockRef.current = true;
-            e.stopPropagation();
-          }}
+          onPointerDownCapture={handleFloatInteractionCapture}
+          onTouchStartCapture={handleFloatInteractionCapture}
+          onTouchMoveCapture={handleFloatInteractionCapture}
           onWheelCapture={(e) => {
             markFloatInteraction();
             floatFocusLockRef.current = true;
@@ -29477,7 +29828,7 @@ style={{ top: STICKY_TOP }}
           {showMobileHeadlineStyleControls && (
             <>
               <div className="rounded border border-white/10 bg-black/20 p-2">
-                <div className="grid grid-cols-2 gap-2 min-[380px]:grid-cols-3">
+                <div className="grid grid-cols-2 gap-2">
                   <Chip
                     small
                     className="w-full justify-center text-center"
@@ -29490,19 +29841,6 @@ style={{ top: STICKY_TOP }}
                     }}
                   >
                     Flat 3D
-                  </Chip>
-                  <Chip
-                    small
-                    className="w-full justify-center text-center"
-                    active={activeMobileHeadlineStyleFocus === "echo"}
-                    onClick={() => {
-                      setMobileHeadlineStyleFocus("echo");
-                      if (!headlineEchoStyleActive) {
-                        applyHeadlineRetroSlicePreset();
-                      }
-                    }}
-                  >
-                    Retro Slice
                   </Chip>
                   <Chip
                     small
@@ -29529,6 +29867,19 @@ style={{ top: STICKY_TOP }}
                     }}
                   >
                     Glitch
+                  </Chip>
+                  <Chip
+                    small
+                    className="w-full justify-center text-center"
+                    active={activeMobileHeadlineStyleFocus === "echo"}
+                    onClick={() => {
+                      setMobileHeadlineStyleFocus("echo");
+                      if (!headlineEchoStyleActive) {
+                        applyHeadlineRetroSlicePreset();
+                      }
+                    }}
+                  >
+                    Echo
                   </Chip>
                   <Chip
                     small
@@ -29562,6 +29913,10 @@ style={{ top: STICKY_TOP }}
                           headGlitchRgbSplit,
                           headGlitchNoise,
                           headGlitchGlow,
+                          headGlitchRedColor,
+                          headGlitchMagentaColor,
+                          headGlitchBlueColor,
+                          headGlitchYellowColor,
                           headShadow,
                           headShadowStrength,
                           headExtrudeDepth,
@@ -29837,6 +30192,24 @@ style={{ top: STICKY_TOP }}
                       />
                     </div>
                   </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/20 px-2.5 text-[10px] uppercase tracking-wider text-neutral-400">
+                      <span className="min-w-0 truncate">Red</span>
+                      <ColorDot value={headGlitchRedColor} onChange={setHeadGlitchRedColor} />
+                    </div>
+                    <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/20 px-2.5 text-[10px] uppercase tracking-wider text-neutral-400">
+                      <span className="min-w-0 truncate">Mag</span>
+                      <ColorDot value={headGlitchMagentaColor} onChange={setHeadGlitchMagentaColor} />
+                    </div>
+                    <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/20 px-2.5 text-[10px] uppercase tracking-wider text-neutral-400">
+                      <span className="min-w-0 truncate">Blue</span>
+                      <ColorDot value={headGlitchBlueColor} onChange={setHeadGlitchBlueColor} />
+                    </div>
+                    <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/20 px-2.5 text-[10px] uppercase tracking-wider text-neutral-400">
+                      <span className="min-w-0 truncate">Yellow</span>
+                      <ColorDot value={headGlitchYellowColor} onChange={setHeadGlitchYellowColor} />
+                    </div>
+                  </div>
                 </>
               )}
               {showMobileHeadlineGradientControls && (
@@ -30010,21 +30383,9 @@ style={{ top: STICKY_TOP }}
           style={mobileFloatPanelStyle}
           ref={floatingAssetRef}
           data-floating-controls="asset"
-          onPointerDownCapture={(e) => {
-            markFloatInteraction();
-            floatFocusLockRef.current = true;
-            e.stopPropagation();
-          }}
-          onTouchStartCapture={(e) => {
-            markFloatInteraction();
-            floatFocusLockRef.current = true;
-            e.stopPropagation();
-          }}
-          onTouchMoveCapture={(e) => {
-            markFloatInteraction();
-            floatFocusLockRef.current = true;
-            e.stopPropagation();
-          }}
+          onPointerDownCapture={handleFloatInteractionCapture}
+          onTouchStartCapture={handleFloatInteractionCapture}
+          onTouchMoveCapture={handleFloatInteractionCapture}
           onWheelCapture={(e) => {
             markFloatInteraction();
             floatFocusLockRef.current = true;
@@ -30067,9 +30428,6 @@ style={{ top: STICKY_TOP }}
                 precision={1}
                 onChange={(next) => activeAssetControls.onPosX?.(next)}
                 rangeClassName="flex-1 accent-emerald-400"
-                onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
-                onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
-                onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
                 disabled={activeAssetControls.locked}
               />
             </div>
@@ -30083,9 +30441,6 @@ style={{ top: STICKY_TOP }}
                 precision={1}
                 onChange={(next) => activeAssetControls.onPosY?.(next)}
                 rangeClassName="flex-1 accent-teal-400"
-                onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
-                onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
-                onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
                 disabled={activeAssetControls.locked}
               />
             </div>
@@ -30105,9 +30460,6 @@ style={{ top: STICKY_TOP }}
                 suffix="%"
                 onChange={(next) => activeAssetControls.onScale(next)}
                 rangeClassName="flex-1 accent-fuchsia-500"
-                onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
-                onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
-                onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
                 disabled={activeAssetControls.locked}
               />
             </div>
@@ -30123,9 +30475,6 @@ style={{ top: STICKY_TOP }}
                 precision={0}
                 onChange={(next) => activeAssetControls.onSeparatorLength?.(next)}
                 rangeClassName="flex-1 accent-rose-400"
-                onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
-                onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
-                onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
                 disabled={activeAssetControls.locked}
               />
             </div>
@@ -30141,9 +30490,6 @@ style={{ top: STICKY_TOP }}
                 precision={0}
                 onChange={(next) => activeAssetControls.onSeparatorOffset?.(next)}
                 rangeClassName="flex-1 accent-cyan-400"
-                onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
-                onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
-                onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
                 disabled={activeAssetControls.locked}
               />
             </div>
@@ -30160,9 +30506,6 @@ style={{ top: STICKY_TOP }}
                 suffix="°"
                 onChange={(next) => activeAssetControls.onShapeSkew?.(next)}
                 rangeClassName="flex-1 accent-amber-400"
-                onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
-                onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
-                onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
                 disabled={activeAssetControls.locked}
               />
             </div>
@@ -30180,9 +30523,6 @@ style={{ top: STICKY_TOP }}
                 suffix="%"
                 onChange={(next) => activeAssetControls.onOpacity?.(next)}
                 rangeClassName="flex-1 accent-indigo-400"
-                onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
-                onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
-                onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
                 disabled={activeAssetControls.locked}
               />
             </div>
@@ -30199,9 +30539,6 @@ style={{ top: STICKY_TOP }}
                 suffix="°"
                 onChange={(next) => activeAssetControls.onTint?.(next)}
                 rangeClassName="flex-1 accent-amber-400"
-                onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
-                onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
-                onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
                 disabled={activeAssetControls.locked}
               />
             </div>
@@ -30217,9 +30554,6 @@ style={{ top: STICKY_TOP }}
                 precision={0}
                 onChange={(next) => activeAssetControls.onShadowBlur?.(next)}
                 rangeClassName="flex-1 accent-cyan-400"
-                onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
-                onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
-                onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
                 disabled={activeAssetControls.locked}
               />
             </div>
@@ -30237,9 +30571,6 @@ style={{ top: STICKY_TOP }}
                 suffix="%"
                 onChange={(next) => activeAssetControls.onShadowStrength?.(next)}
                 rangeClassName="flex-1 accent-cyan-400"
-                onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
-                onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
-                onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
                 disabled={activeAssetControls.locked}
               />
             </div>
@@ -30256,9 +30587,6 @@ style={{ top: STICKY_TOP }}
                 suffix="°"
                 onChange={(next) => activeAssetControls.onRotate?.(next)}
                 rangeClassName="flex-1 accent-sky-400"
-                onPointerDown={() => useFlyerState.getState().setIsLiveDragging(true)}
-                onPointerUp={() => useFlyerState.getState().setIsLiveDragging(false)}
-                onPointerCancel={() => useFlyerState.getState().setIsLiveDragging(false)}
                 disabled={activeAssetControls.locked}
               />
             </div>
@@ -30417,21 +30745,9 @@ style={{ top: STICKY_TOP }}
           style={mobileFloatPanelStyle}
           ref={floatingLightingRef}
           data-floating-controls="lighting"
-          onPointerDownCapture={(e) => {
-            markFloatInteraction();
-            floatFocusLockRef.current = true;
-            e.stopPropagation();
-          }}
-          onTouchStartCapture={(e) => {
-            markFloatInteraction();
-            floatFocusLockRef.current = true;
-            e.stopPropagation();
-          }}
-          onTouchMoveCapture={(e) => {
-            markFloatInteraction();
-            floatFocusLockRef.current = true;
-            e.stopPropagation();
-          }}
+          onPointerDownCapture={handleFloatInteractionCapture}
+          onTouchStartCapture={handleFloatInteractionCapture}
+          onTouchMoveCapture={handleFloatInteractionCapture}
           onWheelCapture={(e) => {
             markFloatInteraction();
             floatFocusLockRef.current = true;
@@ -30606,21 +30922,9 @@ style={{ top: STICKY_TOP }}
           style={mobileFloatPanelStyle}
           ref={floatingBgRef}
           data-floating-controls="bg"
-          onPointerDownCapture={(e) => {
-            markFloatInteraction();
-            floatFocusLockRef.current = true;
-            e.stopPropagation();
-          }}
-          onTouchStartCapture={(e) => {
-            markFloatInteraction();
-            floatFocusLockRef.current = true;
-            e.stopPropagation();
-          }}
-          onTouchMoveCapture={(e) => {
-            markFloatInteraction();
-            floatFocusLockRef.current = true;
-            e.stopPropagation();
-          }}
+          onPointerDownCapture={handleFloatInteractionCapture}
+          onTouchStartCapture={handleFloatInteractionCapture}
+          onTouchMoveCapture={handleFloatInteractionCapture}
           onWheelCapture={(e) => {
             markFloatInteraction();
             floatFocusLockRef.current = true;
