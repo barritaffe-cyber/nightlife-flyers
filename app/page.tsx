@@ -1583,6 +1583,9 @@ type HalftoneHeadlineSvgProps = {
   shadowColor: string;
   shadowOffsetX: number;
   shadowOffsetY: number;
+  depthLayers?: number;
+  depthStepX?: number;
+  depthStepY?: number;
   alpha: number;
   maxDot?: number;
   minDot?: number;
@@ -1610,6 +1613,9 @@ const HalftoneHeadlineSvg = React.memo(function HalftoneHeadlineSvg({
   shadowColor,
   shadowOffsetX,
   shadowOffsetY,
+  depthLayers = 0,
+  depthStepX = 0,
+  depthStepY = 0,
   alpha,
   maxDot = 7.8,
   minDot = 1.2,
@@ -1648,6 +1654,13 @@ const HalftoneHeadlineSvg = React.memo(function HalftoneHeadlineSvg({
   const dotFieldHeight = textBlockHeight + safeFontSize * 0.08;
   const alphaValue = Number(alpha);
   const textOpacity = Math.max(0, Math.min(1, Number.isFinite(alphaValue) ? alphaValue : 1));
+  const safeDepthLayers = Math.max(0, Math.min(72, Math.round(Number(depthLayers) || 0)));
+  const safeDepthStepX = Number.isFinite(Number(depthStepX)) ? Number(depthStepX) : 0;
+  const safeDepthStepY = Number.isFinite(Number(depthStepY)) ? Number(depthStepY) : 0;
+  const shadowLayers =
+    safeDepthLayers > 0
+      ? Array.from({ length: safeDepthLayers }, (_, idx) => safeDepthLayers - idx)
+      : [1];
 
   const dotPath = React.useMemo(() => {
     const commands: string[] = [];
@@ -1721,13 +1734,19 @@ const HalftoneHeadlineSvg = React.memo(function HalftoneHeadlineSvg({
         </clipPath>
       </defs>
 
-      <g transform={`translate(${shadowOffsetX.toFixed(1)} ${shadowOffsetY.toFixed(1)})`}>
-        {renderSvgText(shadowColor, {
-          stroke: shadowColor,
-          strokeWidth: Math.max(0, strokeWidth),
-          paintOrder: "stroke fill",
-        })}
-      </g>
+      {shadowLayers.map((layer) => {
+        const x = safeDepthLayers > 0 ? layer * safeDepthStepX : shadowOffsetX;
+        const y = safeDepthLayers > 0 ? layer * safeDepthStepY : shadowOffsetY;
+        return (
+          <g key={`halftone-depth-${layer}`} transform={`translate(${x.toFixed(1)} ${y.toFixed(1)})`}>
+            {renderSvgText(shadowColor, {
+              stroke: shadowColor,
+              strokeWidth: Math.max(0, strokeWidth),
+              paintOrder: "stroke fill",
+            })}
+          </g>
+        );
+      })}
 
       <g mask={`url(#${maskId})`}>
         <image href={dotFieldHref} x={0} y={0} width={width} height={height} preserveAspectRatio="none" />
@@ -4601,13 +4620,19 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     });
     const rushMaxDotPx = Math.max(1.2, Math.min(14, Number(headRushDotSize) || 7.8));
     const rushShadowPx = Math.max(0, Math.min(42, Number(headRushShadowOffset) || 0));
-    const rushDepthAngleRad = ((Number(headExtrudeAngle) || 28) * Math.PI) / 180;
     const rushDepthDistance = Math.max(
       rushShadowPx * 1.15,
-      Math.min(30, (Number(headExtrudeDistance) || 0) * 0.72)
+      extrudeDepth > 0
+        ? Math.min(
+            HEADLINE_EXTRUDE_MAX_DISTANCE,
+            Math.max(extrudeDistance, extrudeDepth * 0.65)
+          )
+        : Math.min(30, extrudeDistance * 0.72)
     );
-    const rushDepthX = Math.cos(rushDepthAngleRad) * rushDepthDistance;
-    const rushDepthY = Math.sin(rushDepthAngleRad) * rushDepthDistance;
+    const rushDepthX = Math.cos(extrudeAngleRad) * rushDepthDistance;
+    const rushDepthY = Math.sin(extrudeAngleRad) * rushDepthDistance;
+    const rushDepthStepX = extrudeDepth > 0 ? rushDepthX / extrudeDepth : 0;
+    const rushDepthStepY = extrudeDepth > 0 ? rushDepthY / extrudeDepth : 0;
     const rushDarkColor = headExtrudeColor || "#050812";
     const rushLayerBase: React.CSSProperties = {
       position: "absolute",
@@ -4987,6 +5012,9 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
               shadowColor={rushDarkColor}
               shadowOffsetX={rushDepthX}
               shadowOffsetY={rushDepthY}
+              depthLayers={extrudeDepth}
+              depthStepX={rushDepthStepX}
+              depthStepY={rushDepthStepY}
               alpha={textFx.alpha}
               maxDot={rushMaxDotPx}
               minDot={1.2}
