@@ -1,6 +1,5 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import Script from 'next/script';
 import AnalyticsTracker from "../components/analytics/AnalyticsTracker";
 import { getPublicSiteUrl } from "../lib/publicIdentity";
 
@@ -114,19 +113,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
-        <Script
-          id="google-ads-gtag-src"
+        <script
+          async
           src={`https://www.googletagmanager.com/gtag/js?id=${googleAdsTagId}`}
-          strategy="afterInteractive"
         />
-        <Script id="google-ads-gtag-init" strategy="afterInteractive">
-          {`
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
             gtag('config', '${googleAdsTagId}');
-          `}
-        </Script>
+          `,
+          }}
+        />
       </head>
       <body>
         <script
