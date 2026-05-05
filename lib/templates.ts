@@ -281,6 +281,11 @@ export interface TemplateBase {
   headRushDotSize?: number;
   headRushDotSpacing?: number;
   headRushShadowOffset?: number;
+  headGlitchEnabled?: boolean;
+  headGlitchIntensity?: number;
+  headGlitchRgbSplit?: number;
+  headGlitchNoise?: number;
+  headGlitchGlow?: number;
   
 
   // -----------------------------------------------------

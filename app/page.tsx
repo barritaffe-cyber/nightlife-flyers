@@ -2507,7 +2507,7 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
   bgLocked: boolean;
   setBgLocked: (v: boolean) => void;
 
-  headRotate: number; headSkew: number; headSliceEnabled: boolean; headSliceBandCount: number; headSliceBandGap: number; headSliceEchoDistance: number; headSliceTopColor: string; headSliceMidColor: string; headSliceBottomColor: string; headSliceBlur: number; headSliceFade: number; headSliceShadowStrength: number; headRushEnabled: boolean; headRushDotColor: string; headRushContrastColor: string; headRushDotSize: number; headRushDotSpacing: number; headRushShadowOffset: number; headExtrudeDepth: number; headExtrudeAngle: number; headExtrudeDistance: number; headExtrudeColor: string; head2Rotate: number; head2Skew: number; detailsRotate: number; details2Rotate: number; venueRotate: number; subtagRotate: number; logoRotate: number;
+  headRotate: number; headSkew: number; headSliceEnabled: boolean; headSliceBandCount: number; headSliceBandGap: number; headSliceEchoDistance: number; headSliceTopColor: string; headSliceMidColor: string; headSliceBottomColor: string; headSliceBlur: number; headSliceFade: number; headSliceShadowStrength: number; headRushEnabled: boolean; headRushDotColor: string; headRushContrastColor: string; headRushDotSize: number; headRushDotSpacing: number; headRushShadowOffset: number; headGlitchEnabled: boolean; headGlitchIntensity: number; headGlitchRgbSplit: number; headGlitchNoise: number; headGlitchGlow: number; headExtrudeDepth: number; headExtrudeAngle: number; headExtrudeDistance: number; headExtrudeColor: string; head2Rotate: number; head2Skew: number; detailsRotate: number; details2Rotate: number; venueRotate: number; subtagRotate: number; logoRotate: number;
   portraitBoxW: number; portraitBoxH: number; portraitLocked?: boolean; hideUiForExport?: boolean; headAlign: Align;
   onTogglePortraitLock: () => void;
   details2Uppercase?: boolean;
@@ -2606,7 +2606,7 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
 }>((p, ref) => {
   // ✅ CLEAN DESTRUCTURE — do NOT put type annotations here.
   const {
-    headRotate, headSkew, headSliceEnabled, headSliceBandCount, headSliceBandGap, headSliceEchoDistance, headSliceTopColor, headSliceMidColor, headSliceBottomColor, headSliceBlur, headSliceFade, headSliceShadowStrength, headRushEnabled, headRushDotColor, headRushContrastColor, headRushDotSize, headRushDotSpacing, headRushShadowOffset, headExtrudeDepth, headExtrudeAngle, headExtrudeDistance, headExtrudeColor, head2Rotate, head2Skew, detailsRotate, details2Rotate, venueRotate, subtagRotate, logoRotate, headAlign,
+    headRotate, headSkew, headSliceEnabled, headSliceBandCount, headSliceBandGap, headSliceEchoDistance, headSliceTopColor, headSliceMidColor, headSliceBottomColor, headSliceBlur, headSliceFade, headSliceShadowStrength, headRushEnabled, headRushDotColor, headRushContrastColor, headRushDotSize, headRushDotSpacing, headRushShadowOffset, headGlitchEnabled, headGlitchIntensity, headGlitchRgbSplit, headGlitchNoise, headGlitchGlow, headExtrudeDepth, headExtrudeAngle, headExtrudeDistance, headExtrudeColor, head2Rotate, head2Skew, detailsRotate, details2Rotate, venueRotate, subtagRotate, logoRotate, headAlign,
     palette, format, portraitUrl, bgUrl, bgUploadUrl, logoUrl, hue, haze, grade, leak, vignette, bgPosX, bgPosY,
     portraitScale, subtagUppercase, opticalMargin, leadTrackDelta, lastTrackDelta, kerningFix, headBehindPortrait,
     headlineLayerZ, head2LayerZ, detailsLayerZ, details2LayerZ, venueLayerZ, subtagLayerZ,
@@ -4319,15 +4319,57 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
       headSliceEnabled && headSliceShadowStrength > 0
         ? `0 ${Math.round(12 * headSliceShadowStrength)}px 0 rgba(0,0,0,${Math.min(0.45, 0.18 + headSliceShadowStrength * 0.4)})`
         : "none";
-    const rushActive = !!headRushEnabled;
+    const glitchActive = !!headGlitchEnabled;
+    const rushActive = !!headRushEnabled && !glitchActive;
     const rushFillColor =
       textFx.color && textFx.color !== "transparent" && textFx.color !== "none"
         ? textFx.color
         : "#ef2a2a";
-    const rushDotPx = Math.max(0.8, Math.min(9, Number(headRushDotSize) || 2.4));
-    const rushDotGap = Math.max(rushDotPx * 2 + 1, Math.min(28, Number(headRushDotSpacing) || 8.5));
+    const glitchBaseColor =
+      textFx.color && textFx.color !== "transparent" && textFx.color !== "none"
+        ? textFx.color
+        : "#10f7ef";
+    const glitchIntensity = Math.max(0, Math.min(1, Number(headGlitchIntensity) || 0));
+    const glitchRgbSplit = Math.max(0, Math.min(32, Number(headGlitchRgbSplit) || 0));
+    const glitchNoise = Math.max(0, Math.min(1, Number(headGlitchNoise) || 0));
+    const glitchGlow = Math.max(0, Math.min(1, Number(headGlitchGlow) || 0));
+    const glitchSliceCount = Math.max(3, Math.min(6, Math.round(3 + glitchIntensity * 3)));
+    const glitchSliceOffset = 8 + glitchIntensity * 24;
+    const glitchColors = ["#10f7ef", "#ff18d8", "#ff2a2a", "#d8ff25", "#2457ff", "#ffffff"];
+    const glitchSlicePlan = [
+      { top: 0.12, height: 0.08, dir: -0.65, color: 1, scale: 1.02 },
+      { top: 0.27, height: 0.045, dir: 0.95, color: 2, scale: 1.04 },
+      { top: 0.42, height: 0.065, dir: -1.2, color: 0, scale: 1.01 },
+      { top: 0.56, height: 0.055, dir: 1.35, color: 4, scale: 1.05 },
+      { top: 0.7, height: 0.05, dir: -0.9, color: 3, scale: 1.03 },
+      { top: 0.82, height: 0.04, dir: 1.05, color: 1, scale: 1.02 },
+    ];
+    const glitchFragments = [
+      { left: 4, top: 0.18, width: 11, height: 3, color: "#ff2a2a", dir: -0.6 },
+      { left: 15, top: 0.72, width: 9, height: 3, color: "#ff18d8", dir: 0.8 },
+      { left: 31, top: 0.33, width: 7, height: 4, color: "#d8ff25", dir: 0.5 },
+      { left: 48, top: 0.2, width: 13, height: 3, color: "#2457ff", dir: -0.7 },
+      { left: 62, top: 0.62, width: 8, height: 4, color: "#10f7ef", dir: 0.9 },
+      { left: 78, top: 0.36, width: 12, height: 3, color: "#ff18d8", dir: 0.6 },
+      { left: 90, top: 0.75, width: 10, height: 2, color: "#ffffff", dir: -0.8 },
+    ];
+    const rushDotPx = Math.max(0.8, Math.min(9, Number(headRushDotSize) || 1.8));
+    const rushDotGap = Math.max(rushDotPx * 2 + 1, Math.min(28, Number(headRushDotSpacing) || 9));
     const rushShadowPx = Math.max(0, Math.min(42, Number(headRushShadowOffset) || 0));
-    const rushDepthPx = rushShadowPx * 1.75;
+    const rushDepthAngleRad = ((Number(headExtrudeAngle) || 28) * Math.PI) / 180;
+    const rushDepthDistance = Math.max(
+      rushShadowPx * 1.15,
+      Math.min(30, (Number(headExtrudeDistance) || 0) * 0.72)
+    );
+    const rushCutoutDistance = Math.min(
+      24,
+      rushShadowPx * 0.85 + Math.min(8, (Number(headExtrudeDepth) || 0) * 0.12)
+    );
+    const rushDepthX = Math.cos(rushDepthAngleRad) * rushDepthDistance;
+    const rushDepthY = Math.sin(rushDepthAngleRad) * rushDepthDistance;
+    const rushCutoutX = Math.cos(rushDepthAngleRad) * rushCutoutDistance;
+    const rushCutoutY = Math.sin(rushDepthAngleRad) * rushCutoutDistance;
+    const rushDarkColor = headExtrudeColor || "#050812";
     const rushLayerBase: React.CSSProperties = {
       position: "absolute",
       inset: 0,
@@ -4466,6 +4508,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
         {!exportTextMode &&
           extrudeDepth > 0 &&
           !headSliceEnabled &&
+          !rushActive &&
+          !glitchActive &&
           Array.from({ length: extrudeDepth }, (_, idx) => {
             const layer = extrudeDepth - idx;
             return (
@@ -4522,8 +4566,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
               {
                 color: rushFillColor,
                 WebkitTextFillColor: rushFillColor,
-                opacity: Math.min(0.62, Math.max(0.2, textFx.alpha * 0.48)),
-                transform: `translate(${rushDepthPx.toFixed(1)}px, ${(rushDepthPx * 0.68).toFixed(1)}px)`,
+                opacity: Math.min(0.5, Math.max(0.14, textFx.alpha * 0.36)),
+                transform: `translate(${rushDepthX.toFixed(1)}px, ${rushDepthY.toFixed(1)}px)`,
                 zIndex: 0,
               },
               {
@@ -4534,19 +4578,67 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
             {renderRushTextLayer(
               "headline-rush-dark-cutout",
               {
-                color: "#050812",
-                WebkitTextFillColor: "#050812",
+                color: rushDarkColor,
+                WebkitTextFillColor: rushDarkColor,
                 WebkitTextStrokeWidth: textFx.strokeWidth ? `${Math.max(1, textFx.strokeWidth)}px` : undefined,
-                WebkitTextStrokeColor: "#050812",
-                opacity: Math.min(0.98, Math.max(0.3, textFx.alpha * 0.9)),
-                transform: `translate(${rushShadowPx.toFixed(1)}px, ${(rushShadowPx * 0.72).toFixed(1)}px)`,
+                WebkitTextStrokeColor: rushDarkColor,
+                opacity: Math.min(0.9, Math.max(0.26, textFx.alpha * 0.78)),
+                transform: `translate(${rushCutoutX.toFixed(1)}px, ${rushCutoutY.toFixed(1)}px)`,
                 zIndex: 1,
               },
               {
-                color: "#050812",
-                WebkitTextFillColor: "#050812",
+                color: rushDarkColor,
+                WebkitTextFillColor: rushDarkColor,
                 WebkitTextStrokeWidth: textFx.strokeWidth ? `${Math.max(1, textFx.strokeWidth)}px` : undefined,
-                WebkitTextStrokeColor: "#050812",
+                WebkitTextStrokeColor: rushDarkColor,
+              }
+            )}
+          </>
+        )}
+
+        {glitchActive && (
+          <>
+            {renderRushTextLayer(
+              "headline-glitch-magenta-offset",
+              {
+                color: "#ff18d8",
+                WebkitTextFillColor: "#ff18d8",
+                opacity: Math.min(0.82, 0.38 + glitchIntensity * 0.36),
+                transform: `translate(${(-glitchRgbSplit * 0.46).toFixed(1)}px, ${(glitchRgbSplit * 0.18).toFixed(1)}px)`,
+                filter: "blur(0.2px)",
+                zIndex: 0,
+              },
+              {
+                color: "#ff18d8",
+                WebkitTextFillColor: "#ff18d8",
+              }
+            )}
+            {renderRushTextLayer(
+              "headline-glitch-lime-offset",
+              {
+                color: "#d8ff25",
+                WebkitTextFillColor: "#d8ff25",
+                opacity: Math.min(0.68, 0.26 + glitchIntensity * 0.3),
+                transform: `translate(${(glitchRgbSplit * 0.36).toFixed(1)}px, ${(-glitchRgbSplit * 0.2).toFixed(1)}px)`,
+                zIndex: 0,
+              },
+              {
+                color: "#d8ff25",
+                WebkitTextFillColor: "#d8ff25",
+              }
+            )}
+            {renderRushTextLayer(
+              "headline-glitch-red-offset",
+              {
+                color: "#ff272d",
+                WebkitTextFillColor: "#ff272d",
+                opacity: Math.min(0.74, 0.34 + glitchIntensity * 0.3),
+                transform: `translate(${(glitchRgbSplit * 0.82).toFixed(1)}px, 0)`,
+                zIndex: 0,
+              },
+              {
+                color: "#ff272d",
+                WebkitTextFillColor: "#ff272d",
               }
             )}
           </>
@@ -4571,14 +4663,24 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
             opacity: textFx.alpha,
             color: exportTextMode
               ? headlineExportColor
+              : glitchActive
+              ? glitchBaseColor
               : rushActive
               ? rushFillColor
               : textFx.gradient
               ? 'transparent'
               : textFx.color,
-            WebkitTextFillColor: exportTextMode ? headlineExportColor : rushActive ? rushFillColor : undefined,
+            WebkitTextFillColor: exportTextMode
+              ? headlineExportColor
+              : glitchActive
+              ? glitchBaseColor
+              : rushActive
+              ? rushFillColor
+              : undefined,
             textShadow: dragging
               ? 'none'
+              : glitchActive
+              ? `0 0 ${Math.round(5 + glitchGlow * 14)}px rgba(16,247,239,${(0.32 + glitchGlow * 0.46).toFixed(2)}), 0 0 ${Math.round(14 + glitchGlow * 30)}px rgba(255,24,216,${(0.16 + glitchGlow * 0.18).toFixed(2)})`
               : headSliceEnabled
               ? mainSliceShadow
               : headShadow
@@ -4589,7 +4691,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
               : isActive('headline')
               ? { filter: 'drop-shadow(0 0 8px rgba(147,197,253,0.9))' }
               : {}),
-            zIndex: rushActive ? 3 : 1,
+            zIndex: rushActive || glitchActive ? 3 : 1,
           }}
         >
           {exportTextMode
@@ -4610,7 +4712,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
                       ? `${textFx.strokeWidth}px`
                       : undefined,
                     WebkitTextStrokeColor: textFx.strokeColor,
-                    ...(textFx.gradient && !rushActive
+                    ...(textFx.gradient && !rushActive && !glitchActive
                       ? {
                           backgroundImage: `linear-gradient(180deg, ${textFx.gradFrom}, ${textFx.gradTo})`,
                           backgroundSize: '100% 100%',
@@ -4626,6 +4728,99 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
               )}
         </h1>
 
+        {glitchActive && (
+          <>
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-0 top-0"
+              style={{
+                height: estimatedTextHeight,
+                overflow: "hidden",
+                zIndex: 5,
+              }}
+            >
+              {glitchSlicePlan.slice(0, glitchSliceCount).map((slice, idx) => {
+                const bandTop = Math.max(0, estimatedTextHeight * slice.top);
+                const bandHeight = Math.max(3, estimatedTextHeight * slice.height);
+                const shift = slice.dir * glitchSliceOffset * (0.72 + idx * 0.08);
+                const color = glitchColors[slice.color % glitchColors.length];
+                const sliceStyle: React.CSSProperties = {
+                  color,
+                  WebkitTextFillColor: color,
+                  WebkitTextStrokeWidth: textFx.strokeWidth ? `${Math.max(0.6, textFx.strokeWidth * 0.65)}px` : undefined,
+                  WebkitTextStrokeColor: "rgba(0,0,0,0.82)",
+                  textShadow: `0 0 ${Math.round(4 + glitchGlow * 12)}px ${color}`,
+                };
+
+                return (
+                  <div
+                    key={`headline-glitch-slice-${idx}`}
+                    className="absolute left-0 right-0 overflow-hidden"
+                    style={{
+                      top: bandTop,
+                      height: bandHeight,
+                      opacity: Math.min(0.92, 0.48 + glitchIntensity * 0.42),
+                    }}
+                  >
+                    <h1
+                      className="pointer-events-none absolute font-black select-none"
+                      style={{
+                        ...rushLayerBase,
+                        ...sliceStyle,
+                        inset: undefined,
+                        top: -bandTop,
+                        left: shift,
+                        right: "auto",
+                        width: `calc(100% + ${Math.abs(shift) + 28}px)`,
+                        transform: `scaleX(${slice.scale})`,
+                        transformOrigin: "50% 50%",
+                      }}
+                    >
+                      {renderRushTextContent(sliceStyle)}
+                    </h1>
+                  </div>
+                );
+              })}
+            </div>
+            {glitchNoise > 0 && (
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-0 top-0"
+                style={{
+                  height: estimatedTextHeight,
+                  backgroundImage:
+                    "repeating-linear-gradient(180deg, rgba(255,255,255,0.72) 0 1px, transparent 1px 5px), repeating-linear-gradient(90deg, rgba(255,24,216,0.22) 0 2px, transparent 2px 8px)",
+                  opacity: Math.min(0.24, glitchNoise * 0.32),
+                  mixBlendMode: "screen",
+                  zIndex: 6,
+                }}
+              />
+            )}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-0 top-0"
+              style={{ height: estimatedTextHeight, zIndex: 7 }}
+            >
+              {glitchFragments.map((fragment, idx) => (
+                <span
+                  key={`headline-glitch-fragment-${idx}`}
+                  className="absolute block"
+                  style={{
+                    left: `${fragment.left}%`,
+                    top: estimatedTextHeight * fragment.top,
+                    width: `${Math.max(4, fragment.width * (0.65 + glitchIntensity * 0.55))}%`,
+                    height: Math.max(2, fragment.height),
+                    backgroundColor: fragment.color,
+                    opacity: Math.min(0.86, 0.28 + glitchIntensity * 0.5),
+                    transform: `translateX(${(fragment.dir * glitchRgbSplit * 0.72).toFixed(1)}px)`,
+                    boxShadow: `0 0 ${Math.round(4 + glitchGlow * 12)}px ${fragment.color}`,
+                  }}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
         {rushActive && (
           <>
             {renderRushTextLayer(
@@ -4633,19 +4828,19 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
               {
                 color: "transparent",
                 WebkitTextFillColor: "transparent",
-                backgroundImage: `linear-gradient(102deg, transparent 0 31%, ${headRushContrastColor} 36%, ${headRushContrastColor} 55%, rgba(255,255,255,0.42) 58%, transparent 64% 100%)`,
+                backgroundImage: `linear-gradient(102deg, transparent 0 33%, rgba(255,255,255,0.16) 37%, ${headRushContrastColor} 42%, ${headRushContrastColor} 54%, rgba(255,255,255,0.24) 58%, transparent 65% 100%)`,
                 backgroundSize: "100% 100%",
                 backgroundRepeat: "no-repeat",
                 WebkitBackgroundClip: "text",
                 backgroundClip: "text",
-                opacity: Math.min(0.95, Math.max(0.32, textFx.alpha * 0.88)),
-                mixBlendMode: "screen",
+                opacity: Math.min(0.86, Math.max(0.28, textFx.alpha * 0.76)),
+                mixBlendMode: "normal",
                 zIndex: 4,
               },
               {
                 color: "transparent",
                 WebkitTextFillColor: "transparent",
-                backgroundImage: `linear-gradient(102deg, transparent 0 31%, ${headRushContrastColor} 36%, ${headRushContrastColor} 55%, rgba(255,255,255,0.42) 58%, transparent 64% 100%)`,
+                backgroundImage: `linear-gradient(102deg, transparent 0 33%, rgba(255,255,255,0.16) 37%, ${headRushContrastColor} 42%, ${headRushContrastColor} 54%, rgba(255,255,255,0.24) 58%, transparent 65% 100%)`,
                 backgroundSize: "100% 100%",
                 backgroundRepeat: "no-repeat",
                 WebkitBackgroundClip: "text",
@@ -4658,9 +4853,10 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
               style={{ zIndex: 5, overflow: "hidden" }}
             >
               {[
-                { left: 0, width: 36, scale: 0.72, opacity: 0.58 },
-                { left: 28, width: 38, scale: 0.96, opacity: 0.68 },
-                { left: 58, width: 42, scale: 1.24, opacity: 0.78 },
+                { left: 0, width: 34, scale: 0.68, opacity: 0.42 },
+                { left: 24, width: 34, scale: 0.86, opacity: 0.5 },
+                { left: 48, width: 34, scale: 1.03, opacity: 0.58 },
+                { left: 72, width: 28, scale: 1.18, opacity: 0.64 },
               ].map((segment, idx) => {
                 const dotPx = rushDotPx * segment.scale;
                 const dotGap = rushDotGap * (0.9 + segment.scale * 0.18);
@@ -4685,7 +4881,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
                     style={{
                       left: `${segment.left}%`,
                       width: `${segment.width}%`,
-                      opacity: Math.min(0.9, segment.opacity * textFx.alpha),
+                      opacity: Math.min(0.72, segment.opacity * textFx.alpha),
                     }}
                   >
                     <h1
@@ -4704,40 +4900,6 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
                   </div>
                 );
               })}
-            </div>
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute left-1/2 whitespace-nowrap font-black uppercase"
-              style={{
-                top: -Math.max(18, headDisplayPx * 0.22),
-                transform: "translateX(-50%)",
-                color: headRushContrastColor,
-                fontSize: Math.max(9, Math.min(18, headDisplayPx * 0.13)),
-                letterSpacing: "0.58em",
-                lineHeight: 1,
-                opacity: 0.88,
-                textShadow: `0 2px 0 rgba(0,0,0,0.78), ${Math.max(2, rushShadowPx * 0.28)}px ${Math.max(2, rushShadowPx * 0.18)}px 0 #050812`,
-                zIndex: 6,
-              }}
-            >
-              TYPEFACE
-            </div>
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute left-1/2 whitespace-nowrap font-black uppercase"
-              style={{
-                top: estimatedTextHeight + Math.max(8, headDisplayPx * 0.08),
-                transform: "translateX(-50%)",
-                color: rushFillColor,
-                fontSize: Math.max(8, Math.min(16, headDisplayPx * 0.105)),
-                letterSpacing: "0.18em",
-                lineHeight: 1,
-                opacity: 0.92,
-                textShadow: `${Math.max(1, rushShadowPx * 0.22)}px ${Math.max(1, rushShadowPx * 0.16)}px 0 #050812`,
-                zIndex: 6,
-              }}
-            >
-              ABCDEFGHIJKLM NOPQRSTUVWXYZ 0123456789
             </div>
           </>
         )}
@@ -10609,6 +10771,11 @@ function removeFromLogoLibrary(url: string) {
   const [headRushDotSize, setHeadRushDotSize] = useState<number>(2.4);
   const [headRushDotSpacing, setHeadRushDotSpacing] = useState<number>(8.5);
   const [headRushShadowOffset, setHeadRushShadowOffset] = useState<number>(9);
+  const [headGlitchEnabled, setHeadGlitchEnabled] = useState<boolean>(false);
+  const [headGlitchIntensity, setHeadGlitchIntensity] = useState<number>(0.62);
+  const [headGlitchRgbSplit, setHeadGlitchRgbSplit] = useState<number>(10);
+  const [headGlitchNoise, setHeadGlitchNoise] = useState<number>(0.18);
+  const [headGlitchGlow, setHeadGlitchGlow] = useState<number>(0.72);
   const [headExtrudeDepth, setHeadExtrudeDepth] = useState<number>(0);
   const [headExtrudeAngle, setHeadExtrudeAngle] = useState<number>(135);
   const [headExtrudeDistance, setHeadExtrudeDistance] = useState<number>(0);
@@ -12610,6 +12777,12 @@ const mobileFloatPanelStyle = {
 const mobileHeadlineFloatPanelStyle = {
   maxHeight:
     "min(48dvh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 108px))",
+};
+const mobileHeadlineStyleFloatPanelStyle = {
+  minHeight:
+    "min(320px, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 108px))",
+  maxHeight:
+    "min(68dvh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 108px))",
 };
 const mobileFloatViewportClass =
   "lg:hidden fixed left-0 right-0 z-[1200] flex items-end justify-center px-3 pointer-events-none";
@@ -15313,6 +15486,8 @@ const buildEdgeAwareLassoMask = (
       headSliceBlur, headSliceFade, headSliceShadowStrength,
       headRushEnabled, headRushDotColor, headRushContrastColor,
       headRushDotSize, headRushDotSpacing, headRushShadowOffset,
+      headGlitchEnabled, headGlitchIntensity, headGlitchRgbSplit,
+      headGlitchNoise, headGlitchGlow,
       headExtrudeDepth, headExtrudeAngle, headExtrudeDistance, headExtrudeColor,
       textLayerOffset,
 
@@ -15434,6 +15609,11 @@ const buildEdgeAwareLassoMask = (
       if (typeof s.headRushDotSize === 'number') setHeadRushDotSize(s.headRushDotSize);
       if (typeof s.headRushDotSpacing === 'number') setHeadRushDotSpacing(s.headRushDotSpacing);
       if (typeof s.headRushShadowOffset === 'number') setHeadRushShadowOffset(s.headRushShadowOffset);
+      if (typeof s.headGlitchEnabled === 'boolean') setHeadGlitchEnabled(s.headGlitchEnabled);
+      if (typeof s.headGlitchIntensity === 'number') setHeadGlitchIntensity(s.headGlitchIntensity);
+      if (typeof s.headGlitchRgbSplit === 'number') setHeadGlitchRgbSplit(s.headGlitchRgbSplit);
+      if (typeof s.headGlitchNoise === 'number') setHeadGlitchNoise(s.headGlitchNoise);
+      if (typeof s.headGlitchGlow === 'number') setHeadGlitchGlow(s.headGlitchGlow);
       if (typeof s.headExtrudeDepth === 'number') setHeadExtrudeDepth(s.headExtrudeDepth);
       if (typeof s.headExtrudeAngle === 'number') setHeadExtrudeAngle(s.headExtrudeAngle);
       if (typeof s.headExtrudeDistance === 'number') setHeadExtrudeDistance(s.headExtrudeDistance);
@@ -16685,6 +16865,8 @@ function exportDesignJSON(): string {
     headSliceBlur, headSliceFade, headSliceShadowStrength,
     headRushEnabled, headRushDotColor, headRushContrastColor,
     headRushDotSize, headRushDotSpacing, headRushShadowOffset,
+    headGlitchEnabled, headGlitchIntensity, headGlitchRgbSplit,
+    headGlitchNoise, headGlitchGlow,
     headExtrudeDepth, headExtrudeAngle, headExtrudeDistance, headExtrudeColor,
 
     // details (main)
@@ -16861,6 +17043,8 @@ function buildHistoryState() {
     headSliceBlur, headSliceFade, headSliceShadowStrength,
     headRushEnabled, headRushDotColor, headRushContrastColor,
     headRushDotSize, headRushDotSpacing, headRushShadowOffset,
+    headGlitchEnabled, headGlitchIntensity, headGlitchRgbSplit,
+    headGlitchNoise, headGlitchGlow,
     headExtrudeDepth, headExtrudeAngle, headExtrudeDistance, headExtrudeColor,
 
     // details (main)
@@ -16931,6 +17115,8 @@ const historySignature = React.useMemo(() => buildHistorySignature(), [
   headSliceBlur, headSliceFade, headSliceShadowStrength,
   headRushEnabled, headRushDotColor, headRushContrastColor,
   headRushDotSize, headRushDotSpacing, headRushShadowOffset,
+  headGlitchEnabled, headGlitchIntensity, headGlitchRgbSplit,
+  headGlitchNoise, headGlitchGlow,
   headExtrudeDepth, headExtrudeAngle, headExtrudeDistance, headExtrudeColor,
   details, bodyFamily, bodyColor, bodySize, bodyUppercase, bodyBold,
   bodyItalic, bodyUnderline, bodyTracking, detailsLineHeight,
@@ -19960,6 +20146,11 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       applyIfDefined(data.headRushDotSize, setHeadRushDotSize);
       applyIfDefined(data.headRushDotSpacing, setHeadRushDotSpacing);
       applyIfDefined(data.headRushShadowOffset, setHeadRushShadowOffset);
+      applyIfDefined(data.headGlitchEnabled, setHeadGlitchEnabled);
+      applyIfDefined(data.headGlitchIntensity, setHeadGlitchIntensity);
+      applyIfDefined(data.headGlitchRgbSplit, setHeadGlitchRgbSplit);
+      applyIfDefined(data.headGlitchNoise, setHeadGlitchNoise);
+      applyIfDefined(data.headGlitchGlow, setHeadGlitchGlow);
       applyIfDefined(data.headExtrudeDepth, setHeadExtrudeDepth);
       applyIfDefined(data.headExtrudeAngle, setHeadExtrudeAngle);
       applyIfDefined(data.headExtrudeDistance, setHeadExtrudeDistance);
@@ -20328,6 +20519,11 @@ const applyTemplate = React.useCallback<
     setHeadRushDotSize((merged as any).headRushDotSize ?? 2.4);
     setHeadRushDotSpacing((merged as any).headRushDotSpacing ?? 8.5);
     setHeadRushShadowOffset((merged as any).headRushShadowOffset ?? 9);
+    setHeadGlitchEnabled((merged as any).headGlitchEnabled ?? false);
+    setHeadGlitchIntensity((merged as any).headGlitchIntensity ?? 0.62);
+    setHeadGlitchRgbSplit((merged as any).headGlitchRgbSplit ?? 10);
+    setHeadGlitchNoise((merged as any).headGlitchNoise ?? 0.18);
+    setHeadGlitchGlow((merged as any).headGlitchGlow ?? 0.72);
     setHead2Rotate(merged.head2Rotate ?? 0);
     setHead2Skew((merged as any).head2Skew ?? 0);
     setDetailsRotate(merged.detailsRotate ?? 0);
@@ -21222,6 +21418,11 @@ const syncCurrentStateToSession = () => {
     headRushDotSize,
     headRushDotSpacing,
     headRushShadowOffset,
+    headGlitchEnabled,
+    headGlitchIntensity,
+    headGlitchRgbSplit,
+    headGlitchNoise,
+    headGlitchGlow,
     headExtrudeDepth,
     headExtrudeAngle,
     headExtrudeDistance,
@@ -21463,6 +21664,11 @@ const syncHeadlineStyleToSession = React.useCallback(() => {
     headRushDotSize,
     headRushDotSpacing,
     headRushShadowOffset,
+    headGlitchEnabled,
+    headGlitchIntensity,
+    headGlitchRgbSplit,
+    headGlitchNoise,
+    headGlitchGlow,
     headExtrudeDepth,
     headExtrudeAngle,
     headExtrudeDistance,
@@ -21514,6 +21720,11 @@ const syncHeadlineStyleToSession = React.useCallback(() => {
   headRushDotSpacing,
   headRushEnabled,
   headRushShadowOffset,
+  headGlitchEnabled,
+  headGlitchIntensity,
+  headGlitchRgbSplit,
+  headGlitchNoise,
+  headGlitchGlow,
   headX,
   headY,
   headline,
@@ -21656,7 +21867,7 @@ const [floatingAssetVisible, setFloatingAssetVisible] = React.useState(false);
 const [floatingBgVisible, setFloatingBgVisible] = React.useState(false);
 const [floatingLightingVisible, setFloatingLightingVisible] = React.useState(false);
 const [mobileTextFloatTab, setMobileTextFloatTab] = React.useState<"text" | "style">("text");
-const [mobileHeadlineStyleFocus, setMobileHeadlineStyleFocus] = React.useState<"3d" | "gradient" | "echo" | "rush" | null>(null);
+const [mobileHeadlineStyleFocus, setMobileHeadlineStyleFocus] = React.useState<"3d" | "gradient" | "echo" | "rush" | "glitch" | null>(null);
 const [mobileLightingSlide, setMobileLightingSlide] = React.useState<0 | 1 | 2>(0);
 const [projectHelpOpen, setProjectHelpOpen] = React.useState(false);
 const [workflowHelpOpen, setWorkflowHelpOpen] = React.useState(false);
@@ -21698,6 +21909,11 @@ const headlinePresetBaselineRef = React.useRef<null | {
   headRushDotSize: number;
   headRushDotSpacing: number;
   headRushShadowOffset: number;
+  headGlitchEnabled: boolean;
+  headGlitchIntensity: number;
+  headGlitchRgbSplit: number;
+  headGlitchNoise: number;
+  headGlitchGlow: number;
   headShadow: boolean;
   headShadowStrength: number;
   headExtrudeDepth: number;
@@ -22501,6 +22717,11 @@ const applyHeadlineSportsPreset = React.useCallback(() => {
       headRushDotSize,
       headRushDotSpacing,
       headRushShadowOffset,
+      headGlitchEnabled,
+      headGlitchIntensity,
+      headGlitchRgbSplit,
+      headGlitchNoise,
+      headGlitchGlow,
       headShadow,
       headShadowStrength,
       headExtrudeDepth,
@@ -22533,6 +22754,7 @@ const applyHeadlineSportsPreset = React.useCallback(() => {
   setHeadSkew(-12);
   setHeadSliceEnabled(false);
   setHeadRushEnabled(false);
+  setHeadGlitchEnabled(false);
   setHeadShadow(false);
   setHeadShadowStrength(0);
   setHeadExtrudeDepth(28);
@@ -22570,6 +22792,11 @@ const applyHeadlineSportsPreset = React.useCallback(() => {
   headRushDotSpacing,
   headRushEnabled,
   headRushShadowOffset,
+  headGlitchEnabled,
+  headGlitchIntensity,
+  headGlitchRgbSplit,
+  headGlitchNoise,
+  headGlitchGlow,
   headlineFamily,
   lineHeight,
   setSessionValue,
@@ -22599,6 +22826,11 @@ const applyHeadlineRetroSlicePreset = React.useCallback(() => {
       headRushDotSize,
       headRushDotSpacing,
       headRushShadowOffset,
+      headGlitchEnabled,
+      headGlitchIntensity,
+      headGlitchRgbSplit,
+      headGlitchNoise,
+      headGlitchGlow,
       headShadow,
       headShadowStrength,
       headExtrudeDepth,
@@ -22636,6 +22868,7 @@ const applyHeadlineRetroSlicePreset = React.useCallback(() => {
   setHeadExtrudeDepth(0);
   setHeadExtrudeDistance(0);
   setHeadRushEnabled(false);
+  setHeadGlitchEnabled(false);
   setHeadSliceEnabled(true);
   setHeadSliceBandCount(7);
   setHeadSliceBandGap(10);
@@ -22674,6 +22907,11 @@ const applyHeadlineRetroSlicePreset = React.useCallback(() => {
   headRushDotSpacing,
   headRushEnabled,
   headRushShadowOffset,
+  headGlitchEnabled,
+  headGlitchIntensity,
+  headGlitchRgbSplit,
+  headGlitchNoise,
+  headGlitchGlow,
   headlineFamily,
   lineHeight,
   setSessionValue,
@@ -22703,6 +22941,11 @@ const applyHeadlineRushHalftonePreset = React.useCallback(() => {
       headRushDotSize,
       headRushDotSpacing,
       headRushShadowOffset,
+      headGlitchEnabled,
+      headGlitchIntensity,
+      headGlitchRgbSplit,
+      headGlitchNoise,
+      headGlitchGlow,
       headShadow,
       headShadowStrength,
       headExtrudeDepth,
@@ -22715,47 +22958,44 @@ const applyHeadlineRushHalftonePreset = React.useCallback(() => {
     };
   }
 
-  const rushFont = HEADLINE_FONTS_LOCAL.includes("Coolvetica Hv Comp")
-    ? "Coolvetica Hv Comp"
-    : "Nexa-Heavy";
   const nextFx: TextFx = {
     ...textFx,
     uppercase: true,
     bold: true,
     italic: false,
-    tracking: -0.055,
+    tracking: -0.035,
     gradient: false,
     color: "#ef2b2d",
     gradFrom: "#ef2b2d",
     gradTo: "#ff5a38",
-    strokeWidth: 1.4,
+    strokeWidth: 1,
     strokeColor: "#050812",
     glow: 0,
     shadowEnabled: false,
   };
 
-  setHeadlineFamily(rushFont);
-  setTextStyle("headline", format, { family: rushFont, align: "center" });
+  setTextStyle("headline", format, { align: "center" });
   setTextFx(nextFx);
   setSessionValue(format, "textFx", nextFx);
   setHeadRushEnabled(true);
+  setHeadGlitchEnabled(false);
   setHeadRushDotColor("#11141d");
   setHeadRushContrastColor("#f4f1e7");
-  setHeadRushDotSize(2.4);
-  setHeadRushDotSpacing(8.5);
-  setHeadRushShadowOffset(10);
-  setHeadSkew(-14);
-  setHeadRotate(-2);
+  setHeadRushDotSize(1.8);
+  setHeadRushDotSpacing(9);
+  setHeadRushShadowOffset(7);
+  setHeadSkew(-11);
+  setHeadRotate(-1);
   setHeadSliceEnabled(false);
   setHeadShadow(false);
   setHeadShadowStrength(0);
-  setHeadExtrudeDepth(16);
-  setHeadExtrudeAngle(32);
-  setHeadExtrudeDistance(22);
+  setHeadExtrudeDepth(8);
+  setHeadExtrudeAngle(28);
+  setHeadExtrudeDistance(14);
   setHeadExtrudeColor("#050812");
   setHeadAlign("center");
   setAlign("center");
-  setLineHeight(0.78);
+  setLineHeight(0.84);
   setMobileHeadlineStyleFocus("rush");
 }, [
   align,
@@ -22765,6 +23005,128 @@ const applyHeadlineRushHalftonePreset = React.useCallback(() => {
   headExtrudeColor,
   headExtrudeDepth,
   headExtrudeDistance,
+  headRotate,
+  headRushContrastColor,
+  headRushDotColor,
+  headRushDotSize,
+  headRushDotSpacing,
+  headRushEnabled,
+  headRushShadowOffset,
+  headGlitchEnabled,
+  headGlitchIntensity,
+  headGlitchRgbSplit,
+  headGlitchNoise,
+  headGlitchGlow,
+  headShadow,
+  headShadowStrength,
+  headSkew,
+  headSliceBandCount,
+  headSliceBandGap,
+  headSliceBlur,
+  headSliceBottomColor,
+  headSliceEchoDistance,
+  headSliceEnabled,
+  headSliceFade,
+  headSliceMidColor,
+  headSliceShadowStrength,
+  headSliceTopColor,
+  headlineFamily,
+  lineHeight,
+  setSessionValue,
+  setTextStyle,
+  textFx,
+]);
+
+const applyHeadlineGlitchPreset = React.useCallback(() => {
+  if (!headlinePresetBaselineRef.current) {
+    headlinePresetBaselineRef.current = {
+      headlineFamily,
+      textFx,
+      headSkew,
+      headRotate,
+      headSliceEnabled,
+      headSliceBandCount,
+      headSliceBandGap,
+      headSliceEchoDistance,
+      headSliceTopColor,
+      headSliceMidColor,
+      headSliceBottomColor,
+      headSliceBlur,
+      headSliceFade,
+      headSliceShadowStrength,
+      headRushEnabled,
+      headRushDotColor,
+      headRushContrastColor,
+      headRushDotSize,
+      headRushDotSpacing,
+      headRushShadowOffset,
+      headGlitchEnabled,
+      headGlitchIntensity,
+      headGlitchRgbSplit,
+      headGlitchNoise,
+      headGlitchGlow,
+      headShadow,
+      headShadowStrength,
+      headExtrudeDepth,
+      headExtrudeAngle,
+      headExtrudeDistance,
+      headExtrudeColor,
+      headAlign,
+      align,
+      lineHeight,
+    };
+  }
+
+  const nextFx: TextFx = {
+    ...textFx,
+    uppercase: true,
+    bold: true,
+    italic: true,
+    tracking: -0.035,
+    gradient: false,
+    color: "#10f7ef",
+    gradFrom: "#10f7ef",
+    gradTo: "#ff18d8",
+    strokeWidth: 0.8,
+    strokeColor: "#050812",
+    glow: 0,
+    shadowEnabled: false,
+  };
+
+  setTextStyle("headline", format, { align: "center" });
+  setTextFx(nextFx);
+  setSessionValue(format, "textFx", nextFx);
+  setHeadGlitchEnabled(true);
+  setHeadGlitchIntensity(0.68);
+  setHeadGlitchRgbSplit(12);
+  setHeadGlitchNoise(0.2);
+  setHeadGlitchGlow(0.78);
+  setHeadRushEnabled(false);
+  setHeadSliceEnabled(false);
+  setHeadShadow(false);
+  setHeadShadowStrength(0);
+  setHeadSkew(-8);
+  setHeadRotate(0);
+  setHeadExtrudeDepth(0);
+  setHeadExtrudeDistance(0);
+  setHeadExtrudeColor("#050812");
+  setHeadAlign("center");
+  setAlign("center");
+  setLineHeight(0.84);
+  setMobileHeadlineStyleFocus("glitch");
+}, [
+  align,
+  format,
+  headAlign,
+  headExtrudeAngle,
+  headExtrudeColor,
+  headExtrudeDepth,
+  headExtrudeDistance,
+  headGlitchEnabled,
+  headGlitchGlow,
+  headGlitchIntensity,
+  headGlitchNoise,
+  headGlitchRgbSplit,
   headRotate,
   headRushContrastColor,
   headRushDotColor,
@@ -22806,6 +23168,7 @@ const resetHeadlinePresetStyles = React.useCallback(() => {
     setHeadSkew(0);
     setHeadSliceEnabled(false);
     setHeadRushEnabled(false);
+    setHeadGlitchEnabled(false);
     setHeadExtrudeDepth(0);
     setHeadExtrudeDistance(0);
     setMobileHeadlineStyleFocus(null);
@@ -22833,6 +23196,11 @@ const resetHeadlinePresetStyles = React.useCallback(() => {
   setHeadRushDotSize(baseline.headRushDotSize);
   setHeadRushDotSpacing(baseline.headRushDotSpacing);
   setHeadRushShadowOffset(baseline.headRushShadowOffset);
+  setHeadGlitchEnabled(baseline.headGlitchEnabled);
+  setHeadGlitchIntensity(baseline.headGlitchIntensity);
+  setHeadGlitchRgbSplit(baseline.headGlitchRgbSplit);
+  setHeadGlitchNoise(baseline.headGlitchNoise);
+  setHeadGlitchGlow(baseline.headGlitchGlow);
   setHeadShadow(baseline.headShadow);
   setHeadShadowStrength(baseline.headShadowStrength);
   setHeadExtrudeDepth(baseline.headExtrudeDepth);
@@ -23676,8 +24044,11 @@ const headline3dStyleActive = headExtrudeDepth > 0 || headExtrudeDistance > 0;
 const headlineEchoStyleActive = !!headSliceEnabled;
 const headlineGradientStyleActive = !!textFx.gradient;
 const headlineRushStyleActive = !!headRushEnabled;
-const inferredMobileHeadlineStyleFocus: "3d" | "gradient" | "echo" | "rush" | null =
-  headlineRushStyleActive
+const headlineGlitchStyleActive = !!headGlitchEnabled;
+const inferredMobileHeadlineStyleFocus: "3d" | "gradient" | "echo" | "rush" | "glitch" | null =
+  headlineGlitchStyleActive
+    ? "glitch"
+    : headlineRushStyleActive
     ? "rush"
     : headlineEchoStyleActive
     ? "echo"
@@ -23696,8 +24067,12 @@ const showMobileHeadlineEchoControls =
   showMobileHeadlineStyleControls && activeMobileHeadlineStyleFocus === "echo";
 const showMobileHeadlineRushControls =
   showMobileHeadlineStyleControls && activeMobileHeadlineStyleFocus === "rush";
+const showMobileHeadlineGlitchControls =
+  showMobileHeadlineStyleControls && activeMobileHeadlineStyleFocus === "glitch";
 const activeMobileTextFloatPanelStyle = headlineTextStyleTabsVisible
-  ? mobileHeadlineFloatPanelStyle
+  ? showMobileHeadlineStyleControls
+    ? mobileHeadlineStyleFloatPanelStyle
+    : mobileHeadlineFloatPanelStyle
   : mobileFloatPanelStyle;
 const hasAssetControls = !!activeAssetControls;
 
@@ -27176,11 +27551,11 @@ style={{ top: STICKY_TOP }}
           Retro Slice
         </Chip>
         <Chip small active={headRushEnabled} onClick={applyHeadlineRushHalftonePreset}>
-          Rush Halftone 3D
+          Halftone
         </Chip>
-        <span className="text-[11px] text-neutral-500">
-          Flat 3D adds extrusion. Retro Slice adds clipped echo bands. Rush adds halftone poster layers.
-        </span>
+        <Chip small active={headGlitchEnabled} onClick={applyHeadlineGlitchPreset}>
+          Glitch
+        </Chip>
       </div>
 
       {/* TEXT INPUT */}
@@ -27250,7 +27625,6 @@ style={{ top: STICKY_TOP }}
           Gradient
         </Chip>
         <Chip small active={headSliceEnabled} onClick={() => setHeadSliceEnabled((v) => !v)}>Echo Bands</Chip>
-        <Chip small active={headRushEnabled} onClick={() => setHeadRushEnabled((v) => !v)}>Rush FX</Chip>
         <Chip
           small
           active={textFx.strokeWidth > 0}
@@ -27397,7 +27771,7 @@ style={{ top: STICKY_TOP }}
             digits={1}
           />
           <Stepper
-            label="Shadow Offset"
+            label="Offset"
             value={headRushShadowOffset}
             setValue={setHeadRushShadowOffset}
             min={0}
@@ -27407,9 +27781,49 @@ style={{ top: STICKY_TOP }}
         </div>
       )}
 
-      <div className="flex items-end mt-2 flex-wrap w-full">
-        <div className="ml-auto flex flex-wrap items-center gap-3 justify-end text-[11px]">
-          <span className="opacity-80">Fill</span>
+      {headGlitchEnabled && (
+        <div className="grid grid-cols-2 gap-3 mt-2">
+          <Stepper
+            label="Intensity"
+            value={headGlitchIntensity}
+            setValue={setHeadGlitchIntensity}
+            min={0}
+            max={1}
+            step={0.05}
+            digits={2}
+          />
+          <Stepper
+            label="RGB Split"
+            value={headGlitchRgbSplit}
+            setValue={setHeadGlitchRgbSplit}
+            min={0}
+            max={32}
+            step={1}
+          />
+          <Stepper
+            label="Noise"
+            value={headGlitchNoise}
+            setValue={setHeadGlitchNoise}
+            min={0}
+            max={1}
+            step={0.05}
+            digits={2}
+          />
+          <Stepper
+            label="Glow"
+            value={headGlitchGlow}
+            setValue={setHeadGlitchGlow}
+            min={0}
+            max={1}
+            step={0.05}
+            digits={2}
+          />
+        </div>
+      )}
+
+      <div className="mt-3 grid grid-cols-2 gap-2 min-[420px]:grid-cols-3">
+        <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+          <span className="uppercase tracking-[0.12em] opacity-80">Fill</span>
           <ColorDot
             value={textFx.color}
             allowNone
@@ -27420,9 +27834,11 @@ style={{ top: STICKY_TOP }}
               setSessionValue(format, "textFx", next);
             }}
           />
-          {textFx.gradient && (
-            <>
-              <span className="opacity-80">Grad A</span>
+        </div>
+        {textFx.gradient && (
+          <>
+            <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+              <span className="uppercase tracking-[0.12em] opacity-80">Grad A</span>
               <ColorDot
                 value={textFx.gradFrom}
                 onChange={(c) => {
@@ -27431,7 +27847,9 @@ style={{ top: STICKY_TOP }}
                   setSessionValue(format, "textFx", next);
                 }}
               />
-              <span className="opacity-80">Grad B</span>
+            </div>
+            <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+              <span className="uppercase tracking-[0.12em] opacity-80">Grad B</span>
               <ColorDot
                 value={textFx.gradTo}
                 onChange={(c) => {
@@ -27440,27 +27858,39 @@ style={{ top: STICKY_TOP }}
                   setSessionValue(format, "textFx", next);
                 }}
               />
-            </>
-          )}
-          {headSliceEnabled && (
-            <>
-              <span className="opacity-80">Top</span>
+            </div>
+          </>
+        )}
+        {headSliceEnabled && (
+          <>
+            <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+              <span className="uppercase tracking-[0.12em] opacity-80">Top</span>
               <ColorDot value={headSliceTopColor} onChange={setHeadSliceTopColor} />
-              <span className="opacity-80">Middle</span>
+            </div>
+            <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+              <span className="uppercase tracking-[0.12em] opacity-80">Middle</span>
               <ColorDot value={headSliceMidColor} onChange={setHeadSliceMidColor} />
-              <span className="opacity-80">Bottom</span>
+            </div>
+            <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+              <span className="uppercase tracking-[0.12em] opacity-80">Bottom</span>
               <ColorDot value={headSliceBottomColor} onChange={setHeadSliceBottomColor} />
-            </>
-          )}
-          {headRushEnabled && (
-            <>
-              <span className="opacity-80">Dots</span>
+            </div>
+          </>
+        )}
+        {headRushEnabled && (
+          <>
+            <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+              <span className="uppercase tracking-[0.12em] opacity-80">Dots</span>
               <ColorDot value={headRushDotColor} onChange={setHeadRushDotColor} />
-              <span className="opacity-80">Stripe</span>
+            </div>
+            <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+              <span className="uppercase tracking-[0.12em] opacity-80">Stripe</span>
               <ColorDot value={headRushContrastColor} onChange={setHeadRushContrastColor} />
-            </>
-          )}
-          <span className="opacity-80">Stroke</span>
+            </div>
+          </>
+        )}
+        <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+          <span className="uppercase tracking-[0.12em] opacity-80">Stroke</span>
           <ColorDot
             value={textFx.strokeColor}
             onChange={(c) => {
@@ -27469,7 +27899,9 @@ style={{ top: STICKY_TOP }}
               setSessionValue(format, "textFx", next);
             }}
           />
-          <span className="opacity-80">3D</span>
+        </div>
+        <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+          <span className="uppercase tracking-[0.12em] opacity-80">3D</span>
           <ColorDot
             value={headExtrudeColor}
             onChange={setHeadExtrudeColor}
@@ -28737,6 +29169,11 @@ style={{ top: STICKY_TOP }}
             headRushDotSize={headRushDotSize}
             headRushDotSpacing={headRushDotSpacing}
             headRushShadowOffset={headRushShadowOffset}
+            headGlitchEnabled={headGlitchEnabled}
+            headGlitchIntensity={headGlitchIntensity}
+            headGlitchRgbSplit={headGlitchRgbSplit}
+            headGlitchNoise={headGlitchNoise}
+            headGlitchGlow={headGlitchGlow}
             headExtrudeDepth={headExtrudeDepth}
             headExtrudeAngle={headExtrudeAngle}
             headExtrudeDistance={headExtrudeDistance}
@@ -28827,7 +29264,7 @@ style={{ top: STICKY_TOP }}
 
   {activeTextControls && floatingEditorVisible && (
     <div className={mobileFloatViewportClass} style={mobileFloatViewportStyle}>
-      <div className="w-full max-w-[320px] sm:max-w-[340px]">
+      <div className="w-full max-w-[360px] sm:max-w-[380px]">
         <div
           className={mobileFloatPanelClass}
           style={activeMobileTextFloatPanelStyle}
@@ -29039,10 +29476,11 @@ style={{ top: STICKY_TOP }}
             )}
           {showMobileHeadlineStyleControls && (
             <>
-              <div className="-mx-1 overflow-x-auto pb-1">
-                <div className="flex min-w-max items-center gap-2 px-1 whitespace-nowrap">
+              <div className="rounded border border-white/10 bg-black/20 p-2">
+                <div className="grid grid-cols-2 gap-2 min-[380px]:grid-cols-3">
                   <Chip
                     small
+                    className="w-full justify-center text-center"
                     active={activeMobileHeadlineStyleFocus === "3d"}
                     onClick={() => {
                       setMobileHeadlineStyleFocus("3d");
@@ -29055,6 +29493,7 @@ style={{ top: STICKY_TOP }}
                   </Chip>
                   <Chip
                     small
+                    className="w-full justify-center text-center"
                     active={activeMobileHeadlineStyleFocus === "echo"}
                     onClick={() => {
                       setMobileHeadlineStyleFocus("echo");
@@ -29067,6 +29506,7 @@ style={{ top: STICKY_TOP }}
                   </Chip>
                   <Chip
                     small
+                    className="w-full justify-center text-center"
                     active={activeMobileHeadlineStyleFocus === "rush"}
                     onClick={() => {
                       setMobileHeadlineStyleFocus("rush");
@@ -29075,10 +29515,24 @@ style={{ top: STICKY_TOP }}
                       }
                     }}
                   >
-                    Rush
+                    Halftone
                   </Chip>
                   <Chip
                     small
+                    className="w-full justify-center text-center"
+                    active={activeMobileHeadlineStyleFocus === "glitch"}
+                    onClick={() => {
+                      setMobileHeadlineStyleFocus("glitch");
+                      if (!headlineGlitchStyleActive) {
+                        applyHeadlineGlitchPreset();
+                      }
+                    }}
+                  >
+                    Glitch
+                  </Chip>
+                  <Chip
+                    small
+                    className="w-full justify-center text-center"
                     active={activeMobileHeadlineStyleFocus === "gradient"}
                     onClick={() => {
                       if (!headlinePresetBaselineRef.current) {
@@ -29103,6 +29557,11 @@ style={{ top: STICKY_TOP }}
                           headRushDotSize,
                           headRushDotSpacing,
                           headRushShadowOffset,
+                          headGlitchEnabled,
+                          headGlitchIntensity,
+                          headGlitchRgbSplit,
+                          headGlitchNoise,
+                          headGlitchGlow,
                           headShadow,
                           headShadowStrength,
                           headExtrudeDepth,
@@ -29126,18 +29585,19 @@ style={{ top: STICKY_TOP }}
                   </Chip>
                   <Chip
                     small
+                    className="w-full justify-center text-center"
                     onClick={resetHeadlinePresetStyles}
                     active={!activeMobileHeadlineStyleFocus}
                   >
                     Reset
                   </Chip>
                 </div>
+                {!activeMobileHeadlineStyleFocus && (
+                  <div className="mt-2 rounded border border-white/10 bg-neutral-950/80 px-3 py-2 text-[11px] leading-5 text-neutral-400">
+                    Choose a preset above. Reset returns the headline to its pre-preset state.
+                  </div>
+                )}
               </div>
-              {!activeMobileHeadlineStyleFocus && (
-                <div className="rounded border border-white/10 bg-black/20 px-3 py-2 text-[11px] text-neutral-400">
-                  Choose a preset above. Reset returns the headline to its pre-preset state.
-                </div>
-              )}
               {showMobileHeadline3dControls && (
                 <>
                   {activeTextControls.color && (
@@ -29264,7 +29724,7 @@ style={{ top: STICKY_TOP }}
                     </div>
                     <div>
                       <InlineSliderInput
-                        label="Shadow Offset"
+                        label="Offset"
                         value={headRushShadowOffset}
                         min={0}
                         max={42}
@@ -29309,6 +29769,71 @@ style={{ top: STICKY_TOP }}
                         precision={0}
                         onChange={setHeadExtrudeDistance}
                         rangeClassName="flex-1 accent-amber-400"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+              {showMobileHeadlineGlitchControls && (
+                <>
+                  {activeTextControls.color && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[10px] uppercase tracking-wider text-neutral-400">Fill</span>
+                      <ColorDot
+                        value={activeTextControls.color}
+                        allowNone={!!activeTextControls.allowNoFill}
+                        noneTitle="No fill"
+                        onChange={(v) => activeTextControls.onColor?.(v)}
+                      />
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
+                    <div>
+                      <InlineSliderInput
+                        label="Intensity"
+                        value={headGlitchIntensity}
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        precision={2}
+                        onChange={setHeadGlitchIntensity}
+                        rangeClassName="flex-1 accent-fuchsia-400"
+                      />
+                    </div>
+                    <div>
+                      <InlineSliderInput
+                        label="RGB Split"
+                        value={headGlitchRgbSplit}
+                        min={0}
+                        max={32}
+                        step={1}
+                        precision={0}
+                        onChange={setHeadGlitchRgbSplit}
+                        rangeClassName="flex-1 accent-cyan-400"
+                      />
+                    </div>
+                    <div>
+                      <InlineSliderInput
+                        label="Noise"
+                        value={headGlitchNoise}
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        precision={2}
+                        onChange={setHeadGlitchNoise}
+                        rangeClassName="flex-1 accent-slate-400"
+                      />
+                    </div>
+                    <div>
+                      <InlineSliderInput
+                        label="Glow"
+                        value={headGlitchGlow}
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        precision={2}
+                        onChange={setHeadGlitchGlow}
+                        rangeClassName="flex-1 accent-emerald-400"
                       />
                     </div>
                   </div>
