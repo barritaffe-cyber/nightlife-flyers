@@ -1,7 +1,8 @@
  'use client';
  
- import * as React from 'react';
+import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useFlyerState } from '../../app/state/flyerState';
  
 function clsx(...a: (string | false | null | undefined)[]) {
   return a.filter(Boolean).join(' ');
@@ -52,6 +53,43 @@ export const editorUploadPlaceClass =
   'min-h-[40px] flex items-center justify-center border border-cyan-400/70 bg-cyan-500/10 px-3 py-2 text-[11px] font-semibold text-cyan-100 text-center transition hover:bg-cyan-500/16 disabled:cursor-not-allowed disabled:opacity-50';
 export const editorUploadClearClass =
   'min-h-[40px] flex items-center justify-center border border-neutral-700 bg-transparent px-3 py-2 text-[11px] font-medium text-neutral-300 text-center transition hover:bg-neutral-900/60 disabled:cursor-not-allowed disabled:opacity-50';
+
+let activeSliderDragCount = 0;
+let activeSliderDragEndTimer: number | null = null;
+const SLIDER_LIVE_UPDATE_MS = 32;
+
+function sliderValuesEqual(a: number | null, b: number) {
+  return a !== null && Math.abs(a - b) < 0.000001;
+}
+
+function beginSliderDragGate() {
+  if (typeof window !== 'undefined' && activeSliderDragEndTimer !== null) {
+    window.clearTimeout(activeSliderDragEndTimer);
+    activeSliderDragEndTimer = null;
+  }
+  activeSliderDragCount += 1;
+  useFlyerState.getState().setIsLiveDragging(true);
+}
+
+function endSliderDragGateSoon() {
+  activeSliderDragCount = Math.max(0, activeSliderDragCount - 1);
+  if (activeSliderDragCount > 0) return;
+
+  if (typeof window === 'undefined') {
+    useFlyerState.getState().setIsLiveDragging(false);
+    return;
+  }
+
+  if (activeSliderDragEndTimer !== null) {
+    window.clearTimeout(activeSliderDragEndTimer);
+  }
+  activeSliderDragEndTimer = window.setTimeout(() => {
+    activeSliderDragEndTimer = null;
+    if (activeSliderDragCount === 0) {
+      useFlyerState.getState().setIsLiveDragging(false);
+    }
+  }, 48);
+}
  
  export type StepperProps = {
    label?: string;
@@ -83,17 +121,158 @@ export function Stepper({
   );
   const [draftValue, setDraftValue] = React.useState(formattedValue);
   const [isEditing, setIsEditing] = React.useState(false);
+  const rangeRef = React.useRef<HTMLInputElement | null>(null);
+  const rangeFrameRef = React.useRef<number | null>(null);
+  const rangeTimerRef = React.useRef<number | null>(null);
+  const pendingRangeRef = React.useRef<number | null>(null);
+  const latestRangeValueRef = React.useRef(Number.isFinite(value as number) ? Number(value) : Number(min ?? 0));
+  const rangeDraggingRef = React.useRef(false);
+  const rangeDragTokenRef = React.useRef(0);
+  const lastLiveRangeAtRef = React.useRef(0);
+  const lastAppliedRangeValueRef = React.useRef<number | null>(latestRangeValueRef.current);
+  const setValueRef = React.useRef(setValue);
 
   React.useEffect(() => {
-    if (!isEditing) {
+    if (!isEditing && !rangeDraggingRef.current) {
       setDraftValue(formattedValue);
     }
   }, [formattedValue, isEditing]);
+
+  React.useEffect(() => {
+    setValueRef.current = setValue;
+  }, [setValue]);
+
+  React.useEffect(() => {
+    const next = Number.isFinite(value as number) ? Number(value) : Number(min ?? 0);
+    latestRangeValueRef.current = next;
+    if (!rangeDraggingRef.current) {
+      lastAppliedRangeValueRef.current = next;
+      if (rangeRef.current) {
+        rangeRef.current.value = String(next);
+      }
+    }
+  }, [min, value]);
+
+  React.useEffect(() => {
+    return () => {
+      if (rangeFrameRef.current !== null && typeof window !== 'undefined') {
+        window.cancelAnimationFrame(rangeFrameRef.current);
+        rangeFrameRef.current = null;
+      }
+      if (rangeTimerRef.current !== null && typeof window !== 'undefined') {
+        window.clearTimeout(rangeTimerRef.current);
+        rangeTimerRef.current = null;
+      }
+      if (rangeDraggingRef.current) {
+        const next = pendingRangeRef.current;
+        pendingRangeRef.current = null;
+        if (next != null) {
+          lastAppliedRangeValueRef.current = next;
+          setValueRef.current(next);
+        }
+        rangeDraggingRef.current = false;
+        rangeDragTokenRef.current += 1;
+        endSliderDragGateSoon();
+      }
+    };
+  }, []);
+
+  const scheduleLiveRangeChange = React.useCallback(() => {
+    if (rangeFrameRef.current !== null || rangeTimerRef.current !== null) return;
+    if (typeof window === 'undefined') {
+      const next = pendingRangeRef.current;
+      if (next != null && !sliderValuesEqual(lastAppliedRangeValueRef.current, next)) {
+        lastAppliedRangeValueRef.current = next;
+        setValueRef.current(next);
+      }
+      return;
+    }
+    const dragToken = rangeDragTokenRef.current;
+    const run = () => {
+      rangeTimerRef.current = null;
+      rangeFrameRef.current = window.requestAnimationFrame(() => {
+        rangeFrameRef.current = null;
+        const next = pendingRangeRef.current;
+        if (next == null) return;
+        if (!rangeDraggingRef.current || dragToken !== rangeDragTokenRef.current) return;
+        if (sliderValuesEqual(lastAppliedRangeValueRef.current, next)) return;
+        lastLiveRangeAtRef.current = performance.now();
+        lastAppliedRangeValueRef.current = next;
+        setValueRef.current(next);
+      });
+    };
+    const now = performance.now();
+    const wait = Math.max(0, SLIDER_LIVE_UPDATE_MS - (now - lastLiveRangeAtRef.current));
+    if (wait > 0) {
+      rangeTimerRef.current = window.setTimeout(run, wait);
+      return;
+    }
+    run();
+  }, []);
  
    const onRange = (e: React.ChangeEvent<HTMLInputElement>) => {
      const n = clamp(parseFloat(e.target.value));
-     setValue(n);
+     latestRangeValueRef.current = n;
+     pendingRangeRef.current = n;
+     if (rangeDraggingRef.current) {
+       scheduleLiveRangeChange();
+     } else {
+       pendingRangeRef.current = null;
+       if (!isEditing) {
+         setDraftValue(formatNumericValue(n, Math.max(0, digits)));
+       }
+       lastAppliedRangeValueRef.current = n;
+       setValueRef.current(n);
+     }
    };
+
+  const flushPendingRangeSoon = React.useCallback(() => {
+    if (rangeFrameRef.current !== null && typeof window !== 'undefined') {
+      window.cancelAnimationFrame(rangeFrameRef.current);
+      rangeFrameRef.current = null;
+    }
+    if (rangeTimerRef.current !== null && typeof window !== 'undefined') {
+      window.clearTimeout(rangeTimerRef.current);
+      rangeTimerRef.current = null;
+    }
+    const next = pendingRangeRef.current;
+    pendingRangeRef.current = null;
+    if (next == null) return;
+    if (!sliderValuesEqual(lastAppliedRangeValueRef.current, next)) {
+      lastAppliedRangeValueRef.current = next;
+      setValueRef.current(next);
+    }
+    if (!isEditing) {
+      setDraftValue(formatNumericValue(next, Math.max(0, digits)));
+    }
+  }, [digits, isEditing]);
+
+  const onRangePointerDown = React.useCallback((e: React.PointerEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    if (rangeDraggingRef.current) return;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
+    rangeDragTokenRef.current += 1;
+    rangeDraggingRef.current = true;
+    beginSliderDragGate();
+  }, []);
+
+  const onRangePointerEnd = React.useCallback((e: React.PointerEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    if (!rangeDraggingRef.current) return;
+    const raw = e.currentTarget.value;
+    const next = clamp(parseFloat(raw));
+    latestRangeValueRef.current = next;
+    pendingRangeRef.current = next;
+    rangeDraggingRef.current = false;
+    rangeDragTokenRef.current += 1;
+    flushPendingRangeSoon();
+    endSliderDragGateSoon();
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {}
+  }, [clamp, flushPendingRangeSoon]);
  
    const onNumber = (e: React.ChangeEvent<HTMLInputElement>) => {
      setDraftValue(e.target.value);
@@ -178,17 +357,24 @@ export function Stepper({
          />
  
         <input
+          ref={rangeRef}
           type="range"
           min={min}
           max={max}
           step={step}
-          value={Number.isFinite(value as number) ? Number(value) : Number(min ?? 0)}
+          defaultValue={latestRangeValueRef.current}
           onChange={onRange}
           onWheel={onWheel}
           onKeyDown={onKeyDown}
-          onPointerDown={(e) => e.stopPropagation()}
-          onPointerDownCapture={(e) => e.stopPropagation()}
+          onPointerUp={onRangePointerEnd}
+          onPointerCancel={onRangePointerEnd}
+          onPointerDownCapture={onRangePointerDown}
+          onMouseDown={(e) => e.stopPropagation()}
+          onMouseUp={(e) => e.stopPropagation()}
           onTouchStart={(e) => {
+            e.stopPropagation();
+          }}
+          onTouchEnd={(e) => {
             e.stopPropagation();
           }}
           onTouchMove={(e) => {
@@ -197,7 +383,7 @@ export function Stepper({
           }}
           disabled={disabled}
           aria-label={label}
-          style={{ touchAction: 'pan-x' }}
+          style={{ touchAction: 'none' }}
           className={controlRangeClass}
         />
        </div>
@@ -350,6 +536,7 @@ export type SliderRowProps = {
   precision?: number;
   disabled?: boolean;
   onChange: (v: number) => void;
+  onCommit?: (v: number) => void;
 };
 
 function countDecimals(n: number) {
@@ -382,6 +569,7 @@ export type InlineSliderInputProps = {
   onPointerDown?: () => void;
   onPointerUp?: () => void;
   onPointerCancel?: () => void;
+  onCommit?: (v: number) => void;
 };
 
 export function InlineSliderInput({
@@ -401,6 +589,7 @@ export function InlineSliderInput({
   onPointerDown,
   onPointerUp,
   onPointerCancel,
+  onCommit,
 }: InlineSliderInputProps) {
   const safeValue = Number.isFinite(value) ? value : min;
   const clamp = React.useCallback(
@@ -411,21 +600,39 @@ export function InlineSliderInput({
   const formattedValue = formatNumericValue(safeValue * displayScale, inputDigits);
   const [draftValue, setDraftValue] = React.useState(formattedValue);
   const [isEditing, setIsEditing] = React.useState(false);
-  const [rangeValue, setRangeValue] = React.useState(safeValue);
+  const rangeRef = React.useRef<HTMLInputElement | null>(null);
   const rangeFrameRef = React.useRef<number | null>(null);
-  const rangeTimeoutRef = React.useRef<number | null>(null);
+  const rangeTimerRef = React.useRef<number | null>(null);
   const pendingRangeRef = React.useRef<number | null>(null);
+  const latestRangeValueRef = React.useRef(safeValue);
   const rangeDraggingRef = React.useRef(false);
+  const rangeDragTokenRef = React.useRef(0);
+  const lastLiveRangeAtRef = React.useRef(0);
+  const lastAppliedRangeValueRef = React.useRef<number | null>(safeValue);
+  const onChangeRef = React.useRef(onChange);
+  const onCommitRef = React.useRef(onCommit);
 
   React.useEffect(() => {
-    if (!isEditing) {
+    if (!isEditing && !rangeDraggingRef.current) {
       setDraftValue(formattedValue);
     }
   }, [formattedValue, isEditing]);
 
   React.useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  React.useEffect(() => {
+    onCommitRef.current = onCommit;
+  }, [onCommit]);
+
+  React.useEffect(() => {
+    latestRangeValueRef.current = safeValue;
     if (!rangeDraggingRef.current) {
-      setRangeValue(safeValue);
+      lastAppliedRangeValueRef.current = safeValue;
+      if (rangeRef.current) {
+        rangeRef.current.value = String(safeValue);
+      }
     }
   }, [safeValue]);
 
@@ -433,11 +640,57 @@ export function InlineSliderInput({
     return () => {
       if (rangeFrameRef.current !== null && typeof window !== "undefined") {
         window.cancelAnimationFrame(rangeFrameRef.current);
+        rangeFrameRef.current = null;
       }
-      if (rangeTimeoutRef.current !== null && typeof window !== "undefined") {
-        window.clearTimeout(rangeTimeoutRef.current);
+      if (rangeTimerRef.current !== null && typeof window !== "undefined") {
+        window.clearTimeout(rangeTimerRef.current);
+        rangeTimerRef.current = null;
+      }
+      if (rangeDraggingRef.current) {
+        const next = pendingRangeRef.current;
+        pendingRangeRef.current = null;
+        if (next != null) {
+          lastAppliedRangeValueRef.current = next;
+          onChangeRef.current(next);
+        }
+        rangeDraggingRef.current = false;
+        rangeDragTokenRef.current += 1;
+        endSliderDragGateSoon();
       }
     };
+  }, []);
+
+  const scheduleLiveRangeChange = React.useCallback(() => {
+    if (rangeFrameRef.current !== null || rangeTimerRef.current !== null) return;
+    if (typeof window === "undefined") {
+      const next = pendingRangeRef.current;
+      if (next != null && !sliderValuesEqual(lastAppliedRangeValueRef.current, next)) {
+        lastAppliedRangeValueRef.current = next;
+        onChangeRef.current(next);
+      }
+      return;
+    }
+    const dragToken = rangeDragTokenRef.current;
+    const run = () => {
+      rangeTimerRef.current = null;
+      rangeFrameRef.current = window.requestAnimationFrame(() => {
+        rangeFrameRef.current = null;
+        const next = pendingRangeRef.current;
+        if (next == null) return;
+        if (!rangeDraggingRef.current || dragToken !== rangeDragTokenRef.current) return;
+        if (sliderValuesEqual(lastAppliedRangeValueRef.current, next)) return;
+        lastLiveRangeAtRef.current = performance.now();
+        lastAppliedRangeValueRef.current = next;
+        onChangeRef.current(next);
+      });
+    };
+    const now = performance.now();
+    const wait = Math.max(0, SLIDER_LIVE_UPDATE_MS - (now - lastLiveRangeAtRef.current));
+    if (wait > 0) {
+      rangeTimerRef.current = window.setTimeout(run, wait);
+      return;
+    }
+    run();
   }, []);
 
   const commitDraft = React.useCallback(
@@ -453,43 +706,34 @@ export function InlineSliderInput({
         return;
       }
       const next = clamp(parsed / displayScale);
-      onChange(next);
+      onChangeRef.current(next);
+      onCommitRef.current?.(next);
       setDraftValue(formatNumericValue(next * displayScale, inputDigits));
     },
-    [clamp, displayScale, formattedValue, inputDigits, onChange]
+    [clamp, displayScale, formattedValue, inputDigits]
   );
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDraftValue(e.target.value);
   };
 
-  const flushRangeChange = React.useCallback(() => {
-    rangeFrameRef.current = null;
-    const next = pendingRangeRef.current;
-    pendingRangeRef.current = null;
-    if (next == null) return;
-    onChange(next);
-  }, [onChange]);
-
   const handleRangeChange = React.useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const next = clamp(Number(e.target.value));
-      setRangeValue(next);
+      latestRangeValueRef.current = next;
       pendingRangeRef.current = next;
-      if (rangeFrameRef.current !== null || rangeTimeoutRef.current !== null) return;
-      if (typeof window === "undefined") {
-        flushRangeChange();
-        return;
+      if (rangeDraggingRef.current) {
+        scheduleLiveRangeChange();
+      } else {
+        pendingRangeRef.current = null;
+        if (!isEditing) {
+          setDraftValue(formatNumericValue(next * displayScale, inputDigits));
+        }
+        lastAppliedRangeValueRef.current = next;
+        onChangeRef.current(next);
       }
-      rangeFrameRef.current = window.requestAnimationFrame(() => {
-        rangeFrameRef.current = null;
-        rangeTimeoutRef.current = window.setTimeout(() => {
-          rangeTimeoutRef.current = null;
-          flushRangeChange();
-        }, 0);
-      });
     },
-    [clamp, flushRangeChange]
+    [clamp, displayScale, inputDigits, isEditing, scheduleLiveRangeChange]
   );
 
   const flushPendingRangeSoon = React.useCallback(() => {
@@ -497,39 +741,79 @@ export function InlineSliderInput({
       window.cancelAnimationFrame(rangeFrameRef.current);
       rangeFrameRef.current = null;
     }
-    if (rangeTimeoutRef.current !== null && typeof window !== "undefined") {
-      window.clearTimeout(rangeTimeoutRef.current);
-      rangeTimeoutRef.current = null;
+    if (rangeTimerRef.current !== null && typeof window !== "undefined") {
+      window.clearTimeout(rangeTimerRef.current);
+      rangeTimerRef.current = null;
     }
     const next = pendingRangeRef.current;
     pendingRangeRef.current = null;
-    if (next == null) return;
-    if (typeof window === "undefined") {
-      onChange(next);
-      return;
+    if (next == null) return null;
+    if (!sliderValuesEqual(lastAppliedRangeValueRef.current, next)) {
+      lastAppliedRangeValueRef.current = next;
+      onChangeRef.current(next);
     }
-    rangeTimeoutRef.current = window.setTimeout(() => {
-      rangeTimeoutRef.current = null;
-      onChange(next);
-    }, 0);
-  }, [onChange]);
+    if (!isEditing) {
+      setDraftValue(formatNumericValue(next * displayScale, inputDigits));
+    }
+    return next;
+  }, [displayScale, inputDigits, isEditing]);
 
-  const handleRangePointerDown = React.useCallback(() => {
+  const handleRangePointerDown = React.useCallback((e?: React.PointerEvent<HTMLInputElement>) => {
+    e?.stopPropagation();
+    if (!rangeDraggingRef.current) {
+      if (e?.currentTarget && typeof e.pointerId === "number") {
+        try {
+          e.currentTarget.setPointerCapture(e.pointerId);
+        } catch {}
+      }
+      rangeDragTokenRef.current += 1;
+      beginSliderDragGate();
+    }
     rangeDraggingRef.current = true;
     onPointerDown?.();
   }, [onPointerDown]);
 
-  const handleRangePointerUp = React.useCallback(() => {
+  const handleRangePointerUp = React.useCallback((e?: React.PointerEvent<HTMLInputElement>) => {
+    e?.stopPropagation();
+    if (!rangeDraggingRef.current) return;
+    if (e?.currentTarget) {
+      const next = clamp(Number(e.currentTarget.value));
+      latestRangeValueRef.current = next;
+      pendingRangeRef.current = next;
+    }
     rangeDraggingRef.current = false;
-    flushPendingRangeSoon();
+    rangeDragTokenRef.current += 1;
+    const committed = flushPendingRangeSoon();
+    if (committed != null) onCommitRef.current?.(committed);
     onPointerUp?.();
-  }, [flushPendingRangeSoon, onPointerUp]);
+    endSliderDragGateSoon();
+    if (e?.currentTarget && typeof e.pointerId === "number") {
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {}
+    }
+  }, [clamp, flushPendingRangeSoon, onPointerUp]);
 
-  const handleRangePointerCancel = React.useCallback(() => {
+  const handleRangePointerCancel = React.useCallback((e?: React.PointerEvent<HTMLInputElement>) => {
+    e?.stopPropagation();
+    if (!rangeDraggingRef.current) return;
+    if (e?.currentTarget) {
+      const next = clamp(Number(e.currentTarget.value));
+      latestRangeValueRef.current = next;
+      pendingRangeRef.current = next;
+    }
     rangeDraggingRef.current = false;
-    flushPendingRangeSoon();
+    rangeDragTokenRef.current += 1;
+    const committed = flushPendingRangeSoon();
+    if (committed != null) onCommitRef.current?.(committed);
     onPointerCancel?.();
-  }, [flushPendingRangeSoon, onPointerCancel]);
+    endSliderDragGateSoon();
+    if (e?.currentTarget && typeof e.pointerId === "number") {
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {}
+    }
+  }, [clamp, flushPendingRangeSoon, onPointerCancel]);
 
   return (
     <div className="min-w-0 w-full">
@@ -538,17 +822,22 @@ export function InlineSliderInput({
       </div>
       <div className="flex min-w-0 w-full items-center gap-1">
         <input
+          ref={rangeRef}
           type="range"
           min={min}
           max={max}
           step={step}
-          value={rangeValue}
+          defaultValue={latestRangeValueRef.current}
           onChange={handleRangeChange}
           className={clsx("min-w-0 flex-1", rangeClassName || controlRangeClass)}
           style={{ touchAction: "none" }}
-          onPointerDown={handleRangePointerDown}
           onPointerUp={handleRangePointerUp}
           onPointerCancel={handleRangePointerCancel}
+          onPointerDownCapture={handleRangePointerDown}
+          onMouseDown={(e) => e.stopPropagation()}
+          onMouseUp={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
           disabled={disabled}
         />
         <div className="ml-0.5 flex shrink-0 items-center justify-end gap-0.5 max-w-[50px] sm:ml-1 sm:max-w-[64px]">
@@ -597,14 +886,15 @@ export function SliderRow({
   precision,
   disabled = false,
   onChange,
+  onCommit,
 }: SliderRowProps) {
   const safeValue = Number.isFinite(value) ? (value as number) : min;
 
   return (
     <div
       className="select-none py-2"
-      onMouseDownCapture={(e) => e.stopPropagation()}
-      onPointerDownCapture={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
     >
       <InlineSliderInput
         label={label}
@@ -615,6 +905,7 @@ export function SliderRow({
         precision={precision}
         disabled={disabled}
         onChange={onChange}
+        onCommit={onCommit}
         rangeClassName={`flex-1 h-1 rounded-lg appearance-none cursor-pointer transition-colors ${
           disabled
             ? "bg-neutral-800 accent-neutral-600"

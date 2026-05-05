@@ -377,6 +377,18 @@ type FlyerState = {
 // ====================================================
 // ZUSTAND STORE
 // ====================================================
+let pendingSessionValuePatch: Partial<Record<Format, Partial<TemplateBase>>> = {};
+
+function sanitizeSessionValue(key: keyof TemplateBase, value: any) {
+  if (key === "bgPosX" || key === "bgPosY" || key === "bgScale") {
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      return key === "bgScale" ? 1 : 50;
+    }
+  }
+
+  return value;
+}
+
 export const useFlyerState = create<FlyerState>((set, get) => ({
 
 
@@ -451,7 +463,32 @@ export const useFlyerState = create<FlyerState>((set, get) => ({
   // DRAG SYSTEM
   //
   isLiveDragging: false,
-  setIsLiveDragging: (v) => set({ isLiveDragging: v }),
+  setIsLiveDragging: (v) =>
+    set((s) => {
+      if (v) return s.isLiveDragging ? s : { isLiveDragging: true };
+
+      const pending = pendingSessionValuePatch;
+      pendingSessionValuePatch = {};
+      const squarePatch = pending.square;
+      const storyPatch = pending.story;
+
+      if (!squarePatch && !storyPatch) {
+        if (!s.isLiveDragging) return s;
+        return { isLiveDragging: false };
+      }
+
+      return {
+        isLiveDragging: false,
+        session: {
+          square: squarePatch ? { ...s.session.square, ...squarePatch } : s.session.square,
+          story: storyPatch ? { ...s.session.story, ...storyPatch } : s.session.story,
+        },
+        sessionDirty: {
+          square: squarePatch ? true : s.sessionDirty.square,
+          story: storyPatch ? true : s.sessionDirty.story,
+        },
+      };
+    }),
 
   moveTarget: null,
   setMoveTarget: (t) => set({ moveTarget: t }),
@@ -777,31 +814,36 @@ setFocus: (t: any, panel: any) =>
       };
     }),
 
-  // 🔥 PATCHED FUNCTION: Sanitizes input to prevent NaN crashes
-setSessionValue: (fmt, key, value) =>
-  set((s) => {
-    let safeValue = value;
+  // Defers live-drag session writes so sliders can move smoothly and save once on release.
+  setSessionValue: (fmt, key, value) =>
+    set((s) => {
+      const safeValue = sanitizeSessionValue(key, value);
 
-    if (key === "bgPosX" || key === "bgPosY" || key === "bgScale") {
-      if (typeof value !== "number" || !Number.isFinite(value)) {
-        safeValue = key === "bgScale" ? 1 : 50;
+      if (s.isLiveDragging) {
+        pendingSessionValuePatch = {
+          ...pendingSessionValuePatch,
+          [fmt]: {
+            ...(pendingSessionValuePatch[fmt] || {}),
+            [key]: safeValue,
+          },
+        };
+        return s;
       }
-    }
 
-    return {
-      session: {
-        ...s.session,
-        [fmt]: {
-          ...s.session[fmt],
-          [key]: safeValue,
+      return {
+        session: {
+          ...s.session,
+          [fmt]: {
+            ...s.session[fmt],
+            [key]: safeValue,
+          },
         },
-      },
-      sessionDirty: {
-        ...s.sessionDirty,
-        [fmt]: true,
-      },
-    };
-  }),
+        sessionDirty: {
+          ...s.sessionDirty,
+          [fmt]: true,
+        },
+      };
+    }),
 
 // ✅ MUST BE A SIBLING KEY (NOT NESTED)
 exportDesign: () => {
