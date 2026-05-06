@@ -13622,17 +13622,17 @@ const mobileFloatPanelClass =
       }),
     []
   );
-  const starterStartupTemplates = React.useMemo(
+  const visibleTemplateGallery = isStarterPlan ? starterTemplateGallery : TEMPLATE_GALLERY;
+  const startupTemplateOptions = React.useMemo(
     () =>
-      starterTemplateGallery.map((template) => ({
+      visibleTemplateGallery.map((template) => ({
         key: template.id,
         label: template.label,
         desc: template.tags?.slice(0, 3).join(" / ") || "Editable starter flyer",
         preview: template.preview,
       })),
-    [starterTemplateGallery]
+    [visibleTemplateGallery]
   );
-  const visibleTemplateGallery = isStarterPlan ? starterTemplateGallery : TEMPLATE_GALLERY;
   const visibleStartupBackgrounds = isStarterPlan ? STARTER_BACKGROUND_CHOICES : DJ_STARTUP_BACKGROUNDS;
   const isDjStartupMode = startupStudioMode === "dj";
   const normalizedAccessPlan = String(accessPlan || "").trim().toLowerCase();
@@ -22075,8 +22075,13 @@ const handleTemplateSelect = React.useCallback(
             urban: isStarterPlan ? "mardi_gras" : "hiphop_graffiti",
           };
 
-          const tplId = STARTER_TEMPLATE_IDS.has(key) ? key : vibeToTemplateId[key] ?? TEMPLATE_GALLERY[0]?.id;
-          const tpl = TEMPLATE_GALLERY.find((t) => t.id === tplId);
+          const selectedTemplate = TEMPLATE_GALLERY.find((t) => t.id === key);
+          if (selectedTemplate && isStarterPlan && !STARTER_TEMPLATE_IDS.has(selectedTemplate.id)) {
+            alert(`Trial access includes ${STARTER_TEMPLATE_COUNT} starter templates. Subscribe to unlock the full template library.`);
+            return;
+          }
+          const tplId = selectedTemplate?.id ?? vibeToTemplateId[key] ?? TEMPLATE_GALLERY[0]?.id;
+          const tpl = selectedTemplate ?? TEMPLATE_GALLERY.find((t) => t.id === tplId);
           if (!tpl) throw new Error("Template not found for vibe: " + key);
           applyTemplateFromGallery(tpl, { targetFormat: startupFormat });
         }
@@ -26050,7 +26055,7 @@ return (
             buildForYouError={startupBuildError}
             onBuildForYou={handleStartupBuildForYou}
             guestMode={isGuestTrial}
-            starterTemplateOptions={starterStartupTemplates}
+            templateOptions={startupTemplateOptions}
             onLoadProjectFile={async (file) => {
               setLoadingStartup(true);
               try {

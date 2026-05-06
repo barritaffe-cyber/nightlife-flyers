@@ -36,73 +36,13 @@ interface StartupTemplatesProps {
   buildForYouError: string | null;
   onBuildForYou: (payload: StartupBuildPayload) => Promise<void> | void;
   guestMode?: boolean;
-  starterTemplateOptions?: ReadonlyArray<StartupTemplateOption>;
+  templateOptions?: ReadonlyArray<StartupTemplateOption>;
   djBackgroundOptions: ReadonlyArray<{
     id: string;
     src: string;
     name: string;
   }>;
 }
-
-const templates = [
-  {
-    key: "club",
-    label: "Miami Nights",
-    desc: "Ocean Drive glow & neon nightlife",
-    icon: (
-      <svg width="30" height="30" viewBox="0 0 64 64" fill="none" stroke="currentColor">
-        <path strokeWidth="2.2" d="M14 42c6-11.2 14.7-16.8 26-16.8 4.6 0 8.8.8 12.6 2.4" />
-        <path strokeWidth="2.2" d="M12 49.5c7.1-6 14.3-9 21.8-9 6.6 0 12.8 2 18.7 6" />
-        <circle cx="20" cy="24" r="2.6" fill="currentColor" stroke="none" />
-        <circle cx="31.5" cy="20" r="2.2" fill="currentColor" stroke="none" />
-        <circle cx="44" cy="23" r="2.6" fill="currentColor" stroke="none" />
-        <path strokeWidth="2" d="M9 54h46" opacity="0.45" />
-      </svg>
-    ),
-  },
-  {
-    key: "tropical",
-    label: "Latin Tropical Street",
-    desc: "Street party energy with warm color",
-    icon: (
-      <svg width="30" height="30" viewBox="0 0 64 64" fill="none" stroke="currentColor">
-        <path strokeWidth="2.2" d="M32 12v22" />
-        <path strokeWidth="2.2" d="M32 19c7-5.3 13.2-7.9 18.6-7.9" />
-        <path strokeWidth="2.2" d="M32 24.5c-7-5.3-13.2-7.9-18.6-7.9" />
-        <path strokeWidth="2.2" d="M32 30c5.9-4 11.5-5.9 16.8-5.9" />
-        <path strokeWidth="2.2" d="M32 34.5C26.1 30.5 20.5 28.6 15.2 28.6" />
-        <path strokeWidth="2" d="M12 52h40" opacity="0.45" />
-      </svg>
-    ),
-  },
-  {
-    key: "luxury",
-    label: "Atlanta Skyline",
-    desc: "City lights, late-night skyline mood",
-    icon: (
-      <svg width="30" height="30" viewBox="0 0 64 64" fill="none" stroke="currentColor">
-        <path strokeWidth="2.2" d="M12 52h40" />
-        <path strokeWidth="2.2" d="M18 52V28h10v24" />
-        <path strokeWidth="2.2" d="M30 52V16h10v36" />
-        <path strokeWidth="2.2" d="M42 52V24h8v28" />
-        <path strokeWidth="2" d="M22 33h2M22 38h2M34 22h2M34 28h2M34 34h2M46 30h2M46 36h2" opacity="0.65" />
-      </svg>
-    ),
-  },
-  {
-    key: "urban",
-    label: "Hip Hop Block Party",
-    desc: "Street party energy, raw crowd vibe",
-    icon: (
-      <svg width="30" height="30" viewBox="0 0 64 64" fill="none" stroke="currentColor">
-        <path strokeWidth="2.2" d="M12 52h40" />
-        <path strokeWidth="2.2" d="M16 52V29l16-8 16 8v23" />
-        <path strokeWidth="2.2" d="M24 52V39h16v13" />
-        <path strokeWidth="2" d="M21 33h2M28 29h2M34 29h2M41 33h2" opacity="0.65" />
-      </svg>
-    ),
-  },
-] as const;
 
 const categories = [
   {
@@ -159,7 +99,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
   buildForYouError,
   onBuildForYou,
   guestMode = false,
-  starterTemplateOptions = [],
+  templateOptions = [],
   djBackgroundOptions,
 }) => {
   const [screen, setScreen] = React.useState<"entry" | "advanced" | "build" | "dj">("entry");
@@ -247,6 +187,8 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
       ? "w-[min(94vw,780px)] max-h-[86vh] overflow-y-auto bg-[linear-gradient(180deg,rgba(9,11,16,0.99),rgba(13,16,24,0.98))] p-5 text-center shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
       : screen === "entry"
       ? "w-[min(92vw,420px)] max-h-[84vh] overflow-y-auto bg-[linear-gradient(180deg,rgba(10,12,18,0.99),rgba(13,16,24,0.98))] p-5 text-center shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
+      : screen === "advanced"
+      ? "w-[min(94vw,920px)] max-h-[84vh] overflow-y-auto bg-[linear-gradient(180deg,rgba(10,12,18,0.99),rgba(13,16,24,0.98))] p-5 text-center shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
       : "w-[min(92vw,620px)] max-h-[84vh] overflow-y-auto bg-[linear-gradient(180deg,rgba(10,12,18,0.99),rgba(13,16,24,0.98))] p-5 text-center shadow-[0_24px_80px_rgba(0,0,0,0.55)]";
 
   const startupButtonClass =
@@ -256,9 +198,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
   const advancedCardClass =
     "bg-[linear-gradient(180deg,rgba(55,31,71,0.22),rgba(14,17,25,0.92))] p-4 text-left shadow-[0_18px_40px_rgba(0,0,0,0.22)] transition hover:bg-[linear-gradient(180deg,rgba(72,40,94,0.28),rgba(17,20,29,0.95))]";
   const advancedTemplateCardClass =
-    "group relative bg-[linear-gradient(180deg,rgba(58,33,74,0.22),rgba(18,21,31,0.9))] p-3.5 text-left text-white shadow-[0_14px_32px_rgba(0,0,0,0.18)] transition hover:bg-[linear-gradient(180deg,rgba(76,43,98,0.3),rgba(20,23,33,0.95))]";
-  const advancedIconWrapClass =
-    "mb-3 flex h-12 w-12 items-center justify-center bg-[linear-gradient(135deg,rgba(22,18,32,0.96),rgba(45,28,60,0.92))] text-fuchsia-100 shadow-[0_10px_24px_rgba(0,0,0,0.2)]";
+    "group relative overflow-hidden border border-white/10 bg-[linear-gradient(180deg,rgba(58,33,74,0.22),rgba(18,21,31,0.9))] text-left text-white shadow-[0_14px_32px_rgba(0,0,0,0.18)] transition hover:border-fuchsia-200/30 hover:bg-[linear-gradient(180deg,rgba(76,43,98,0.3),rgba(20,23,33,0.95))]";
   const advancedLabelClass = "text-[11px] uppercase tracking-[0.16em] text-fuchsia-100/55";
   const advancedButtonClass =
     startupButtonClass + " bg-fuchsia-500/[0.07] shadow-[0_12px_28px_rgba(0,0,0,0.18)] hover:bg-fuchsia-500/[0.11]";
@@ -270,6 +210,43 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
     if (!file) return;
     await onLoadProjectFile(file);
   };
+
+  const renderTemplateCard = (template: StartupTemplateOption) => (
+    <button
+      key={template.key}
+      type="button"
+      disabled={buildForYouLoading}
+      onClick={() => onSelect(template.key)}
+      className={advancedTemplateCardClass}
+    >
+      <div className="aspect-[1.35] w-full overflow-hidden bg-black">
+        {template.preview ? (
+          <img
+            src={template.preview}
+            alt={template.label}
+            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+            draggable={false}
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-xs text-neutral-500">
+            Template
+          </div>
+        )}
+      </div>
+      <div className="p-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0 truncate text-sm font-semibold text-white">{template.label}</div>
+          <div className="shrink-0 text-[10px] uppercase tracking-[0.18em] text-fuchsia-100/60 transition group-hover:text-fuchsia-100">
+            Start
+          </div>
+        </div>
+        <div className="mt-1 line-clamp-2 text-[11px] leading-4 text-neutral-300">
+          {template.desc}
+        </div>
+      </div>
+      <div className="pointer-events-none absolute inset-0 bg-white/0 transition group-hover:bg-fuchsia-400/[0.04]" />
+    </button>
+  );
 
   return (
     <AnimatePresence>
@@ -290,50 +267,16 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                   </div>
                   <h2 className="mt-2 text-2xl font-semibold text-white">Pick one template to start</h2>
                   <p className="mt-2 text-sm text-neutral-400">
-                    Start with 4 free starter templates. Subscribe to unlock the full template library, DJ / Artist mode, and clean exports.
+                    Choose from the templates available to your current access.
                   </p>
                 </div>
 
                 <div className="mx-auto mt-5 grid w-full max-w-[680px] grid-cols-1 gap-3 sm:grid-cols-2">
-                  {starterTemplateOptions.map((template) => (
-                    <button
-                      key={template.key}
-                      type="button"
-                      disabled={buildForYouLoading}
-                      onClick={() => onSelect(template.key)}
-                      className="group overflow-hidden border border-white/10 bg-white/[0.04] text-left shadow-[0_18px_40px_rgba(0,0,0,0.22)] transition hover:border-cyan-200/35 hover:bg-white/[0.07] disabled:opacity-60"
-                    >
-                      <div className="aspect-[1.45] w-full overflow-hidden bg-black">
-                        {template.preview ? (
-                          <img
-                            src={template.preview}
-                            alt={template.label}
-                            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
-                            draggable={false}
-                          />
-                        ) : (
-                          <div className="flex h-full items-center justify-center text-xs text-neutral-500">
-                            Template
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-3">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="min-w-0 truncate text-sm font-semibold text-white">{template.label}</div>
-                          <div className="shrink-0 text-[10px] uppercase tracking-[0.18em] text-cyan-100/60 transition group-hover:text-cyan-100">
-                            Start
-                          </div>
-                        </div>
-                        <div className="mt-1 line-clamp-2 text-[11px] leading-4 text-neutral-300">
-                          {template.desc}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
+                  {templateOptions.map(renderTemplateCard)}
                 </div>
 
                 <div className="mx-auto mt-4 max-w-[680px] text-center text-[11px] text-neutral-500">
-                  There are more templates inside Nightlife Flyers. Choose a plan when you are ready to unlock them all.
+                  You can switch templates later inside Nightlife Flyers.
                 </div>
               </div>
             ) : (
@@ -498,21 +441,10 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                 <div className="mt-1 text-sm text-neutral-300">
                   Fastest path for most flyers. Pick a layout, then swap text, background, portraits, and brand elements.
                 </div>
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                  {templates.map((template) => (
-                    <button
-                      key={template.key}
-                      onClick={() => onSelect(template.key)}
-                      className={advancedTemplateCardClass}
-                    >
-                      <div className={advancedIconWrapClass}>
-                        {template.icon}
-                      </div>
-                      <div className="font-semibold text-white">{template.label}</div>
-                      <div className="mt-1 text-[11px] leading-5 text-neutral-300">{template.desc}</div>
-                      <div className="pointer-events-none absolute inset-0 bg-white/0 transition group-hover:bg-fuchsia-400/[0.04]" />
-                    </button>
-                  ))}
+                <div className="mt-4 max-h-[48vh] overflow-y-auto pr-1">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {templateOptions.map(renderTemplateCard)}
+                  </div>
                 </div>
               </div>
 
