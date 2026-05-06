@@ -14239,13 +14239,7 @@ const mobileFloatPanelClass =
       typeof navigator !== "undefined" &&
       /iPad|iPhone|iPod|Android/i.test(navigator.userAgent || "");
     const safeScale = isMobileExport
-      ? Math.max(
-          1,
-          Math.min(
-            exportScale,
-            Math.floor((MOBILE_EXPORT_MAX_DIM / Math.max(canvasSize.w, canvasSize.h)) * 100) / 100
-          )
-        )
+      ? clampMobileExportScale(exportScale, canvasSize.w, canvasSize.h)
       : exportType === "jpg"
       ? clampDesktopJpgExportScale(exportScale, canvasSize.w, canvasSize.h)
       : exportScale;
@@ -14272,11 +14266,11 @@ const mobileFloatPanelClass =
       const scaleAttempts = isMobileExport
         ? Array.from(
             new Set(
-              [exportScale, safeScale, 4, 2, 1].filter(
+              [safeScale, 2, 1.5, 1].filter(
                 (value) =>
                   Number.isFinite(value) &&
                   value >= 1 &&
-                  (value === exportScale || value <= safeScale)
+                  value <= safeScale
               )
             )
           )
@@ -14311,8 +14305,8 @@ const mobileFloatPanelClass =
               false
             );
             usedScale = scale;
-            width = canvasSize.w * scale;
-            height = canvasSize.h * scale;
+            width = Math.round(canvasSize.w * scale);
+            height = Math.round(canvasSize.h * scale);
             sizeBytes = dataUrlBytes(dataUrl);
             if (!mustRetry || !needsRetry()) {
               if (scale !== exportScale) {
@@ -14338,8 +14332,8 @@ const mobileFloatPanelClass =
                   true
                 );
                 usedScale = scale;
-                width = canvasSize.w * scale;
-                height = canvasSize.h * scale;
+                width = Math.round(canvasSize.w * scale);
+                height = Math.round(canvasSize.h * scale);
                 sizeBytes = dataUrlBytes(dataUrl);
                 attempt = maxAttempts + 1;
                 break;
@@ -17863,9 +17857,28 @@ function extractCssUrls(input: string): string[] {
 }
 const EXPORT_TRANSPARENT_PIXEL =
   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
-const MOBILE_EXPORT_MAX_DIM = 8192;
+const MOBILE_EXPORT_MAX_DIM = 1440;
+const MOBILE_EXPORT_MAX_PIXELS = 1_600_000;
+const MOBILE_EXPORT_MAX_SCALE = 2;
 const DESKTOP_JPG_EXPORT_MAX_DIM = 3200;
 const DESKTOP_JPG_EXPORT_MAX_PIXELS = 9_000_000;
+
+function clampMobileExportScale(
+  requestedScale: number,
+  width: number,
+  height: number
+) {
+  const baseMaxDim = Math.max(width, height, 1);
+  const safeByDim = MOBILE_EXPORT_MAX_DIM / baseMaxDim;
+  const safeByPixels = Math.sqrt(
+    MOBILE_EXPORT_MAX_PIXELS / Math.max(width * height, 1)
+  );
+  const safeScale = Math.max(
+    1,
+    Math.min(requestedScale, MOBILE_EXPORT_MAX_SCALE, safeByDim, safeByPixels)
+  );
+  return Math.floor(safeScale * 100) / 100;
+}
 
 function clampDesktopJpgExportScale(
   requestedScale: number,
