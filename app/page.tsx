@@ -4550,16 +4550,28 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	    const savedGreenColor = String(headGlitchMagentaColor || "").trim().toLowerCase();
 	    const glitchGreenColor = savedGreenColor && savedGreenColor !== "#ff18d8" ? headGlitchMagentaColor : "#00ff66";
 	    const glitchBlueColor = headGlitchBlueColor || "#004bff";
-	    const glitchRedTransform = `translate(${(-glitchChannelOffset * 0.82).toFixed(1)}px, ${(-glitchVerticalOffset).toFixed(1)}px)`;
-	    const glitchBlueTransform = `translate(${(glitchChannelOffset * 0.72).toFixed(1)}px, ${glitchVerticalOffset.toFixed(1)}px)`;
-	    const glitchStrokeTransform = `translate(${(glitchChannelOffset * 0.38).toFixed(1)}px, ${(-glitchVerticalOffset * 1.05).toFixed(1)}px)`;
+	    const glitchRedOffsetX = -glitchChannelOffset * 0.82;
+	    const glitchRedOffsetY = -glitchVerticalOffset;
+	    const glitchBlueOffsetX = glitchChannelOffset * 0.72;
+	    const glitchBlueOffsetY = glitchVerticalOffset;
+	    const glitchStrokeOffsetX = glitchChannelOffset * 0.38;
+	    const glitchStrokeOffsetY = -glitchVerticalOffset * 1.05;
+	    const glitchRedTransform = `translate(${glitchRedOffsetX.toFixed(1)}px, ${glitchRedOffsetY.toFixed(1)}px)`;
+	    const glitchBlueTransform = `translate(${glitchBlueOffsetX.toFixed(1)}px, ${glitchBlueOffsetY.toFixed(1)}px)`;
+	    const glitchStrokeTransform = `translate(${glitchStrokeOffsetX.toFixed(1)}px, ${glitchStrokeOffsetY.toFixed(1)}px)`;
 	    const glitchChannelStrokeWidth = Math.max(0, textFx.strokeWidth || 0);
 	    const glitchVisibleStrokeWidth = Math.max(1.4, textFx.strokeWidth || 1.6);
 	    const glitchWhiteStrokeWidth = Math.max(2.2, glitchVisibleStrokeWidth + 1.2);
-	    const glitchGlowFilter =
+	    const glitchGlowDropShadow =
 	      glitchGlow > 0
 	        ? `drop-shadow(0 0 ${(2 + glitchGlow * 10).toFixed(1)}px rgba(255,255,255,${(0.08 + glitchGlow * 0.22).toFixed(2)}))`
-	        : "none";
+	        : "";
+	    const glitchGlowFilter = glitchGlowDropShadow || "none";
+	    const glitchExportFilterId = `headline-glitch-screen-${format}`;
+	    const glitchExportFilter = `url(#${glitchExportFilterId})${glitchGlowDropShadow ? ` ${glitchGlowDropShadow}` : ""}`;
+	    const glitchExportStrokeRadius = Math.max(1, Math.min(5, glitchWhiteStrokeWidth * 0.52));
+	    const glitchWhiteStrokeOpacity = Math.min(1, 0.72 + glitchIntensity * 0.18 + glitchGlow * 0.12);
+	    const useGlitchExportFilter = glitchActive && exportTextMode;
 	    const glitchNoiseSeed = stableStringSeed(
 	      [
 	        headlineText,
@@ -4672,7 +4684,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	      zIndex: number,
 	      mixBlendMode: React.CSSProperties["mixBlendMode"],
 	      strokeOnly = false,
-	      opacityScale = 1
+	      opacityScale = 1,
+	      filterOverride?: React.CSSProperties["filter"]
 	    ) =>
 	      glitchNoiseBlocks.map((block, idx) => {
 	        const rightPct = Math.max(0, 100 - block.leftPct - block.widthPct);
@@ -4698,7 +4711,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	            transform: fragmentTransform,
 	            clipPath,
 	            mixBlendMode,
-	            filter: glitchGlowFilter,
+	            filter: filterOverride ?? glitchGlowFilter,
 	            opacity: Math.min(1, textFx.alpha * block.opacity * opacityScale),
 	            zIndex,
 	          },
@@ -4722,8 +4735,69 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
           overflow: "visible",
           transform: glitchActive ? "scaleX(0.88)" : undefined,
           transformOrigin: "50% 50%",
+          isolation: glitchActive ? "isolate" : undefined,
         }}
       >
+        {glitchActive && exportTextMode && (
+          <svg
+            aria-hidden="true"
+            focusable="false"
+            className="pointer-events-none absolute h-0 w-0 overflow-hidden"
+          >
+            <defs>
+              <filter
+                id={glitchExportFilterId}
+                x="-45%"
+                y="-45%"
+                width="190%"
+                height="190%"
+                colorInterpolationFilters="sRGB"
+                primitiveUnits="userSpaceOnUse"
+              >
+                <feFlood floodColor={glitchGreenColor} result="green-color" />
+                <feComposite in="green-color" in2="SourceAlpha" operator="in" result="green" />
+
+                <feOffset
+                  in="SourceAlpha"
+                  dx={glitchRedOffsetX.toFixed(2)}
+                  dy={glitchRedOffsetY.toFixed(2)}
+                  result="red-mask"
+                />
+                <feFlood floodColor={glitchRedColor} result="red-color" />
+                <feComposite in="red-color" in2="red-mask" operator="in" result="red" />
+                <feBlend in="green" in2="red" mode="screen" result="red-green" />
+
+                <feOffset
+                  in="SourceAlpha"
+                  dx={glitchBlueOffsetX.toFixed(2)}
+                  dy={glitchBlueOffsetY.toFixed(2)}
+                  result="blue-mask"
+                />
+                <feFlood floodColor={glitchBlueColor} result="blue-color" />
+                <feComposite in="blue-color" in2="blue-mask" operator="in" result="blue" />
+                <feBlend in="red-green" in2="blue" mode="screen" result="rgb" />
+
+                <feOffset
+                  in="SourceAlpha"
+                  dx={glitchStrokeOffsetX.toFixed(2)}
+                  dy={glitchStrokeOffsetY.toFixed(2)}
+                  result="stroke-source"
+                />
+                <feMorphology
+                  in="stroke-source"
+                  operator="dilate"
+                  radius={glitchExportStrokeRadius.toFixed(2)}
+                  result="stroke-dilate"
+                />
+                <feComposite in="stroke-dilate" in2="stroke-source" operator="out" result="stroke-mask" />
+                <feFlood floodColor="#ffffff" floodOpacity={glitchWhiteStrokeOpacity.toFixed(2)} result="stroke-color" />
+                <feComposite in="stroke-color" in2="stroke-mask" operator="in" result="white-stroke" />
+                <feBlend in="rgb" in2="white-stroke" mode="screen" result="screened" />
+              </filter>
+            </defs>
+          </svg>
+        )}
+
         {!exportTextMode && headSliceEnabled && (
           <div
             aria-hidden="true"
@@ -4918,9 +4992,11 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
             fontStyle: textFx.italic ? 'italic' : 'normal',
             fontStretch: glitchActive ? "normal" : undefined,
             textDecorationLine: textFx.underline ? 'underline' : 'none',
-            opacity: textFx.alpha,
+	            opacity: textFx.alpha,
 	            color: glitchActive
-	              ? glitchGreenColor
+	              ? useGlitchExportFilter
+	                ? "#ffffff"
+	                : glitchGreenColor
 	              : exportTextMode
 	              ? headlineExportColor
 	              : rushActive
@@ -4929,14 +5005,16 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	              ? 'transparent'
 	              : textFx.color,
 	            WebkitTextFillColor: glitchActive
-	              ? glitchGreenColor
+	              ? useGlitchExportFilter
+	                ? "#ffffff"
+	                : glitchGreenColor
 	              : exportTextMode
 	              ? headlineExportColor
 	              : rushActive
 	              ? rushFillColor
 	              : undefined,
 	            WebkitTextStrokeWidth: glitchActive ? `${glitchVisibleStrokeWidth}px` : undefined,
-	            WebkitTextStrokeColor: glitchActive ? glitchGreenColor : undefined,
+	            WebkitTextStrokeColor: glitchActive ? (useGlitchExportFilter ? "#ffffff" : glitchGreenColor) : undefined,
 	            paintOrder: glitchActive ? "stroke fill" : undefined,
 	            textShadow: dragging
 	              ? 'none'
@@ -4949,9 +5027,11 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
               : 'none',
             ...(dragging
               ? {}
+              : useGlitchExportFilter
+              ? { filter: glitchExportFilter }
               : !glitchActive && isActive('headline')
-              ? { filter: 'drop-shadow(0 0 8px rgba(147,197,253,0.9))' }
-              : {}),
+	              ? { filter: 'drop-shadow(0 0 8px rgba(147,197,253,0.9))' }
+	              : {}),
             zIndex: glitchActive ? 9 : rushActive ? 3 : 1,
             }}
           >
@@ -4974,11 +5054,11 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	                        : textFx.strokeWidth
 	                        ? `${textFx.strokeWidth}px`
 	                        : undefined,
-	                      WebkitTextStrokeColor: glitchActive ? glitchGreenColor : textFx.strokeColor,
+	                      WebkitTextStrokeColor: glitchActive ? (useGlitchExportFilter ? "#ffffff" : glitchGreenColor) : textFx.strokeColor,
 	                      ...(glitchActive
 	                        ? {
-	                            color: glitchGreenColor,
-	                            WebkitTextFillColor: glitchGreenColor,
+	                            color: useGlitchExportFilter ? "#ffffff" : glitchGreenColor,
+	                            WebkitTextFillColor: useGlitchExportFilter ? "#ffffff" : glitchGreenColor,
 	                          }
 	                        : {}),
 	                      paintOrder: glitchActive ? "stroke fill" : undefined,
@@ -4999,7 +5079,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
           </h1>
         )}
 
-	        {glitchActive && (
+	        {glitchActive && !exportTextMode && (
 	          <>
 	            {renderRushTextLayer(
 	              "headline-glitch-red-screen",
@@ -5102,6 +5182,20 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	                  0.95
 	                )}
 	              </>
+	            )}
+	          </>
+	        )}
+	        {useGlitchExportFilter && glitchNoiseBlocks.length > 0 && (
+	          <>
+	            {renderGlitchNoiseFragments(
+	              "headline-glitch-export-screen-block",
+	              "#ffffff",
+	              undefined,
+	              13,
+	              "normal",
+	              false,
+	              0.62,
+	              glitchExportFilter
 	            )}
 	          </>
 	        )}
