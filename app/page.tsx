@@ -13923,14 +13923,7 @@ const mobileFloatPanelClass =
       currentUrl.searchParams.get("guest") === "1" ||
       currentUrl.searchParams.get("skipLanding") === "1";
 
-    if (shouldOpenStudio) {
-      const loginUrl = new URL("/login", window.location.origin);
-      loginUrl.searchParams.set("intent", "studio-preview");
-      loginUrl.searchParams.set("next", "/?studio=1");
-      setRedirectingToLanding(true);
-      window.location.replace(loginUrl.toString());
-      return;
-    }
+    if (shouldOpenStudio) return;
 
     const landingUrl = new URL("/landing", window.location.origin);
     currentUrl.searchParams.forEach((value, key) => {

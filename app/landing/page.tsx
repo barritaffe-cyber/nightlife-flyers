@@ -11,9 +11,9 @@ import {
 } from "../../lib/publicIdentity";
 
 const outcomes = [
-  "Advanced Neural Workstation",
-  "No subscription required",
-  "Clean square and story exports",
+  "Try the studio before login",
+  "Edit text, color, flares, and glitch type",
+  "Export or save when you are ready",
 ];
 
 const premiumPoints = [
@@ -39,7 +39,7 @@ const premiumPoints = [
   },
 ];
 
-const studioPreviewLoginHref = "/login?intent=studio-preview&next=%2F%3Fstudio%3D1";
+const studioPreviewHref = "/?studio=1";
 
 export default function LandingPage() {
   const supportPhone = getPublicSupportPhone();
@@ -72,26 +72,54 @@ export default function LandingPage() {
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#050608] text-white">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="relative h-[560px] overflow-hidden [mask-image:linear-gradient(to_bottom,black_0%,black_58%,transparent_100%)] sm:h-[640px] lg:h-[720px]">
+      <section className="relative min-h-[640px] overflow-hidden sm:min-h-[720px] lg:min-h-[760px]">
+        <div className="absolute inset-0">
+          <video
+            className="h-full w-full object-cover object-center opacity-[0.86] brightness-[0.82] saturate-[1.16]"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            poster="/landing/meta-ad-preview-poster.jpg"
+          >
+            <source src="/landing/meta-ad-preview.mp4" type="video/mp4" />
+          </video>
           <Image
-            src="/landing/bg1.webp"
-            alt="Vibrant nightclub crowd dancing under blue and pink lights"
+            src="/landing/meta-ad-preview-poster.jpg"
+            alt=""
             fill
             priority
             sizes="100vw"
-            className="object-cover object-center opacity-[0.94] brightness-[0.82] saturate-[1.16]"
+            className="-z-10 object-cover object-center"
           />
         </div>
-        <div className="absolute inset-x-0 top-0 h-[760px] bg-[linear-gradient(180deg,rgba(5,6,8,0.02)_0%,rgba(5,6,8,0.06)_38%,rgba(5,6,8,0.68)_72%,#050608_96%)]" />
-        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/58 to-transparent" />
-        <div className="absolute inset-x-0 top-[320px] h-[420px] bg-gradient-to-b from-transparent via-[#050608]/70 to-[#050608]" />
-        <div className="absolute inset-x-0 top-0 h-[720px] bg-[radial-gradient(circle_at_center,rgba(5,6,8,0.08)_0%,rgba(5,6,8,0.26)_68%,rgba(5,6,8,0.54)_100%)]" />
-      </div>
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,6,8,0.92)_0%,rgba(5,6,8,0.68)_42%,rgba(5,6,8,0.26)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,6,8,0.48)_0%,rgba(5,6,8,0.08)_38%,#050608_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_42%,rgba(0,229,255,0.18)_0%,rgba(255,43,214,0.10)_30%,rgba(5,6,8,0)_60%)]" />
 
-      <div className="relative z-10">
-        <header className="absolute inset-x-0 top-0 z-20">
-          <div className="mx-auto flex w-full max-w-7xl items-center justify-end px-4 py-3 sm:px-6">
+        <header className="relative z-20">
+          <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
+            <Link
+              href="/landing"
+              className="inline-flex items-center gap-2 drop-shadow-[0_2px_18px_rgba(0,0,0,0.75)]"
+              aria-label="Nightlife Flyers home"
+            >
+              <Image
+                src="/branding/nf-logo.png"
+                alt="Nightlife Flyers"
+                width={48}
+                height={48}
+                className="h-10 w-10 rounded-full ring-1 ring-cyan-100/45 shadow-[0_0_28px_rgba(103,232,249,0.28)] sm:h-12 sm:w-12"
+                priority
+              />
+              <span
+                className="hidden text-xs tracking-[0.24em] text-white sm:block"
+                style={{ fontFamily: '"LEMONMILK-Bold", "Segoe UI", sans-serif' }}
+              >
+                NIGHTLIFE FLYERS
+              </span>
+            </Link>
             <div className="flex items-center gap-2 drop-shadow-[0_2px_18px_rgba(0,0,0,0.75)]">
               <Link
                 href="/pricing"
@@ -100,88 +128,63 @@ export default function LandingPage() {
                 Pricing
               </Link>
               <Link
-                href={studioPreviewLoginHref}
+                href={studioPreviewHref}
                 className="rounded-lg bg-white px-3 py-2 text-xs font-bold text-black transition hover:bg-cyan-100"
               >
-                Enter Studio
+                Try Studio
               </Link>
             </div>
           </div>
         </header>
 
-        <section className="mx-auto flex h-[430px] w-full max-w-7xl items-center justify-center px-4 pt-8 sm:h-[500px] sm:px-6 lg:h-[560px]">
-          <Link
-            href="/"
-            className="group inline-flex flex-col items-center gap-3 text-center drop-shadow-[0_10px_36px_rgba(0,0,0,0.78)]"
-            aria-label="Nightlife Flyers home"
-          >
-            <Image
-              src="/branding/nf-logo.png"
-              alt="Nightlife Flyers"
-              width={208}
-              height={208}
-              className="h-32 w-32 rounded-full ring-1 ring-cyan-100/45 shadow-[0_0_58px_rgba(103,232,249,0.32)] transition group-hover:scale-[1.02] sm:h-44 sm:w-44 lg:h-52 lg:w-52"
-              priority
-            />
-            <span
-              className="text-sm tracking-[0.28em] text-white sm:text-base"
-              style={{ fontFamily: '"LEMONMILK-Bold", "Segoe UI", sans-serif' }}
-            >
-              NIGHTLIFE FLYERS
-            </span>
-          </Link>
-        </section>
-
-        <section className="mx-auto w-full max-w-7xl px-4 pb-12 pt-0 sm:px-6 sm:pb-14">
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,0.96fr)_320px] lg:items-end">
-            <div className="max-w-3xl">
+        <div className="relative z-10 mx-auto flex min-h-[560px] w-full max-w-7xl items-center px-4 pb-12 pt-8 sm:min-h-[640px] sm:px-6 lg:min-h-[680px]">
+          <div className="w-full max-w-3xl">
               <Link
                 href="/billing/checkout?plan=creator&billing=monthly"
-                className="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 border border-cyan-200/20 bg-cyan-300/[0.08] px-3 py-1.5 text-[10px] font-semibold uppercase leading-5 tracking-[0.12em] text-cyan-100 transition hover:border-cyan-100/40 hover:bg-cyan-300/[0.12] sm:text-[11px] sm:tracking-[0.16em]"
+                className="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 border border-cyan-200/20 bg-cyan-300/[0.08] px-3 py-1.5 text-[10px] font-semibold uppercase leading-5 tracking-[0.12em] text-cyan-100 backdrop-blur-sm transition hover:border-cyan-100/40 hover:bg-cyan-300/[0.12] sm:text-[11px] sm:tracking-[0.16em]"
               >
                 <span className="h-1.5 w-1.5 rounded-full bg-cyan-300 shadow-[0_0_16px_rgba(103,232,249,0.9)]" />
-                {foundingStatus} Secure lifetime prestige access.
+                {foundingStatus}
               </Link>
 
               <h1
-                className="mt-5 max-w-3xl text-5xl leading-[0.94] text-white sm:text-6xl lg:text-7xl"
+                className="mt-4 max-w-3xl text-[2.9rem] leading-[0.9] text-white sm:mt-5 sm:text-6xl lg:text-7xl"
                 style={{ fontFamily: '"Nexa-Heavy", "Segoe UI", sans-serif' }}
               >
-                The New Standard for Professional Flyer Design.
+                Try the Neural Flyer Studio Before You Sign Up.
               </h1>
 
-              <p className="mt-5 max-w-2xl text-base leading-7 text-white/76 sm:text-lg">
-                Make the flyer look as expensive as the night. Remove the pain from flyer design, do it your way, on your own time.
+              <p className="mt-4 max-w-2xl text-base leading-7 text-white/78 sm:mt-5 sm:text-lg">
+                Open the workstation, touch the design, change the look, then sign in only when you are ready to export or save.
               </p>
 
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-6 flex flex-col gap-3 sm:mt-7 sm:flex-row">
                 <Link
-                  href="/billing/checkout?plan=creator&billing=monthly"
+                  href={studioPreviewHref}
                   className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-cyan-300 px-5 text-sm font-black text-black shadow-[0_0_34px_rgba(103,232,249,0.24)] transition hover:bg-white"
                 >
-                  Secure My Founding Spot
+                  Try Studio Free
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
-                  href={studioPreviewLoginHref}
+                  href="/billing/checkout?plan=creator&billing=monthly"
                   className="inline-flex min-h-12 items-center justify-center rounded-lg border border-white/18 bg-white/[0.05] px-5 text-sm font-semibold text-white transition hover:border-white/35 hover:bg-white/[0.09]"
                 >
-                  Enter the Studio
+                  Secure Founding Spot
                 </Link>
               </div>
-            </div>
 
-            <div className="grid gap-3 border-y border-white/10 py-4 text-sm text-white/78 lg:mb-1">
+            <div className="mt-6 grid gap-2 border-y border-white/10 py-4 text-sm text-white/78 sm:mt-8 sm:max-w-xl sm:grid-cols-3 sm:border-y-0 sm:py-0">
               {outcomes.map((item) => (
-                <div key={item} className="flex items-center gap-2">
+                <div key={item} className="flex items-center gap-2 sm:items-start">
                   <Check className="h-4 w-4 shrink-0 text-cyan-200" />
                   <span>{item}</span>
                 </div>
               ))}
             </div>
           </div>
-        </section>
-      </div>
+        </div>
+      </section>
 
       <section className="border-y border-white/10 bg-[#080a0f] px-4 py-10 sm:px-6">
         <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
