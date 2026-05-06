@@ -2877,6 +2877,8 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
     onSelectIcon,
   } = p;
 
+const mobileLiveCompositeMode = !!isMobileView && !hideUiForExport;
+
 // === LOCK UI (single source) ===
 const NEON = 'rgba(167,139,250,0.95)';
 const GLOW = `0 0 0 2px ${NEON}, 0 0 0 6px rgba(167,139,250,0.25)`;
@@ -3776,6 +3778,7 @@ return (
       style={{
         background:
           'radial-gradient(60% 60% at 50% 0%, rgba(99,102,241,.35), rgba(236,72,153,.12) 40%, transparent 70%)',
+        display: mobileLiveCompositeMode ? "none" : undefined,
         filter: 'blur(22px)',
       }}
     />
@@ -3799,7 +3802,7 @@ return (
         // 2. TRANSFORM: handled on image
         transform: "none",
         transformOrigin: "center center",
-        willChange: "transform",
+        willChange: mobileLiveCompositeMode ? "auto" : "transform",
 
         pointerEvents: "auto",
         cursor: bgLocked ? "not-allowed" : moveTarget === "background" ? "grabbing" : "grab",
@@ -4562,8 +4565,9 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	    const glitchChannelStrokeWidth = Math.max(0, textFx.strokeWidth || 0);
 	    const glitchVisibleStrokeWidth = Math.max(1.4, textFx.strokeWidth || 1.6);
 	    const glitchWhiteStrokeWidth = Math.max(2.2, glitchVisibleStrokeWidth + 1.2);
+	    const mobileLiveTextPerfMode = !!isMobileView && !exportTextMode;
 	    const glitchGlowDropShadow =
-	      glitchGlow > 0
+	      glitchGlow > 0 && !mobileLiveTextPerfMode
 	        ? `drop-shadow(0 0 ${(2 + glitchGlow * 10).toFixed(1)}px rgba(255,255,255,${(0.08 + glitchGlow * 0.22).toFixed(2)}))`
 	        : "";
 	    const glitchGlowFilter = glitchGlowDropShadow || "none";
@@ -4583,7 +4587,14 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	    );
 	    const glitchNoiseBlockCount =
 	      glitchActive && glitchNoise > 0
-	        ? Math.max(2, Math.round(4 + glitchNoise * 18 + glitchIntensity * glitchNoise * 8))
+	        ? Math.max(
+	            2,
+	            Math.round(
+	              mobileLiveTextPerfMode
+	                ? 2 + glitchNoise * 6 + glitchIntensity * glitchNoise * 4
+	                : 4 + glitchNoise * 18 + glitchIntensity * glitchNoise * 8
+	            )
+	          )
 	        : 0;
 	    const glitchNoiseRng = mulberry32(glitchNoiseSeed ^ 0x8f13a7);
 	    const glitchBlockShift = Math.max(
@@ -14641,6 +14652,18 @@ async function injectGoogleFontsForExport(
 }
 const [selIconId, setSelIconId] = useState<string | null>(null);
 const [iconList, setIconList] = useState<Icon[]>([]);
+const activeCanvasAssetsForFormat = portraits?.[format] || [];
+const activeCanvasFlareCount = activeCanvasAssetsForFormat.filter(
+  (asset: any) => !!asset?.isFlare && !asset?.isSticker
+).length;
+const activeCanvasObjectCount =
+  activeCanvasAssetsForFormat.length + iconList.length + ((emojis?.[format] || []).length);
+const mobileCompositeStressMode =
+  isMobileView &&
+  !hideUiForExport &&
+  (headGlitchEnabled || activeCanvasFlareCount > 0) &&
+  (activeCanvasObjectCount >= 2 || !!bgUploadUrl || !!bgUrl);
+const canvasMasterFilterCss = mobileCompositeStressMode ? "none" : masterFilterCss;
 
 
 
@@ -18818,6 +18841,8 @@ useEffect(() => {
 // === PORTRAIT LAYER BEGIN (Consolidated: Handles Portraits AND Flares) ===
 const portraitCanvas = React.useMemo(() => {
   const list = portraits[format] || [];
+  const mobileLiveAssetMode = !!isMobileView && !hideUiForExport;
+  const liveAssetMaxSide = mobileLiveAssetMode ? "110vh" : "140vh";
 
   const classify = (item: any) => {
     const id = String(item?.id || "");
@@ -18983,8 +19008,9 @@ const portraitCanvas = React.useMemo(() => {
       isSelected &&
       (isDragging || (isMobileView && isLiveDragging)) &&
       (isLogo || isFlare || isSticker || isExtracted || isShapeGraphic || (!isFlare && !isSticker));
+    const suppressDuplicateImageLayers = reduceDragEffects || mobileLiveAssetMode;
     const showSubjectLighting =
-      !reduceDragEffects && !isShapeGraphic && !isPortraitAsset && portraitLighting.enabled;
+      !suppressDuplicateImageLayers && !isShapeGraphic && !isPortraitAsset && portraitLighting.enabled;
     const portraitFilterPreset =
       !isShapeGraphic && !isPortraitAsset
         ? isBrandFace
@@ -19000,10 +19026,10 @@ const portraitCanvas = React.useMemo(() => {
     );
     const mergeCssFilters = (...parts: Array<string | null | undefined>) =>
       parts.filter((part) => !!part && part !== "none").join(" ") || "none";
-    const showPosterOverlay = !reduceDragEffects && portraitFilterPreset === "poster";
-    const showPopOverlay = !reduceDragEffects && portraitFilterPreset === "pop";
-    const showNeoOverlay = !reduceDragEffects && portraitFilterPreset === "neo";
-    const showComicOverlay = !reduceDragEffects && portraitFilterPreset === "comic";
+    const showPosterOverlay = !suppressDuplicateImageLayers && portraitFilterPreset === "poster";
+    const showPopOverlay = !suppressDuplicateImageLayers && portraitFilterPreset === "pop";
+    const showNeoOverlay = !suppressDuplicateImageLayers && portraitFilterPreset === "neo";
+    const showComicOverlay = !suppressDuplicateImageLayers && portraitFilterPreset === "comic";
     const mainFaceToneFilter =
       portraitFilterPreset === "none"
         ? ""
@@ -19278,8 +19304,8 @@ const portraitCanvas = React.useMemo(() => {
                 transformOrigin: "center",
                 width: isShapeGraphic ? `${shapeWidth}px` : "auto",
                 height: isShapeGraphic ? `${shapeHeight}px` : "auto",
-                maxWidth: isShapeGraphic ? "none" : "140vh",
-                maxHeight: isShapeGraphic ? "none" : "140vh",
+                maxWidth: isShapeGraphic ? "none" : liveAssetMaxSide,
+                maxHeight: isShapeGraphic ? "none" : liveAssetMaxSide,
                 opacity: (p as any).opacity ?? 1,
                 pointerEvents: "none",
                 userSelect: "none",
@@ -19300,12 +19326,12 @@ const portraitCanvas = React.useMemo(() => {
                   display: "block",
                   width: isShapeGraphic ? "100%" : "auto",
                   height: isShapeGraphic ? "100%" : "auto",
-                  maxWidth: isShapeGraphic ? "none" : "140vh",
-                  maxHeight: isShapeGraphic ? "none" : "140vh",
+                  maxWidth: isShapeGraphic ? "none" : liveAssetMaxSide,
+                  maxHeight: isShapeGraphic ? "none" : liveAssetMaxSide,
                   objectFit: isShapeGraphic ? "fill" : "contain",
                   pointerEvents: "none",
                   userSelect: "none",
-                  willChange: "transform, filter, opacity",
+                  willChange: isDragging ? "transform" : mobileLiveAssetMode ? "auto" : "transform, filter, opacity",
                   mixBlendMode: ((p as any).blendMode ?? "normal") as any,
                   filter: portraitBaseFilter,
                 }}
@@ -19545,7 +19571,7 @@ const portraitCanvas = React.useMemo(() => {
                   />
                 </>
               )}
-              {!reduceDragEffects && portraitFilterPreset === "halftone" && (
+              {!suppressDuplicateImageLayers && portraitFilterPreset === "halftone" && (
                 <>
                   <img
                     src={p.url}
@@ -19769,6 +19795,7 @@ const portraitCanvas = React.useMemo(() => {
   dragging,
   unlockingIds,
   isMobileView,
+  hideUiForExport,
   ignoreTransparentAssetClick,
   redirectTransparentAssetPointer,
 ]);
@@ -19785,6 +19812,8 @@ const portraitCanvas = React.useMemo(() => {
 const flareCanvas = React.useMemo(() => {
   const list = portraits?.[format] || [];
   const flares = list.filter((p: any) => !!(p as any).isFlare && !(p as any).isSticker);
+  const mobileLiveFlareMode = !!isMobileView && !hideUiForExport;
+  const flareMaxSide = mobileLiveFlareMode ? "110vh" : "140vh";
 
   return (
     <div
@@ -19805,14 +19834,11 @@ const flareCanvas = React.useMemo(() => {
           !!(p as any).isTexture ||
           /^flare_paint\d+_/i.test(String((p as any).id || "")) ||
           /^Paint\s/i.test(String((p as any).label || ""));
-        const isAmberBurstFlare =
-          /^flare_flare03_/i.test(String((p as any).id || "")) ||
-          /\/flares\/flare03\.(jpg|png)/i.test(String((p as any).url || ""));
         const effectiveBlendMode = isTextureAsset
           ? ((p as any).blendMode === "screen" || (p as any).blendMode === "overlay" || !(p as any).blendMode
               ? (tintDeg !== 0 ? "color" : "overlay")
               : (p as any).blendMode)
-          : (isAmberBurstFlare ? "screen" : ((p as any).blendMode ?? "screen"));
+          : "screen";
         const effectiveOpacity = isTextureAsset
           ? ((p as any).opacity === 0.45 || (p as any).opacity == null
               ? 0.85
@@ -19974,14 +20000,17 @@ const flareCanvas = React.useMemo(() => {
                 height: "auto",
                 zIndex: 30 + Number((p as any).layerOffset ?? 0),
                 transform: "translate3d(var(--pdx, 0px), var(--pdy, 0px), 0px) translate(-50%, -50%)",
-                willChange: "transform",
+                willChange: isDragging ? "transform" : mobileLiveFlareMode ? "auto" : "transform",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 pointerEvents: locked ? "none" : "auto",
                 cursor: !locked && isSelected ? "grab" : "default",
                 touchAction: locked ? "auto" : "none",
-                filter: isSelected && !isDragging ? "drop-shadow(0 0 10px rgba(255,255,255,0.22))" : "none",
+                filter:
+                  isSelected && !isDragging && !mobileLiveFlareMode
+                    ? "drop-shadow(0 0 10px rgba(255,255,255,0.22))"
+                    : "none",
               }}
             >
               {isTextureAsset ? (
@@ -19992,8 +20021,8 @@ const flareCanvas = React.useMemo(() => {
                   hue={tintDeg}
                   style={{
                     transform: `scale(${p.scale ?? 1}) rotate(${(p as any).rotation ?? 0}deg)`,
-                  maxWidth: "140vh",
-                  maxHeight: "140vh",
+                  maxWidth: flareMaxSide,
+                  maxHeight: flareMaxSide,
                   objectFit: "contain",
                   pointerEvents: "none",
                   userSelect: "none",
@@ -20011,8 +20040,8 @@ const flareCanvas = React.useMemo(() => {
                   draggable={false}
                   style={{
                     transform: `scale(${p.scale ?? 1}) rotate(${(p as any).rotation ?? 0}deg)`,
-                  maxWidth: "140vh",
-                  maxHeight: "140vh",
+                  maxWidth: flareMaxSide,
+                  maxHeight: flareMaxSide,
                   objectFit: "contain",
                   pointerEvents: "none",
                   userSelect: "none",
@@ -20133,6 +20162,7 @@ const flareCanvas = React.useMemo(() => {
   selectedPortraitId,
   dragging,
   isMobileView,
+  hideUiForExport,
   ignoreTransparentAssetClick,
   redirectTransparentAssetPointer,
 ]);
@@ -21113,7 +21143,7 @@ const applyTemplate = React.useCallback<
               rotation: e.rotation ?? 0,
               opacity: e.opacity ?? 0.9,
               locked: !!e.locked,
-              blendMode: e.blendMode ?? (e.isFlare ? "screen" : "normal"),
+              blendMode: e.isFlare && !e.isSticker ? "screen" : (e.blendMode ?? "normal"),
               isFlare: !!e.isFlare,
               isSticker: !!e.isSticker,
               tint: e.tint ?? 0,
@@ -29347,8 +29377,8 @@ style={{ top: STICKY_TOP }}
     <div
       className="relative w-full flex justify-center items-center"
       style={{
-        filter: masterFilterCss,
-        WebkitFilter: masterFilterCss,
+        filter: canvasMasterFilterCss,
+        WebkitFilter: canvasMasterFilterCss,
       }}
     >
 
@@ -29360,7 +29390,7 @@ style={{ top: STICKY_TOP }}
 
     {/* --- LAYER 2: CONTENT --- */}
     <div className="relative z-10 w-full h-full flex justify-center items-center">
-      {!isBgDragging && (
+      {!isBgDragging && !mobileCompositeStressMode && (
         <div
           style={grainStyle}
           data-nonexport="true"
