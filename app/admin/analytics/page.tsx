@@ -15,6 +15,28 @@ type DashboardPayload = {
   top_sources: Array<{ label: string; count: number }>;
   top_paths: Array<{ label: string; count: number }>;
   top_landings: Array<{ label: string; count: number }>;
+  live?: {
+    window_seconds: number;
+    active_sessions: number;
+    authenticated_sessions: number;
+    guest_sessions: number;
+    top_paths: Array<{ label: string; count: number }>;
+    sessions: Array<{
+      session_key: string;
+      visitor: string;
+      last_seen_at: string;
+      seconds_ago: number;
+      path: string | null;
+      email: string | null;
+      authenticated: boolean;
+      utm_source: string | null;
+      utm_campaign: string | null;
+      landing_path: string | null;
+      referrer: string | null;
+      last_event: string | null;
+      recent_events: number;
+    }>;
+  };
   recent_events: Array<{
     id: string;
     created_at: string;
@@ -49,10 +71,15 @@ export default function AdminAnalyticsPage() {
   const [payload, setPayload] = React.useState<DashboardPayload | null>(null);
   const [days, setDays] = React.useState(1);
   const [loading, setLoading] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  const load = React.useCallback(async (windowDays: number) => {
-    setLoading(true);
+  const load = React.useCallback(async (windowDays: number, options: { silent?: boolean } = {}) => {
+    if (options.silent) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
 
     const supabase = supabaseBrowser();
@@ -73,15 +100,24 @@ export default function AdminAnalyticsPage() {
       setError(json?.error || "Analytics dashboard failed.");
       setPayload(null);
       setLoading(false);
+      setRefreshing(false);
       return;
     }
 
     setPayload(json);
     setLoading(false);
+    setRefreshing(false);
   }, []);
 
   React.useEffect(() => {
     void load(days);
+  }, [days, load]);
+
+  React.useEffect(() => {
+    const interval = window.setInterval(() => {
+      void load(days, { silent: true });
+    }, 15000);
+    return () => window.clearInterval(interval);
   }, [days, load]);
 
   return (
@@ -94,6 +130,9 @@ export default function AdminAnalyticsPage() {
             <p className="mt-2 text-sm text-white/60">
               Private funnel and traffic data for admin emails only.
             </p>
+            {refreshing ? (
+              <p className="mt-1 text-xs text-cyan-200/70">Refreshing live sessions...</p>
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {RANGE_OPTIONS.map((option) => (
@@ -148,6 +187,86 @@ export default function AdminAnalyticsPage() {
                 </div>
               ))}
             </div>
+
+            <section className="rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.055] p-5">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <div className="text-xs uppercase tracking-[0.18em] text-cyan-100/60">
+                    Live Sessions
+                  </div>
+                  <h2 className="mt-2 text-2xl font-semibold">
+                    {payload.live?.active_sessions ?? 0} active now
+                  </h2>
+                  <p className="mt-1 text-sm text-white/60">
+                    Last {payload.live?.window_seconds ?? 120} seconds. Auto-refreshes every 15 seconds.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                    <div className="text-white/45">Guests</div>
+                    <div className="mt-1 text-xl font-semibold">{payload.live?.guest_sessions ?? 0}</div>
+                  </div>
+                  <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                    <div className="text-white/45">Logged in</div>
+                    <div className="mt-1 text-xl font-semibold">{payload.live?.authenticated_sessions ?? 0}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-4 lg:grid-cols-[0.7fr_1.3fr]">
+                <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+                  <h3 className="text-sm font-semibold text-white/85">Active Paths</h3>
+                  <div className="mt-3 space-y-2 text-sm">
+                    {payload.live?.top_paths?.length ? payload.live.top_paths.map((item) => (
+                      <div key={item.label} className="flex items-center justify-between gap-3">
+                        <span className="truncate text-white/70">{item.label}</span>
+                        <span className="text-white">{item.count}</span>
+                      </div>
+                    )) : <div className="text-white/45">No active sessions right now.</div>}
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto rounded-xl border border-white/10 bg-black/20">
+                  <table className="min-w-full text-left text-sm">
+                    <thead className="text-white/45">
+                      <tr>
+                        <th className="px-4 py-3 font-medium">Last Seen</th>
+                        <th className="px-4 py-3 font-medium">Visitor</th>
+                        <th className="px-4 py-3 font-medium">Path</th>
+                        <th className="px-4 py-3 font-medium">Source</th>
+                        <th className="px-4 py-3 font-medium">Events</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(payload.live?.sessions || []).map((session) => (
+                        <tr key={session.session_key} className="border-t border-white/8 align-top">
+                          <td className="px-4 py-3 text-white/65">{session.seconds_ago}s ago</td>
+                          <td className="px-4 py-3 text-white/75">
+                            <div>{session.email || session.visitor}</div>
+                            <div className="text-xs text-white/35">{session.authenticated ? "logged in" : "guest"}</div>
+                          </td>
+                          <td className="px-4 py-3 text-white/75">{session.path || "-"}</td>
+                          <td className="px-4 py-3 text-white/65">
+                            <div>{session.utm_source || "-"}</div>
+                            {session.utm_campaign ? (
+                              <div className="text-xs text-white/35">{session.utm_campaign}</div>
+                            ) : null}
+                          </td>
+                          <td className="px-4 py-3 text-white/65">{session.recent_events}</td>
+                        </tr>
+                      ))}
+                      {!(payload.live?.sessions || []).length ? (
+                        <tr>
+                          <td colSpan={5} className="px-4 py-6 text-white/45">
+                            No active sessions right now.
+                          </td>
+                        </tr>
+                      ) : null}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
 
             <div className="grid gap-4 lg:grid-cols-3">
               <section className="rounded-2xl border border-white/10 bg-neutral-900 p-5">
