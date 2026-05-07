@@ -4482,12 +4482,6 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     const explicitLineCount = Math.max(1, headlineText.split("\n").length);
     const estimatedTextHeight = Math.max(headDisplayPx, headDisplayPx * lineHeight * explicitLineCount);
     const exportTextMode = !!hideUiForExport;
-    const headlineExportColor =
-      typeof textFx.color === "string" &&
-      textFx.color !== "transparent" &&
-      textFx.color !== "none"
-        ? textFx.color
-        : textFx.gradFrom || "#ffffff";
     const sliceBandCount = Math.max(3, Math.round(headSliceBandCount || 0));
     const sliceEchoDistance = Math.max(0, Number(headSliceEchoDistance) || 0);
     const sliceAreaHeight = estimatedTextHeight + sliceEchoDistance * 2;
@@ -4610,9 +4604,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
       textShadow: "none",
     };
     const renderRushTextContent = (lineStyle: React.CSSProperties = {}) =>
-      exportTextMode
-        ? renderWithDoubleBreaks(headlineText)
-        : renderHeadlineRich(headlineText, {
+      renderHeadlineRich(headlineText, {
             baseTrackEm: textFx.tracking,
             leadDeltaEm: leadTrackDelta,
             lastDeltaEm: lastTrackDelta,
@@ -4761,7 +4753,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
           </svg>
         )}
 
-        {!exportTextMode && headSliceEnabled && (
+        {headSliceEnabled && (
           <div
             aria-hidden="true"
             className="pointer-events-none absolute left-0 right-0"
@@ -4837,8 +4829,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
           </div>
         )}
 
-        {!exportTextMode &&
-          extrudeDepth > 0 &&
+        {extrudeDepth > 0 &&
           !headSliceEnabled &&
           !rushActive &&
           !glitchActive &&
@@ -4960,8 +4951,6 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	              ? useGlitchExportFilter
 	                ? "#ffffff"
 	                : glitchGreenColor
-	              : exportTextMode
-	              ? headlineExportColor
 	              : rushActive
 	              ? rushFillColor
 	              : textFx.gradient
@@ -4971,11 +4960,11 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	              ? useGlitchExportFilter
 	                ? "#ffffff"
 	                : glitchGreenColor
-	              : exportTextMode
-	              ? headlineExportColor
 	              : rushActive
 	              ? rushFillColor
-	              : undefined,
+	              : textFx.gradient
+	              ? 'transparent'
+	              : textFx.color,
 	            WebkitTextStrokeWidth: glitchActive ? `${glitchVisibleStrokeWidth}px` : undefined,
 	            WebkitTextStrokeColor: glitchActive ? (useGlitchExportFilter ? "#ffffff" : glitchGreenColor) : undefined,
 	            paintOrder: glitchActive ? "stroke fill" : undefined,
@@ -4998,51 +4987,49 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
             zIndex: glitchActive ? 9 : rushActive ? 3 : 1,
             }}
           >
-            {exportTextMode
-              ? renderWithDoubleBreaks(headlineText)
-              : renderHeadlineRich(
-                  headlineText,
-                  {
-                    baseTrackEm: textFx.tracking,
-                    leadDeltaEm: leadTrackDelta,
-                    lastDeltaEm: lastTrackDelta,
-                    opticalMargin,
-                    kerningFix,
-                    lineHeight: lineHeight,
-                    lineStyle: {
-                      display: 'block',
-                      width: '100%',
-	                      WebkitTextStrokeWidth: glitchActive
-	                        ? `${glitchVisibleStrokeWidth}px`
-	                        : textFx.strokeWidth
-	                        ? `${textFx.strokeWidth}px`
-	                        : undefined,
-	                      WebkitTextStrokeColor: glitchActive ? (useGlitchExportFilter ? "#ffffff" : glitchGreenColor) : textFx.strokeColor,
-	                      ...(glitchActive
-	                        ? {
-	                            color: useGlitchExportFilter ? "#ffffff" : glitchGreenColor,
-	                            WebkitTextFillColor: useGlitchExportFilter ? "#ffffff" : glitchGreenColor,
-	                          }
-	                        : {}),
-	                      paintOrder: glitchActive ? "stroke fill" : undefined,
-                      ...(textFx.gradient && !rushActive && !glitchActive
-                        ? {
-                            backgroundImage: `linear-gradient(180deg, ${textFx.gradFrom}, ${textFx.gradTo})`,
-                            backgroundSize: '100% 100%',
-                            backgroundRepeat: 'no-repeat',
-                            WebkitBackgroundClip: 'text',
-                            backgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            color: 'transparent',
-                          }
-                        : {}),
-                    },
-                  }
-                )}
+            {renderHeadlineRich(
+              headlineText,
+              {
+                baseTrackEm: textFx.tracking,
+                leadDeltaEm: leadTrackDelta,
+                lastDeltaEm: lastTrackDelta,
+                opticalMargin,
+                kerningFix,
+                lineHeight: lineHeight,
+                lineStyle: {
+                  display: 'block',
+                  width: '100%',
+                  WebkitTextStrokeWidth: glitchActive
+                    ? `${glitchVisibleStrokeWidth}px`
+                    : textFx.strokeWidth
+                    ? `${textFx.strokeWidth}px`
+                    : undefined,
+                  WebkitTextStrokeColor: glitchActive ? (useGlitchExportFilter ? "#ffffff" : glitchGreenColor) : textFx.strokeColor,
+                  ...(glitchActive
+                    ? {
+                        color: useGlitchExportFilter ? "#ffffff" : glitchGreenColor,
+                        WebkitTextFillColor: useGlitchExportFilter ? "#ffffff" : glitchGreenColor,
+                      }
+                    : {}),
+                  paintOrder: glitchActive ? "stroke fill" : undefined,
+                  ...(textFx.gradient && !rushActive && !glitchActive
+                    ? {
+                        backgroundImage: `linear-gradient(180deg, ${textFx.gradFrom}, ${textFx.gradTo})`,
+                        backgroundSize: '100% 100%',
+                        backgroundRepeat: 'no-repeat',
+                        WebkitBackgroundClip: 'text',
+                        backgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        color: 'transparent',
+                      }
+                    : {}),
+                },
+              }
+            )}
           </h1>
         )}
 
-	        {glitchActive && !exportTextMode && (
+	        {glitchActive && (
 	          <>
 	            {renderRushTextLayer(
 	              "headline-glitch-red-screen",
@@ -10132,11 +10119,6 @@ useEffect(() => {
 
 useEffect(() => {
   if (tourStep == null) return;
-  if (isMobileView) {
-    setTourRect(null);
-    setTourTip(null);
-    return;
-  }
   if (prevTourStep.current !== tourStep) {
     setSelectedPanel(null); // close panels once per step change
     useFlyerState.getState().setSelectedPanel(null); // also reset store-selected panel
@@ -21245,9 +21227,13 @@ const applyTemplate = React.useCallback<
     setTextFx({
       ...DEFAULT_TEXT_FX,
       ...incomingFx,
-      italic: incomingFx.italic ?? merged.headlineItalic ?? DEFAULT_TEXT_FX.italic,
-      bold: incomingFx.bold ?? merged.headlineBold ?? DEFAULT_TEXT_FX.bold,
-      alpha: incomingFx.alpha ?? DEFAULT_TEXT_FX.alpha,
+      italic: incomingFx.italic ?? merged.headlineItalic ?? merged.headItalic ?? DEFAULT_TEXT_FX.italic,
+      bold: incomingFx.bold ?? merged.headlineBold ?? merged.headBold ?? DEFAULT_TEXT_FX.bold,
+      underline: incomingFx.underline ?? merged.headUnderline ?? DEFAULT_TEXT_FX.underline,
+      alpha:
+        incomingFx.alpha ??
+        (typeof merged.headAlpha === "number" ? merged.headAlpha : undefined) ??
+        DEFAULT_TEXT_FX.alpha,
       tracking:
         incomingFx.tracking ??
         (typeof merged.headTracking === "number" ? merged.headTracking : undefined) ??
@@ -21258,7 +21244,18 @@ const applyTemplate = React.useCallback<
         merged.headUppercase ??
         DEFAULT_TEXT_FX.uppercase,
       color: incomingFx.color ?? merged.headColor ?? DEFAULT_TEXT_FX.color,
-      gradient: incomingFx.gradient ?? false,
+      gradient: incomingFx.gradient ?? merged.headGradient ?? false,
+      gradFrom: incomingFx.gradFrom ?? merged.headGradFrom ?? DEFAULT_TEXT_FX.gradFrom,
+      gradTo: incomingFx.gradTo ?? merged.headGradTo ?? DEFAULT_TEXT_FX.gradTo,
+      strokeWidth:
+        incomingFx.strokeWidth ??
+        (typeof merged.headStrokeWidth === "number" ? merged.headStrokeWidth : undefined) ??
+        DEFAULT_TEXT_FX.strokeWidth,
+      strokeColor: incomingFx.strokeColor ?? merged.headStrokeColor ?? DEFAULT_TEXT_FX.strokeColor,
+      glow:
+        incomingFx.glow ??
+        (typeof merged.headGlow === "number" ? merged.headGlow : undefined) ??
+        DEFAULT_TEXT_FX.glow,
     });
 
     // 1b. HEADLINE 2 FX (separate state from headline 1)
@@ -26591,107 +26588,8 @@ return (
 </header>
 {/* ===== UI: PAGE HEADER (END) ===== */}
 
-{/* --- ONBOARDING STRIP (only after hydration, only first open) --- */}
- {hydrated && tourStep != null && isMobileView && (() => {
-  const stepNow = TOUR_STEPS[tourStep];
-  if (!stepNow) return null;
-  const nextStep = getNextTourStep(tourStep, 1);
-  const prevStep = getNextTourStep(tourStep, -1);
-  const isLastStep = nextStep >= TOUR_STEPS.length;
-
-  return (
-    <div
-      className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/[0.92] px-4 py-5 text-white backdrop-blur-xl pointer-events-auto overscroll-contain"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Mobile studio tour"
-      onPointerDown={(event) => event.stopPropagation()}
-      onClick={(event) => event.stopPropagation()}
-    >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(6,182,212,0.14),transparent_34%),radial-gradient(circle_at_45%_92%,rgba(217,70,239,0.1),transparent_38%)]" />
-      <div className="relative flex max-h-[calc(100dvh-32px)] w-full max-w-[390px] flex-col overflow-hidden rounded-[26px] border border-white/10 bg-[#080a10]/[0.96] shadow-[0_30px_100px_rgba(0,0,0,0.7)]">
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-          <div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-200/80">
-              Mobile Tour
-            </div>
-            <div className="mt-0.5 text-[11px] text-white/[0.45]">
-              Step {visibleTourStepNumber} / {visibleTourStepCount}
-            </div>
-          </div>
-          <button
-            type="button"
-            className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/[0.62] hover:bg-white/[0.09] hover:text-white"
-            onClick={markOnboarded}
-          >
-            Skip
-          </button>
-        </div>
-
-        <div className="overflow-y-auto px-5 py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {renderMobileTourVisual(stepNow.id)}
-          <div className="mt-5 text-center">
-            <h2 className="text-xl font-semibold leading-tight text-white">
-              {stepNow.title}
-            </h2>
-            <p className="mx-auto mt-2 max-w-[310px] text-sm leading-6 text-white/[0.68]">
-              {stepNow.body}
-            </p>
-            <div className="mt-3 text-[11px] uppercase tracking-[0.16em] text-cyan-100/[0.55]">
-              Tap Next to continue
-            </div>
-          </div>
-        </div>
-
-        <div className="border-t border-white/10 px-4 py-4">
-          <div className="mb-3 flex items-center justify-center gap-1.5">
-            {TOUR_STEPS.map((step, index) =>
-              isTourStepVisible(step.id) ? (
-                <span
-                  key={step.id}
-                  className={`h-1.5 rounded-full transition-all ${
-                    index === tourStep ? "w-6 bg-cyan-200" : "w-1.5 bg-white/20"
-                  }`}
-                />
-              ) : null
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              className="min-h-11 rounded-xl border border-white/10 bg-white/[0.045] px-4 text-xs font-semibold uppercase tracking-[0.14em] text-white/[0.72] hover:bg-white/[0.08] hover:text-white"
-              onClick={() => {
-                if (prevStep < 0) {
-                  markOnboarded();
-                  return;
-                }
-                setTourStep(prevStep);
-              }}
-            >
-              {prevStep < 0 ? "Skip" : "Back"}
-            </button>
-            <button
-              type="button"
-              className="min-h-11 rounded-xl bg-cyan-300 px-4 text-xs font-black uppercase tracking-[0.14em] text-black shadow-[0_0_32px_rgba(103,232,249,0.3)] hover:bg-white"
-              onClick={() => {
-                if (isLastStep) {
-                  markOnboarded();
-                  setUiMode("design");
-                  return;
-                }
-                setTourStep(nextStep);
-              }}
-            >
-              {isLastStep ? "Finish" : "Next"}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-})()}
-
- {hydrated && tourStep != null && !isMobileView && (
+{/* --- GUIDED TOUR --- */}
+ {hydrated && tourStep != null && (
   <div className="fixed inset-0 z-[2000] pointer-events-none">
     <style jsx global>{`
       @keyframes neonPulse {
@@ -32367,7 +32265,7 @@ style={{ top: STICKY_TOP }}
 </div>
 {/* UI: PROJECT PORTABLE SAVE (END) */}
 
-{workflowHelpOpen && (
+{workflowHelpOpen && typeof document !== "undefined" && createPortal((
   <div className="fixed inset-0 z-[5100] flex items-center justify-center bg-black/88 p-4">
     <div className="w-full max-w-3xl overflow-hidden border border-cyan-400/30 bg-[#0a0d12] shadow-[0_30px_80px_rgba(0,0,0,.6)]">
       <div className="border-b border-white/10 bg-neutral-950/90 px-5 py-4">
@@ -32558,9 +32456,9 @@ style={{ top: STICKY_TOP }}
       </div>
     </div>
   </div>
-)}
+), document.body)}
 
-{projectHelpOpen && (
+{projectHelpOpen && typeof document !== "undefined" && createPortal((
   <div className="fixed inset-0 z-[5100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
     <div className="w-full max-w-xl rounded-2xl border border-cyan-400/30 bg-[#0a0d12] shadow-[0_30px_80px_rgba(0,0,0,.6)] overflow-hidden">
       <div className="px-5 py-4 border-b border-white/10 bg-neutral-950/90">
@@ -32609,7 +32507,7 @@ style={{ top: STICKY_TOP }}
       </div>
     </div>
   </div>
-)}
+), document.body)}
 
 
 </aside>
