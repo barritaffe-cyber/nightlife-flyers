@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../lib/supabase/admin";
 import { supabaseAuth } from "../../../../lib/supabase/auth";
-import { extractClientTrackingPayload, insertAnalyticsEvent } from "../../../../lib/analytics/server";
+import {
+  extractClientTrackingPayload,
+  insertAnalyticsEvent,
+  isIgnoredAnalyticsEmail,
+} from "../../../../lib/analytics/server";
 
 export const runtime = "nodejs";
 
@@ -25,6 +29,9 @@ export async function POST(req: Request) {
         userId = data?.user?.id || null;
         email = data?.user?.email || null;
       } catch {}
+    }
+    if (!email && isIgnoredAnalyticsEmail(body?.client_email)) {
+      email = String(body.client_email);
     }
 
     const tracking = extractClientTrackingPayload(req, body);

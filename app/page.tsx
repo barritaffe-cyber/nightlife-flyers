@@ -78,7 +78,7 @@ import {
 import { TEXT_SEPARATOR_GRAPHICS, buildSeparatorSvgDataUrl } from "../lib/textSeparators";
 import { SHAPE_GRAPHICS, buildShapeSvgDataUrl, buildShapeSvgMarkup } from "../lib/shapeGraphics";
 import { getPublicLegalName, getPublicSupportEmail } from "../lib/publicIdentity";
-import { getClientTrackingPayload, trackClientEvent } from "../lib/analytics/client";
+import { getClientTrackingPayload, sendClientEventBeacon, trackClientEvent } from "../lib/analytics/client";
 import { getDeviceType, getOrCreateDeviceId } from "../lib/auth/device";
 
 const AiBackgroundPanel = dynamic(() => import("../components/editor/AiBackgroundPanel"), {
@@ -21502,6 +21502,20 @@ const applyTemplateFromGallery = React.useCallback(
     store.setSession((prev) => ({ ...prev, square: {}, story: {} }));
     store.setSessionDirty((prev) => ({ ...prev, square: false, story: false }));
 
+    void trackClientEvent("template_selected", {
+      properties: {
+        template_id: tpl.id,
+        template_label: tpl.label,
+        target_format: fmt,
+        advance_workflow: Boolean(opts?.advanceWorkflow),
+        allow_starter_preview: Boolean(opts?.allowStarterPreview),
+        is_starter: isStarterPlan,
+        has_auth_session: hasAuthSession,
+        subscription_status: subscriptionStatus,
+        mobile: isMobileView,
+      },
+    });
+
     setTemplateId(tpl.id);
     setActiveTemplate(tpl);
     applyTemplate(tpl, { targetFormat: fmt, initialLoad: true });
@@ -21534,7 +21548,7 @@ const applyTemplateFromGallery = React.useCallback(
       }, 120);
     }
   },
-  [applyTemplate, format, isStarterPlan]
+  [applyTemplate, format, hasAuthSession, isMobileView, isStarterPlan, subscriptionStatus]
 );
 
 const handleAutoLayoutFromBackground = React.useCallback(async () => {
@@ -24135,6 +24149,214 @@ const openWorkflowHelp = React.useCallback((source = "toolbar") => {
 const startGuidedTourFromHelp = React.useCallback(() => {
   startTour("help_panel");
 }, [startTour]);
+const studioAnalyticsContext = React.useMemo(
+  () => ({
+    mobile: isMobileView,
+    ui_mode: uiMode,
+    selected_panel: selectedPanel,
+    mobile_controls_tab: isMobileView ? mobileControlsTab : null,
+    format,
+    template_id: templateId,
+    template_label: activeTemplate?.label ?? null,
+    is_starter: isStarterPlan,
+    has_auth_session: hasAuthSession,
+    has_paid_access: hasPaidAccess,
+    access_plan: accessPlan,
+    subscription_status: subscriptionStatus,
+    has_background: Boolean(bgUrl || bgUploadUrl),
+    headline_style: headGlitchEnabled
+      ? "glitch"
+      : headRushEnabled
+      ? "halftone"
+      : headLineEnabled
+      ? "line"
+      : headSliceEnabled
+      ? "echo"
+      : "standard",
+  }),
+  [
+    accessPlan,
+    activeTemplate?.label,
+    bgUploadUrl,
+    bgUrl,
+    format,
+    hasAuthSession,
+    hasPaidAccess,
+    headGlitchEnabled,
+    headLineEnabled,
+    headRushEnabled,
+    headSliceEnabled,
+    isMobileView,
+    isStarterPlan,
+    mobileControlsTab,
+    selectedPanel,
+    subscriptionStatus,
+    templateId,
+    uiMode,
+  ]
+);
+const studioAnalyticsContextRef = React.useRef<Record<string, unknown>>(studioAnalyticsContext);
+const studioSessionStartedAtRef = React.useRef(0);
+const studioSessionLastTickAtRef = React.useRef(0);
+const studioSessionLastActivityAtRef = React.useRef(0);
+const studioSessionActiveMsRef = React.useRef(0);
+const studioSessionLastActivityTypeRef = React.useRef<string | null>(null);
+const studioSessionInteractionCountsRef = React.useRef<Record<string, number>>({});
+const studioSessionLastStateKeyRef = React.useRef<string | null>(null);
+
+React.useEffect(() => {
+  studioAnalyticsContextRef.current = studioAnalyticsContext;
+}, [studioAnalyticsContext]);
+
+React.useEffect(() => {
+  if (!hydrated) return;
+
+  const stateKey = [
+    studioAnalyticsContext.ui_mode,
+    studioAnalyticsContext.selected_panel,
+    studioAnalyticsContext.mobile_controls_tab,
+    studioAnalyticsContext.format,
+    studioAnalyticsContext.template_id,
+  ].join("|");
+
+  if (!studioSessionLastStateKeyRef.current) {
+    studioSessionLastStateKeyRef.current = stateKey;
+    return;
+  }
+  if (studioSessionLastStateKeyRef.current === stateKey) return;
+
+  studioSessionLastStateKeyRef.current = stateKey;
+  void trackClientEvent("studio_state_changed", {
+    properties: {
+      ...studioAnalyticsContext,
+    },
+  });
+}, [hydrated, studioAnalyticsContext]);
+
+React.useEffect(() => {
+  if (!hydrated || typeof window === "undefined") return;
+
+  const HEARTBEAT_MS = 30000;
+  const IDLE_AFTER_MS = 15000;
+  const now = Date.now();
+  let endSent = false;
+
+  studioSessionStartedAtRef.current = now;
+  studioSessionLastTickAtRef.current = now;
+  studioSessionLastActivityAtRef.current = now;
+  studioSessionActiveMsRef.current = 0;
+  studioSessionLastActivityTypeRef.current = "session_start";
+  studioSessionInteractionCountsRef.current = {};
+
+  const updateActiveClock = () => {
+    const current = Date.now();
+    const lastTick = studioSessionLastTickAtRef.current || current;
+    const delta = Math.max(0, current - lastTick);
+    const recentlyActive = current - (studioSessionLastActivityAtRef.current || current) <= IDLE_AFTER_MS;
+    if (document.visibilityState === "visible" && recentlyActive) {
+      studioSessionActiveMsRef.current += delta;
+    }
+    studioSessionLastTickAtRef.current = current;
+  };
+
+  const recordActivity = (type: string) => {
+    updateActiveClock();
+    studioSessionLastActivityAtRef.current = Date.now();
+    studioSessionLastActivityTypeRef.current = type;
+    studioSessionInteractionCountsRef.current[type] =
+      (studioSessionInteractionCountsRef.current[type] || 0) + 1;
+  };
+
+  const buildSessionProperties = (reason: string) => {
+    updateActiveClock();
+    const current = Date.now();
+    const elapsedMs = Math.max(0, current - studioSessionStartedAtRef.current);
+    const activeMs = Math.max(0, studioSessionActiveMsRef.current);
+    const interactions = { ...studioSessionInteractionCountsRef.current };
+    const totalInteractions = Object.values(interactions).reduce((sum, count) => sum + count, 0);
+
+    return {
+      ...studioAnalyticsContextRef.current,
+      reason,
+      elapsed_seconds: Math.round(elapsedMs / 1000),
+      active_seconds: Math.round(activeMs / 1000),
+      idle_seconds: Math.max(0, Math.round((elapsedMs - activeMs) / 1000)),
+      last_activity_type: studioSessionLastActivityTypeRef.current,
+      last_activity_seconds_ago: Math.max(
+        0,
+        Math.round((current - (studioSessionLastActivityAtRef.current || current)) / 1000)
+      ),
+      visibility_state: document.visibilityState,
+      interactions_since_last_heartbeat: interactions,
+      total_interactions_since_last_heartbeat: totalInteractions,
+    };
+  };
+
+  void trackClientEvent("page_view", {
+    properties: {
+      ...studioAnalyticsContextRef.current,
+    },
+  });
+  void trackClientEvent("session_started", {
+    properties: buildSessionProperties("start"),
+  });
+
+  const sendHeartbeat = (reason = "interval") => {
+    const properties = buildSessionProperties(reason);
+    studioSessionInteractionCountsRef.current = {};
+    void trackClientEvent("session_heartbeat", { properties });
+  };
+
+  const sendEndingBeacon = (reason: string) => {
+    if (endSent) return;
+    endSent = true;
+    const properties = buildSessionProperties(reason);
+    sendClientEventBeacon("session_ended", { properties });
+  };
+
+  const handleVisibility = () => {
+    updateActiveClock();
+    if (document.visibilityState === "hidden") {
+      const properties = buildSessionProperties("visibility_hidden");
+      studioSessionInteractionCountsRef.current = {};
+      sendClientEventBeacon("session_heartbeat", { properties });
+    } else {
+      recordActivity("visibility_visible");
+    }
+  };
+
+  const handlePageHide = () => sendEndingBeacon("pagehide");
+  const handlePointerActivity = () => recordActivity("pointer");
+  const handleKeyboardActivity = () => recordActivity("keyboard");
+  const handleScrollActivity = () => recordActivity("scroll");
+  const handleTouchActivity = () => recordActivity("touch");
+  const handleInputActivity = () => recordActivity("input");
+  const handleChangeActivity = () => recordActivity("change");
+  const heartbeatId = window.setInterval(() => sendHeartbeat("interval"), HEARTBEAT_MS);
+  const passive = { passive: true } as AddEventListenerOptions;
+
+  window.addEventListener("pointerdown", handlePointerActivity, passive);
+  window.addEventListener("keydown", handleKeyboardActivity);
+  window.addEventListener("scroll", handleScrollActivity, passive);
+  window.addEventListener("touchstart", handleTouchActivity, passive);
+  window.addEventListener("input", handleInputActivity, true);
+  window.addEventListener("change", handleChangeActivity, true);
+  document.addEventListener("visibilitychange", handleVisibility);
+  window.addEventListener("pagehide", handlePageHide);
+
+  return () => {
+    window.clearInterval(heartbeatId);
+    window.removeEventListener("pointerdown", handlePointerActivity);
+    window.removeEventListener("keydown", handleKeyboardActivity);
+    window.removeEventListener("scroll", handleScrollActivity);
+    window.removeEventListener("touchstart", handleTouchActivity);
+    window.removeEventListener("input", handleInputActivity, true);
+    window.removeEventListener("change", handleChangeActivity, true);
+    document.removeEventListener("visibilitychange", handleVisibility);
+    window.removeEventListener("pagehide", handlePageHide);
+    sendEndingBeacon("unmount");
+  };
+}, [hydrated]);
 const switchWorkflowStudioMode = React.useCallback(
   (next: "creator" | "dj") => {
     const nextIsDj = next === "dj";

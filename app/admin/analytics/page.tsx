@@ -15,6 +15,7 @@ type DashboardPayload = {
   top_sources: Array<{ label: string; count: number }>;
   top_paths: Array<{ label: string; count: number }>;
   top_landings: Array<{ label: string; count: number }>;
+  top_events: Array<{ label: string; count: number }>;
   live?: {
     window_seconds: number;
     active_sessions: number;
@@ -34,6 +35,12 @@ type DashboardPayload = {
       landing_path: string | null;
       referrer: string | null;
       last_event: string | null;
+      ui_mode: string | null;
+      selected_panel: string | null;
+      template_label: string | null;
+      last_activity_type: string | null;
+      elapsed_seconds: number | null;
+      active_seconds: number | null;
       recent_events: number;
     }>;
   };
@@ -58,6 +65,25 @@ function formatDate(value: string) {
   } catch {
     return value;
   }
+}
+
+function formatDuration(raw: number | null | undefined) {
+  const seconds = Math.max(0, Math.round(Number(raw || 0)));
+  const minutes = Math.floor(seconds / 60);
+  const remaining = seconds % 60;
+  if (minutes >= 60) {
+    const hours = Math.floor(minutes / 60);
+    const hourMinutes = minutes % 60;
+    return `${hours}h ${hourMinutes}m`;
+  }
+  return `${minutes}:${remaining.toString().padStart(2, "0")}`;
+}
+
+function formatMetricValue(label: string, value: number) {
+  if (label.endsWith("_seconds")) {
+    return formatDuration(value);
+  }
+  return value.toLocaleString();
 }
 
 const RANGE_OPTIONS = [
@@ -183,7 +209,7 @@ export default function AdminAnalyticsPage() {
                   <div className="text-xs uppercase tracking-[0.18em] text-white/45">
                     {formatMetricLabel(label)}
                   </div>
-                  <div className="mt-3 text-3xl font-semibold">{value}</div>
+                  <div className="mt-3 text-3xl font-semibold">{formatMetricValue(label, value)}</div>
                 </div>
               ))}
             </div>
@@ -232,6 +258,8 @@ export default function AdminAnalyticsPage() {
                       <tr>
                         <th className="px-4 py-3 font-medium">Last Seen</th>
                         <th className="px-4 py-3 font-medium">Visitor</th>
+                        <th className="px-4 py-3 font-medium">Doing</th>
+                        <th className="px-4 py-3 font-medium">Duration</th>
                         <th className="px-4 py-3 font-medium">Path</th>
                         <th className="px-4 py-3 font-medium">Source</th>
                         <th className="px-4 py-3 font-medium">Events</th>
@@ -245,6 +273,16 @@ export default function AdminAnalyticsPage() {
                             <div>{session.email || session.visitor}</div>
                             <div className="text-xs text-white/35">{session.authenticated ? "logged in" : "guest"}</div>
                           </td>
+                          <td className="px-4 py-3 text-white/75">
+                            <div>{session.selected_panel || session.ui_mode || session.last_event || "-"}</div>
+                            <div className="text-xs text-white/35">
+                              {session.template_label || session.last_activity_type || session.last_event || "-"}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-white/65">
+                            <div>{formatDuration(session.elapsed_seconds)}</div>
+                            <div className="text-xs text-white/35">active {formatDuration(session.active_seconds)}</div>
+                          </td>
                           <td className="px-4 py-3 text-white/75">{session.path || "-"}</td>
                           <td className="px-4 py-3 text-white/65">
                             <div>{session.utm_source || "-"}</div>
@@ -257,7 +295,7 @@ export default function AdminAnalyticsPage() {
                       ))}
                       {!(payload.live?.sessions || []).length ? (
                         <tr>
-                          <td colSpan={5} className="px-4 py-6 text-white/45">
+                          <td colSpan={7} className="px-4 py-6 text-white/45">
                             No active sessions right now.
                           </td>
                         </tr>
@@ -268,7 +306,19 @@ export default function AdminAnalyticsPage() {
               </div>
             </section>
 
-            <div className="grid gap-4 lg:grid-cols-3">
+            <div className="grid gap-4 lg:grid-cols-4">
+              <section className="rounded-2xl border border-white/10 bg-neutral-900 p-5">
+                <h2 className="text-lg font-semibold">Top Actions</h2>
+                <div className="mt-4 space-y-3 text-sm">
+                  {(payload.top_events || []).length ? (payload.top_events || []).map((item) => (
+                    <div key={item.label} className="flex items-center justify-between gap-3">
+                      <span className="truncate text-white/75">{formatMetricLabel(item.label)}</span>
+                      <span className="text-white">{item.count}</span>
+                    </div>
+                  )) : <div className="text-white/45">No tracked actions yet.</div>}
+                </div>
+              </section>
+
               <section className="rounded-2xl border border-white/10 bg-neutral-900 p-5">
                 <h2 className="text-lg font-semibold">Top Sources</h2>
                 <div className="mt-4 space-y-3 text-sm">

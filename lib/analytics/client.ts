@@ -5,6 +5,7 @@ import { supabaseBrowser } from "../supabase/client";
 const ANON_ID_KEY = "nightlife_analytics_anon_id";
 const SESSION_ID_KEY = "nightlife_analytics_session_id";
 const ATTRIBUTION_KEY = "nightlife_analytics_attribution_v1";
+let lastKnownAnalyticsEmail: string | null = null;
 
 export type ClientTrackingPayload = {
   path: string;
@@ -160,13 +161,20 @@ export function getClientTrackingPayload(path?: string): ClientTrackingPayload {
   };
 }
 
-async function readAccessToken() {
+async function readSessionIdentity() {
   try {
     const supabase = supabaseBrowser();
     const { data } = await supabase.auth.getSession();
-    return data.session?.access_token || null;
+    lastKnownAnalyticsEmail = data.session?.user?.email || lastKnownAnalyticsEmail;
+    return {
+      token: data.session?.access_token || null,
+      email: data.session?.user?.email || null,
+    };
   } catch {
-    return null;
+    return {
+      token: null,
+      email: lastKnownAnalyticsEmail,
+    };
   }
 }
 
@@ -179,22 +187,58 @@ export async function trackClientEvent(
 ) {
   if (typeof window === "undefined") return;
 
+  const identity = await readSessionIdentity();
   const payload = {
     event,
     properties: options.properties || {},
+    client_email: identity.email,
     ...getClientTrackingPayload(options.path),
   };
-
-  const token = await readAccessToken();
 
   try {
     await fetch("/api/analytics/ingest", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(identity.token ? { Authorization: `Bearer ${identity.token}` } : {}),
       },
       body: JSON.stringify(payload),
+      keepalive: true,
+    });
+  } catch {}
+}
+
+export function sendClientEventBeacon(
+  event: string,
+  options: {
+    path?: string;
+    properties?: Record<string, unknown>;
+  } = {}
+) {
+  if (typeof window === "undefined") return;
+
+  const payload = {
+    event,
+    properties: options.properties || {},
+    client_email: lastKnownAnalyticsEmail,
+    ...getClientTrackingPayload(options.path),
+  };
+  const body = JSON.stringify(payload);
+
+  try {
+    if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+      const blob = new Blob([body], { type: "application/json" });
+      if (navigator.sendBeacon("/api/analytics/ingest", blob)) return;
+    }
+  } catch {}
+
+  try {
+    void fetch("/api/analytics/ingest", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body,
       keepalive: true,
     });
   } catch {}

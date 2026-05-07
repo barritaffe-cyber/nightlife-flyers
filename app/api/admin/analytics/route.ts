@@ -42,6 +42,24 @@ function topEntries(map: Map<string, number>, limit = 10) {
     .map(([label, count]) => ({ label, count }));
 }
 
+function numericProperty(row: AnalyticsRow, key: string) {
+  const value = row.properties?.[key];
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function stringProperty(row: AnalyticsRow, key: string) {
+  const value = row.properties?.[key];
+  if (typeof value !== "string") return null;
+  const text = value.trim();
+  return text || null;
+}
+
+function average(values: number[]) {
+  if (!values.length) return 0;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
 function uniqueVisitorKey(row: AnalyticsRow) {
   return row.anon_id || row.session_id || row.user_id || row.ip_hash || row.email || row.id;
 }
@@ -87,13 +105,6 @@ export async function GET(req: Request) {
         .from("analytics_events")
         .select("*")
         .gte("created_at", liveSince)
-        .in("event_name", [
-          "session_started",
-          "session_heartbeat",
-          "session_ended",
-          "page_view",
-          "export_button_pressed",
-        ])
         .order("created_at", { ascending: false })
         .limit(1000),
     ]);
@@ -118,15 +129,56 @@ export async function GET(req: Request) {
     const sourceCounts = new Map<string, number>();
     const pathCounts = new Map<string, number>();
     const landingCounts = new Map<string, number>();
+    const actionCounts = new Map<string, number>();
     const visitorIds = new Set<string>();
+    const sessionStats = new Map<
+      string,
+      {
+        firstSeenAt: number;
+        lastSeenAt: number;
+        maxElapsedSeconds: number;
+        maxActiveSeconds: number;
+        eventCount: number;
+      }
+    >();
 
     for (const row of rows) {
       increment(eventCounts, row.event_name);
+      if (row.event_name !== "session_heartbeat") {
+        increment(actionCounts, row.event_name);
+      }
       increment(sourceCounts, row.utm_source);
       increment(pathCounts, row.path);
       increment(landingCounts, row.landing_path);
       visitorIds.add(uniqueVisitorKey(row));
+
+      const key = sessionKey(row);
+      const createdAt = new Date(row.created_at).getTime();
+      const elapsedSeconds = numericProperty(row, "elapsed_seconds") || 0;
+      const activeSeconds = numericProperty(row, "active_seconds") || 0;
+      const existing = sessionStats.get(key);
+      if (existing) {
+        existing.firstSeenAt = Math.min(existing.firstSeenAt, createdAt);
+        existing.lastSeenAt = Math.max(existing.lastSeenAt, createdAt);
+        existing.maxElapsedSeconds = Math.max(existing.maxElapsedSeconds, elapsedSeconds);
+        existing.maxActiveSeconds = Math.max(existing.maxActiveSeconds, activeSeconds);
+        existing.eventCount += 1;
+      } else {
+        sessionStats.set(key, {
+          firstSeenAt: createdAt,
+          lastSeenAt: createdAt,
+          maxElapsedSeconds: elapsedSeconds,
+          maxActiveSeconds: activeSeconds,
+          eventCount: 1,
+        });
+      }
     }
+
+    const sessionDurations = Array.from(sessionStats.values()).map((stats) =>
+      Math.max(stats.maxElapsedSeconds, Math.round((stats.lastSeenAt - stats.firstSeenAt) / 1000))
+    );
+    const sessionActiveDurations = Array.from(sessionStats.values()).map((stats) => stats.maxActiveSeconds);
+    const sessionEventCounts = Array.from(sessionStats.values()).map((stats) => stats.eventCount);
 
     const liveSessionLatest = new Map<string, AnalyticsRow>();
     const liveSessionEventCounts = new Map<string, number>();
@@ -153,6 +205,12 @@ export async function GET(req: Request) {
         landing_path: row.landing_path,
         referrer: row.referrer,
         last_event: row.event_name,
+        ui_mode: stringProperty(row, "ui_mode"),
+        selected_panel: stringProperty(row, "selected_panel"),
+        template_label: stringProperty(row, "template_label"),
+        last_activity_type: stringProperty(row, "last_activity_type"),
+        elapsed_seconds: numericProperty(row, "elapsed_seconds"),
+        active_seconds: numericProperty(row, "active_seconds"),
         recent_events: liveSessionEventCounts.get(key) || 0,
       }));
 
@@ -182,9 +240,20 @@ export async function GET(req: Request) {
       summary: {
         active_sessions: liveSessions.length,
         unique_visitors: visitorIds.size,
+        sessions_tracked: sessionStats.size,
+        avg_session_duration_seconds: Math.round(average(sessionDurations)),
+        avg_active_seconds: Math.round(average(sessionActiveDurations)),
+        total_active_seconds: Math.round(sessionActiveDurations.reduce((sum, value) => sum + value, 0)),
+        avg_events_per_session: Math.round(average(sessionEventCounts)),
         page_views: eventCounts.get("page_view") || 0,
         pricing_views: eventCounts.get("pricing_view") || 0,
         sessions_started: eventCounts.get("session_started") || 0,
+        session_heartbeats: eventCounts.get("session_heartbeat") || 0,
+        sessions_ended: eventCounts.get("session_ended") || 0,
+        studio_state_changes: eventCounts.get("studio_state_changed") || 0,
+        template_selections: eventCounts.get("template_selected") || 0,
+        help_opens: eventCounts.get("help_opened") || 0,
+        tours_started: eventCounts.get("tour_started") || 0,
         signup_started: eventCounts.get("signup_started") || 0,
         signup_requested: eventCounts.get("signup_requested") || 0,
         login_started: eventCounts.get("login_started") || 0,
@@ -207,6 +276,7 @@ export async function GET(req: Request) {
       top_sources: topEntries(sourceCounts),
       top_paths: topEntries(pathCounts),
       top_landings: topEntries(landingCounts),
+      top_events: topEntries(actionCounts, 12),
       live: {
         window_seconds: Math.round(LIVE_SESSION_WINDOW_MS / 1000),
         active_sessions: liveSessions.length,

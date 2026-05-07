@@ -7,6 +7,10 @@ export type AnalyticsEventName =
   | "session_started"
   | "session_heartbeat"
   | "session_ended"
+  | "studio_state_changed"
+  | "template_selected"
+  | "tour_started"
+  | "help_opened"
   | "signup_started"
   | "signup_requested"
   | "login_started"
@@ -22,6 +26,7 @@ export type AnalyticsEventName =
   | "magic_blend_started"
   | "magic_blend_succeeded"
   | "magic_blend_failed"
+  | "export_button_pressed"
   | "checkout_started"
   | "checkout_succeeded"
   | "subscription_activated";
