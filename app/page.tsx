@@ -9679,7 +9679,7 @@ async function addLogosFromFiles(files: FileList) {
 // ===== ONBOARDING STRIP (first-open only) =====
 const ONBOARD_KEY = 'nf:onboarded:v1';
 const HELP_SHIMMER_SEEN_KEY = 'nf:help-shimmer-seen:v1';
-const WELCOME_HELP_PROMPT_SEEN_KEY = 'nf:welcome-help-prompt-seen:v1';
+const WELCOME_HELP_PROMPT_SEEN_KEY = 'nf:onboarding-coach-seen:v2';
 type WelcomeHelperStage = "tap_headline" | "edit_headline" | "good_job";
 const [showOnboard, setShowOnboard] = useState<boolean>(false);
 const [helpShimmerEligible, setHelpShimmerEligible] = useState<boolean>(false);
@@ -9767,10 +9767,7 @@ useEffect(() => {
 useEffect(() => {
   if (!hydrated) return;
   try {
-    const hasSeenWelcome =
-      localStorage.getItem(WELCOME_HELP_PROMPT_SEEN_KEY) === '1' ||
-      localStorage.getItem(HELP_SHIMMER_SEEN_KEY) === '1' ||
-      localStorage.getItem(ONBOARD_KEY) === '1';
+    const hasSeenWelcome = localStorage.getItem(WELCOME_HELP_PROMPT_SEEN_KEY) === '1';
     setWelcomeHelpPromptVisible(!hasSeenWelcome);
     if (!hasSeenWelcome) {
       setWelcomeHelperStage("tap_headline");
