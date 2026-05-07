@@ -56,7 +56,7 @@ export const editorUploadClearClass =
 
 let activeSliderDragCount = 0;
 let activeSliderDragEndTimer: number | null = null;
-const SLIDER_LIVE_UPDATE_MS = 32;
+const SLIDER_LIVE_UPDATE_MS = 16;
 
 function sliderValuesEqual(a: number | null, b: number) {
   return a !== null && Math.abs(a - b) < 0.000001;
