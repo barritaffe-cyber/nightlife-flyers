@@ -9674,8 +9674,10 @@ async function addLogosFromFiles(files: FileList) {
 // ===== ONBOARDING STRIP (first-open only) =====
 const ONBOARD_KEY = 'nf:onboarded:v1';
 const HELP_SHIMMER_SEEN_KEY = 'nf:help-shimmer-seen:v1';
+const TRY_EDITING_CLICKED_KEY = 'nf:try-editing-clicked:v1';
 const [showOnboard, setShowOnboard] = useState<boolean>(false);
 const [helpShimmerEligible, setHelpShimmerEligible] = useState<boolean>(false);
+const [tryEditingCtaVisible, setTryEditingCtaVisible] = useState<boolean>(false);
 const [tourStep, setTourStep] = useState<number | null>(null);
 const [tourRect, setTourRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
 const [tourTip, setTourTip] = useState<{ top: number; left: number; centered?: boolean } | null>(null);
@@ -9750,6 +9752,15 @@ useEffect(() => {
     setHelpShimmerEligible(!hasSeenHelp);
   } catch {
     setHelpShimmerEligible(false);
+  }
+}, [hydrated]);
+
+useEffect(() => {
+  if (!hydrated) return;
+  try {
+    setTryEditingCtaVisible(sessionStorage.getItem(TRY_EDITING_CLICKED_KEY) !== '1');
+  } catch {
+    setTryEditingCtaVisible(false);
   }
 }, [hydrated]);
 
@@ -13122,7 +13133,6 @@ React.useEffect(() => {
   const [exportProgressActive, setExportProgressActive] = useState(false);
   const [exportBlobUrl, setExportBlobUrl] = useState<string | null>(null);
   const [exportFilename, setExportFilename] = useState<string | null>(null);
-  const [starterCleanExportUnlocked, setStarterCleanExportUnlocked] = useState(false);
   const [exportSignupEmail, setExportSignupEmail] = useState("");
   const [starterRenderQuota, setStarterRenderQuota] = useState<{
     limit: number;
@@ -13230,58 +13240,6 @@ const mobileFloatPanelClass =
     if (kb < 1024) return `${kb.toFixed(1)} KB`;
     const mb = kb / 1024;
     return `${mb.toFixed(2)} MB`;
-  }
-
-  const starterWatermarkLabel = "Nightlife Flyers Starter";
-  const starterCanvasBadge = "Starter preview - upgrade for clean canvas";
-
-  async function addStarterWatermark(
-    sourceDataUrl: string,
-    format: "png" | "jpg"
-  ): Promise<string> {
-    return await new Promise<string>((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const w = img.naturalWidth || 1080;
-        const h = img.naturalHeight || 1080;
-        const c = document.createElement("canvas");
-        c.width = w;
-        c.height = h;
-        const ctx = c.getContext("2d");
-        if (!ctx) {
-          resolve(sourceDataUrl);
-          return;
-        }
-        ctx.drawImage(img, 0, 0, w, h);
-
-        const label = starterWatermarkLabel;
-        const fontSize = Math.max(14, Math.round(Math.min(w, h) * 0.028));
-        const padX = Math.round(fontSize * 0.7);
-        const padY = Math.round(fontSize * 0.45);
-        ctx.font = `700 ${fontSize}px Inter, Arial, sans-serif`;
-        const textW = Math.ceil(ctx.measureText(label).width);
-        const boxW = textW + padX * 2;
-        const boxH = fontSize + padY * 2;
-        ctx.textBaseline = "middle";
-        const inset = Math.round(fontSize * 0.8);
-        const y = Math.max(0, inset);
-        const drawBadge = (x: number) => {
-          ctx.fillStyle = "rgba(0,0,0,0.56)";
-          ctx.fillRect(x, y, boxW, boxH);
-          ctx.fillStyle = "rgba(255,255,255,0.95)";
-          ctx.fillText(label, x + padX, y + boxH / 2);
-        };
-
-        drawBadge(Math.max(0, inset));
-        drawBadge(Math.max(0, w - boxW - inset));
-
-        resolve(
-          format === "jpg" ? c.toDataURL("image/jpeg", 0.95) : c.toDataURL("image/png")
-        );
-      };
-      img.onerror = () => resolve(sourceDataUrl);
-      img.src = sourceDataUrl;
-    });
   }
 
   function downloadExport(dataUrl: string, format: 'png' | 'jpg') {
@@ -13771,9 +13729,6 @@ const mobileFloatPanelClass =
     uploadLimit: number;
     uploadUsed: number;
     uploadRemaining: number;
-    cleanExportLimit: number;
-    cleanExportUsed: number;
-    cleanExportRemaining: number;
   };
 
   const [subscriptionStatus, setSubscriptionStatus] = React.useState<SubscriptionAccessState>("inactive");
@@ -13867,7 +13822,6 @@ const mobileFloatPanelClass =
     generationUsed: number;
     generationRemaining: number;
     starterUploadRemaining: number;
-    starterCleanExportRemaining: number;
   } | null>(null);
 
   const applyGenerationQuota = React.useCallback((payload: any) => {
@@ -13902,29 +13856,10 @@ const mobileFloatPanelClass =
           ? Math.max(0, uploadLimit - (Number.isFinite(uploadUsed) ? uploadUsed : 0))
           : NaN)
     );
-    const cleanExportLimit = Number(
-      payload?.starter_clean_export_limit ?? payload?.starterCleanExportLimit ?? 1
-    );
-    const cleanExportUsed = Number(
-      payload?.starter_clean_export_used ?? payload?.starterCleanExportUsed ?? 0
-    );
-    const cleanExportRemaining = Number(
-      payload?.starter_clean_export_remaining ??
-        payload?.starterCleanExportRemaining ??
-        (Number.isFinite(cleanExportLimit)
-          ? Math.max(0, cleanExportLimit - (Number.isFinite(cleanExportUsed) ? cleanExportUsed : 0))
-          : NaN)
-    );
-
     setStarterTrialQuota({
       uploadLimit: Number.isFinite(uploadLimit) ? Math.max(0, uploadLimit) : 1,
       uploadUsed: Number.isFinite(uploadUsed) ? Math.max(0, uploadUsed) : 0,
       uploadRemaining: Number.isFinite(uploadRemaining) ? Math.max(0, uploadRemaining) : 0,
-      cleanExportLimit: Number.isFinite(cleanExportLimit) ? Math.max(0, cleanExportLimit) : 1,
-      cleanExportUsed: Number.isFinite(cleanExportUsed) ? Math.max(0, cleanExportUsed) : 0,
-      cleanExportRemaining: Number.isFinite(cleanExportRemaining)
-        ? Math.max(0, cleanExportRemaining)
-        : 0,
     });
   }, []);
 
@@ -14045,7 +13980,6 @@ const mobileFloatPanelClass =
             generationUsed: 0,
             generationRemaining: 0,
             starterUploadRemaining: 0,
-            starterCleanExportRemaining: 0,
           });
         }
         return null;
@@ -14082,7 +14016,6 @@ const mobileFloatPanelClass =
             generationUsed: Number(json.generation_used || 0),
             generationRemaining: Number(json.generation_remaining || 0),
             starterUploadRemaining: Number(json.starter_upload_remaining || 0),
-            starterCleanExportRemaining: Number(json.starter_clean_export_remaining || 0),
           });
         }
 
@@ -14156,20 +14089,14 @@ const mobileFloatPanelClass =
 
   const consumeStarterTrialBenefit = React.useCallback(
     async (
-      kind: "upload" | "clean_export",
+      kind: "upload",
       opts?: { silent?: boolean }
     ) => {
       if (!isStarterPlan) return true;
 
       const token = await getAccessToken();
       if (!token) {
-        if (kind === "upload") {
-          return true;
-        }
-        if (!opts?.silent) {
-          alert("Sign in to claim your Starter clean export.");
-        }
-        return false;
+        return true;
       }
 
       let nextQuota = starterTrialQuota;
@@ -14180,24 +14107,14 @@ const mobileFloatPanelClass =
             uploadLimit: Number(refreshed.json.starter_upload_limit || 1),
             uploadUsed: Number(refreshed.json.starter_upload_used || 0),
             uploadRemaining: Number(refreshed.json.starter_upload_remaining || 0),
-            cleanExportLimit: Number(refreshed.json.starter_clean_export_limit || 1),
-            cleanExportUsed: Number(refreshed.json.starter_clean_export_used || 0),
-            cleanExportRemaining: Number(refreshed.json.starter_clean_export_remaining || 0),
           };
         }
       }
 
-      const remaining =
-        kind === "upload"
-          ? nextQuota?.uploadRemaining ?? 0
-          : nextQuota?.cleanExportRemaining ?? 0;
+      const remaining = nextQuota?.uploadRemaining ?? 0;
       if (remaining <= 0) {
         if (!opts?.silent) {
-          alert(
-            kind === "upload"
-              ? "Starter includes one portrait or logo upload. Upgrade or use a pass for more uploads."
-              : "Starter includes one clean export. Upgrade or use a pass for unlimited clean exports."
-          );
+          alert("Starter includes one portrait or logo upload. Upgrade or use a pass for more uploads.");
         }
         return false;
       }
@@ -14229,22 +14146,13 @@ const mobileFloatPanelClass =
         }
         if (opts?.silent && !res.ok) return false;
         if (!res.ok) {
-          alert(
-            json?.error ||
-              (kind === "upload"
-                ? "Starter upload could not be used."
-                : "Starter clean export could not be used.")
-          );
+          alert(json?.error || "Starter upload could not be used.");
           return false;
         }
         return true;
       } catch {
         if (!opts?.silent) {
-          alert(
-            kind === "upload"
-              ? "Starter upload could not be used."
-              : "Starter clean export could not be used."
-          );
+          alert("Starter upload could not be used.");
         }
         return false;
       }
@@ -14329,7 +14237,6 @@ const mobileFloatPanelClass =
     }
     setExportFilename(null);
     setExportMeta(null);
-    setStarterCleanExportUnlocked(false);
     startExportProgress();
 
     const isMobileExport =
@@ -14459,19 +14366,6 @@ const mobileFloatPanelClass =
         }
       }
 
-      let usedStarterCleanExport = false;
-      if (isStarterPlan) {
-        usedStarterCleanExport = await consumeStarterTrialBenefit("clean_export", {
-          silent: true,
-        });
-      }
-
-      if (isStarterPlan && !usedStarterCleanExport) {
-        dataUrl = await addStarterWatermark(dataUrl, exportType);
-        sizeBytes = dataUrlBytes(dataUrl);
-      }
-      setStarterCleanExportUnlocked(usedStarterCleanExport);
-
       setExportDataUrl(dataUrl);
       const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
       const filename = `nightlife_export_${stamp}.${exportType}`;
@@ -14509,7 +14403,6 @@ const mobileFloatPanelClass =
     artRef,
     canvasSize.h,
     canvasSize.w,
-    consumeStarterTrialBenefit,
     exportScale,
     exportType,
     exportStatus,
@@ -14686,7 +14579,6 @@ const mobileFloatPanelClass =
     setExportStatus('idle');
     setExportError(null);
     setExportDataUrl(null);
-    setStarterCleanExportUnlocked(false);
     if (exportBlobUrl) {
       try { URL.revokeObjectURL(exportBlobUrl); } catch {}
     }
@@ -21502,20 +21394,6 @@ const applyTemplateFromGallery = React.useCallback(
     store.setSession((prev) => ({ ...prev, square: {}, story: {} }));
     store.setSessionDirty((prev) => ({ ...prev, square: false, story: false }));
 
-    void trackClientEvent("template_selected", {
-      properties: {
-        template_id: tpl.id,
-        template_label: tpl.label,
-        target_format: fmt,
-        advance_workflow: Boolean(opts?.advanceWorkflow),
-        allow_starter_preview: Boolean(opts?.allowStarterPreview),
-        is_starter: isStarterPlan,
-        has_auth_session: hasAuthSession,
-        subscription_status: subscriptionStatus,
-        mobile: isMobileView,
-      },
-    });
-
     setTemplateId(tpl.id);
     setActiveTemplate(tpl);
     applyTemplate(tpl, { targetFormat: fmt, initialLoad: true });
@@ -21548,7 +21426,7 @@ const applyTemplateFromGallery = React.useCallback(
       }, 120);
     }
   },
-  [applyTemplate, format, hasAuthSession, isMobileView, isStarterPlan, subscriptionStatus]
+  [applyTemplate, format, isStarterPlan]
 );
 
 const handleAutoLayoutFromBackground = React.useCallback(async () => {
@@ -24201,37 +24079,31 @@ const studioSessionLastTickAtRef = React.useRef(0);
 const studioSessionLastActivityAtRef = React.useRef(0);
 const studioSessionActiveMsRef = React.useRef(0);
 const studioSessionLastActivityTypeRef = React.useRef<string | null>(null);
-const studioSessionInteractionCountsRef = React.useRef<Record<string, number>>({});
-const studioSessionLastStateKeyRef = React.useRef<string | null>(null);
 
 React.useEffect(() => {
   studioAnalyticsContextRef.current = studioAnalyticsContext;
 }, [studioAnalyticsContext]);
 
-React.useEffect(() => {
-  if (!hydrated) return;
-
-  const stateKey = [
-    studioAnalyticsContext.ui_mode,
-    studioAnalyticsContext.selected_panel,
-    studioAnalyticsContext.mobile_controls_tab,
-    studioAnalyticsContext.format,
-    studioAnalyticsContext.template_id,
-  ].join("|");
-
-  if (!studioSessionLastStateKeyRef.current) {
-    studioSessionLastStateKeyRef.current = stateKey;
-    return;
-  }
-  if (studioSessionLastStateKeyRef.current === stateKey) return;
-
-  studioSessionLastStateKeyRef.current = stateKey;
-  void trackClientEvent("studio_state_changed", {
-    properties: {
-      ...studioAnalyticsContext,
-    },
-  });
-}, [hydrated, studioAnalyticsContext]);
+const handleTryEditingClick = React.useCallback(
+  (source: "header" | "mobile_action_bar") => {
+    try { sessionStorage.setItem(TRY_EDITING_CLICKED_KEY, '1'); } catch {}
+    setTryEditingCtaVisible(false);
+    void trackClientEvent("try_editing_clicked", {
+      properties: {
+        source,
+        ...studioAnalyticsContextRef.current,
+      },
+    });
+    setUiMode("design");
+    setMobileControlsOpen(true);
+    setMobileControlsTab("design");
+    setSelectedPanel("headline");
+    window.setTimeout(() => {
+      document.querySelector('[data-tour="headline"]')?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 50);
+  },
+  [setSelectedPanel]
+);
 
 React.useEffect(() => {
   if (!hydrated || typeof window === "undefined") return;
@@ -24246,7 +24118,6 @@ React.useEffect(() => {
   studioSessionLastActivityAtRef.current = now;
   studioSessionActiveMsRef.current = 0;
   studioSessionLastActivityTypeRef.current = "session_start";
-  studioSessionInteractionCountsRef.current = {};
 
   const updateActiveClock = () => {
     const current = Date.now();
@@ -24263,8 +24134,6 @@ React.useEffect(() => {
     updateActiveClock();
     studioSessionLastActivityAtRef.current = Date.now();
     studioSessionLastActivityTypeRef.current = type;
-    studioSessionInteractionCountsRef.current[type] =
-      (studioSessionInteractionCountsRef.current[type] || 0) + 1;
   };
 
   const buildSessionProperties = (reason: string) => {
@@ -24272,8 +24141,6 @@ React.useEffect(() => {
     const current = Date.now();
     const elapsedMs = Math.max(0, current - studioSessionStartedAtRef.current);
     const activeMs = Math.max(0, studioSessionActiveMsRef.current);
-    const interactions = { ...studioSessionInteractionCountsRef.current };
-    const totalInteractions = Object.values(interactions).reduce((sum, count) => sum + count, 0);
 
     return {
       ...studioAnalyticsContextRef.current,
@@ -24287,8 +24154,6 @@ React.useEffect(() => {
         Math.round((current - (studioSessionLastActivityAtRef.current || current)) / 1000)
       ),
       visibility_state: document.visibilityState,
-      interactions_since_last_heartbeat: interactions,
-      total_interactions_since_last_heartbeat: totalInteractions,
     };
   };
 
@@ -24303,7 +24168,6 @@ React.useEffect(() => {
 
   const sendHeartbeat = (reason = "interval") => {
     const properties = buildSessionProperties(reason);
-    studioSessionInteractionCountsRef.current = {};
     void trackClientEvent("session_heartbeat", { properties });
   };
 
@@ -24318,7 +24182,6 @@ React.useEffect(() => {
     updateActiveClock();
     if (document.visibilityState === "hidden") {
       const properties = buildSessionProperties("visibility_hidden");
-      studioSessionInteractionCountsRef.current = {};
       sendClientEventBeacon("session_heartbeat", { properties });
     } else {
       recordActivity("visibility_visible");
@@ -25451,6 +25314,17 @@ const mobileControlsTabs = (
       >
         Undo
       </button>
+      {tryEditingCtaVisible && (
+        <button
+          type="button"
+          onClick={() => handleTryEditingClick("mobile_action_bar")}
+          data-mobile-float-lock="true"
+          className={`${mobileTabButtonClass} border-amber-300/80 bg-amber-300/15 text-amber-100 hover:bg-amber-300/25`}
+          title="Try editing"
+        >
+          Try Editing
+        </button>
+      )}
       <button
         type="button"
         onClick={() => openWorkflowHelp("mobile_action_bar")}
@@ -27077,6 +26951,18 @@ return (
                 />
               </button>
 
+              {tryEditingCtaVisible && !isMobileView && (
+                <button
+                  type="button"
+                  data-mobile-float-lock="true"
+                  onClick={() => handleTryEditingClick("header")}
+                  className="shrink-0 whitespace-nowrap border border-amber-300/80 bg-amber-300/15 px-2 py-[3px] text-[11px] font-semibold text-amber-100 transition-colors hover:bg-amber-300/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+                  title="Try editing"
+                >
+                  Try Editing
+                </button>
+              )}
+
               <button
                 type="button"
                 data-mobile-float-lock="true"
@@ -27150,17 +27036,15 @@ return (
                     Print
                   </Chip>
                 )}
-              </div>
-              <div className="ml-auto shrink-0">
                 <button
                   type="button"
                   disabled={starterRenderLimitReached || exportStatus === 'rendering'}
                   onClick={() => triggerExportStart("finish_header")}
                   title={starterRenderLimitReached ? starterRenderLimitMessage : "Preview and export"}
-                  className="nf-export-cta min-h-[26px] whitespace-nowrap border px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.1em] disabled:cursor-not-allowed"
+                  className="nf-export-cta min-h-[22px] whitespace-nowrap border px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.06em] disabled:cursor-not-allowed"
                 >
                   <span className="whitespace-nowrap">
-                    {exportStatus === 'rendering' ? 'Exporting...' : `Export ${exportType}`}
+                    {exportStatus === 'rendering' ? '...' : 'Export'}
                   </span>
                 </button>
               </div>
@@ -27318,7 +27202,6 @@ return (
             {accountData?.status === "starter" && (
               <>
                 <div>Starter upload remaining: {accountData?.starterUploadRemaining ?? 0}</div>
-                <div>Starter clean export remaining: {accountData?.starterCleanExportRemaining ?? 0}</div>
               </>
             )}
             <div>
@@ -27502,18 +27385,14 @@ return (
                 </div>
                 {isStarterPlan && (
                   <div className="text-[11px] text-amber-300">
-                    {starterCleanExportUnlocked
-                      ? "Starter clean export used. This preview is watermark-free."
-                      : "Starter exports include a watermark. Sign in to claim your one clean export, or grab a pass for more."}
+                    Starter export is ready without a watermark.
                   </div>
                 )}
               </div>
             ) : (
               <div className="text-[12px] text-neutral-300">
                 {isStarterPlan
-                  ? starterCleanExportUnlocked
-                    ? "Your export is ready. Your Starter clean export was applied."
-                    : "Your export is ready. Starter includes a watermark unless you claim the one clean export."
+                  ? "Your export is ready without a watermark."
                   : "Your export is ready. Download the clean file below."}
               </div>
             )}
@@ -27524,7 +27403,7 @@ return (
                 }}
                 className="rounded-xl border border-fuchsia-300/20 bg-fuchsia-500/[0.08] p-3"
               >
-                <div className="text-sm font-semibold text-white">Ready for a clean export?</div>
+                <div className="text-sm font-semibold text-white">Keep this design?</div>
                 <div className="mt-1 text-[12px] text-neutral-300">
                   Add your email to log in, keep this design, and choose a plan.
                 </div>
@@ -30004,41 +29883,6 @@ style={{ top: STICKY_TOP }}
           </div>
         </div>
       )}
-      {isStarterPlan && (
-        <div
-          aria-hidden="true"
-          data-nonexport="true"
-          className="pointer-events-none absolute inset-0 z-[70] overflow-hidden select-none"
-        >
-          <div className="absolute inset-[-18%] flex flex-col justify-around opacity-[0.18]">
-            {Array.from({ length: 5 }, (_, rowIndex) => (
-              <div
-                key={`starter-watermark-row-${rowIndex}`}
-                className="flex gap-10 whitespace-nowrap text-white/80"
-                style={{
-                  transform: `translateX(${rowIndex % 2 === 0 ? "-12%" : "-26%"}) rotate(-24deg)`,
-                  transformOrigin: "center",
-                }}
-              >
-                {Array.from({ length: 4 }, (_, colIndex) => (
-                  <span
-                    key={`starter-watermark-cell-${rowIndex}-${colIndex}`}
-                    className="text-[20px] font-black uppercase tracking-[0.45em] drop-shadow-[0_0_22px_rgba(0,0,0,0.45)]"
-                  >
-                    {starterWatermarkLabel}
-                  </span>
-                ))}
-              </div>
-            ))}
-          </div>
-          <div className="absolute inset-x-0 bottom-4 flex justify-center px-4">
-            <div className="rounded-full border border-white/20 bg-black/55 px-4 py-2 text-center text-[11px] font-semibold uppercase tracking-[0.28em] text-white/90 shadow-[0_12px_40px_rgba(0,0,0,0.38)] backdrop-blur-sm">
-              {starterCanvasBadge}
-            </div>
-          </div>
-        </div>
-      )}
-
       <AnimatePresence mode="wait">
         <motion.div
           key="fade-wrapper"
