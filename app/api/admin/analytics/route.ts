@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { resolveAdminUserFromRequest } from "../../../../lib/adminAccess";
+import { IGNORED_ANALYTICS_EMAILS, isIgnoredAnalyticsEmail } from "../../../../lib/analytics/server";
 import { supabaseAdmin } from "../../../../lib/supabase/admin";
 
 type AnalyticsRow = {
@@ -107,8 +108,12 @@ export async function GET(req: Request) {
       throw new Error(liveRowsResult.error.message);
     }
 
-    const rows = ((rowsResult.data || []) as AnalyticsRow[]).filter((row) => row && row.created_at);
-    const liveRows = ((liveRowsResult.data || []) as AnalyticsRow[]).filter((row) => row && row.created_at);
+    const rows = ((rowsResult.data || []) as AnalyticsRow[]).filter(
+      (row) => row && row.created_at && !isIgnoredAnalyticsEmail(row.email)
+    );
+    const liveRows = ((liveRowsResult.data || []) as AnalyticsRow[]).filter(
+      (row) => row && row.created_at && !isIgnoredAnalyticsEmail(row.email)
+    );
     const eventCounts = new Map<string, number>();
     const sourceCounts = new Map<string, number>();
     const pathCounts = new Map<string, number>();
@@ -171,8 +176,9 @@ export async function GET(req: Request) {
       admin_email: adminUser.user.email || null,
       days,
       range_start: since,
-      total_events: countResult.count || 0,
+      total_events: rows.length,
       sampled_events: rows.length,
+      ignored_emails: IGNORED_ANALYTICS_EMAILS,
       summary: {
         active_sessions: liveSessions.length,
         unique_visitors: visitorIds.size,

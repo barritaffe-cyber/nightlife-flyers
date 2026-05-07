@@ -58,6 +58,12 @@ export default function ProfilePage() {
           >
             View pricing
           </Link>
+          <Link
+            href="/admin"
+            className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
+          >
+            Admin tools
+          </Link>
         </div>
       </div>
     </div>

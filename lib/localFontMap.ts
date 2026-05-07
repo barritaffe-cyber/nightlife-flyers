@@ -21,15 +21,32 @@ export const FONT_FILE_MAP: Record<string, string> = {
   
   // --- LEMON MILK (Kept as-is for consistency) ---
   "LEMONMILK-BoldItalic": "/fonts/LEMONMILK-BoldItalic.ttf",
+  "LEMONMILK-Bold": "/fonts/LEMONMILK-Bold.ttf",
   "LEMONMILK-Light": "/fonts/LEMONMILK-Light.ttf",
   "LEMONMILK-Medium": "/fonts/LEMONMILK-Medium.ttf",
   "LEMONMILK-Regular": "/fonts/LEMONMILK-Regular.ttf",
   
   // --- COOLVETICA (Renamed) ---
   "Coolvetica Hv Comp": "/fonts/Coolvetica-Hv-Comp.ttf",
+  "Coolvetica Rg Cond": "/fonts/Coolvetica-Rg-Cond.ttf",
   "Coolvetica Rg Cram": "/fonts/Coolvetica-Rg-Cram.ttf",
   
   // --- OTHER (Renamed/Stabilized) ---
+  "Avigea": "/fonts/Avigea.woff2",
+  "Avigea Italic": "/fonts/avigea/Avigea Italic.woff2",
+  "Brigends Expanded": "/fonts/Brigends Expanded.otf",
+  "Moderniz": "/fonts/Moderniz.otf",
+  "Newake": "/fonts/NewakeFont-Demo.otf",
+  "Tropical Avenue": "/fonts/Tropical Avenue Personal Use Only.ttf",
+  "Minecrafter": "/fonts/Minecrafter.Reg.ttf",
+  "Minecrafter Alt": "/fonts/Minecrafter.Alt.ttf",
+  "Pixel Digivolve": "/fonts/Pixel Digivolve.otf",
+  "Pixel Digivolve Italic": "/fonts/Pixel Digivolve Italic.otf",
+  "Techno Hideo": "/fonts/techno_hideo.ttf",
+  "Techno Hideo Bold": "/fonts/techno_hideo_bold.ttf",
+  "BTSE PS2": "/fonts/btseps2.TTF",
+  "DS-Digital": "/fonts/DS-DIGIB.TTF",
+  "Digital Cards Demo": "/fonts/Digital Cards Demo.ttf",
   "Nexa-Heavy": "/fonts/Nexa-Heavy.ttf",
   "Nexa-ExtraLight": "/fonts/Nexa-ExtraLight.ttf",
   "cubic": "/fonts/cubic.ttf",

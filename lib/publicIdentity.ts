@@ -1,9 +1,11 @@
 export function getPublicSiteUrl() {
-  return process.env.NEXT_PUBLIC_SITE_URL || "https://nightlife-flyers.com";
+  return String(process.env.NEXT_PUBLIC_SITE_URL || "https://www.nightlife-flyers.com")
+    .trim()
+    .replace(/\/+$/, "");
 }
 
 export function getPublicSiteHost() {
-  return getPublicSiteUrl().replace(/^https?:\/\//, "").replace(/\/.*$/, "") || "nightlife-flyers.com";
+  return getPublicSiteUrl().replace(/^https?:\/\//, "").replace(/\/.*$/, "") || "www.nightlife-flyers.com";
 }
 
 export function getPublicSupportEmail() {

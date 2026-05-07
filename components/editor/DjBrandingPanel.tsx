@@ -728,6 +728,7 @@ export default function DjBrandingPanel({
                     small
                     className="!w-full !rounded-none"
                     active={mainFaceFilterPreset === preset}
+                    deferHeavy
                     onClick={() => onMainFaceFilterPresetChange(preset)}
                     disabled={!mainFaceOnCanvas}
                   >
@@ -754,7 +755,7 @@ export default function DjBrandingPanel({
 
             <div className="space-y-2">
               <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-                <Chip small className="!w-full !rounded-none" active={mainFaceLightingAutoMatch} onClick={onMainFaceLightingAutoMatchToggle} disabled={!mainFaceOnCanvas}>
+                <Chip small className="!w-full !rounded-none" active={mainFaceLightingAutoMatch} deferHeavy onClick={onMainFaceLightingAutoMatchToggle} disabled={!mainFaceOnCanvas}>
                   Auto Match
                 </Chip>
                 <Chip small className="!w-full !rounded-none" active={advancedLightingOpen} onClick={() => setAdvancedLightingOpen((open) => !open)} disabled={!mainFaceOnCanvas}>
@@ -768,6 +769,7 @@ export default function DjBrandingPanel({
                     key={preset.id}
                     small
                     className="!w-full !rounded-none"
+                    deferHeavy
                     onClick={() => onMainFaceLightingChange(preset.patch)}
                     disabled={!mainFaceOnCanvas || !mainFaceLightingEnabled}
                   >
@@ -1268,6 +1270,7 @@ export default function DjBrandingPanel({
                 key={p.id}
                 small
                 className="!w-full !rounded-none"
+                deferHeavy
                 onClick={() =>
                   onKitChange({
                     ...kit,

@@ -414,6 +414,113 @@ html, body {
   font-display: swap;
 }
 
+/* --- NEW LOCAL DISPLAY FONTS --- */
+@font-face {
+  font-family: "Avigea";
+  src: url("/fonts/Avigea.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Avigea Italic";
+  src: url("/fonts/avigea/Avigea%20Italic.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Brigends Expanded";
+  src: url("/fonts/Brigends%20Expanded.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Moderniz";
+  src: url("/fonts/Moderniz.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Newake";
+  src: url("/fonts/NewakeFont-Demo.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Tropical Avenue";
+  src: url("/fonts/Tropical%20Avenue%20Personal%20Use%20Only.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Minecrafter";
+  src: url("/fonts/Minecrafter.Reg.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Minecrafter Alt";
+  src: url("/fonts/Minecrafter.Alt.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Pixel Digivolve";
+  src: url("/fonts/Pixel%20Digivolve.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Pixel Digivolve Italic";
+  src: url("/fonts/Pixel%20Digivolve%20Italic.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Techno Hideo";
+  src: url("/fonts/techno_hideo.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Techno Hideo Bold";
+  src: url("/fonts/techno_hideo_bold.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "BTSE PS2";
+  src: url("/fonts/btseps2.TTF") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DS-Digital";
+  src: url("/fonts/DS-DIGIB.TTF") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Digital Cards Demo";
+  src: url("/fonts/Digital%20Cards%20Demo.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* === Nightlife Flyers: slider styling for Stepper -> Slider swap === */
 .nf-range {
   --nf-thumb: #ffffff;

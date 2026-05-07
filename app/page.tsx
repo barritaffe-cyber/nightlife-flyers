@@ -1621,7 +1621,6 @@ const HalftoneHeadlineSvg = React.memo(function HalftoneHeadlineSvg({
 }: HalftoneHeadlineSvgProps) {
   const reactId = React.useId().replace(/:/g, "");
   const maskId = `halftone-text-mask-${reactId}`;
-  const centerClipId = `halftone-center-clip-${reactId}`;
   const safeText = String(text || "").trim() ? String(text) : "HEADLINE";
   const lines = safeText.split("\n");
   const dotRows = 38;
@@ -1652,13 +1651,6 @@ const HalftoneHeadlineSvg = React.memo(function HalftoneHeadlineSvg({
   const dotFieldHeight = textBlockHeight + safeFontSize * 0.08;
   const alphaValue = Number(alpha);
   const textOpacity = Math.max(0, Math.min(1, Number.isFinite(alphaValue) ? alphaValue : 1));
-  const safeDepthLayers = Math.max(0, Math.min(72, Math.round(Number(depthLayers) || 0)));
-  const safeDepthStepX = Number.isFinite(Number(depthStepX)) ? Number(depthStepX) : 0;
-  const safeDepthStepY = Number.isFinite(Number(depthStepY)) ? Number(depthStepY) : 0;
-  const shadowLayers =
-    safeDepthLayers > 0
-      ? Array.from({ length: safeDepthLayers }, (_, idx) => safeDepthLayers - idx)
-      : [1];
 
   const dotPath = React.useMemo(() => {
     const commands: string[] = [];
@@ -1684,11 +1676,6 @@ const HalftoneHeadlineSvg = React.memo(function HalftoneHeadlineSvg({
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}"><path d="${dotPath}" fill="${escapeSvgAttr(color)}"/></svg>`;
     return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   }, [color, dotPath, height, width]);
-
-  const accentDotFieldHref = React.useMemo(() => {
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}"><path d="${dotPath}" fill="${escapeSvgAttr(accentColor)}"/></svg>`;
-    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-  }, [accentColor, dotPath, height, width]);
 
   const renderSvgText = (fill: string, extraProps: React.SVGProps<SVGTextElement> = {}) => (
     <text
@@ -1727,30 +1714,10 @@ const HalftoneHeadlineSvg = React.memo(function HalftoneHeadlineSvg({
           <rect width={width} height={height} fill="black" />
           {renderSvgText("white")}
         </mask>
-        <clipPath id={centerClipId}>
-          <rect x={width * 0.37} y={0} width={width * 0.21} height={height} />
-        </clipPath>
       </defs>
-
-      {shadowLayers.map((layer) => {
-        const x = safeDepthLayers > 0 ? layer * safeDepthStepX : shadowOffsetX;
-        const y = safeDepthLayers > 0 ? layer * safeDepthStepY : shadowOffsetY;
-        return (
-          <g key={`halftone-depth-${layer}`} transform={`translate(${x.toFixed(1)} ${y.toFixed(1)})`}>
-            {renderSvgText(shadowColor, {
-              stroke: shadowColor,
-              strokeWidth: Math.max(0, strokeWidth),
-              paintOrder: "stroke fill",
-            })}
-          </g>
-        );
-      })}
 
       <g mask={`url(#${maskId})`}>
         <image href={dotFieldHref} x={0} y={0} width={width} height={height} preserveAspectRatio="none" />
-      </g>
-      <g mask={`url(#${maskId})`} clipPath={`url(#${centerClipId})`}>
-        <image href={accentDotFieldHref} x={0} y={0} width={width} height={height} preserveAspectRatio="none" />
       </g>
     </svg>
   );
@@ -4621,13 +4588,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	          opacity: Math.min(0.98, (0.38 + glitchNoise * 0.6) * (0.88 + glitchIntensity * 0.28)),
 	        };
 	      }
-	    );
+    );
     const rushMaxDotPx = Math.max(1.2, Math.min(14, Number(headRushDotSize) || 7.8));
-    const rushShadowPx = Math.max(0, Math.min(42, Number(headRushShadowOffset) || 0));
-    const rushDepthDistance = rushShadowPx * 1.15;
-    const rushDepthX = Math.cos(extrudeAngleRad) * rushDepthDistance;
-    const rushDepthY = Math.sin(extrudeAngleRad) * rushDepthDistance;
-    const rushDarkColor = headExtrudeColor || "#050812";
     const rushLayerBase: React.CSSProperties = {
       position: "absolute",
       inset: 0,
@@ -4962,10 +4924,10 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
               letterSpacingEm={Number.isFinite(textFx.tracking) ? textFx.tracking : -0.075}
               fontStyle={textFx.italic ? "italic" : "normal"}
               color={headRushDotColor || rushFillColor}
-              accentColor={headRushContrastColor || "#ffffff"}
-              shadowColor={rushDarkColor}
-              shadowOffsetX={rushDepthX}
-              shadowOffsetY={rushDepthY}
+              accentColor={headRushDotColor || rushFillColor}
+              shadowColor="transparent"
+              shadowOffsetX={0}
+              shadowOffsetY={0}
               depthLayers={0}
               depthStepX={0}
               depthStepY={0}
@@ -9674,11 +9636,18 @@ const markOnboarded = () => {
   }, 50);
 };
 
-const startTour = React.useCallback(() => {
+const startTour = React.useCallback((source = "button") => {
   try { localStorage.removeItem(ONBOARD_KEY); } catch {}
+  void trackClientEvent("tour_started", {
+    properties: {
+      source,
+      mobile: isMobileView,
+    },
+  });
+  setWorkflowHelpOpen(false);
   setShowOnboard(true);
   setTourStep(0);
-}, []);
+}, [isMobileView]);
 
 const openTourPanel = React.useCallback(
   (panel: string | null, tab: "design" | "assets", targetId: string) => {
@@ -11082,7 +11051,7 @@ function removeFromLogoLibrary(url: string) {
   const [headRushContrastColor, setHeadRushContrastColor] = useState<string>("#ffffff");
   const [headRushDotSize, setHeadRushDotSize] = useState<number>(7.8);
   const [headRushDotSpacing, setHeadRushDotSpacing] = useState<number>(8.5);
-  const [headRushShadowOffset, setHeadRushShadowOffset] = useState<number>(9);
+  const [headRushShadowOffset, setHeadRushShadowOffset] = useState<number>(0);
   const [headGlitchEnabled, setHeadGlitchEnabled] = useState<boolean>(false);
   const [headGlitchIntensity, setHeadGlitchIntensity] = useState<number>(0.55);
   const [headGlitchRgbSplit, setHeadGlitchRgbSplit] = useState<number>(18);
@@ -20982,7 +20951,7 @@ const applyTemplate = React.useCallback<
     setHeadRushContrastColor((merged as any).headRushContrastColor ?? "#ffffff");
     setHeadRushDotSize((merged as any).headRushDotSize ?? 7.8);
     setHeadRushDotSpacing((merged as any).headRushDotSpacing ?? 8.5);
-    setHeadRushShadowOffset((merged as any).headRushShadowOffset ?? 9);
+    setHeadRushShadowOffset((merged as any).headRushShadowOffset ?? 0);
     setHeadGlitchEnabled((merged as any).headGlitchEnabled ?? false);
     setHeadGlitchIntensity((merged as any).headGlitchIntensity ?? 0.55);
     setHeadGlitchRgbSplit((merged as any).headGlitchRgbSplit ?? 18);
@@ -23532,7 +23501,7 @@ const applyHeadlineRushHalftonePreset = React.useCallback(() => {
   setHeadRushContrastColor("#ffffff");
   setHeadRushDotSize(7.8);
   setHeadRushDotSpacing(9);
-  setHeadRushShadowOffset(9);
+  setHeadRushShadowOffset(0);
   setHeadSkew(0);
   setHeadRotate(0);
   setHeadSliceEnabled(false);
@@ -23723,71 +23692,58 @@ const applyHeadlineGlitchPreset = React.useCallback(() => {
 ]);
 
 const resetHeadlinePresetStyles = React.useCallback(() => {
-  const baseline = headlinePresetBaselineRef.current;
-  if (!baseline) {
-    const nextFx: TextFx = {
-      ...textFx,
-      gradient: false,
-      glow: 0,
-      shadowEnabled: false,
-    };
-    setTextFx(nextFx);
-    setSessionValue(format, "textFx", nextFx);
-    setHeadSkew(0);
-    setHeadSliceEnabled(false);
-    setHeadRushEnabled(false);
-    setHeadGlitchEnabled(false);
-    setHeadExtrudeDepth(0);
-    setHeadExtrudeDistance(0);
-    setMobileHeadlineStyleFocus(null);
-    return;
-  }
+  const nextFx: TextFx = {
+    ...DEFAULT_TEXT_FX,
+    texture: undefined,
+    gradient: false,
+    color: "#ffffff",
+    strokeWidth: 0,
+    strokeColor: "#000000",
+    shadow: 0,
+    glow: 0,
+    shadowEnabled: false,
+  };
 
-  setHeadlineFamily(baseline.headlineFamily);
-  setTextFx(baseline.textFx);
-  setSessionValue(format, "textFx", baseline.textFx);
-  setHeadSkew(baseline.headSkew);
-  setHeadRotate(baseline.headRotate);
-  setHeadSliceEnabled(baseline.headSliceEnabled);
-  setHeadSliceBandCount(baseline.headSliceBandCount);
-  setHeadSliceBandGap(baseline.headSliceBandGap);
-  setHeadSliceEchoDistance(baseline.headSliceEchoDistance);
-  setHeadSliceTopColor(baseline.headSliceTopColor);
-  setHeadSliceMidColor(baseline.headSliceMidColor);
-  setHeadSliceBottomColor(baseline.headSliceBottomColor);
-  setHeadSliceBlur(baseline.headSliceBlur);
-  setHeadSliceFade(baseline.headSliceFade);
-  setHeadSliceShadowStrength(baseline.headSliceShadowStrength);
-  setHeadRushEnabled(baseline.headRushEnabled);
-  setHeadRushDotColor(baseline.headRushDotColor);
-  setHeadRushContrastColor(baseline.headRushContrastColor);
-  setHeadRushDotSize(baseline.headRushDotSize);
-  setHeadRushDotSpacing(baseline.headRushDotSpacing);
-  setHeadRushShadowOffset(baseline.headRushShadowOffset);
-  setHeadGlitchEnabled(baseline.headGlitchEnabled);
-  setHeadGlitchIntensity(baseline.headGlitchIntensity);
-  setHeadGlitchRgbSplit(baseline.headGlitchRgbSplit);
-  setHeadGlitchNoise(baseline.headGlitchNoise);
-  setHeadGlitchGlow(baseline.headGlitchGlow);
-  setHeadGlitchRedColor(baseline.headGlitchRedColor);
-  setHeadGlitchMagentaColor(baseline.headGlitchMagentaColor);
-  setHeadGlitchBlueColor(baseline.headGlitchBlueColor);
-  setHeadGlitchYellowColor(baseline.headGlitchYellowColor);
-  setHeadShadow(baseline.headShadow);
-  setHeadShadowStrength(baseline.headShadowStrength);
-  setHeadExtrudeDepth(baseline.headExtrudeDepth);
-  setHeadExtrudeAngle(baseline.headExtrudeAngle);
-  setHeadExtrudeDistance(baseline.headExtrudeDistance);
-  setHeadExtrudeColor(baseline.headExtrudeColor);
-  setHeadAlign(baseline.headAlign);
-  setAlign(baseline.align);
-  setLineHeight(baseline.lineHeight);
+  setTextFx(nextFx);
+  setSessionValue(format, "textFx", nextFx);
+  setHeadSkew(0);
+  setHeadRotate(0);
+  setHeadShadow(false);
+  setHeadShadowStrength(0);
+  setHeadSliceEnabled(false);
+  setHeadSliceBandCount(7);
+  setHeadSliceBandGap(10);
+  setHeadSliceEchoDistance(135);
+  setHeadSliceTopColor("#e85b2e");
+  setHeadSliceMidColor("#ffe9b3");
+  setHeadSliceBottomColor("#55b6c7");
+  setHeadSliceBlur(6);
+  setHeadSliceFade(0.5);
+  setHeadSliceShadowStrength(0.35);
+  setHeadRushEnabled(false);
+  setHeadRushDotColor("#ff2a45");
+  setHeadRushContrastColor("#ffffff");
+  setHeadRushDotSize(7.8);
+  setHeadRushDotSpacing(9);
+  setHeadRushShadowOffset(0);
+  setHeadGlitchEnabled(false);
+  setHeadGlitchIntensity(0.55);
+  setHeadGlitchRgbSplit(18);
+  setHeadGlitchNoise(0.04);
+  setHeadGlitchGlow(0.42);
+  setHeadGlitchRedColor("#ff1d25");
+  setHeadGlitchMagentaColor("#00ff66");
+  setHeadGlitchBlueColor("#004bff");
+  setHeadGlitchYellowColor("#d8ff25");
+  setHeadExtrudeDepth(0);
+  setHeadExtrudeAngle(38);
+  setHeadExtrudeDistance(0);
+  setHeadExtrudeColor("#080d13");
   setMobileHeadlineStyleFocus(null);
   headlinePresetBaselineRef.current = null;
 }, [
   format,
   setSessionValue,
-  textFx,
 ]);
 
 const mobilePanelClass = React.useCallback(
@@ -23812,11 +23768,22 @@ const handleCreatorWorkflowPrimaryAction = React.useCallback(() => {
 
   openCreatorWorkflowStep(creatorFlowCurrentStep);
 }, [advanceCreatorWorkflow, creatorFlowCurrentStep, creatorWorkflowCurrent, openCreatorWorkflowStep, uiMode]);
-const openWorkflowHelp = React.useCallback(() => {
+const openWorkflowHelp = React.useCallback((source = "toolbar") => {
   flushSync(() => {
     setWorkflowHelpOpen(true);
   });
-}, []);
+  void trackClientEvent("help_opened", {
+    properties: {
+      source,
+      mobile: isMobileView,
+      ui_mode: uiMode,
+      selected_panel: selectedPanel,
+    },
+  });
+}, [isMobileView, selectedPanel, uiMode]);
+const startGuidedTourFromHelp = React.useCallback(() => {
+  startTour("help_panel");
+}, [startTour]);
 const switchWorkflowStudioMode = React.useCallback(
   (next: "creator" | "dj") => {
     const nextIsDj = next === "dj";
@@ -24908,11 +24875,11 @@ const mobileControlsTabs = (
       </button>
       <button
         type="button"
-        onClick={startTour}
+        onClick={() => openWorkflowHelp("mobile_action_bar")}
         className={`${mobileTabButtonClass} border-fuchsia-400/70 text-fuchsia-100 bg-fuchsia-500/20 hover:bg-fuchsia-500/30`}
-        title="Start Tour"
+        title="Open Help"
       >
-        Start Tour
+        Help
       </button>
       <Link
         href="/pricing"
@@ -26417,12 +26384,12 @@ return (
               </Link>
               <button
                 type="button"
-                onClick={startTour}
+                onClick={() => openWorkflowHelp("desktop_header")}
                 className="ml-1 text-[12px] px-2 py-[2px] border border-fuchsia-400/70 bg-fuchsia-500/20 hover:bg-fuchsia-500/30 hidden lg:inline-flex text-fuchsia-100 whitespace-nowrap shadow-[0_0_14px_rgba(217,70,239,0.65)]"
-                aria-label="Start Tour"
-                title="Start Tour"
+                aria-label="Open Help"
+                title="Open Help"
               >
-                Start Tour
+                Help
               </button>
               <button
                 type="button"
@@ -26528,16 +26495,16 @@ return (
               <button
                 type="button"
                 data-mobile-float-lock="true"
-                onClick={openWorkflowHelp}
+                onClick={() => openWorkflowHelp("toolbar")}
                 className={clsx(
                   "shrink-0 whitespace-nowrap border px-2 py-[3px] text-[11px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400",
                   workflowHelpOpen
                     ? "bg-indigo-600 border-indigo-300 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.12)_inset]"
                     : "border-neutral-700 bg-neutral-900/70 text-neutral-200 hover:bg-neutral-800"
                 )}
-                title="Open mode and workflow guide"
+                title="Open Help"
               >
-                Mode
+                Help
               </button>
 
               {!isMobileView && activeTextLayerKey && (
@@ -28131,6 +28098,9 @@ style={{ top: STICKY_TOP }}
         <Chip small active={headSliceEnabled} onClick={applyHeadlineRetroSlicePreset}>
           Echo
         </Chip>
+        <Chip small onClick={resetHeadlinePresetStyles}>
+          Reset
+        </Chip>
       </div>
 
       {/* TEXT INPUT */}
@@ -28327,7 +28297,7 @@ style={{ top: STICKY_TOP }}
       )}
 
       {headRushEnabled && (
-        <div className="grid grid-cols-3 gap-3 mt-2">
+        <div className="grid grid-cols-2 gap-3 mt-2">
           <Stepper
             label="Dot Size"
             value={headRushDotSize}
@@ -28345,14 +28315,6 @@ style={{ top: STICKY_TOP }}
             max={28}
             step={0.5}
             digits={1}
-          />
-          <Stepper
-            label="Offset"
-            value={headRushShadowOffset}
-            setValue={setHeadRushShadowOffset}
-            min={0}
-            max={42}
-            step={1}
           />
         </div>
       )}
@@ -28474,10 +28436,6 @@ style={{ top: STICKY_TOP }}
             <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
               <span className="uppercase tracking-[0.12em] opacity-80">Dots</span>
               <ColorDot value={headRushDotColor} onChange={setHeadRushDotColor} />
-            </div>
-            <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
-              <span className="uppercase tracking-[0.12em] opacity-80">Stripe</span>
-              <ColorDot value={headRushContrastColor} onChange={setHeadRushContrastColor} />
             </div>
           </>
         )}
@@ -30184,7 +30142,7 @@ style={{ top: STICKY_TOP }}
                 </div>
                 {!activeMobileHeadlineStyleFocus && (
                   <div className="mt-2 rounded border border-white/10 bg-neutral-950/80 px-3 py-2 text-[11px] leading-5 text-neutral-400">
-                    Choose a preset above. Reset returns the headline to its pre-preset state.
+                    Choose a preset above. Reset clears the headline back to a clean text style.
                   </div>
                 )}
               </div>
@@ -30281,8 +30239,6 @@ style={{ top: STICKY_TOP }}
                       />
                       <span className="text-[10px] uppercase tracking-wider text-neutral-400">Dots</span>
                       <ColorDot value={headRushDotColor} onChange={setHeadRushDotColor} />
-                      <span className="text-[10px] uppercase tracking-wider text-neutral-400">Stripe</span>
-                      <ColorDot value={headRushContrastColor} onChange={setHeadRushContrastColor} />
                     </div>
                   )}
                   <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
@@ -30308,18 +30264,6 @@ style={{ top: STICKY_TOP }}
                         precision={1}
                         onChange={setHeadRushDotSpacing}
                         rangeClassName="flex-1 accent-orange-400"
-                      />
-                    </div>
-                    <div>
-                      <InlineSliderInput
-                        label="Offset"
-                        value={headRushShadowOffset}
-                        min={0}
-                        max={42}
-                        step={1}
-                        precision={0}
-                        onChange={setHeadRushShadowOffset}
-                        rangeClassName="flex-1 accent-slate-400"
                       />
                     </div>
                     <div>
@@ -32423,319 +32367,198 @@ style={{ top: STICKY_TOP }}
 </div>
 {/* UI: PROJECT PORTABLE SAVE (END) */}
 
-{workflowHelpOpen && (!isDjStartupMode ? (
+{workflowHelpOpen && (
   <div className="fixed inset-0 z-[5100] flex items-center justify-center bg-black/88 p-4">
-    <div className="w-full max-w-4xl overflow-hidden border border-cyan-400/30 bg-[#0a0d12] shadow-[0_30px_80px_rgba(0,0,0,.6)]">
+    <div className="w-full max-w-3xl overflow-hidden border border-cyan-400/30 bg-[#0a0d12] shadow-[0_30px_80px_rgba(0,0,0,.6)]">
       <div className="border-b border-white/10 bg-neutral-950/90 px-5 py-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-sm uppercase tracking-[0.2em] text-cyan-300">Workflow</div>
-            <div className="mt-1 text-lg font-semibold text-white">Build a flyer with a clear sequence.</div>
+            <div className="text-sm uppercase tracking-[0.2em] text-cyan-300">Help</div>
+            <div className="mt-1 text-xl font-semibold text-white">Let us build your first flyer.</div>
             <div className="mt-2 text-sm text-neutral-400">
-              Guided step: <span className="text-white">{creatorWorkflowMeta[creatorFlowCurrentStep].label}</span>
+              You already picked a template. Start by editing what is on the canvas.
             </div>
           </div>
-          <div className={clsx("grid gap-2 sm:min-w-[260px]", isStarterPlan ? "grid-cols-1" : "grid-cols-2")}>
-            <button
-              type="button"
-              onClick={() => switchWorkflowStudioMode("creator")}
-              className="border border-white/15 bg-white/[0.08] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white"
-            >
-              Creator Studio
-            </button>
-            {!isStarterPlan && (
-              <button
-                type="button"
-                onClick={() => switchWorkflowStudioMode("dj")}
-                className="border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-200 transition hover:bg-neutral-900"
-              >
-                DJ / Artist
-              </button>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={() => setWorkflowHelpOpen(false)}
+            className="border border-white/10 bg-white/[0.06] px-3 py-2 text-xs text-white/75 hover:bg-white/[0.1]"
+          >
+            Close
+          </button>
         </div>
       </div>
 
-      <div className="grid max-h-[72vh] grid-cols-1 gap-2.5 overflow-y-auto p-4 md:grid-cols-2">
-        <div className="border border-white/10 bg-white/[0.03] p-3.5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-xs uppercase tracking-wide text-cyan-300">1. {creatorWorkflowMeta.scene.label}</div>
-              <div className="mt-1 text-sm text-neutral-300">{creatorWorkflowMeta.scene.summary}</div>
+      <div className="max-h-[72vh] overflow-y-auto p-4">
+        <div className="space-y-3">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-200">
+              Basic
             </div>
-            <div className="text-[10px] uppercase tracking-[0.14em] text-neutral-500">{creatorWorkflowMeta.scene.count}</div>
+            <div className="mt-1 text-sm text-neutral-400">
+              These are the first moves most flyers need.
+            </div>
           </div>
-          <div className="mt-3 grid grid-cols-1 gap-2">
-            <button
-              type="button"
-              onClick={() => openCreatorWorkflowTarget("template", "design", { uiMode: "design", targetId: "template-panel" })}
-              className="w-full border border-white/15 bg-white/[0.06] px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-white transition hover:bg-white/[0.09]"
-            >
-              Open Template Gallery
-            </button>
-            <button
-              type="button"
-              onClick={() => openCreatorWorkflowTarget("background", "assets")}
-              className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900"
-            >
-              Open Scene Builder
-            </button>
-            {!isStarterPlan && (
+
+          <div className="grid gap-2 md:grid-cols-2">
+            <div className="border border-white/10 bg-white/[0.03] p-3">
+              <div className="text-sm font-semibold text-white">1. Edit text objects</div>
+              <div className="mt-1 text-[12px] leading-5 text-neutral-400">
+                Click any text on the canvas to open that text editor. Change the words, size, color, spacing, and alignment there.
+              </div>
+              <button
+                type="button"
+                onClick={() => openCreatorWorkflowTarget("headline", "design")}
+                className="mt-3 border border-white/15 bg-white/[0.06] px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-white hover:bg-white/[0.1]"
+              >
+                Open Headline
+              </button>
+            </div>
+
+            <div className="border border-white/10 bg-white/[0.03] p-3">
+              <div className="text-sm font-semibold text-white">2. Add assets</div>
+              <div className="mt-1 text-[12px] leading-5 text-neutral-400">
+                Add icons, emojis, flares, overlays, or cutout graphics only where they help the event feel more finished.
+              </div>
+              <button
+                type="button"
+                onClick={() => openCreatorWorkflowTarget("icons", "assets")}
+                className="mt-3 border border-white/15 bg-white/[0.06] px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-white hover:bg-white/[0.1]"
+              >
+                Open Graphics
+              </button>
+            </div>
+
+            <div className="border border-white/10 bg-white/[0.03] p-3">
+              <div className="text-sm font-semibold text-white">3. Edit the background</div>
+              <div className="mt-1 text-[12px] leading-5 text-neutral-400">
+                Click the background or open Backgrounds to swap the scene, adjust placement, or make quick background edits.
+              </div>
+              <button
+                type="button"
+                onClick={() => openCreatorWorkflowTarget("background", "assets")}
+                className="mt-3 border border-white/15 bg-white/[0.06] px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-white hover:bg-white/[0.1]"
+              >
+                Open Background
+              </button>
+            </div>
+
+            <div className="border border-white/10 bg-white/[0.03] p-3">
+              <div className="text-sm font-semibold text-white">4. Upload your logo</div>
+              <div className="mt-1 text-[12px] leading-5 text-neutral-400">
+                Upload a transparent PNG logo for the cleanest result. JPG logos usually bring a box or background with them.
+              </div>
+              <button
+                type="button"
+                onClick={() => openCreatorWorkflowTarget("logo", "design", { targetId: "logo-panel" })}
+                className="mt-3 border border-white/15 bg-white/[0.06] px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-white hover:bg-white/[0.1]"
+              >
+                Open Logo
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5 space-y-3 border-t border-white/10 pt-4">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-fuchsia-200">
+              Advanced
+            </div>
+            <div className="mt-1 text-sm text-neutral-400">
+              Use these after the basic layout is working.
+            </div>
+          </div>
+
+          <div className="grid gap-2 md:grid-cols-2">
+            <div className="border border-white/10 bg-white/[0.03] p-3">
+              <div className="text-sm font-semibold text-white">Headline layer styles</div>
+              <div className="mt-1 text-[12px] leading-5 text-neutral-400">
+                Use these for Glitch, Halftone, and Echo headline looks. Pick one style, then tune the sliders and colors lightly.
+              </div>
+              <button
+                type="button"
+                onClick={() => openCreatorWorkflowTarget("headline", "design")}
+                className="mt-3 border border-white/15 bg-white/[0.06] px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-white hover:bg-white/[0.1]"
+              >
+                Open Styles
+              </button>
+            </div>
+
+            <div className="border border-white/10 bg-white/[0.03] p-3">
+              <div className="text-sm font-semibold text-white">Cinematic Headlines</div>
+              <div className="mt-1 text-[12px] leading-5 text-neutral-400">
+                Generate a rendered headline when you want a stronger poster-style title. Use it for the main headline, not every text layer.
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setWorkflowHelpOpen(false);
+                  setUiMode("design");
+                  setMobileControlsOpen(true);
+                  setMobileControlsTab("design");
+                  setSelectedPanel(null);
+                  setTimeout(() => {
+                    document.querySelector('[data-tour="cinematic"]')?.scrollIntoView({ behavior: "smooth", block: "center" });
+                  }, 150);
+                }}
+                className="mt-3 border border-white/15 bg-white/[0.06] px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-white hover:bg-white/[0.1]"
+              >
+                Open Cinematic
+              </button>
+            </div>
+
+            <div className="border border-white/10 bg-white/[0.03] p-3">
+              <div className="text-sm font-semibold text-white">Subject extraction</div>
+              <div className="mt-1 text-[12px] leading-5 text-neutral-400">
+                Use this to cut a person or object out of an image, place it on the flyer, then adjust scale, lighting, and position.
+              </div>
+              <button
+                type="button"
+                onClick={() => openCreatorWorkflowTarget("portrait", "assets")}
+                className="mt-3 border border-white/15 bg-white/[0.06] px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-white hover:bg-white/[0.1]"
+              >
+                Open Subjects
+              </button>
+            </div>
+
+            <div className="border border-white/10 bg-white/[0.03] p-3">
+              <div className="text-sm font-semibold text-white">AI Backgrounds</div>
+              <div className="mt-1 text-[12px] leading-5 text-neutral-400">
+                Generate a new scene when the template background is not enough. Keep prompts simple: venue type, lighting, crowd, and mood.
+              </div>
               <button
                 type="button"
                 onClick={() => openCreatorWorkflowTarget("ai_background", "assets", { targetId: "ai-background-panel" })}
-                className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900"
+                disabled={isStarterPlan}
+                title={isStarterPlan ? "AI Backgrounds unlock after login and plan selection." : undefined}
+                className="mt-3 border border-white/15 bg-white/[0.06] px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-white hover:bg-white/[0.1] disabled:cursor-not-allowed disabled:opacity-45"
               >
-                Open AI Scene
+                Open AI Backgrounds
               </button>
-            )}
-          </div>
-        </div>
-
-        <div className="border border-white/10 bg-white/[0.03] p-3.5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-xs uppercase tracking-wide text-cyan-300">2. {creatorWorkflowMeta.copy.label}</div>
-              <div className="mt-1 text-sm text-neutral-300">{creatorWorkflowMeta.copy.summary}</div>
             </div>
-            <div className="text-[10px] uppercase tracking-[0.14em] text-neutral-500">{creatorWorkflowMeta.copy.count}</div>
-          </div>
-          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <button
-              type="button"
-              onClick={() => openCreatorWorkflowTarget("headline", "design")}
-              className="w-full border border-white/15 bg-white/[0.06] px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-white transition hover:bg-white/[0.09]"
-            >
-              Headline
-            </button>
-            <button
-              type="button"
-              onClick={() => openCreatorWorkflowTarget("head2", "design")}
-              className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900"
-            >
-              Sub Headline
-            </button>
-            <button
-              type="button"
-              onClick={() => openCreatorWorkflowTarget("details", "design")}
-              className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900"
-            >
-              Details
-            </button>
-            <button
-              type="button"
-              onClick={() => openCreatorWorkflowTarget("venue", "design")}
-              className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900"
-            >
-              Venue
-            </button>
-            <button
-              type="button"
-              onClick={() => openCreatorWorkflowTarget("logo", "design", { targetId: "logo-panel" })}
-              className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900 sm:col-span-2"
-            >
-              Logo / 3D
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setUiMode("design");
-                setMobileControlsOpen(true);
-                setMobileControlsTab("design");
-                setSelectedPanel(null);
-                setTimeout(() => {
-                  document.querySelector('[data-tour="cinematic"]')?.scrollIntoView({ behavior: "smooth", block: "center" });
-                }, 150);
-              }}
-              className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900 sm:col-span-2"
-            >
-              Cinematic Text
-            </button>
           </div>
         </div>
 
-        <div className="border border-white/10 bg-white/[0.03] p-3.5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-xs uppercase tracking-wide text-cyan-300">3. {creatorWorkflowMeta.assets.label}</div>
-              <div className="mt-1 text-sm text-neutral-300">{creatorWorkflowMeta.assets.summary}</div>
-            </div>
-            <div className="text-[10px] uppercase tracking-[0.14em] text-neutral-500">{creatorWorkflowMeta.assets.count}</div>
-          </div>
-          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <button
-              type="button"
-              onClick={() => openCreatorWorkflowTarget("icons", "assets")}
-              className="w-full border border-white/15 bg-white/[0.06] px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-white transition hover:bg-white/[0.09]"
-            >
-              Open Graphics & FX
-            </button>
-            <button
-              type="button"
-              onClick={() => openCreatorWorkflowTarget("portrait", "assets")}
-              className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900"
-            >
-              Portraits
-            </button>
-            <button
-              type="button"
-              onClick={() => openCreatorWorkflowTarget("cinema", "assets")}
-              className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900"
-            >
-              Cinematic Overlays
-            </button>
-            {MAGIC_BLEND_ENABLED && !isStarterPlan && (
-              <button
-                type="button"
-                onClick={() => openCreatorWorkflowTarget("magic_blend", "assets", { targetId: "magic-blend-panel" })}
-                className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900 sm:col-span-2"
-              >
-                Portrait Blend
-              </button>
-            )}
-          </div>
+        <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-white/10 pt-4">
+          <button
+            type="button"
+            onClick={startGuidedTourFromHelp}
+            className="border border-fuchsia-300/70 bg-fuchsia-500/18 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-fuchsia-100 hover:bg-fuchsia-500/26"
+          >
+            Show Me Around
+          </button>
+          <button
+            type="button"
+            onClick={() => setWorkflowHelpOpen(false)}
+            className="border border-white/15 bg-white/[0.08] px-4 py-2 text-sm font-semibold text-white hover:bg-white/[0.12]"
+          >
+            Close
+          </button>
         </div>
-
-        <div className="border border-white/10 bg-white/[0.03] p-3.5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-xs uppercase tracking-wide text-cyan-300">4. {creatorWorkflowMeta.finish.label}</div>
-              <div className="mt-1 text-sm text-neutral-300">{creatorWorkflowMeta.finish.summary}</div>
-            </div>
-            <div className="text-[10px] uppercase tracking-[0.14em] text-neutral-500">{creatorWorkflowMeta.finish.count}</div>
-          </div>
-          <div className="mt-3 grid grid-cols-1 gap-2">
-            <button
-              type="button"
-              onClick={() => openCreatorWorkflowTarget("mastergrade", "design", { uiMode: "finish" })}
-              disabled={starterRenderLimitReached}
-              title={starterRenderLimitReached ? starterRenderLimitMessage : undefined}
-              className="w-full border border-white/15 bg-white/[0.06] px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-white transition hover:bg-white/[0.09] disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Open Finish Mode
-            </button>
-            <button
-              type="button"
-              onClick={() => openCreatorWorkflowTarget("mastergrade", "design", { uiMode: "finish" })}
-              disabled={starterRenderLimitReached}
-              title={starterRenderLimitReached ? starterRenderLimitMessage : undefined}
-              className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Open Master Color Grade
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setWorkflowHelpOpen(false);
-                setProjectHelpOpen(true);
-              }}
-              className="w-full border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-neutral-200 transition hover:bg-neutral-900"
-            >
-              Project Save Guide
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex justify-end border-t border-white/10 px-5 py-4">
-        <button
-          type="button"
-          onClick={() => setWorkflowHelpOpen(false)}
-          className="border border-white/15 bg-white/[0.08] px-4 py-2 text-sm font-semibold text-white hover:bg-white/[0.12]"
-        >
-          Close
-        </button>
       </div>
     </div>
   </div>
-) : (
-  <div className="fixed inset-0 z-[5100] bg-black/88 flex items-center justify-center p-4">
-    <div className="w-full max-w-3xl overflow-hidden border border-cyan-400/30 bg-[#0a0d12] shadow-[0_30px_80px_rgba(0,0,0,.6)]">
-      <div className="border-b border-white/10 bg-neutral-950/90 px-5 py-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <div className="text-sm uppercase tracking-[0.2em] text-cyan-300">Workflow</div>
-            <div className="mt-1 text-lg font-semibold text-white">Create a flyer in 10 minutes or less.</div>
-          </div>
-          <div className={clsx("grid gap-2 sm:min-w-[260px]", isStarterPlan ? "grid-cols-1" : "grid-cols-2")}>
-            <button
-              type="button"
-              onClick={() => switchWorkflowStudioMode("creator")}
-              className="border border-neutral-700 bg-neutral-900/60 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-200 transition hover:bg-neutral-900"
-            >
-              Creator Studio
-            </button>
-            {!isStarterPlan && (
-              <button
-                type="button"
-                onClick={() => switchWorkflowStudioMode("dj")}
-                className="border border-white/15 bg-white/[0.08] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white"
-              >
-                DJ / Artist
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-neutral-200 max-h-[70vh] overflow-y-auto">
-        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-          <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">Flow 1: Cinematic Text Quick Build</div>
-          <ol className="list-decimal pl-5 space-y-1 text-neutral-300">
-            <li>Open Template.</li>
-            <li>Open Cinematic Text and generate.</li>
-            <li>Change headline/details text.</li>
-            <li>Export.</li>
-          </ol>
-        </div>
-
-        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-          <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">Flow 2: AI Hero Poster</div>
-          <ol className="list-decimal pl-5 space-y-1 text-neutral-300">
-            <li>Open Template.</li>
-            <li>Generate a new background.</li>
-            <li>Add subject.</li>
-            <li>Place and light the subject on canvas, then finish the poster design.</li>
-            <li>Add text and graphics.</li>
-            <li>Export.</li>
-          </ol>
-        </div>
-
-        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-          <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">Flow 3: Fast Template Remix</div>
-          <ol className="list-decimal pl-5 space-y-1 text-neutral-300">
-            <li>Open Template.</li>
-            <li>Swap colors and fonts.</li>
-            <li>Update text/date/venue.</li>
-            <li>Add flare or icon accents.</li>
-            <li>Export.</li>
-          </ol>
-        </div>
-
-        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-          <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">Flow 4: Weekly Brand Drop</div>
-          <ol className="list-decimal pl-5 space-y-1 text-neutral-300">
-            <li>Open Template.</li>
-            <li>Apply My Brand in DJ Branding.</li>
-            <li>Generate or upload background.</li>
-            <li>Refresh copy for this event.</li>
-            <li>Save Design and Export.</li>
-          </ol>
-        </div>
-      </div>
-
-      <div className="px-5 py-4 border-t border-white/10 flex justify-end">
-        <button
-          type="button"
-          onClick={() => setWorkflowHelpOpen(false)}
-          className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-sm"
-        >
-          Close
-        </button>
-      </div>
-    </div>
-  </div>
-))}
+)}
 
 {projectHelpOpen && (
   <div className="fixed inset-0 z-[5100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">

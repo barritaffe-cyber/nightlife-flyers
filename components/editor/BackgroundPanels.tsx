@@ -6,6 +6,7 @@ import clsx from 'clsx';
 import {
   Collapsible,
   Chip,
+  InlineSliderInput,
   Stepper,
   editorEmptyStateBodyClass,
   editorEmptyStateClass,
@@ -28,6 +29,7 @@ import {
   editorUploadPreviewClass,
 } from './controls';
 import { removeBackgroundLocal } from '../../lib/removeBgLocal';
+import { EXTRACT_SUBJECT_CLEANUP } from '../../lib/cleanupCutoutUrl';
 
 type Props = {
   presetBackgrounds?: ReadonlyArray<{
@@ -250,7 +252,9 @@ function BackgroundPanels({
       ctx.clearRect(0, 0, cropW, cropH);
       ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
       const cropUrl = canvas.toDataURL('image/png');
-      const removed = await removeBackgroundLocal(cropUrl);
+      const removed = await removeBackgroundLocal(cropUrl, {
+        cleanup: EXTRACT_SUBJECT_CLEANUP,
+      });
       setExtractPreviewUrl(removed);
     } catch (err: any) {
       setExtractPreviewUrl(null);
@@ -714,19 +718,19 @@ function BackgroundPanels({
               <div className="space-y-3">
                 <div className={`${editorUploadHolderClass}`}>
                   <div className="text-[12px] font-medium text-white">Selection</div>
-                  <div className="flex items-center gap-2">
-                      <div className="min-w-[48px] text-[11px] font-medium text-neutral-300">
-                        Zoom
+                  <div className="flex items-end gap-2">
+                      <div className="min-w-0 flex-1">
+                        <InlineSliderInput
+                          label="Zoom"
+                          min={1}
+                          max={3}
+                          step={0.05}
+                          value={extractZoom}
+                          precision={2}
+                          onChange={setExtractZoom}
+                          rangeClassName="flex-1 accent-cyan-400"
+                        />
                       </div>
-                      <input
-                        type="range"
-                        min={1}
-                        max={3}
-                        step={0.05}
-                        value={extractZoom}
-                        onChange={(e) => setExtractZoom(Number(e.target.value))}
-                        className="w-full accent-cyan-400"
-                      />
                       <button
                         type="button"
                         className="min-h-[32px] shrink-0 border border-neutral-700 bg-transparent px-2 py-1 text-[10px] font-medium text-neutral-300 transition hover:bg-neutral-900/60"

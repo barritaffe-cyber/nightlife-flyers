@@ -45,9 +45,25 @@ export type AnalyticsEventInsert = {
   ipHash?: string | null;
 };
 
+export const IGNORED_ANALYTICS_EMAILS = [
+  "barritaffe@gmail.com",
+  "level47.store@gmail.com",
+] as const;
+
+const IGNORED_ANALYTICS_EMAIL_SET = new Set<string>(IGNORED_ANALYTICS_EMAILS);
+
 function normalizeText(value: unknown, max = 500) {
   const text = typeof value === "string" ? value.trim() : "";
   return text ? text.slice(0, max) : null;
+}
+
+function normalizeEmail(value: unknown) {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+export function isIgnoredAnalyticsEmail(value: unknown) {
+  const email = normalizeEmail(value);
+  return email ? IGNORED_ANALYTICS_EMAIL_SET.has(email) : false;
 }
 
 function normalizeJsonRecord(value: unknown) {
@@ -99,6 +115,8 @@ export async function insertAnalyticsEvent(
   admin: SupabaseClient,
   input: AnalyticsEventInsert
 ) {
+  if (isIgnoredAnalyticsEmail(input.email)) return;
+
   const { error } = await admin.from("analytics_events").insert({
     event_name: normalizeText(input.eventName, 80),
     path: normalizeText(input.path, 300),

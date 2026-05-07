@@ -8,9 +8,6 @@ import { refundReservedUnits, reserveGenerationUnits } from "../../../lib/access
 
 export const runtime = "nodejs";
 
-// Replicate model endpoint
-const FLUX_ENDPOINT =
-  "https://api.replicate.com/v1/models/black-forest-labs/flux-2-pro/predictions";
 const REPLICATE_INPAINT_ENDPOINT =
   process.env.REPLICATE_INPAINT_ENDPOINT ||
   "https://api.replicate.com/v1/models/black-forest-labs/flux-fill/predictions";
@@ -18,140 +15,14 @@ const REPLICATE_INPAINT_VERSION = process.env.REPLICATE_INPAINT_VERSION;
 const REPLICATE_FILES_ENDPOINT = "https://api.replicate.com/v1/files";
 
 const AI_API_KEY = process.env.REPLICATE_API_TOKEN;
-const FAL_API_KEY = process.env.FAL_KEY || process.env.FAL_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const STABILITY_API_KEY = process.env.STABILITY_API_KEY;
-const STABILITY_API_URL =
-  process.env.STABILITY_API_URL ||
-  "https://api.stability.ai/v2beta/stable-image/generate/sd3";
 const REMOVE_BG_API_URL =
   (process.env.REMOVE_BG_API_URL || "https://api.remove.bg/v1.0/removebg").trim();
-const FAL_FLUX2_EDIT_ENDPOINT =
-  process.env.FAL_FLUX2_EDIT_ENDPOINT || "https://fal.run/fal-ai/flux-2-pro/edit";
-const FAL_ENABLE_SAFETY_CHECKER =
-  String(process.env.FAL_ENABLE_SAFETY_CHECKER || "false").toLowerCase() === "true";
-const FAL_SAFETY_TOLERANCE = Math.max(
-  1,
-  Math.min(6, Number.parseInt(String(process.env.FAL_SAFETY_TOLERANCE || "5"), 10) || 5)
-);
-
-// -----------------------------
-// MASTER INTERNAL PROMPT (BASE)
-// -----------------------------
-const BASE_PROMPT = `Cinematic photo composite. Integrate the subject into the background environment so it looks shot in-camera.
-
-Core matching requirements (must match the Background Reference):
-- light direction
-- color temperature
-- contrast level
-- shadow softness
-
-Blend requirements (critical):
-- match the background lighting direction, color temperature, and contrast
-- relight the entire subject using the Background Reference lighting source (face, hair, skin, clothing, hands, legs, shoes)
-- keep lighting physically consistent across the whole body (same key/fill/rim logic, falloff, and shadow softness)
-- add realistic contact shadows at feet/base and soft ambient occlusion around edges
-- add believable cast shadows from the subject onto nearby ground/surfaces when those shadows should exist
-- add subtle edge color bleed and light wrap from the environment
-- match lens and depth-of-field; soften cutout edges slightly
-- preserve subject identity, face, hairstyle, clothing, and pose from the Subject Identity and Placement references
-- do not change facial features or body proportions; keep the same facial likeness
-- preserve exact face geometry (jawline, cheekbone width, nose shape, eye spacing, lip shape, ear placement)
-- preserve exact body geometry (shoulder width, torso length, waist-hip ratio, limb lengths, hand size)
-- no body reshaping, no slimming/bulking, no limb stretching, no head-size changes
-
-Grounding:
-- align subject scale and perspective to the background
-- keep the subject on a believable ground plane (no floating)
-
-Framing lock (critical):
-- treat the Placement Reference as a hard placement map for the subject
-- keep subject position, scale, and orientation matched to the Placement Reference
-- do not recenter, reframe, zoom out, or shift the subject to another area
-- do not alter pose, limb placement, or body angle
-- if any instruction conflicts, preserve the Placement Reference framing first
-
-Background integrity:
-- preserve the background scene from the Background Reference (no new objects, no major layout changes)
-- keep background people/subjects, but push them back in depth and contrast
-
-Lighting interaction:
-- only use light sources that already exist in the Background Reference
-- if there are no beams, do not add beams
-- atmosphere allowed when requested by the style; avoid heavy fog
-- subject should block light beams and receive color spill from the scene
-- subtle environmental color spill from surroundings onto skin and clothing
-- match scene-specific highlight/shadow placement on every region of the subject, not just face/upper body
-- no studio lighting, no beauty lighting, no flat fill
-- if the scene is dark and moody, keep the subject darker and cinematic (no bright/exposed subject)
-- edge light and rim light are allowed only where matching practical light sources exist in the Background Reference
-
-Occlusion integrity (critical):
-- subject body and clothing must remain fully opaque (no translucency through torso, arms, legs, or face)
-- no table/floor/wall texture bleeding through the subject
-- no double-exposure or ghosted overlay on the subject
-- if foreground objects in the Background Reference occlude the subject, occlusion edges must be clean and physically correct
-- do not let floor/desk/booth lines pass through visible subject regions
-
-Look:
-- strong contrast with clean blacks/highlights
-- natural skin tones influenced by scene lighting
-- realistic exposure and dynamic range across face, skin, clothing, and hair
-- no halos, no glow outlines, no sticker/cutout look
-- no text, no logos, no watermarks, no extra people
-- no face distortion, identity change, or altered facial features
-- no anatomy drift, no altered body ratios, no stylized proportions
-- no overexposed skin, artificial glow, flat lighting, or studio lighting
-
-Safety:
-- fully clothed, family-friendly, non-suggestive attire`;
 
 // -----------------------------
 // STYLE SUFFIXES (APPEND ONLY)
 // -----------------------------
 type MagicBlendStyle = "club" | "tropical" | "jazz_bar" | "outdoor_summer";
-
-const STYLE_SUFFIX: Record<MagicBlendStyle, string> = {
-  club: `Club style bias:
-- preserve the exact venue from the Background Reference; no environment replacement
-- favor moody nightlife contrast and practical-light realism
-- emphasize believable neon/practical spill only where those sources are present
-- keep distant background slightly softer than subject for depth
-- optional subtle haze only around existing fixtures and beams
-
-Avoid:
-- daylight look, flat studio fill, fake CGI glow
-- inventing new lights, structures, or crowd subjects`,
-  tropical: `Environment styling:
-- preserve the exact venue from the Background Reference; no environment replacement
-- warm evening nightlife tone with realistic practical spill and soft highlights
-- subtle atmosphere only if already supported by the scene
-- keep natural skin tones and physically plausible shadow falloff
-
-Avoid:
-- nightclub lasers or stage strobes
-- heavy magenta club lighting or EDM concert beams`,
-  jazz_bar: `Environment styling (intimate jazz bar):
-- preserve the exact venue from the Background Reference; no environment replacement
-- intimate low-key mood with practical amber spill where lamps/bars exist
-- keep realistic shadow gradients and avoid over-bright skin lift
-- maintain premium editorial texture, not glossy studio polish
-
-Avoid:
-- nightclub strobe lighting
-- neon rave colors
-- flat lighting`,
-  outdoor_summer: `Environment styling:
-- preserve the exact environment from the Background Reference; no environment replacement
-- bright natural outdoor light behavior with realistic sun direction and cast shadows
-- breathable summer atmosphere with controlled saturation and skin realism
-- maintain scene depth and horizon/perspective consistency
-
-Avoid:
-- nightclub lasers, concert strobes, or heavy club lighting
-- dark indoor jazz bar interiors`,
-
-};
 
 // -----------------------------
 // image helpers
@@ -388,6 +259,7 @@ async function removeSubjectBackground(buf: Buffer): Promise<Buffer> {
   return Buffer.from(await upstream.arrayBuffer());
 }
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
 async function buildReplacementCompositeAssets(opts: {
   bgCanvas: Buffer;
   subjectBuf: Buffer;
@@ -536,97 +408,6 @@ async function buildReplacementCompositeAssets(opts: {
   return { composite, localMask };
 }
 
-async function buildIdentityReferenceBoard(subjectBuf: Buffer) {
-  const normalized = await sharp(subjectBuf)
-    .ensureAlpha()
-    .resize(1536, 1536, { fit: "inside", withoutEnlargement: true })
-    .png()
-    .toBuffer();
-  const meta = await sharp(normalized).metadata();
-  const w = meta.width || 1536;
-  const h = meta.height || 1536;
-  const bounds = await detectOpaqueBounds(normalized);
-
-  if (!bounds) {
-    return sharp(normalized)
-      .resize(1024, 1024, {
-        fit: "contain",
-        background: { r: 0, g: 0, b: 0, alpha: 0 },
-      })
-      .png()
-      .toBuffer();
-  }
-
-  const padX = Math.max(8, Math.round(bounds.width * 0.08));
-  const padY = Math.max(8, Math.round(bounds.height * 0.06));
-  const bodyLeft = clampInt(bounds.left - padX, 0, w - 1);
-  const bodyTop = clampInt(bounds.top - padY, 0, h - 1);
-  const bodyWidth = clampInt(
-    bounds.width + padX * 2,
-    1,
-    w - bodyLeft
-  );
-  const bodyHeight = clampInt(
-    bounds.height + padY * 2,
-    1,
-    h - bodyTop
-  );
-
-  const facePadX = Math.max(8, Math.round(bounds.width * 0.06));
-  const faceLeft = clampInt(bounds.left - facePadX, 0, w - 1);
-  const faceTop = clampInt(bounds.top, 0, h - 1);
-  const faceWidth = clampInt(
-    bounds.width + facePadX * 2,
-    1,
-    w - faceLeft
-  );
-  const faceHeight = clampInt(Math.round(bounds.height * 0.58), 1, h - faceTop);
-
-  const bodyTile = await sharp(normalized)
-    .extract({
-      left: bodyLeft,
-      top: bodyTop,
-      width: bodyWidth,
-      height: bodyHeight,
-    })
-    .resize(576, 1024, {
-      fit: "contain",
-      background: { r: 0, g: 0, b: 0, alpha: 0 },
-    })
-    .png()
-    .toBuffer();
-
-  const faceTile = await sharp(normalized)
-    .extract({
-      left: faceLeft,
-      top: faceTop,
-      width: faceWidth,
-      height: faceHeight,
-    })
-    .resize(448, 1024, {
-      fit: "cover",
-      position: "north",
-      background: { r: 0, g: 0, b: 0, alpha: 0 },
-    })
-    .png()
-    .toBuffer();
-
-  return sharp({
-    create: {
-      width: 1024,
-      height: 1024,
-      channels: 4,
-      background: { r: 0, g: 0, b: 0, alpha: 0 },
-    },
-  })
-    .composite([
-      { input: bodyTile, left: 0, top: 0 },
-      { input: faceTile, left: 576, top: 0 },
-    ])
-    .png()
-    .toBuffer();
-}
-
 type SceneLightingProfile = {
   keyDirection: string;
   verticalBias: string;
@@ -662,6 +443,675 @@ function rgbToHex(r: number, g: number, b: number) {
 
 function luminance(r: number, g: number, b: number) {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+type RgbColor = { r: number; g: number; b: number };
+
+function clampByte(value: number) {
+  return Math.max(0, Math.min(255, Math.round(value)));
+}
+
+function mixColor(a: RgbColor, b: RgbColor, amount: number): RgbColor {
+  const t = Math.max(0, Math.min(1, amount));
+  return {
+    r: clampByte(a.r * (1 - t) + b.r * t),
+    g: clampByte(a.g * (1 - t) + b.g * t),
+    b: clampByte(a.b * (1 - t) + b.b * t),
+  };
+}
+
+function luminanceOfColor(color: RgbColor) {
+  return luminance(color.r, color.g, color.b);
+}
+
+function scaleAlpha(raw: Buffer, opacity: number) {
+  const out = Buffer.alloc(raw.length);
+  const factor = Math.max(0, Math.min(1, opacity));
+  for (let i = 0; i < raw.length; i += 1) {
+    out[i] = Math.max(0, Math.min(255, Math.round(raw[i] * factor)));
+  }
+  return out;
+}
+
+async function detectMaskBounds(buf: Buffer, threshold = 10): Promise<AlphaBounds | null> {
+  const raw = await sharp(buf)
+    .grayscale()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const { data, info } = raw;
+  const w = info.width;
+  const h = info.height;
+  let minX = w;
+  let minY = h;
+  let maxX = -1;
+  let maxY = -1;
+
+  for (let y = 0; y < h; y += 1) {
+    const row = y * w;
+    for (let x = 0; x < w; x += 1) {
+      if (data[row + x] > threshold) {
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  if (maxX < minX || maxY < minY) return null;
+  return {
+    left: minX,
+    top: minY,
+    width: maxX - minX + 1,
+    height: maxY - minY + 1,
+  };
+}
+
+async function computeSceneLuminance(buf: Buffer) {
+  const raw = await sharp(buf)
+    .resize(48, 48, { fit: "fill" })
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const { data, info } = raw;
+  let total = 0;
+  const pixels = info.width * info.height;
+  for (let i = 0; i < pixels; i += 1) {
+    const o = i * info.channels;
+    total += luminance(data[o], data[o + 1], data[o + 2]);
+  }
+  return pixels ? total / pixels : 96;
+}
+
+async function computeMaskedLuminance(buf: Buffer, maskBuf: Buffer) {
+  const [imageRaw, maskRaw] = await Promise.all([
+    sharp(buf).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
+    sharp(maskBuf).extractChannel(0).raw().toBuffer({ resolveWithObject: true }),
+  ]);
+
+  const { data, info } = imageRaw;
+  let total = 0;
+  let weight = 0;
+  const pixels = info.width * info.height;
+  for (let i = 0; i < pixels; i += 1) {
+    const mask = maskRaw.data[i] / 255;
+    if (mask <= 0.02) continue;
+    const o = i * info.channels;
+    const alpha = info.channels > 3 ? data[o + 3] / 255 : 1;
+    const w = mask * alpha;
+    if (w <= 0.01) continue;
+    total += luminance(data[o], data[o + 1], data[o + 2]) * w;
+    weight += w;
+  }
+  return weight > 0 ? total / weight : 96;
+}
+
+async function trimSubjectToAlpha(buf: Buffer) {
+  const normalized = await sharp(buf).ensureAlpha().png().toBuffer();
+  const alphaBuf = await sharp(normalized).extractChannel("alpha").png().toBuffer();
+  const bounds = await detectOpaqueBounds(normalized, 8);
+  const meta = await sharp(normalized).metadata();
+  if (!meta.width || !meta.height) {
+    throw new Error("Invalid subject image.");
+  }
+  if (!bounds) {
+    return {
+      subjectBuf: normalized,
+      maskBuf: alphaBuf,
+      bounds: { left: 0, top: 0, width: meta.width, height: meta.height },
+    };
+  }
+
+  const extractArea = {
+    left: bounds.left,
+    top: bounds.top,
+    width: bounds.width,
+    height: bounds.height,
+  };
+
+  const [subjectBuf, maskBuf] = await Promise.all([
+    sharp(normalized).extract(extractArea).png().toBuffer(),
+    sharp(alphaBuf).extract(extractArea).png().toBuffer(),
+  ]);
+
+  return { subjectBuf, maskBuf, bounds };
+}
+
+async function buildSubjectIdentityReference(buf: Buffer) {
+  const trimmed = await trimSubjectToAlpha(buf);
+  const subjectBoard = await sharp({
+    create: {
+      width: 1024,
+      height: 1536,
+      channels: 3,
+      background: { r: 238, g: 233, b: 226 },
+    },
+  })
+    .composite([
+      {
+        input: await sharp(trimmed.subjectBuf)
+          .resize(860, 1320, {
+            fit: "contain",
+            withoutEnlargement: false,
+            background: { r: 0, g: 0, b: 0, alpha: 0 },
+          })
+          .png()
+          .toBuffer(),
+        left: 82,
+        top: 118,
+      },
+    ])
+    .png()
+    .toBuffer();
+
+  return sharp(subjectBoard)
+    .modulate({ brightness: 1.02, saturation: 1.02 })
+    .png()
+    .toBuffer();
+}
+
+async function renderPlacedSubjectFromSource(
+  sourceSubjectBuf: Buffer,
+  placementMaskBuf: Buffer,
+  canvasWidth: number,
+  canvasHeight: number
+) {
+  const placementBounds = await detectMaskBounds(placementMaskBuf, 12);
+  if (!placementBounds) throw new Error("Could not determine subject placement.");
+
+  const trimmed = await trimSubjectToAlpha(sourceSubjectBuf);
+  const [resizedSubjectBuf, resizedMaskBuf] = await Promise.all([
+    sharp(trimmed.subjectBuf)
+      .resize(placementBounds.width, placementBounds.height, { fit: "fill" })
+      .png()
+      .toBuffer(),
+    sharp(trimmed.maskBuf)
+      .resize(placementBounds.width, placementBounds.height, { fit: "fill" })
+      .png()
+      .toBuffer(),
+  ]);
+
+  const placedSubjectBuf = await sharp({
+    create: {
+      width: canvasWidth,
+      height: canvasHeight,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    },
+  })
+    .composite([{ input: resizedSubjectBuf, left: placementBounds.left, top: placementBounds.top }])
+    .png()
+    .toBuffer();
+
+  const placedMaskBuf = await sharp({
+    create: {
+      width: canvasWidth,
+      height: canvasHeight,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 1 },
+    },
+  })
+    .composite([{ input: resizedMaskBuf, left: placementBounds.left, top: placementBounds.top }])
+    .flatten({ background: { r: 0, g: 0, b: 0 } })
+    .grayscale()
+    .png()
+    .toBuffer();
+
+  return {
+    placedSubjectBuf,
+    placedMaskBuf,
+    placementBounds,
+  };
+}
+
+async function detectSceneLighting(
+  bgBuf: Buffer,
+  maskBuf: Buffer
+): Promise<{ lightSide: "left" | "right"; highlightColor: RgbColor; sideContrast: number }> {
+  const bounds = await detectMaskBounds(maskBuf, 12);
+  if (!bounds) {
+    return {
+      lightSide: "left",
+      highlightColor: { r: 244, g: 218, b: 188 },
+      sideContrast: 32,
+    };
+  }
+
+  const raw = await sharp(bgBuf).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const { data, info } = raw;
+  const stripW = Math.max(16, Math.round(bounds.width * 0.18));
+  const leftStart = Math.max(0, bounds.left - stripW);
+  const leftEnd = Math.max(leftStart + 1, bounds.left);
+  const rightStart = Math.min(info.width - 1, bounds.left + bounds.width);
+  const rightEnd = Math.min(info.width, rightStart + stripW);
+  const top = Math.max(0, bounds.top + Math.round(bounds.height * 0.06));
+  const bottom = Math.min(info.height, bounds.top + Math.round(bounds.height * 0.9));
+  const topBand = Math.max(14, Math.round(bounds.height * 0.18));
+  const topStart = Math.max(0, bounds.top - topBand);
+  const topEnd = Math.max(topStart + 1, bounds.top);
+
+  const sampleRegion = (x0: number, x1: number, y0: number, y1: number) => {
+    let totalR = 0;
+    let totalG = 0;
+    let totalB = 0;
+    let totalL = 0;
+    let count = 0;
+    for (let y = y0; y < y1; y += 1) {
+      for (let x = x0; x < x1; x += 1) {
+        const o = (y * info.width + x) * info.channels;
+        const r = data[o];
+        const g = data[o + 1];
+        const b = data[o + 2];
+        totalR += r;
+        totalG += g;
+        totalB += b;
+        totalL += luminance(r, g, b);
+        count += 1;
+      }
+    }
+    if (!count) {
+      return { color: { r: 224, g: 200, b: 178 }, luminance: 128 };
+    }
+    return {
+      color: {
+        r: clampByte(totalR / count),
+        g: clampByte(totalG / count),
+        b: clampByte(totalB / count),
+      },
+      luminance: totalL / count,
+    };
+  };
+
+  const leftSample = sampleRegion(leftStart, leftEnd, top, bottom);
+  const rightSample = sampleRegion(rightStart, rightEnd, top, bottom);
+  const topSample = sampleRegion(bounds.left, bounds.left + bounds.width, topStart, topEnd);
+  const lightSide = leftSample.luminance >= rightSample.luminance ? "left" : "right";
+  const sideColor = lightSide === "left" ? leftSample.color : rightSample.color;
+  const sideContrast = Math.abs(leftSample.luminance - rightSample.luminance);
+  const liftTowardWhite = sideContrast > 26 ? 0.62 : sideContrast > 14 ? 0.52 : 0.44;
+  const liftedSideColor = mixColor(sideColor, { r: 255, g: 248, b: 238 }, liftTowardWhite);
+  const topLiftedColor = mixColor(topSample.color, { r: 255, g: 246, b: 236 }, 0.42);
+  const highlightColor = mixColor(liftedSideColor, topLiftedColor, 0.48);
+
+  return { lightSide, highlightColor, sideContrast };
+}
+
+async function buildDirectionalSubjectMasks(maskBuf: Buffer, lightSide: "left" | "right") {
+  const normalized = await sharp(maskBuf).grayscale().png().toBuffer();
+  const meta = await sharp(normalized).metadata();
+  if (!meta.width || !meta.height) {
+    throw new Error("Invalid placement mask.");
+  }
+
+  const coreRaw = await sharp(normalized).threshold(12).raw().toBuffer({ resolveWithObject: true });
+  const highlightGradientSvg = Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${meta.width}" height="${meta.height}" viewBox="0 0 ${meta.width} ${meta.height}">
+      <defs>
+        <linearGradient id="hx" x1="${lightSide === "left" ? "0%" : "100%"}" y1="0%" x2="${lightSide === "left" ? "100%" : "0%"}" y2="0%">
+          <stop offset="0%" stop-color="white" stop-opacity="1" />
+          <stop offset="52%" stop-color="white" stop-opacity="0.56" />
+          <stop offset="100%" stop-color="white" stop-opacity="0.06" />
+        </linearGradient>
+        <linearGradient id="hy" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="white" stop-opacity="1" />
+          <stop offset="68%" stop-color="white" stop-opacity="0.46" />
+          <stop offset="100%" stop-color="white" stop-opacity="0.08" />
+        </linearGradient>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#hx)" />
+      <rect width="100%" height="100%" fill="url(#hy)" />
+    </svg>`
+  );
+  const shadowGradientSvg = Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${meta.width}" height="${meta.height}" viewBox="0 0 ${meta.width} ${meta.height}">
+      <defs>
+        <linearGradient id="sx" x1="${lightSide === "left" ? "100%" : "0%"}" y1="0%" x2="${lightSide === "left" ? "0%" : "100%"}" y2="0%">
+          <stop offset="0%" stop-color="white" stop-opacity="1" />
+          <stop offset="66%" stop-color="white" stop-opacity="0.4" />
+          <stop offset="100%" stop-color="white" stop-opacity="0.08" />
+        </linearGradient>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#sx)" />
+    </svg>`
+  );
+
+  const toGrayRaw = async (svg: Buffer) =>
+    sharp({
+      create: {
+        width: meta.width,
+        height: meta.height,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 1 },
+      },
+    })
+      .composite([{ input: svg }])
+      .flatten({ background: { r: 0, g: 0, b: 0 } })
+      .grayscale()
+      .raw()
+      .toBuffer();
+
+  const highlightRaw = await toGrayRaw(highlightGradientSvg);
+  const shadowRaw = await toGrayRaw(shadowGradientSvg);
+  const highlightMaskRaw = Buffer.alloc(coreRaw.data.length);
+  const shadowMaskRaw = Buffer.alloc(coreRaw.data.length);
+
+  for (let i = 0; i < coreRaw.data.length; i += 1) {
+    const core = coreRaw.data[i] / 255;
+    const hi = highlightRaw[i] / 255;
+    const sh = shadowRaw[i] / 255;
+    highlightMaskRaw[i] = Math.round(255 * core * hi);
+    shadowMaskRaw[i] = Math.round(255 * core * sh);
+  }
+
+  const toMaskPng = (rawBuf: Buffer) =>
+    sharp(rawBuf, {
+      raw: { width: meta.width, height: meta.height, channels: 1 },
+    })
+      .blur(4.4)
+      .png()
+      .toBuffer();
+
+  return {
+    subjectHighlightMask: await toMaskPng(highlightMaskRaw),
+    subjectShadowMask: await toMaskPng(shadowMaskRaw),
+  };
+}
+
+async function buildIntegrationMasks(maskBuf: Buffer) {
+  const normalized = await sharp(maskBuf).grayscale().png().toBuffer();
+  const meta = await sharp(normalized).metadata();
+  if (!meta.width || !meta.height) {
+    throw new Error("Invalid placement mask.");
+  }
+
+  const coreRaw = await sharp(normalized).threshold(12).raw().toBuffer({ resolveWithObject: true });
+  const outerRaw = await sharp(normalized).blur(4.5).threshold(6).raw().toBuffer({ resolveWithObject: true });
+  const innerRaw = await sharp(normalized).blur(1.8).threshold(200).raw().toBuffer({ resolveWithObject: true });
+
+  const ring = Buffer.alloc(coreRaw.info.width * coreRaw.info.height);
+  const innerBand = Buffer.alloc(coreRaw.info.width * coreRaw.info.height);
+  for (let i = 0; i < ring.length; i += 1) {
+    const coreOn = coreRaw.data[i] > 12;
+    const outerOn = outerRaw.data[i] > 10;
+    const innerOn = innerRaw.data[i] > 180;
+    ring[i] = outerOn && !coreOn ? 255 : 0;
+    innerBand[i] = coreOn && !innerOn ? 255 : 0;
+  }
+
+  const bounds = await detectMaskBounds(normalized, 12);
+  const shadow = Buffer.alloc(ring.length);
+  if (bounds) {
+    const cx = bounds.left + bounds.width / 2;
+    const cy = Math.min(meta.height - 1, bounds.top + bounds.height + bounds.height * 0.06);
+    const rx = Math.max(16, bounds.width * 0.26);
+    const ry = Math.max(8, bounds.height * 0.055);
+    const shadowSvg = Buffer.from(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${meta.width}" height="${meta.height}" viewBox="0 0 ${meta.width} ${meta.height}">
+        <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="white" />
+      </svg>`
+    );
+    const shadowRaw = await sharp({
+      create: {
+        width: meta.width,
+        height: meta.height,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 1 },
+      },
+    })
+      .composite([{ input: shadowSvg }])
+      .flatten({ background: { r: 0, g: 0, b: 0 } })
+      .grayscale()
+      .blur(14)
+      .raw()
+      .toBuffer();
+
+    for (let i = 0; i < shadow.length; i += 1) {
+      const coreOn = coreRaw.data[i] > 12;
+      shadow[i] = coreOn ? 0 : shadowRaw[i];
+    }
+  }
+
+  const ringMask = await sharp(ring, {
+    raw: { width: meta.width, height: meta.height, channels: 1 },
+  })
+    .blur(0.35)
+    .png()
+    .toBuffer();
+  const shadowMask = await sharp(shadow, {
+    raw: { width: meta.width, height: meta.height, channels: 1 },
+  }).png().toBuffer();
+  const innerSpillMask = await sharp(innerBand, {
+    raw: { width: meta.width, height: meta.height, channels: 1 },
+  })
+    .blur(0.6)
+    .png()
+    .toBuffer();
+
+  return { ringMask, shadowMask, innerSpillMask };
+}
+
+async function buildAlphaOverlay(rgbBuf: Buffer, maskBuf: Buffer, opacity: number) {
+  const rgb = await sharp(rgbBuf).removeAlpha().png().toBuffer();
+  const alphaRaw = await sharp(maskBuf).extractChannel(0).raw().toBuffer({ resolveWithObject: true });
+  const scaledAlpha = scaleAlpha(alphaRaw.data, opacity);
+  return sharp(rgb)
+    .joinChannel(
+      await sharp(scaledAlpha, {
+        raw: { width: alphaRaw.info.width, height: alphaRaw.info.height, channels: 1 },
+      }).png().toBuffer()
+    )
+    .png()
+    .toBuffer();
+}
+
+async function buildBlackOverlay(width: number, height: number, maskBuf: Buffer, opacity: number) {
+  const alphaRaw = await sharp(maskBuf).extractChannel(0).raw().toBuffer({ resolveWithObject: true });
+  const scaledAlpha = scaleAlpha(alphaRaw.data, opacity);
+  return sharp({
+    create: {
+      width,
+      height,
+      channels: 3,
+      background: { r: 0, g: 0, b: 0 },
+    },
+  })
+    .joinChannel(
+      await sharp(scaledAlpha, {
+        raw: { width: alphaRaw.info.width, height: alphaRaw.info.height, channels: 1 },
+      }).png().toBuffer()
+    )
+    .png()
+    .toBuffer();
+}
+
+async function buildColorOverlay(
+  width: number,
+  height: number,
+  maskBuf: Buffer,
+  opacity: number,
+  color: RgbColor
+) {
+  const alphaRaw = await sharp(maskBuf).extractChannel(0).raw().toBuffer({ resolveWithObject: true });
+  const scaledAlpha = scaleAlpha(alphaRaw.data, opacity);
+  return sharp({
+    create: {
+      width,
+      height,
+      channels: 3,
+      background: color,
+    },
+  })
+    .joinChannel(
+      await sharp(scaledAlpha, {
+        raw: { width: alphaRaw.info.width, height: alphaRaw.info.height, channels: 1 },
+      }).png().toBuffer()
+    )
+    .png()
+    .toBuffer();
+}
+
+async function buildUnionMask(buffers: Buffer[], blur = 1.8): Promise<Buffer> {
+  if (!buffers.length) {
+    throw new Error("No masks provided.");
+  }
+
+  const raws = await Promise.all(
+    buffers.map((buf) =>
+      sharp(buf)
+        .extractChannel(0)
+        .raw()
+        .toBuffer({ resolveWithObject: true })
+    )
+  );
+
+  const first = raws[0];
+  const out = Buffer.alloc(first.info.width * first.info.height);
+  for (let i = 0; i < out.length; i += 1) {
+    let max = 0;
+    for (const raw of raws) {
+      const next = raw.data[i];
+      if (next > max) max = next;
+    }
+    out[i] = max;
+  }
+
+  return sharp(out, {
+    raw: {
+      width: first.info.width,
+      height: first.info.height,
+      channels: 1,
+    },
+  })
+    .blur(blur)
+    .png()
+    .toBuffer();
+}
+
+type EditSize = "1024x1024" | "1024x1536" | "1536x1024";
+type LocalizedEditPatch = {
+  cropImage: Buffer;
+  cropMask: Buffer;
+  editSize: EditSize;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
+function pickLocalizedEditSize(width: number, height: number): EditSize {
+  const aspect = width / Math.max(height, 1);
+  if (aspect <= 0.76) return "1024x1536";
+  if (aspect >= 1.32) return "1536x1024";
+  return "1024x1024";
+}
+
+function getEditAspect(size: EditSize) {
+  if (size === "1024x1536") return 1024 / 1536;
+  if (size === "1536x1024") return 1536 / 1024;
+  return 1;
+}
+
+function fitRectToAspect(
+  rect: AlphaBounds,
+  canvasWidth: number,
+  canvasHeight: number,
+  targetAspect: number
+): AlphaBounds {
+  let left = rect.left;
+  let top = rect.top;
+  let width = rect.width;
+  let height = rect.height;
+
+  if (width / Math.max(height, 1) < targetAspect) {
+    const desiredWidth = Math.min(canvasWidth, Math.max(width, Math.round(height * targetAspect)));
+    left = clampInt(Math.round(left + width / 2 - desiredWidth / 2), 0, canvasWidth - desiredWidth);
+    width = desiredWidth;
+  } else {
+    const desiredHeight = Math.min(
+      canvasHeight,
+      Math.max(height, Math.round(width / Math.max(targetAspect, 0.001)))
+    );
+    top = clampInt(Math.round(top + height / 2 - desiredHeight / 2), 0, canvasHeight - desiredHeight);
+    height = desiredHeight;
+  }
+
+  return { left, top, width, height };
+}
+
+async function buildLocalizedEditPatch(
+  imageBuf: Buffer,
+  maskBuf: Buffer
+): Promise<LocalizedEditPatch | null> {
+  const bounds = await detectMaskBounds(maskBuf, 10);
+  const meta = await sharp(imageBuf).metadata();
+  if (!bounds || !meta.width || !meta.height) {
+    return null;
+  }
+
+  const padX = Math.max(80, Math.round(bounds.width * 0.22));
+  const padTop = Math.max(72, Math.round(bounds.height * 0.18));
+  const padBottom = Math.max(96, Math.round(bounds.height * 0.32));
+  const padded: AlphaBounds = {
+    left: clampInt(bounds.left - padX, 0, meta.width - 1),
+    top: clampInt(bounds.top - padTop, 0, meta.height - 1),
+    width: clampInt(bounds.width + padX * 2, 1, meta.width),
+    height: clampInt(bounds.height + padTop + padBottom, 1, meta.height),
+  };
+  padded.width = Math.min(padded.width, meta.width - padded.left);
+  padded.height = Math.min(padded.height, meta.height - padded.top);
+
+  const editSize = pickLocalizedEditSize(padded.width, padded.height);
+  const cropRect = fitRectToAspect(padded, meta.width, meta.height, getEditAspect(editSize));
+  const extractArea = {
+    left: cropRect.left,
+    top: cropRect.top,
+    width: cropRect.width,
+    height: cropRect.height,
+  };
+  const [cropImage, cropMask] = await Promise.all([
+    sharp(imageBuf).extract(extractArea).png().toBuffer(),
+    sharp(maskBuf).extract(extractArea).png().toBuffer(),
+  ]);
+
+  return {
+    cropImage,
+    cropMask,
+    editSize,
+    left: cropRect.left,
+    top: cropRect.top,
+    width: cropRect.width,
+    height: cropRect.height,
+  };
+}
+
+async function mergeLocalizedEditPatch(
+  baseImageBuf: Buffer,
+  patchBuf: Buffer,
+  patch: LocalizedEditPatch,
+  mergeMaskBuf?: Buffer
+) {
+  const [resizedPatch, resizedMask] = await Promise.all([
+    sharp(patchBuf)
+      .resize(patch.width, patch.height, { fit: "fill" })
+      .ensureAlpha()
+      .png()
+      .toBuffer(),
+    sharp(mergeMaskBuf || patch.cropMask)
+      .resize(patch.width, patch.height, { fit: "fill" })
+      .extractChannel(0)
+      .png()
+      .toBuffer(),
+  ]);
+
+  const maskedPatch = await sharp(await sharp(resizedPatch).removeAlpha().png().toBuffer())
+    .joinChannel(resizedMask)
+    .png()
+    .toBuffer();
+
+  return sharp(baseImageBuf)
+    .composite([{ input: maskedPatch, left: patch.left, top: patch.top }])
+    .png()
+    .toBuffer();
 }
 
 function getCameraFramingLock(
@@ -884,26 +1334,6 @@ async function analyzeSceneLighting(bgCanvas: Buffer): Promise<SceneLightingProf
   };
 }
 
-async function pollForCompletion(url: string, token: string): Promise<string> {
-  for (let i = 0; i < 180; i++) {
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json();
-
-    if (data.status === "succeeded") {
-      const out = data.output;
-      return Array.isArray(out) ? out[0] : out;
-    }
-    if (data.status === "failed") {
-      throw new Error(data.error || "AI generation failed during polling");
-    }
-
-    await new Promise((r) => setTimeout(r, 1000));
-  }
-  throw new Error("AI generation timed out");
-}
-
 async function uploadToReplicate(dataUrl: string, token: string): Promise<string> {
   const match = dataUrl.match(/^data:(.+?);base64,(.+)$/);
   if (!match) throw new Error("Invalid data URL");
@@ -1012,63 +1442,29 @@ async function runReplicateInpaint(opts: {
   throw new Error("Replicate inpaint returned no image");
 }
 
-async function runFlux(opts: {
-  imageDataUrls: string[]; // ✅ multiple
-  prompt: string;
-  token: string;
-  aspect_ratio: "1:1" | "9:16" | "4:5";
-  safety_tolerance?: number;
-}) {
-  const response = await fetch(FLUX_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${opts.token}`,
-      Prefer: "wait",
-    },
-    body: JSON.stringify({
-      input: {
-        prompt: opts.prompt,
-        input_images: opts.imageDataUrls, // ✅ IMPORTANT: pass both images
-        resolution: "1 MP",
-        aspect_ratio: opts.aspect_ratio,
-        output_format: "png",
-        output_quality: 95,
-        safety_tolerance: opts.safety_tolerance ?? 2,
-      },
-    }),
-  });
-
-  const raw = await response.text();
-  if (!response.ok) throw new Error(`AI Provider failed: ${raw}`);
-
-  const result = JSON.parse(raw);
-
-  if (result.status === "processing" || result.status === "starting") {
-    if (!result?.urls?.get) throw new Error(`AI Provider failed: ${raw}`);
-    return await pollForCompletion(result.urls.get, opts.token);
-  }
-
-  if (result.output) {
-    return Array.isArray(result.output) ? result.output[0] : result.output;
-  }
-
-  throw new Error(`AI Provider failed: ${raw}`);
-}
-
 async function runOpenAIEdit(opts: {
-  image: Buffer;
+  image: Buffer | Buffer[];
   mask?: Buffer;
   prompt: string;
-  size: "1024x1024" | "1024x1792" | "1792x1024";
+  size: EditSize;
+  inputFidelity?: "high" | "low";
+  quality?: "high" | "medium" | "low" | "auto";
+  background?: "opaque" | "transparent" | "auto";
 }) {
   if (!OPENAI_API_KEY) {
     throw new Error("Missing OPENAI_API_KEY in .env.local");
   }
 
   const form = new FormData();
-  const blob = new Blob([new Uint8Array(opts.image)], { type: "image/png" });
-  form.append("image", blob, "image.png");
+  const images = Array.isArray(opts.image) ? opts.image : [opts.image];
+  images.forEach((imageBuf, index) => {
+    const blob = new Blob([new Uint8Array(imageBuf)], { type: "image/png" });
+    if (images.length > 1) {
+      form.append("image[]", blob, `image-${index + 1}.png`);
+    } else {
+      form.append("image", blob, "image.png");
+    }
+  });
   if (opts.mask) {
     const maskBlob = new Blob([new Uint8Array(opts.mask)], { type: "image/png" });
     form.append("mask", maskBlob, "mask.png");
@@ -1076,6 +1472,15 @@ async function runOpenAIEdit(opts: {
   form.append("model", "gpt-image-1");
   form.append("prompt", opts.prompt);
   form.append("size", opts.size);
+  if (opts.inputFidelity) {
+    form.append("input_fidelity", opts.inputFidelity);
+  }
+  if (opts.quality) {
+    form.append("quality", opts.quality);
+  }
+  if (opts.background) {
+    form.append("background", opts.background);
+  }
 
   const res = await fetch("https://api.openai.com/v1/images/edits", {
     method: "POST",
@@ -1129,131 +1534,42 @@ async function buildOpenAiEditMask(maskBuf: Buffer): Promise<Buffer> {
     .toBuffer();
 }
 
-async function runStabilityEdit(opts: {
-  image: Buffer;
-  prompt: string;
-  size: "1024x1024" | "1024x1792" | "1792x1024";
-}) {
-  if (!STABILITY_API_KEY) {
-    throw new Error("Missing STABILITY_API_KEY in .env.local");
+async function buildEdgeBandEditMask(maskBuf: Buffer): Promise<Buffer> {
+  const normalized = await sharp(maskBuf)
+    .grayscale()
+    .threshold(10)
+    .png()
+    .toBuffer();
+
+  const expanded = await sharp(normalized).dilate(24).raw().toBuffer({ resolveWithObject: true });
+  const contracted = await sharp(normalized).erode(10).raw().toBuffer({ resolveWithObject: true });
+  const { data: expandedData, info } = expanded;
+  const { data: contractedData } = contracted;
+  const ring = Buffer.alloc(info.width * info.height);
+  let nonZero = 0;
+
+  for (let i = 0; i < ring.length; i += 1) {
+    const value = Math.max(0, expandedData[i] - contractedData[i]);
+    ring[i] = value;
+    if (value > 0) nonZero += 1;
   }
 
-  const form = new FormData();
-  const blob = new Blob([new Uint8Array(opts.image)], { type: "image/png" });
-  form.append("mode", "image-to-image");
-  form.append("image", blob, "image.png");
-  form.append("prompt", opts.prompt);
-  form.append("output_format", "png");
-  const width = opts.size === "1024x1792" ? 1024 : opts.size === "1792x1024" ? 1792 : 1024;
-  const height = opts.size === "1024x1792" ? 1792 : opts.size === "1792x1024" ? 1024 : 1024;
-  form.append("width", String(width));
-  form.append("height", String(height));
-  // Keep denoise in the safer identity-preserving range for composites.
-  form.append("strength", "0.42");
+  if (!nonZero) {
+    return normalized;
+  }
 
-  const res = await fetch(STABILITY_API_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${STABILITY_API_KEY}`,
-      Accept: "application/json",
+  return sharp(ring, {
+    raw: {
+      width: info.width,
+      height: info.height,
+      channels: 1,
     },
-    body: form,
-  });
-
-  const contentType = res.headers.get("content-type") || "";
-  const rawText = await res.text();
-  if (!res.ok) {
-    let msg = `Stability HTTP ${res.status}`;
-    try {
-      if (contentType.includes("application/json")) {
-        const j = JSON.parse(rawText);
-        msg = j?.message || j?.error || msg;
-      } else if (rawText) {
-        msg = rawText;
-      }
-    } catch {}
-    console.error("Stability error:", res.status, contentType, rawText);
-    throw new Error(`${msg} | ${rawText || "no body"}`);
-  }
-
-  if (contentType.includes("application/json")) {
-    const j = JSON.parse(rawText || "{}");
-    const img = j?.image || j?.data?.[0]?.image;
-    if (!img) throw new Error("No image in Stability response");
-    return `data:image/png;base64,${img}`;
-  }
-
-  const buf = Buffer.from(rawText, "base64");
-  return `data:image/png;base64,${buf.toString("base64")}`;
+  })
+    .blur(2.4)
+    .png()
+    .toBuffer();
 }
-
-async function runFalEdit(opts: {
-  imageDataUrls: string[];
-  prompt: string;
-  format: "square" | "story" | "portrait";
-}) {
-  if (!FAL_API_KEY) {
-    throw new Error("Missing FAL_KEY / FAL_API_KEY in .env.local");
-  }
-
-  const image_size =
-    opts.format === "story"
-      ? { width: 1024, height: 1536 }
-      : opts.format === "portrait"
-      ? { width: 1024, height: 1280 }
-      : { width: 1024, height: 1024 };
-
-  const payload = {
-    prompt: opts.prompt,
-    image_urls: opts.imageDataUrls,
-    image_size,
-    output_format: "png",
-    enable_safety_checker: FAL_ENABLE_SAFETY_CHECKER,
-    safety_tolerance: FAL_SAFETY_TOLERANCE,
-    sync_mode: true,
-  };
-
-  const res = await fetch(FAL_FLUX2_EDIT_ENDPOINT, {
-    method: "POST",
-    headers: {
-      Authorization: `Key ${FAL_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-
-  const raw = await res.text();
-  let j: any = {};
-  try {
-    j = raw ? JSON.parse(raw) : {};
-  } catch {
-    j = {};
-  }
-
-  if (!res.ok) {
-    const msg =
-      j?.detail?.[0]?.msg ||
-      j?.error?.message ||
-      j?.error ||
-      j?.message ||
-      `FAL HTTP ${res.status}`;
-    throw new Error(msg);
-  }
-
-  const out =
-    j?.images?.[0]?.url ||
-    j?.images?.[0]?.image?.url ||
-    j?.images?.[0]?.image ||
-    j?.image?.url ||
-    j?.image;
-  if (!out) throw new Error("No image in FAL response");
-  if (typeof out === "string") {
-    if (out.startsWith("data:image/")) return out;
-    if (out.startsWith("http://") || out.startsWith("https://")) return out;
-    return `data:image/png;base64,${out}`;
-  }
-  throw new Error("Unexpected FAL response format");
-}
+/* eslint-enable @typescript-eslint/no-unused-vars */
 
 // -----------------------------
 // route
@@ -1294,14 +1610,6 @@ export async function POST(req: Request) {
     }
   };
   try {
-    stage = "check-keys";
-    if (!OPENAI_API_KEY && !AI_API_KEY && !STABILITY_API_KEY && !FAL_API_KEY) {
-      return NextResponse.json(
-        { error: "Missing STABILITY_API_KEY / OPENAI_API_KEY / REPLICATE_API_TOKEN / FAL_KEY in .env.local" },
-        { status: 500 }
-      );
-    }
-
     stage = "parse-body";
     const body = await req.json();
     const trackingBody =
@@ -1315,9 +1623,9 @@ export async function POST(req: Request) {
       replaceSubject = false,
       style = "club",
       format = "square",
-      provider = "replicate",
-      extraPrompt = "",
+      provider = "openai",
       cameraZoom = "auto",
+      extraPrompt = "",
     } = body as {
       subject: string;
       background: string;
@@ -1327,11 +1635,9 @@ export async function POST(req: Request) {
       style?: MagicBlendStyle;
       format?: "square" | "story" | "portrait";
       provider?: "stability" | "openai" | "replicate" | "nano" | "fal";
-      extraPrompt?: string;
       cameraZoom?: string;
+      extraPrompt?: string;
     };
-    const resolvedProvider =
-      provider === "nano" ? "fal" : provider;
     activeProvider = provider;
 
     stage = "validate-inputs";
@@ -1401,81 +1707,50 @@ export async function POST(req: Request) {
     };
 
     stage = "resolve-format";
-    const aspect_ratio: "1:1" | "9:16" | "4:5" =
-      format === "story" ? "9:16" : format === "portrait" ? "4:5" : "1:1";
-
-    // --- Precomposite subject onto background (conditioning image) ---
-    const sizeW = format === "story" ? 1024 : format === "portrait" ? 1024 : 1024;
+    const sizeW = 1024;
     const sizeH = format === "story" ? 1792 : format === "portrait" ? 1280 : 1024;
     const baseSize = Math.min(sizeW, sizeH);
 
-    // 1) Background canvas (this is the "truth" reference)
-    stage = "load-background";
-    const bgBuf = await toBufferFromAnyImage(background);
-    const bgCanvas = await sharp(bgBuf)
-      .resize(sizeW, sizeH, { fit: "cover" })
-      .png()
-      .toBuffer();
-    const sceneProfile = await analyzeSceneLighting(bgCanvas);
-    const placementReferenceBuf =
+    stage = "load";
+    const [bgCanvas, placementReferenceBuf, maskInputBuf] = await Promise.all([
+      sharp(await toBufferFromAnyImage(background))
+        .resize(sizeW, sizeH, { fit: "cover" })
+        .png()
+        .toBuffer(),
       typeof placementReference === "string" && placementReference
-        ? await sharp(await toBufferFromAnyImage(placementReference))
+        ? sharp(await toBufferFromAnyImage(placementReference))
             .resize(sizeW, sizeH, { fit: "cover" })
             .png()
             .toBuffer()
-        : null;
-    const placementMaskBuf =
+        : Promise.resolve<Buffer | null>(null),
       typeof placementMask === "string" && placementMask
-        ? await sharp(await toBufferFromAnyImage(placementMask))
+        ? sharp(await toBufferFromAnyImage(placementMask))
             .resize(sizeW, sizeH, { fit: "cover" })
+            .grayscale()
             .png()
             .toBuffer()
-        : null;
-    const useReplacementWorkflow = Boolean(replaceSubject && placementMaskBuf);
+        : Promise.resolve<Buffer | null>(null),
+    ]);
 
-    // 2) Subject buffer
     stage = "load-subject";
     let subjBuf = await toBufferFromAnyImage(subject);
-    if (useReplacementWorkflow) {
-      stage = "subject:assess-cutout";
-      const initialIsolation = await assessSubjectIsolation(subjBuf);
-      if (!initialIsolation.usable) {
+    const initialIsolation = await assessSubjectIsolation(subjBuf);
+    const subjectHasTransparency = await hasMeaningfulTransparency(subjBuf);
+    if (!subjectHasTransparency || !initialIsolation.usable) {
+      try {
         stage = "subject:auto-remove-bg";
         subjBuf = await removeSubjectBackground(subjBuf);
+      } catch {
+        if (replaceSubject) {
+          throw new Error(
+            "Subject still includes its background. Upload a transparent PNG cutout or enable server-side background removal."
+          );
+        }
       }
     }
 
-    // Subject framing: bigger & slightly lifted (poster feel)
-    // NOTE: if background adherence is still weak, drop this to 0.88–0.92
-    const zoom = normalizeCameraZoom(cameraZoom);
-    const zoomScaleMap: Record<string, number> = {
-      "full body": format === "story" ? 0.66 : format === "portrait" ? 0.7 : 0.72,
-      "three-quarter": format === "story" ? 0.82 : format === "portrait" ? 0.86 : 0.88,
-      "waist-up": format === "story" ? 1.08 : format === "portrait" ? 1.14 : 1.18,
-      "chest-up": format === "story" ? 1.26 : format === "portrait" ? 1.34 : 1.4,
-      auto: safeStyle === "club" ? 0.98 : 0.92,
-    };
-    const subjectScale = Math.max(
-      0.58,
-      Math.min(1.45, zoomScaleMap[zoom] ?? zoomScaleMap.auto)
-    );
-    const subjSize = Math.min(
-      Math.round(baseSize * subjectScale),
-      sizeW,
-      sizeH
-    );
-    const subjLeft = Math.max(0, Math.round((sizeW - subjSize) / 2));
-    const yLiftMap: Record<CameraZoom, number> = {
-      "full body": -0.02,
-      "three-quarter": 0.02,
-      "waist-up": 0.08,
-      "chest-up": 0.14,
-      auto: safeStyle === "tropical" ? 0.01 : 0.05,
-    };
-    const yLift = Math.round(baseSize * (yLiftMap[zoom] ?? yLiftMap.auto));
-    const subjTop = Math.max(0, Math.round((sizeH - subjSize) / 2) - yLift);
-
-    async function hardenSubjectAlpha(buf: Buffer) {
+    stage = "normalize-subject";
+    const hardenedSubjBuf = await (async (buf: Buffer) => {
       try {
         const normalized = await sharp(buf).ensureAlpha().png().toBuffer();
         const alpha = await sharp(normalized)
@@ -1485,17 +1760,12 @@ export async function POST(req: Request) {
           .blur(0.35)
           .png()
           .toBuffer();
-        return await sharp(normalized)
-          .removeAlpha()
-          .joinChannel(alpha)
-          .png()
-          .toBuffer();
+        return await sharp(normalized).removeAlpha().joinChannel(alpha).png().toBuffer();
       } catch {
         return buf;
       }
-    }
-
-    async function safeCropSubject(buf: Buffer) {
+    })(subjBuf);
+    const safeSubjBuf = await (async (buf: Buffer) => {
       try {
         const normalized = await sharp(buf).ensureAlpha().png().toBuffer();
         const meta = await sharp(normalized).metadata();
@@ -1507,6 +1777,7 @@ export async function POST(req: Request) {
           width: meta.width,
           height: meta.height,
         };
+        const zoom = normalizeCameraZoom(cameraZoom);
         const cropRatioByZoom: Record<CameraZoom, number> = {
           "full body": 1,
           "three-quarter": 0.88,
@@ -1520,495 +1791,305 @@ export async function POST(req: Request) {
         const bottomPad = zoom === "full body" ? Math.max(0, Math.round(cropBase.height * 0.04)) : 0;
         const extractLeft = clampInt(cropBase.left - sidePad, 0, meta.width - 1);
         const extractTop = clampInt(cropBase.top - topPad, 0, meta.height - 1);
-        const extractWidth = clampInt(
-          cropBase.width + sidePad * 2,
-          1,
-          meta.width - extractLeft
-        );
+        const extractWidth = clampInt(cropBase.width + sidePad * 2, 1, meta.width - extractLeft);
         const desiredHeight = cropBase.height * cropRatio + topPad + bottomPad;
-        const extractHeight = clampInt(
-          desiredHeight,
-          1,
-          meta.height - extractTop
-        );
+        const extractHeight = clampInt(desiredHeight, 1, meta.height - extractTop);
         return await sharp(normalized)
-          .extract({
-            left: extractLeft,
-            top: extractTop,
-            width: extractWidth,
-            height: extractHeight,
-          })
+          .extract({ left: extractLeft, top: extractTop, width: extractWidth, height: extractHeight })
           .png()
           .toBuffer();
       } catch {
         return buf;
       }
-    }
+    })(hardenedSubjBuf);
+    const sizeStr: EditSize = format === "square" ? "1024x1024" : "1024x1536";
+    const reinterpretStyleHint =
+      safeStyle === "tropical" || safeStyle === "outdoor_summer"
+        ? "Keep the original environment recognizably similar with warm sunset or summer light, believable water reflections, and a polished travel-editorial look."
+        : safeStyle === "jazz_bar"
+        ? "Keep the original environment recognizably similar with warm practical lighting, intimate ambience, and premium editorial realism."
+        : "Keep the original environment recognizably similar with coherent nightlife lighting, natural depth, and a polished photographed look.";
+    const extraPromptText =
+      typeof extraPrompt === "string" && extraPrompt.trim() ? ` ${extraPrompt.trim()}` : "";
 
-    async function buildCompositeBundle(subjInput: Buffer) {
-      const subjPng = await sharp(subjInput)
-        .resize(subjSize, subjSize, {
-          fit: "contain",
-          background: { r: 0, g: 0, b: 0, alpha: 0 },
-        })
-        .png()
-        .toBuffer();
-
-      const composite = await sharp(bgCanvas)
-        .composite([{ input: subjPng, left: subjLeft, top: subjTop }])
-        .png()
-        .toBuffer();
-
-      // Build a hard matte reference: white subject on black background.
-      const subjAlpha = await sharp(subjPng)
-        .extractChannel("alpha")
-        .threshold(10)
-        .png()
-        .toBuffer();
-      const whiteRgb = await sharp({
-        create: {
-          width: subjSize,
-          height: subjSize,
-          channels: 3,
-          background: { r: 255, g: 255, b: 255 },
-        },
-      })
-        .png()
-        .toBuffer();
-      const whiteSubject = await sharp(whiteRgb)
-        .joinChannel(subjAlpha)
-        .png()
-        .toBuffer();
-      const matte = await sharp({
-        create: {
-          width: sizeW,
-          height: sizeH,
-          channels: 3,
-          background: { r: 0, g: 0, b: 0 },
-        },
-      })
-        .composite([{ input: whiteSubject, left: subjLeft, top: subjTop }])
-        .png()
-        .toBuffer();
-
-      return { composite, matte };
-    }
-
-    // 3) Composite subject onto the background for placement reference
-    stage = "harden-alpha";
-    const hardenedSubjBuf = await hardenSubjectAlpha(subjBuf);
-    if (useReplacementWorkflow) {
-      stage = "subject:verify-cutout";
-      const subjectIsolation = await assessSubjectIsolation(hardenedSubjBuf);
-      const subjectHasTransparency = await hasMeaningfulTransparency(hardenedSubjBuf);
-      if (!subjectHasTransparency || !subjectIsolation.usable) {
-        throw new Error(
-          "Subject still includes its background. Upload a transparent PNG cutout or enable server-side background removal."
-        );
-      }
-    }
-    stage = "safe-crop";
-    const safeSubjBuf = await safeCropSubject(hardenedSubjBuf);
-    stage = "build-composite";
-    const { composite: generatedCompositeBuf, matte: subjectMatteBuf } =
-      await buildCompositeBundle(safeSubjBuf);
-    const preCompositeBuf = placementReferenceBuf || generatedCompositeBuf;
-
-    // 4) Convert all references to data URLs (order matters)
-    stage = "data-urls";
-    const bgOnlyDataUrl = bufferToDataUrlPng(bgCanvas);
-    const subjectMatteDataUrl = bufferToDataUrlPng(
-      placementMaskBuf || subjectMatteBuf
-    );
-    const subjectIdentityBuf = await buildIdentityReferenceBoard(hardenedSubjBuf);
-    const subjectIdentityDataUrl = bufferToDataUrlPng(subjectIdentityBuf);
-    const placementGuideDataUrl = placementReferenceBuf
-      ? bufferToDataUrlPng(placementReferenceBuf)
-      : bufferToDataUrlPng(generatedCompositeBuf);
-    const replacementCompositeAssets =
-      useReplacementWorkflow && placementMaskBuf
-        ? await buildReplacementCompositeAssets({
-            bgCanvas,
-            subjectBuf: safeSubjBuf,
-            placementMaskBuf,
-            sceneProfile,
-          })
-        : null;
-
-    // --- Build prompt (reference map + BASE + SUFFIX + background lock) ---
-    stage = "build-prompt";
-    const referenceMap = `Reference map (strict):
-- Image 1 = Subject identity board (left panel = body proportions, right panel = face likeness lock)
-- Image 2 = Subject placement reference (composite framing/pose/scale)
-- Image 3 = Background reference (environment truth)
-- Image 4 = Subject matte reference (solidity mask)`;
-    const backgroundLock =
-      safeStyle === "club"
-        ? `Background lock (guided):
-- Image 2 is the subject placement and framing reference.
-- Image 3 is the background reference and should remain recognizable.
-- Image 4 is the subject matte reference (white subject shape on black background).
-- Preserve the background’s layout, architecture, and key features from Image 3.
-- Do not replace the environment or move the scene.
-- Preserve the original background aesthetic from Image 3: venue mood, color palette, haze, lighting character, and composition.
-- Do not redesign the scene, add new decor, or change background styling.
-- Subject relighting must be derived from Image 3 lighting only (direction, color, intensity, contrast).
-- Subject framing must remain matched to Image 2 (same placement, scale, and pose).
-- Keep the same time of day and lighting direction as Image 3.`
-        : `Background lock (strict):
-- Image 2 is the subject placement and framing reference.
-- Image 3 is the background reference and MUST be preserved exactly.
-- Image 4 is the subject matte reference (white subject shape on black background).
-- Preserve the background’s layout, architecture, structure, and key features from Image 3.
-- Do not replace the environment. Do not invent a new background. Do not move the scene.
-- Preserve the original background aesthetic from Image 3: venue mood, color palette, haze, lighting character, and composition.
-- Subject relighting must be derived from Image 3 lighting only (direction, color, intensity, contrast).
-- Subject framing must remain matched to Image 2 (same placement, scale, and pose).
-- Keep the same time of day and lighting direction as Image 3.
-- Do not change the weather or season.
-- Only add subtle atmosphere and a few small accent lights; no scene overhaul.`;
-    const sceneCueBlock = `Scene-derived lighting lock (strict, from Image 3):
-- key direction: ${sceneProfile.keyDirection}
-- vertical brightness bias: ${sceneProfile.verticalBias}
-- color temperature: ${sceneProfile.temperature}
-- contrast level: ${sceneProfile.contrast}
-- shadow softness: ${sceneProfile.shadowSoftness}
-- scene brightness: ${sceneProfile.brightness}
-- scene saturation: ${sceneProfile.saturation}
-- highlight color cue: ${sceneProfile.highlightHex}
-- shadow color cue: ${sceneProfile.shadowHex}
-
-Rules:
-- relight subject using this direction/contrast/temperature/shadow-softness profile
-- keep highlight spill close to ${sceneProfile.highlightHex}; keep occluded regions near ${sceneProfile.shadowHex}
-- preserve lighting asymmetry from Image 3; do not evenly light both sides of the face/body unless Image 3 is actually even
-- do not add frontal beauty light, flat key light, or clean studio fill
-- if Image 3 is dark, keep the subject dark and scene-embedded rather than brightened for clarity
-- practical light color from the scene must visibly affect skin, clothing, hair, and legs, not just facial highlights
-- preserve nightlife atmosphere: local haze glow, beam spill, and colored edge wrap should stay subtle but physically tied to the actual fixtures in Image 3
-- no light source invention and no global relight that conflicts with Image 3`;
-    const occlusionLock = `Occlusion lock (strict):
-- Treat Image 4 matte as solidity guidance: white area is subject body volume.
-- Subject body/clothing must stay fully opaque; no translucency and no double-exposure.
-- Do not let floor/table/booth/background textures pass through visible subject regions.
-- If a foreground object from Image 3 occludes the subject, occlusion must be crisp and physically plausible.
-- Maintain contact grounding at the feet/base with realistic contact shadow.`;
-    const identityLock = `Identity and proportion lock (strict):
-- use Image 1 identity board to preserve exact face geometry and body ratios
-- prioritize the right panel of Image 1 for facial likeness (eyes, nose, lips, jawline, skin texture)
-- preserve skull/face structure exactly; do not alter nose/eyes/lips/jaw shape
-- preserve shoulder width, torso length, limb lengths, and hand size proportions
-- no beauty filter smoothing, no stylization, no body morphing`;
-    const lowAngleHint = /low[\s-]?angle|upward perspective|camera from below/i.test(
-      String(extraPrompt || "")
-    );
-    const cameraFramingBlock = getCameraFramingLock(cameraZoom, format, lowAngleHint);
-
-    const extraBlock =
-      typeof extraPrompt === "string" && extraPrompt.trim()
-        ? `\n\nAdditional directives:\n${extraPrompt.trim()}`
-        : "";
-    const nanoTone =
-      provider === "nano"
-        ? `\n\nStyle tone:\n- nightlife editorial, moody, cinematic\n- avoid corporate/stock photo look\n- gritty texture, candid energy\n- no sterile studio feel`
-        : "";
-    const finalPrompt = `${referenceMap}
-
-${BASE_PROMPT}
-
-${sceneCueBlock}
-
-${occlusionLock}
-
-${identityLock}
-
-${cameraFramingBlock}
-
-${STYLE_SUFFIX[safeStyle]}
-
-${backgroundLock}${extraBlock}${nanoTone}`;
-
-    const replacementPrompt = `Reference map (strict):
-- Image 1 = Clean background plate (environment truth)
-- Image 2 = Neutral placement guide (subject slot, pose, framing, and scale only)
-- Image 3 = Subject identity board (face and body likeness lock)
-- Image 4 = Subject placement mask (the only region where the subject may appear)
-
-Core objective:
-- integrate the uploaded subject from Image 3 into the exact background from Image 1 so the result looks like one real photograph
-- use Image 2 only as pose/framing/placement guidance, not as identity guidance
-- use Image 4 as the only allowed subject region
-- keep the exact placement, pose, crop, and scale indicated by Image 2 and Image 4
-- keep the exact background aesthetic from Image 1: venue mood, palette, haze, lighting character, and composition
-- the only human subject allowed in the final image is the uploaded subject from Image 3
-- ${useReplacementWorkflow ? "the placeholder person implied by Image 2 must be fully replaced by the uploaded subject from Image 3" : "do not invent or preserve any additional person outside the uploaded subject"}
-
-Hard rules:
-- exactly one primary human subject in the final image
-- that subject must be the uploaded subject from Image 3
-- do not create a duplicate subject
-- do not create a second person with the same face, hair, clothing, or silhouette
-- no extra body, no second head, no double exposure, no reflection clone, no background duplicate of the subject
-- do not render the subject on white, gray, solid-color, or seamless studio background
-- do not produce a comp card, product cutout, poster plate, or isolated model render
-- do not create an inset image, framed insert, vertical panel, or image-within-image composition
-- do not generate any person outside the white region in Image 4
-- preserve the background from Image 1 outside the subject integration area
-- do not redesign, replace, restyle, relight, or rearrange the background scene
-- do not add new decor, props, furniture, signage, smoke, lights, or people unless already present in Image 1
-- only adjust local contact shadow and local light wrapping needed to seat the subject naturally into the scene
-- preserve exact face geometry and body proportions from Image 3
-- preserve exact background perspective and camera framing from Image 1
-- keep the camera shot from Image 1 exactly: same lens feel, crop, horizon, and subject scale in frame
-- match lighting from Image 1 exactly across the full body, not just the face
-- subject luminance should sit naturally inside the scene; do not make the subject brighter, cleaner, or more polished than nearby people at the same depth
-- keep lighting moody and venue-driven; no studio glamour pass, no cosmetic skin lift, no commercial beauty retouch
-- no subject scaling drift, no pose drift, no new angle
-
-${sceneCueBlock}
-
-${identityLock}
-
-${cameraFramingBlock}
-
-${STYLE_SUFFIX[safeStyle]}${extraBlock}`;
-
-    const harmonizationPrompt = `Harmonize the already placed subject into the scene so the image reads as one real photograph.
-
-Input truth:
-- the current image already contains the subject in the correct placement, scale, pose, and framing
-- there is exactly one subject already present in the image
-- preserve the current subject identity, silhouette, body proportions, pose, and exact placement
-- preserve the current background composition and camera shot exactly
-
-Allowed changes only:
-- local lighting integration across the full body
-- environmental color spill from the scene
-- contact shadow and grounding at feet/base
-- subtle edge blending, haze interaction, and depth consistency
-- local shadow shaping needed to match the scene
-
-Hard rules:
-- do not move, resize, duplicate, or replace the subject
-- do not generate a second version, close-up, crop, reflection, echo, or duplicate of the subject
-- do not change the subject's face, hair, body proportions, clothing, or pose
-- do not alter the background outside the masked harmonization region
-- do not create extra people
-- do not create an inset frame, white backdrop, comp card, or isolated model render
-- do not brighten the subject beyond the scene lighting
-- keep the subject embedded in the environment, not studio-lit
-
-${sceneCueBlock}
-
-${identityLock}
-
-${cameraFramingBlock}
-
-${STYLE_SUFFIX[safeStyle]}${extraBlock}`;
-
-    // --- Single unified pass with multiple reference images ---
-    const isReplacementMode = Boolean(replacementCompositeAssets);
-    const sizeStr =
-      format === "story" ? "1024x1792" : format === "portrait" ? "1024x1024" : "1024x1024";
-    const standardReferenceImageDataUrls = [
-      subjectIdentityDataUrl,
-      placementGuideDataUrl,
-      bgOnlyDataUrl,
-      subjectMatteDataUrl,
-    ];
-    const replacementReferenceImageDataUrls = [
-      bgOnlyDataUrl,
-      placementGuideDataUrl,
-      subjectIdentityDataUrl,
-      subjectMatteDataUrl,
-    ];
-    const primaryImageDataUrls = isReplacementMode
-      ? replacementReferenceImageDataUrls
-      : standardReferenceImageDataUrls;
-    const primaryPrompt = isReplacementMode ? replacementPrompt : finalPrompt;
-    const stagedCompositeDataUrl = replacementCompositeAssets
-      ? bufferToDataUrlPng(replacementCompositeAssets.composite)
-      : null;
-    const stagedMaskDataUrl = replacementCompositeAssets
-      ? bufferToDataUrlPng(replacementCompositeAssets.localMask)
-      : null;
-    const stagedOpenAiMask = replacementCompositeAssets
-      ? await buildOpenAiEditMask(replacementCompositeAssets.localMask)
-      : null;
-    const stagedEditInput = replacementCompositeAssets?.composite || preCompositeBuf;
-    const stagedPrompt = isReplacementMode ? harmonizationPrompt : finalPrompt;
-
-    if (isReplacementMode) {
-      if (stagedCompositeDataUrl && stagedMaskDataUrl && AI_API_KEY) {
-        try {
-          stage = "replacement:replicate-inpaint";
-          const outUrl = await runReplicateInpaint({
-            imageDataUrl: stagedCompositeDataUrl,
-            maskDataUrl: stagedMaskDataUrl,
-            prompt: harmonizationPrompt,
-          });
-          return successResponse("replicate_inpaint", outUrl);
-        } catch (err) {
-          console.error("magic-blend replacement replicate masked fallback", err);
-        }
-      }
-
-      if (replacementCompositeAssets && stagedOpenAiMask && OPENAI_API_KEY) {
-        try {
-          stage = "replacement:openai-mask";
-          const outUrl = await runOpenAIEdit({
-            image: replacementCompositeAssets.composite,
-            mask: stagedOpenAiMask,
-            prompt: harmonizationPrompt,
-            size: sizeStr,
-          });
-          return successResponse("openai_mask", outUrl);
-        } catch (err) {
-          console.error("magic-blend replacement openai masked fallback", err);
-        }
-      }
-
-      if (resolvedProvider === "fal") {
-        try {
-          stage = "fal:run";
-          const outUrl = await runFalEdit({
-            imageDataUrls: primaryImageDataUrls,
-            prompt: primaryPrompt,
-            format,
-          });
-          return successResponse("fal", outUrl);
-        } catch (err) {
-          console.error("magic-blend replacement fal freeform fallback", err);
-        }
-      }
-
-      if (resolvedProvider === "replicate") {
-        stage = "replicate:prep";
-        try {
-          stage = "replicate:run";
-          const outUrl = await runFlux({
-            imageDataUrls: primaryImageDataUrls,
-            prompt: primaryPrompt,
-            token: AI_API_KEY as string,
-            aspect_ratio,
-            safety_tolerance: 2,
-          });
-          return successResponse("replicate", outUrl);
-        } catch (err) {
-          console.error("magic-blend replacement replicate freeform fallback", err);
-        }
-      }
-
-      throw new Error(
-        "Replacement generation failed before any AI pass succeeded. Deterministic fallback is disabled because it ignores lighting and camera controls."
-      );
-    }
-
-    if (resolvedProvider === "fal") {
-      stage = "fal:run";
-      const outUrl = await runFalEdit({
-        imageDataUrls: primaryImageDataUrls,
-        prompt: primaryPrompt,
-        format,
-      });
-      return successResponse("fal", outUrl);
-    }
-
-    if (resolvedProvider === "replicate") {
-      stage = "replicate:prep";
+    if (provider === "openai" && placementReferenceBuf && OPENAI_API_KEY) {
       try {
-        stage = "replicate:run";
-        const outUrl = await runFlux({
-          imageDataUrls: primaryImageDataUrls,
-          prompt: primaryPrompt,
-          token: AI_API_KEY as string,
-          aspect_ratio,
-          safety_tolerance: 2,
+        stage = "reinterpret:openai";
+        const subjectReferenceBuf = await buildSubjectIdentityReference(hardenedSubjBuf);
+        const reinterpretPrompt = [
+          "Reference map:",
+          "Image 1 = subject identity reference.",
+          "Image 2 = composition and placement guide.",
+          "Image 3 = original background reference.",
+          "Create one coherent, photorealistic image that looks like a real photo taken in camera.",
+          "The person must remain recognizably the same as Image 1: same face, skin tone, hairstyle, body proportions, clothing, and overall likeness.",
+          "Use Image 2 to match framing, pose anchor, placement, scale, and camera composition.",
+          "Use Image 3 to preserve the original location's key elements, layout, horizon, major objects, palette, and lighting direction.",
+          "Controlled reinterpretation is allowed: minor natural drift is acceptable, but do not turn this into a different person or a different location.",
+          "Finish as a well-lit, naturally exposed, unified editorial photo rather than a pasted composite.",
+          "No black box, no plain backdrop, no comp card, no isolated cutout, no poster layout, no text, and no extra people.",
+          reinterpretStyleHint + extraPromptText,
+        ].join(" ");
+        const outUrl = await runOpenAIEdit({
+          image: [subjectReferenceBuf, placementReferenceBuf, bgCanvas],
+          prompt: reinterpretPrompt,
+          size: sizeStr,
+          inputFidelity: "high",
+          quality: "high",
+          background: "opaque",
         });
-        return successResponse("replicate", outUrl);
-      } catch (err: any) {
-        const msg = String(err?.message || err || "");
-        const msgLower = msg.toLowerCase();
-        const isSensitive =
-          msgLower.includes("sensitive") ||
-          msgLower.includes("safety") ||
-          msgLower.includes("nsfw");
-        const isQuotaOrCredits =
-          msgLower.includes("not enough tokens") ||
-          msgLower.includes("insufficient") ||
-          msgLower.includes("quota") ||
-          msgLower.includes("credit") ||
-          msgLower.includes("payment required");
+        return successResponse("openai_controlled_reinterpretation", outUrl);
+      } catch (err) {
+        console.error("magic-blend openai reinterpretation fallback", err);
+      }
+    }
 
-        if (isQuotaOrCredits) {
-          // Replicate credit/token exhaustion: gracefully fail over to available providers.
+    stage = "place-subject";
+    const zoom = normalizeCameraZoom(cameraZoom);
+    const placement = maskInputBuf
+      ? await renderPlacedSubjectFromSource(safeSubjBuf, maskInputBuf, sizeW, sizeH)
+      : await (async () => {
+          const trimmed = await trimSubjectToAlpha(safeSubjBuf);
+          const zoomScaleMap: Record<CameraZoom, number> = {
+            "full body": format === "story" ? 0.66 : format === "portrait" ? 0.7 : 0.72,
+            "three-quarter": format === "story" ? 0.82 : format === "portrait" ? 0.86 : 0.88,
+            "waist-up": format === "story" ? 1.08 : format === "portrait" ? 1.14 : 1.18,
+            "chest-up": format === "story" ? 1.26 : format === "portrait" ? 1.34 : 1.4,
+            auto: safeStyle === "club" ? 0.98 : 0.92,
+          };
+          const subjectScale = Math.max(0.58, Math.min(1.45, zoomScaleMap[zoom] ?? zoomScaleMap.auto));
+          const slotSize = Math.min(Math.round(baseSize * subjectScale), sizeW, sizeH);
+          const yLiftMap: Record<CameraZoom, number> = {
+            "full body": -0.02,
+            "three-quarter": 0.02,
+            "waist-up": 0.08,
+            "chest-up": 0.14,
+            auto: safeStyle === "tropical" ? 0.01 : 0.05,
+          };
+          const yLift = Math.round(baseSize * (yLiftMap[zoom] ?? yLiftMap.auto));
+          const resizedSubjectBuf = await sharp(trimmed.subjectBuf)
+            .resize(slotSize, slotSize, {
+              fit: "contain",
+              background: { r: 0, g: 0, b: 0, alpha: 0 },
+            })
+            .png()
+            .toBuffer();
+          const resizedMaskBuf = await sharp(trimmed.maskBuf)
+            .resize(slotSize, slotSize, {
+              fit: "contain",
+              background: { r: 0, g: 0, b: 0, alpha: 0 },
+            })
+            .png()
+            .toBuffer();
+          const left = Math.max(0, Math.round((sizeW - slotSize) / 2));
+          const top = Math.max(0, Math.round((sizeH - slotSize) / 2) - yLift);
+          const placedSubjectBuf = await sharp({
+            create: {
+              width: sizeW,
+              height: sizeH,
+              channels: 4,
+              background: { r: 0, g: 0, b: 0, alpha: 0 },
+            },
+          })
+            .composite([{ input: resizedSubjectBuf, left, top }])
+            .png()
+            .toBuffer();
+          const placedMaskBuf = await sharp({
+            create: {
+              width: sizeW,
+              height: sizeH,
+              channels: 4,
+              background: { r: 0, g: 0, b: 0, alpha: 1 },
+            },
+          })
+            .composite([{ input: resizedMaskBuf, left, top }])
+            .flatten({ background: { r: 0, g: 0, b: 0 } })
+            .grayscale()
+            .png()
+            .toBuffer();
+          return { placedSubjectBuf, placedMaskBuf };
+        })();
+
+    stage = "scene-analysis";
+    const placedSubjectBuf = placement.placedSubjectBuf;
+    const placedMaskBuf = placement.placedMaskBuf;
+    const { ringMask, shadowMask, innerSpillMask } = await buildIntegrationMasks(placedMaskBuf);
+    const { lightSide, highlightColor, sideContrast } = await detectSceneLighting(bgCanvas, placedMaskBuf);
+    const { subjectHighlightMask, subjectShadowMask } = await buildDirectionalSubjectMasks(
+      placedMaskBuf,
+      lightSide
+    );
+    const sceneLuminance = await computeSceneLuminance(bgCanvas);
+    const subjectLuminance = await computeMaskedLuminance(placedSubjectBuf, placedMaskBuf);
+    const highlightLuminance = luminanceOfColor(highlightColor);
+    const sceneIsDark = sceneLuminance < 88;
+    const shadowOpacity = sceneIsDark ? 0.34 : sceneLuminance < 138 ? 0.24 : 0.16;
+    const ringDarkOpacity = sceneIsDark ? 0.18 : sceneLuminance < 138 ? 0.12 : 0.08;
+    const wrapOpacity = sceneIsDark ? 0.18 : sceneLuminance < 138 ? 0.14 : 0.11;
+    const spillOpacity = sceneIsDark ? 0.12 : sceneLuminance < 138 ? 0.1 : 0.08;
+    const subjectHighlightOpacity =
+      sideContrast > 26
+        ? sceneIsDark
+          ? 0.48
+          : sceneLuminance < 138
+          ? 0.42
+          : 0.34
+        : sceneIsDark
+        ? 0.4
+        : sceneLuminance < 138
+        ? 0.34
+        : 0.28;
+    const subjectShadowOpacity =
+      sideContrast > 26
+        ? sceneIsDark
+          ? 0.26
+          : sceneLuminance < 138
+          ? 0.22
+          : 0.18
+        : sceneIsDark
+        ? 0.22
+        : sceneLuminance < 138
+        ? 0.18
+        : 0.14;
+    const subjectHighlightOverlayOpacity = sideContrast > 26 ? 0.22 : 0.16;
+    const highlightDelta = highlightLuminance - subjectLuminance;
+    const subjectBrightness = Math.max(
+      0.92,
+      Math.min(1.42, 1 + (highlightDelta / 255) * (sideContrast > 26 ? 0.7 : 0.46))
+    );
+    const subjectSaturation = sceneIsDark ? 1.04 : sceneLuminance < 138 ? 1.08 : 1.12;
+
+    stage = "scene-overlays";
+    const backgroundWrapSource = await sharp(bgCanvas).blur(14).png().toBuffer();
+    const backgroundSpillSource = await sharp(bgCanvas).blur(22).png().toBuffer();
+    const litSubjectBase = await sharp(placedSubjectBuf)
+      .modulate({
+        brightness: subjectBrightness,
+        saturation: subjectSaturation,
+      })
+      .png()
+      .toBuffer();
+    const edgeWrapOverlay = await buildAlphaOverlay(backgroundWrapSource, ringMask, wrapOpacity);
+    const subjectSpillOverlay = await buildAlphaOverlay(backgroundSpillSource, innerSpillMask, spillOpacity);
+    const subjectHighlightOverlay = await buildColorOverlay(
+      sizeW,
+      sizeH,
+      subjectHighlightMask,
+      subjectHighlightOpacity,
+      highlightColor
+    );
+    const subjectHighlightOverlayStrong = await buildColorOverlay(
+      sizeW,
+      sizeH,
+      subjectHighlightMask,
+      subjectHighlightOverlayOpacity,
+      mixColor(highlightColor, { r: 255, g: 250, b: 244 }, 0.58)
+    );
+    const ringDarkOverlay = await buildBlackOverlay(sizeW, sizeH, ringMask, ringDarkOpacity);
+    const shadowOverlay = await buildBlackOverlay(sizeW, sizeH, shadowMask, shadowOpacity);
+    const subjectShadowOverlay = await buildBlackOverlay(
+      sizeW,
+      sizeH,
+      subjectShadowMask,
+      subjectShadowOpacity
+    );
+    const litSubjectBuf = await sharp(litSubjectBase)
+      .composite([
+        { input: subjectShadowOverlay, blend: "multiply" },
+        { input: subjectSpillOverlay, blend: "soft-light" },
+        { input: subjectHighlightOverlay, blend: "overlay" },
+        { input: subjectHighlightOverlayStrong, blend: "screen" },
+      ])
+      .png()
+      .toBuffer();
+
+    stage = "compose";
+    const output = await sharp(bgCanvas)
+      .composite([
+        { input: litSubjectBuf },
+        { input: shadowOverlay, blend: "multiply" },
+        { input: ringDarkOverlay, blend: "multiply" },
+        { input: edgeWrapOverlay, blend: "screen" },
+      ])
+      .png()
+      .toBuffer();
+    const deterministicUrl = bufferToDataUrlPng(output);
+    const harmonizationMask = await buildUnionMask([
+      ringMask,
+      innerSpillMask,
+      shadowMask,
+    ]);
+    const localizedPatch = await buildLocalizedEditPatch(output, harmonizationMask);
+    const styleHint =
+      safeStyle === "tropical" || safeStyle === "outdoor_summer"
+        ? "Preserve sunlit outdoor atmosphere, water realism, and natural warm spill."
+        : safeStyle === "jazz_bar"
+        ? "Preserve intimate low-light ambience, warm practical spill, and soft shadow rolloff."
+        : "Preserve nightlife contrast, moody ambience, practical color spill, and scene depth.";
+    const harmonizationPrompt = [
+      "Edit only the masked local scene-integration region so the subject feels photographed inside the existing scene.",
+      "Preserve the exact subject identity, face, hair, body proportions, clothing, pose, and framing.",
+      "Preserve the exact background composition, objects, text, and layout outside the masked area and keep the full frame composition stable.",
+      "Improve only local scene integration: edge continuity, grounding, contact shadow, environmental spill, haze interaction, reflected light, texture continuity around the silhouette, and believable local relighting tied to the scene.",
+      "Do not redraw the person, do not swap the face, do not restyle clothing, do not move the subject, and do not change the background plate.",
+      "Do not create a poster-card cutout, clean studio backdrop, halo, or pasted look.",
+      "This is a local patch edit, not a full-image redesign.",
+      styleHint,
+    ].join(" ");
+
+    const allowsAiHarmonization = provider === "openai" || provider === "replicate";
+    const preferredProvider = provider === "replicate" ? "replicate" : "openai";
+    const providerOrder = preferredProvider === "replicate"
+      ? (["replicate", "openai"] as const)
+      : (["openai", "replicate"] as const);
+
+    if (allowsAiHarmonization && localizedPatch) {
+      const localizedEdgeMask = await buildEdgeBandEditMask(localizedPatch.cropMask);
+      for (const harmonizer of providerOrder) {
+        if (harmonizer === "openai" && OPENAI_API_KEY) {
           try {
-            stage = "replicate:fallback-openai";
+            stage = "harmonize:openai-mask";
             const outUrl = await runOpenAIEdit({
-              image: stagedEditInput,
-              prompt: stagedPrompt,
-              size: sizeStr,
+              image: localizedPatch.cropImage,
+              mask: await buildOpenAiEditMask(localizedEdgeMask),
+              prompt: harmonizationPrompt,
+              size: localizedPatch.editSize,
             });
-            return successResponse("openai_fallback", outUrl);
-          } catch {
-            try {
-              stage = "replicate:fallback-stability";
-              const outUrl = await runStabilityEdit({
-                image: stagedEditInput,
-                prompt: stagedPrompt,
-                size: sizeStr,
-              });
-              return successResponse("stability_fallback", outUrl);
-            } catch {
-              throw new Error(
-                `Replicate credits exhausted and fallback providers failed. Original: ${msg}`
-              );
-            }
+            const merged = await mergeLocalizedEditPatch(
+              output,
+              await toBufferFromAnyImage(outUrl),
+              localizedPatch,
+              localizedEdgeMask
+            );
+            return successResponse("openai_harmonize_patch", bufferToDataUrlPng(merged));
+          } catch (err) {
+            console.error("magic-blend openai harmonization fallback", err);
           }
         }
 
-        if (!isSensitive) throw err;
-
-        stage = "replicate:safe-retry";
-        const safePrompt =
-          `Preserve the exact subject identity from Image 3 (face, skin tone, hair, clothing). ` +
-          `Preserve exact face geometry and body proportions from the uploaded subject reference. ` +
-          `Do not change ethnicity, age, or gender. ` +
-          `Preserve the background from Image 1 exactly. ` +
-          `Keep subject framing matched to Image 2 (same placement, scale, and pose). ` +
-          `Relight the subject using only Image 1 scene lighting for seamless integration. ` +
-          `Subject must remain fully opaque; no table/floor texture bleed-through. ` +
-          `Use scene cues: key ${sceneProfile.keyDirection}, temperature ${sceneProfile.temperature}, contrast ${sceneProfile.contrast}. ` +
-          `Family-friendly, non-suggestive styling.`;
-        stage = "replicate:safe-run";
-        const outUrl = await runFlux({
-          imageDataUrls: standardReferenceImageDataUrls,
-          prompt: `${finalPrompt}\n\nAdditional safety emphasis:\n${safePrompt}`,
-          token: AI_API_KEY as string,
-          aspect_ratio,
-          safety_tolerance: 1,
-        });
-        return successResponse("replicate_safe_retry", outUrl);
+        if (harmonizer === "replicate" && AI_API_KEY) {
+          try {
+            stage = "harmonize:replicate-inpaint";
+            const outUrl = await runReplicateInpaint({
+              imageDataUrl: bufferToDataUrlPng(localizedPatch.cropImage),
+              maskDataUrl: bufferToDataUrlPng(localizedEdgeMask),
+              prompt: harmonizationPrompt,
+            });
+            const merged = await mergeLocalizedEditPatch(
+              output,
+              await toBufferFromAnyImage(outUrl),
+              localizedPatch,
+              localizedEdgeMask
+            );
+            return successResponse("replicate_harmonize_patch", bufferToDataUrlPng(merged));
+          } catch (err) {
+            console.error("magic-blend replicate harmonization fallback", err);
+          }
+        }
       }
     }
 
-    if (resolvedProvider === "openai") {
-      stage = "openai:run";
-      const outUrl = await runOpenAIEdit({
-        image: stagedEditInput,
-        prompt: stagedPrompt,
-        size: sizeStr,
-      });
-      return successResponse("openai", outUrl);
-    }
-
-    stage = "stability:run";
-    const outUrl = await runStabilityEdit({
-      image: stagedEditInput,
-      prompt: stagedPrompt,
-      size: sizeStr,
-    });
-    return successResponse("stability", outUrl);
+    return successResponse("deterministic_composite", deterministicUrl);
   } catch (err: any) {
     await trackAnalytics("magic_blend_failed", {
       stage,

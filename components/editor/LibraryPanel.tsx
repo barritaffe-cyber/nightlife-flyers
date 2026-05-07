@@ -169,7 +169,6 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
     const addEmoji = useFlyerState((s) => s.addEmoji);
     const updateEmoji = useFlyerState((s) => s.updateEmoji);
     const removeEmoji = useFlyerState((s) => s.removeEmoji);
-    const setIsLiveDragging = useFlyerState((s) => s.setIsLiveDragging);
     const ASSET_LAYER_STEP = 8;
     const ASSET_LAYER_MIN = -120;
     const ASSET_LAYER_MAX = 160;
@@ -210,20 +209,6 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
         store.setMoveTarget('icon');
       },
       [format, nudgeAssetLayerOffset]
-    );
-    const beginSliderDrag = React.useCallback(() => {
-      setIsLiveDragging(true);
-    }, [setIsLiveDragging]);
-    const endSliderDrag = React.useCallback(() => {
-      setIsLiveDragging(false);
-    }, [setIsLiveDragging]);
-    const sliderDragProps = React.useMemo(
-      () => ({
-        onPointerDown: beginSliderDrag,
-        onPointerUp: endSliderDrag,
-        onPointerCancel: endSliderDrag,
-      }),
-      [beginSliderDrag, endSliderDrag]
     );
     const deferLibraryPlacement = React.useCallback((work: () => void) => {
       if (typeof window === "undefined") {
@@ -454,8 +439,8 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
         <div
           className={railCardClass}
           data-portrait-area="true"
-          onMouseDownCapture={(e) => e.stopPropagation()}
-          onPointerDownCapture={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
         >
           <div className={railHeaderClass}>
             <span className={railTitleClass}>{title}</span>
@@ -570,7 +555,6 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                     />
                     <div>
                       <InlineSliderInput
-                        {...sliderDragProps}
                         label="Label Size"
                         value={Number((sel as any).labelSize ?? 9)}
                         min={7}
@@ -589,7 +573,6 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                     </div>
                     <div>
                       <InlineSliderInput
-                        {...sliderDragProps}
                         label="Label Y Offset"
                         value={Number((sel as any).labelOffsetY ?? 0)}
                         min={isShapeGraphic ? -60 : -30}
@@ -610,7 +593,6 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                       <>
                         <div>
                           <InlineSliderInput
-                            {...sliderDragProps}
                             label="Label Rotate"
                             value={Number((sel as any).labelRotate ?? 0)}
                             min={-180}
@@ -629,7 +611,6 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                         </div>
                         <div>
                           <InlineSliderInput
-                            {...sliderDragProps}
                             label="Label Skew"
                             value={Number((sel as any).labelSkew ?? 0)}
                             min={-60}
@@ -675,7 +656,6 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
           {!isShapeGraphic && (
             <div>
               <InlineSliderInput
-                {...sliderDragProps}
                 label="Scale"
                 value={sel.scale ?? 1}
                 min={0.01}
@@ -696,7 +676,6 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
           {isShapeGraphic && (
             <div>
               <InlineSliderInput
-                {...sliderDragProps}
                 label="Scale"
                 value={Number(sel.scale ?? 1)}
                 min={0.01}
@@ -716,7 +695,6 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
 
           <div>
             <InlineSliderInput
-              {...sliderDragProps}
               label="Opacity"
               value={(sel as any).opacity ?? 1}
               min={0}
@@ -736,7 +714,6 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
           {isShapeGraphic && (
             <div>
               <InlineSliderInput
-                {...sliderDragProps}
                 label="Length"
                 value={Number((sel as any).shapeLength ?? 160)}
                 min={48}
@@ -757,7 +734,6 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
           {isShapeGraphic && (
             <div>
               <InlineSliderInput
-                {...sliderDragProps}
                 label="Skew"
                 value={Number((sel as any).shapeSkew ?? 0)}
                 min={-60}
@@ -779,7 +755,6 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
           {isSeparator && (
             <div>
               <InlineSliderInput
-                {...sliderDragProps}
                 label="Length"
                 value={Number((sel as any).separatorWidth ?? 180)}
                 min={128}
@@ -804,7 +779,6 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
           {isSeparator && (
             <div>
               <InlineSliderInput
-                {...sliderDragProps}
                 label="Offset"
                 value={Number((sel as any).separatorOffset ?? 0)}
                 min={-360}
@@ -828,7 +802,6 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
 
           <div>
             <InlineSliderInput
-              {...sliderDragProps}
               label="Rotation"
               value={Number((sel as any).rotation ?? 0)}
               min={-180}
@@ -847,7 +820,6 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
           {!isShapeGraphic && (
             <div>
               <InlineSliderInput
-                {...sliderDragProps}
                 label="Tint"
                 value={(sel as any).tint ?? 0}
                 min={-180}
@@ -991,8 +963,8 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
         <div
           className={railCardClass}
           data-portrait-area="true"
-          onMouseDownCapture={(e) => e.stopPropagation()}
-          onPointerDownCapture={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
         >
           <div className={railHeaderClass}>
             <span className={railTitleClass}>{title}</span>
@@ -1059,7 +1031,6 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                     />
                     <div>
                       <InlineSliderInput
-                        {...sliderDragProps}
                         label="Label Size"
                         value={Number((sel as any).labelSize ?? 9)}
                         min={7}
@@ -1074,7 +1045,6 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                     </div>
                     <div>
                       <InlineSliderInput
-                        {...sliderDragProps}
                         label="Label Y Offset"
                         value={Number((sel as any).labelOffsetY ?? 0)}
                         min={-30}
@@ -1341,8 +1311,8 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                 <div
                   className="panel mt-4 rounded-lg border border-neutral-800 bg-neutral-950/40 p-3"
                   data-portrait-area="true"
-                  onMouseDownCapture={(e) => e.stopPropagation()}
-                  onPointerDownCapture={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
                 >
                   <div className="text-[12px] text-neutral-200 font-bold mb-2 flex justify-between items-center">
                     <span>{isFlare ? 'Flare Controls' : 'Emoji Controls'}</span>
@@ -1395,7 +1365,6 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
 
                   <div className="mb-3">
                     <InlineSliderInput
-                      {...sliderDragProps}
                       label="Scale"
                       value={sel.scale ?? 1}
                       min={0.01}
@@ -1414,7 +1383,6 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
 
                   <div className="mb-3">
                     <InlineSliderInput
-                      {...sliderDragProps}
                       label="Opacity"
                       value={sel.opacity ?? 1}
                       min={0}
@@ -1433,7 +1401,6 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
 
                   <div className="mb-3">
                     <InlineSliderInput
-                      {...sliderDragProps}
                       label="Rotation"
                       value={sel.rotation ?? 0}
                       min={-180}
@@ -1451,7 +1418,6 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
 
                   <div className="mb-3">
                     <InlineSliderInput
-                      {...sliderDragProps}
                       label="Tint"
                       value={(sel as any).tint ?? 0}
                       min={-180}
