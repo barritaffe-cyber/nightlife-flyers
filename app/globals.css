@@ -121,6 +121,44 @@ html, body {
   opacity: 0.65;
 }
 
+.nf-help-shimmer {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(34, 211, 238, 0.85) !important;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.28), rgba(217, 70, 239, 0.22)) !important;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12) inset,
+    0 0 14px rgba(34, 211, 238, 0.32),
+    0 0 20px rgba(217, 70, 239, 0.18);
+}
+
+.nf-help-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: -35% auto -35% -60%;
+  width: 48%;
+  transform: rotate(18deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.68), transparent);
+  animation: nfHelpShimmerSweep 3.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes nfHelpShimmerSweep {
+  0%, 42% {
+    left: -60%;
+  }
+  100% {
+    left: 125%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nf-help-shimmer::after {
+    animation: none;
+    display: none;
+  }
+}
+
 @keyframes nfExportGoldPulse {
   0%, 100% {
     box-shadow:

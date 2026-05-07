@@ -9673,7 +9673,9 @@ async function addLogosFromFiles(files: FileList) {
 
 // ===== ONBOARDING STRIP (first-open only) =====
 const ONBOARD_KEY = 'nf:onboarded:v1';
+const HELP_SHIMMER_SEEN_KEY = 'nf:help-shimmer-seen:v1';
 const [showOnboard, setShowOnboard] = useState<boolean>(false);
+const [helpShimmerEligible, setHelpShimmerEligible] = useState<boolean>(false);
 const [tourStep, setTourStep] = useState<number | null>(null);
 const [tourRect, setTourRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
 const [tourTip, setTourTip] = useState<{ top: number; left: number; centered?: boolean } | null>(null);
@@ -9739,8 +9741,22 @@ useEffect(() => {
   setShowOnboard(false);
 }, [hydrated]);
 
+useEffect(() => {
+  if (!hydrated) return;
+  try {
+    const hasSeenHelp =
+      localStorage.getItem(HELP_SHIMMER_SEEN_KEY) === '1' ||
+      localStorage.getItem(ONBOARD_KEY) === '1';
+    setHelpShimmerEligible(!hasSeenHelp);
+  } catch {
+    setHelpShimmerEligible(false);
+  }
+}, [hydrated]);
+
 const markOnboarded = () => {
   try { localStorage.setItem(ONBOARD_KEY, '1'); } catch {}
+  try { localStorage.setItem(HELP_SHIMMER_SEEN_KEY, '1'); } catch {}
+  setHelpShimmerEligible(false);
   setShowOnboard(false);
   setTourStep(null);
   setUiMode("design");
@@ -9754,6 +9770,8 @@ const markOnboarded = () => {
 
 const startTour = React.useCallback((source = "button") => {
   try { localStorage.removeItem(ONBOARD_KEY); } catch {}
+  try { localStorage.setItem(HELP_SHIMMER_SEEN_KEY, '1'); } catch {}
+  setHelpShimmerEligible(false);
   void trackClientEvent("tour_started", {
     properties: {
       source,
@@ -22529,6 +22547,7 @@ const [mobileHeadlineStyleFocus, setMobileHeadlineStyleFocus] = React.useState<"
 const [mobileLightingSlide, setMobileLightingSlide] = React.useState<0 | 1 | 2>(0);
 const [projectHelpOpen, setProjectHelpOpen] = React.useState(false);
 const [workflowHelpOpen, setWorkflowHelpOpen] = React.useState(false);
+const shouldShimmerHelp = helpShimmerEligible && !workflowHelpOpen && tourStep == null;
 const [djWorkflowJump, setDjWorkflowJump] = React.useState<null | {
   step: "background" | "mainface" | "lighting" | "design";
   nonce: number;
@@ -24099,6 +24118,8 @@ const openSaveExportCta = React.useCallback(() => {
   });
 }, [openCreatorWorkflowTarget]);
 const openWorkflowHelp = React.useCallback((source = "toolbar") => {
+  try { localStorage.setItem(HELP_SHIMMER_SEEN_KEY, '1'); } catch {}
+  setHelpShimmerEligible(false);
   flushSync(() => {
     setWorkflowHelpOpen(true);
   });
@@ -25211,7 +25232,11 @@ const mobileControlsTabs = (
       <button
         type="button"
         onClick={() => openWorkflowHelp("mobile_action_bar")}
-        className={`${mobileTabButtonClass} border-fuchsia-400/70 text-fuchsia-100 bg-fuchsia-500/20 hover:bg-fuchsia-500/30`}
+        className={clsx(
+          mobileTabButtonClass,
+          "border-fuchsia-400/70 text-fuchsia-100 bg-fuchsia-500/20 hover:bg-fuchsia-500/30",
+          shouldShimmerHelp && "nf-help-shimmer"
+        )}
         title="Open Help"
       >
         Help
@@ -26720,7 +26745,10 @@ return (
               <button
                 type="button"
                 onClick={() => openWorkflowHelp("desktop_header")}
-                className="ml-1 text-[12px] px-2 py-[2px] border border-fuchsia-400/70 bg-fuchsia-500/20 hover:bg-fuchsia-500/30 hidden lg:inline-flex text-fuchsia-100 whitespace-nowrap shadow-[0_0_14px_rgba(217,70,239,0.65)]"
+                className={clsx(
+                  "ml-1 text-[12px] px-2 py-[2px] border border-fuchsia-400/70 bg-fuchsia-500/20 hover:bg-fuchsia-500/30 hidden lg:inline-flex text-fuchsia-100 whitespace-nowrap shadow-[0_0_14px_rgba(217,70,239,0.65)]",
+                  shouldShimmerHelp && "nf-help-shimmer"
+                )}
                 aria-label="Open Help"
                 title="Open Help"
               >
@@ -26835,7 +26863,8 @@ return (
                   "shrink-0 whitespace-nowrap border px-2 py-[3px] text-[11px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400",
                   workflowHelpOpen
                     ? "bg-indigo-600 border-indigo-300 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.12)_inset]"
-                    : "border-neutral-700 bg-neutral-900/70 text-neutral-200 hover:bg-neutral-800"
+                    : "border-neutral-700 bg-neutral-900/70 text-neutral-200 hover:bg-neutral-800",
+                  shouldShimmerHelp && "nf-help-shimmer"
                 )}
                 title="Open Help"
               >
