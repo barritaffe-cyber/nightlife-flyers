@@ -9679,7 +9679,6 @@ async function addLogosFromFiles(files: FileList) {
 // ===== ONBOARDING STRIP (first-open only) =====
 const ONBOARD_KEY = 'nf:onboarded:v1';
 const HELP_SHIMMER_SEEN_KEY = 'nf:help-shimmer-seen:v1';
-const WELCOME_HELP_PROMPT_SEEN_KEY = 'nf:onboarding-coach-seen:v2';
 type WelcomeHelperStage = "tap_headline" | "edit_headline" | "good_job";
 const [showOnboard, setShowOnboard] = useState<boolean>(false);
 const [helpShimmerEligible, setHelpShimmerEligible] = useState<boolean>(false);
@@ -9766,15 +9765,9 @@ useEffect(() => {
 
 useEffect(() => {
   if (!hydrated) return;
-  try {
-    const hasSeenWelcome = localStorage.getItem(WELCOME_HELP_PROMPT_SEEN_KEY) === '1';
-    setWelcomeHelpPromptVisible(!hasSeenWelcome);
-    if (!hasSeenWelcome) {
-      setWelcomeHelperStage("tap_headline");
-    }
-  } catch {
-    setWelcomeHelpPromptVisible(false);
-  }
+  setWelcomeHelperStage("tap_headline");
+  setWelcomeRewardToastHidden(false);
+  setWelcomeHelpPromptVisible(true);
 }, [hydrated]);
 
 const markOnboarded = () => {
@@ -24024,7 +24017,6 @@ const openSaveExportCta = React.useCallback(() => {
 }, [openCreatorWorkflowTarget]);
 const openWorkflowHelp = React.useCallback((source = "toolbar") => {
   try { localStorage.setItem(HELP_SHIMMER_SEEN_KEY, '1'); } catch {}
-  try { localStorage.setItem(WELCOME_HELP_PROMPT_SEEN_KEY, '1'); } catch {}
   setHelpShimmerEligible(false);
   setWelcomeHelpPromptVisible(false);
   flushSync(() => {
@@ -24137,7 +24129,6 @@ React.useEffect(() => {
 }, [welcomeHelperStage, welcomeHelpPromptVisible]);
 
 const dismissWelcomeHelpPrompt = React.useCallback(() => {
-  try { localStorage.setItem(WELCOME_HELP_PROMPT_SEEN_KEY, '1'); } catch {}
   setWelcomeHelpPromptVisible(false);
 }, []);
 
@@ -24151,7 +24142,6 @@ const applyWelcomeCoach3dEffect = React.useCallback(() => {
   setHeadExtrudeDistance((value) => Math.max(value, 28));
   setHeadExtrudeAngle(34);
   setHeadExtrudeColor("#05070b");
-  try { localStorage.setItem(WELCOME_HELP_PROMPT_SEEN_KEY, '1'); } catch {}
   setWelcomeHelpPromptVisible(false);
 }, []);
 
