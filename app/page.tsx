@@ -23137,8 +23137,8 @@ const creatorWorkflowGuide = React.useMemo(() => {
 
   return {
     title: "Ready to publish",
-    buttonLabel: uiMode === "finish" ? "Publish" : "Open Finish",
-    mobileButtonLabel: uiMode === "finish" ? "Publish" : "Finish",
+    buttonLabel: uiMode === "finish" ? "Publish" : "Color",
+    mobileButtonLabel: uiMode === "finish" ? "Publish" : "Color",
     hint: "After checking the final look, publish the flyer.",
   };
 }, [
@@ -24094,6 +24094,12 @@ const handleCreatorWorkflowPrimaryAction = React.useCallback(() => {
 
   openCreatorWorkflowStep(creatorFlowCurrentStep);
 }, [advanceCreatorWorkflow, creatorFlowCurrentStep, creatorWorkflowCurrent, openCreatorWorkflowStep, uiMode]);
+const openSaveExportCta = React.useCallback(() => {
+  openCreatorWorkflowTarget("mastergrade", "design", {
+    uiMode: "finish",
+    targetId: "mastergrade-panel",
+  });
+}, [openCreatorWorkflowTarget]);
 const openWorkflowHelp = React.useCallback((source = "toolbar") => {
   flushSync(() => {
     setWorkflowHelpOpen(true);
@@ -26866,14 +26872,9 @@ return (
                   className="shrink-0 whitespace-nowrap"
                   disabled={starterRenderLimitReached}
                   title={starterRenderLimitReached ? starterRenderLimitMessage : undefined}
-                  onClick={() => {
-                    openCreatorWorkflowTarget("mastergrade", "design", {
-                      uiMode: "finish",
-                      targetId: "mastergrade-panel",
-                    });
-                  }}
+                  onClick={openSaveExportCta}
                 >
-                  Next: Finish
+                  Color
                 </Chip>
               )}
             </div>
@@ -26883,15 +26884,15 @@ return (
 
 
      {/* RIGHT: EXPORT BUTTON (aligned to right panel column) */}
-        <div className="flex items-center gap-4 justify-self-stretch w-full pr-1" data-tour="export">
-          {uiMode === "finish" && (
-            <>
+        <div className="flex min-w-0 items-center gap-3 justify-self-stretch w-full pr-1" data-tour="export">
+          {uiMode === "finish" ? (
+            <div className="flex min-w-0 w-full items-center gap-2 lg:gap-4">
               <div className="flex items-center gap-2 text-[11px]">
                 <span>Export</span>
                 <Chip small active={exportType==='png'} onClick={()=>setExportType('png')}>PNG</Chip>
                 <Chip small active={exportType==='jpg'} onClick={()=>setExportType('jpg')}>JPG</Chip>
               </div>
-              <div className="flex items-center gap-2 text-[11px]">
+              <div className="hidden sm:flex items-center gap-2 text-[11px]">
                 <span>Scale</span>
                 <Chip small active={exportScale===2} onClick={()=>setExportScale(2)}>2x</Chip>
                 <Chip small active={exportScale===4} onClick={()=>setExportScale(4)}>4x</Chip>
@@ -26902,20 +26903,20 @@ return (
                 )}
               </div>
               <div className="ml-auto">
-                <Chip
-                  small
-                  deferHeavy
+                <button
+                  type="button"
                   disabled={starterRenderLimitReached || exportStatus === 'rendering'}
                   onClick={() => triggerExportStart("finish_header")}
                   title={starterRenderLimitReached ? starterRenderLimitMessage : "Preview and export"}
+                  className="nf-export-cta min-h-[26px] whitespace-nowrap border px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.1em] disabled:cursor-not-allowed"
                 >
                   <span className="whitespace-nowrap">
-                    {exportStatus === 'rendering' ? 'exporting…' : `export ${exportType}`}
+                    {exportStatus === 'rendering' ? 'Exporting...' : `Export ${exportType}`}
                   </span>
-                </Chip>
+                </button>
               </div>
-            </>
-          )}
+            </div>
+          ) : null}
         </div>
 
         </div>
