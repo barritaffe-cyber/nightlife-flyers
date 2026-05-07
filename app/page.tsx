@@ -1630,25 +1630,26 @@ const HalftoneHeadlineSvg = React.memo(function HalftoneHeadlineSvg({
   const safeMaxDot = Math.max(minDot, Math.min(14, Number(maxDot) || 7.8));
   const letterSpacing = Number.isFinite(letterSpacingEm) ? letterSpacingEm : -0.075;
   const letterSpacingPx = letterSpacing * safeFontSize;
-  const padX = Math.max(28, safeFontSize * 0.28);
-  const topPad = Math.max(10, safeFontSize * 0.14);
-  const bottomPad = Math.max(10, safeFontSize * 0.14);
+  const fontOverhang = Math.max(18, safeFontSize * 0.22);
+  const padX = Math.max(48, safeFontSize * 0.6);
+  const topPad = Math.max(24, safeFontSize * 0.32);
+  const bottomPad = Math.max(28, safeFontSize * 0.38);
   const lineStep = safeFontSize * safeLineHeight;
-  const textBlockHeight = safeFontSize + Math.max(0, lines.length - 1) * lineStep;
+  const textBlockHeight = safeFontSize * 1.18 + Math.max(0, lines.length - 1) * lineStep;
   const estimatedLineWidth = (line: string) => {
     const count = Math.max(1, line.length);
-    const base = count * safeFontSize * 0.72;
-    const tracking = letterSpacingPx * Math.max(0, count - 1);
-    return Math.max(safeFontSize * 1.8, base + tracking);
+    const base = count * safeFontSize * 0.9;
+    const tracking = Math.max(0, letterSpacingPx * Math.max(0, count - 1));
+    return Math.max(safeFontSize * 2.4, base + tracking + fontOverhang * 2);
   };
   const textWidth = Math.max(...lines.map(estimatedLineWidth));
-  const width = Math.max(safeFontSize * 3.2, textWidth + padX * 2);
+  const width = Math.max(safeFontSize * 4.2, textWidth + padX * 2);
   const height = topPad + textBlockHeight + bottomPad;
   const textX = align === "left" ? padX : align === "right" ? width - padX : width / 2;
   const textAnchor = align === "left" ? "start" : align === "right" ? "end" : "middle";
-  const firstLineY = topPad + safeFontSize * 0.5;
-  const dotFieldTop = Math.max(0, topPad - safeFontSize * 0.04);
-  const dotFieldHeight = textBlockHeight + safeFontSize * 0.08;
+  const firstLineY = topPad + safeFontSize * 0.62;
+  const dotFieldTop = Math.max(0, topPad - safeFontSize * 0.18);
+  const dotFieldHeight = textBlockHeight + safeFontSize * 0.36;
   const alphaValue = Number(alpha);
   const textOpacity = Math.max(0, Math.min(1, Number.isFinite(alphaValue) ? alphaValue : 1));
 
@@ -23923,7 +23924,6 @@ const applyHeadlineGlitchPreset = React.useCallback(() => {
     };
   }
 
-  const glitchPresetFont = "Doctor Glitch";
   const nextFx: TextFx = {
     ...textFx,
     uppercase: true,
@@ -23940,9 +23940,7 @@ const applyHeadlineGlitchPreset = React.useCallback(() => {
     shadowEnabled: false,
   };
 
-  setHeadlineFamily(glitchPresetFont);
-  setTextStyle("headline", format, { align: "center", family: glitchPresetFont });
-  setSessionValue(format, "headlineFamily", glitchPresetFont);
+  setTextStyle("headline", format, { align: "center" });
   setTextFx(nextFx);
   setSessionValue(format, "textFx", nextFx);
   setHeadGlitchEnabled(true);
@@ -26886,13 +26884,13 @@ return (
      {/* RIGHT: EXPORT BUTTON (aligned to right panel column) */}
         <div className="flex min-w-0 items-center gap-3 justify-self-stretch w-full pr-1" data-tour="export">
           {uiMode === "finish" ? (
-            <div className="flex min-w-0 w-full items-center gap-2 lg:gap-4">
-              <div className="flex items-center gap-2 text-[11px]">
+            <div className="flex min-w-0 w-full flex-wrap items-center gap-2 lg:flex-nowrap lg:gap-4">
+              <div className="flex shrink-0 items-center gap-2 text-[11px]">
                 <span>Export</span>
                 <Chip small active={exportType==='png'} onClick={()=>setExportType('png')}>PNG</Chip>
                 <Chip small active={exportType==='jpg'} onClick={()=>setExportType('jpg')}>JPG</Chip>
               </div>
-              <div className="hidden sm:flex items-center gap-2 text-[11px]">
+              <div className="flex shrink-0 items-center gap-2 text-[11px]">
                 <span>Scale</span>
                 <Chip small active={exportScale===2} onClick={()=>setExportScale(2)}>2x</Chip>
                 <Chip small active={exportScale===4} onClick={()=>setExportScale(4)}>4x</Chip>
@@ -26902,7 +26900,7 @@ return (
                   </Chip>
                 )}
               </div>
-              <div className="ml-auto">
+              <div className="ml-auto shrink-0">
                 <button
                   type="button"
                   disabled={starterRenderLimitReached || exportStatus === 'rendering'}
