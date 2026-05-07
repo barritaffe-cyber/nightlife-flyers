@@ -232,6 +232,23 @@ export interface TemplateBase {
   bgBlur?: number;
   vignette?: boolean;
   vignetteStrength?: number;
+  textureOpacity?: number;
+  haze?: number;
+  grade?: number;
+  leak?: number;
+  hue?: number;
+  clarity?: number;
+
+  // Master color grade
+  exp?: number;
+  contrast?: number;
+  saturation?: number;
+  warmth?: number;
+  tint?: number;
+  gamma?: number;
+  grain?: number;
+  vibrance?: number;
+  filmGrade?: number;
 
   // -----------------------------------------------------
   // HEADLINE 1
@@ -286,6 +303,10 @@ export interface TemplateBase {
   headGlitchRgbSplit?: number;
   headGlitchNoise?: number;
   headGlitchGlow?: number;
+  headGlitchRedColor?: string;
+  headGlitchMagentaColor?: string;
+  headGlitchBlueColor?: string;
+  headGlitchYellowColor?: string;
   
 
   // -----------------------------------------------------

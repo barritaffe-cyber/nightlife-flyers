@@ -267,7 +267,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                   </div>
                   <h2 className="mt-2 text-2xl font-semibold text-white">Pick one template to start</h2>
                   <p className="mt-2 text-sm text-neutral-400">
-                    Choose from the templates available to your current access.
+                    Choose any template and start editing before you sign up.
                   </p>
                 </div>
 

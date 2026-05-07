@@ -4624,19 +4624,9 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	    );
     const rushMaxDotPx = Math.max(1.2, Math.min(14, Number(headRushDotSize) || 7.8));
     const rushShadowPx = Math.max(0, Math.min(42, Number(headRushShadowOffset) || 0));
-    const rushDepthDistance = Math.max(
-      rushShadowPx * 1.15,
-      extrudeDepth > 0
-        ? Math.min(
-            HEADLINE_EXTRUDE_MAX_DISTANCE,
-            Math.max(extrudeDistance, extrudeDepth * 0.65)
-          )
-        : Math.min(30, extrudeDistance * 0.72)
-    );
+    const rushDepthDistance = rushShadowPx * 1.15;
     const rushDepthX = Math.cos(extrudeAngleRad) * rushDepthDistance;
     const rushDepthY = Math.sin(extrudeAngleRad) * rushDepthDistance;
-    const rushDepthStepX = extrudeDepth > 0 ? rushDepthX / extrudeDepth : 0;
-    const rushDepthStepY = extrudeDepth > 0 ? rushDepthY / extrudeDepth : 0;
     const rushDarkColor = headExtrudeColor || "#050812";
     const rushLayerBase: React.CSSProperties = {
       position: "absolute",
@@ -4976,9 +4966,9 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
               shadowColor={rushDarkColor}
               shadowOffsetX={rushDepthX}
               shadowOffsetY={rushDepthY}
-              depthLayers={extrudeDepth}
-              depthStepX={rushDepthStepX}
-              depthStepY={rushDepthStepY}
+              depthLayers={0}
+              depthStepX={0}
+              depthStepY={0}
               alpha={textFx.alpha}
               maxDot={rushMaxDotPx}
               minDot={1.2}
@@ -13730,13 +13720,13 @@ const mobileFloatPanelClass =
   const visibleTemplateGallery = isStarterPlan ? starterTemplateGallery : TEMPLATE_GALLERY;
   const startupTemplateOptions = React.useMemo(
     () =>
-      visibleTemplateGallery.map((template) => ({
+      TEMPLATE_GALLERY.map((template) => ({
         key: template.id,
         label: template.label,
         desc: template.tags?.slice(0, 3).join(" / ") || "Editable starter flyer",
         preview: template.preview,
       })),
-    [visibleTemplateGallery]
+    []
   );
   const visibleStartupBackgrounds = isStarterPlan ? STARTER_BACKGROUND_CHOICES : DJ_STARTUP_BACKGROUNDS;
   const isDjStartupMode = startupStudioMode === "dj";
@@ -14656,7 +14646,7 @@ const mobileCompositeStressMode =
   !hideUiForExport &&
   (headGlitchEnabled || activeCanvasFlareCount > 0) &&
   (activeCanvasObjectCount >= 2 || !!bgUploadUrl || !!bgUrl);
-const canvasMasterFilterCss = mobileCompositeStressMode ? "none" : masterFilterCss;
+const canvasMasterFilterCss = masterFilterCss;
 
 
 
@@ -15874,8 +15864,22 @@ const buildEdgeAwareLassoMask = (
       // palette & bg fx
       palette,
       vignette,
+      vignetteStrength,
+      textureOpacity,
       haze,
+      grade,
+      leak,
       hue,
+      clarity,
+      exp,
+      contrast,
+      saturation,
+      warmth,
+      tint,
+      gamma,
+      grain,
+      vibrance,
+      filmGrade,
 
       // lock flags
       portraitLocked,
@@ -16058,9 +16062,24 @@ const buildEdgeAwareLassoMask = (
         // (uncomment next line if you later make palette stateful)
         // setPalette(s.palette);
       }
-      if (typeof s.vignette === 'number') setVignette(s.vignette);
+      if (typeof s.vignette === 'boolean') setVignette(s.vignette);
+      if (typeof s.vignette === 'number') setVignette(s.vignette > 0);
+      if (typeof s.vignetteStrength === 'number') setVignetteStrength(s.vignetteStrength);
+      if (typeof s.textureOpacity === 'number') setTextureOpacity(s.textureOpacity);
       if (typeof s.haze === 'number') setHaze(s.haze);
+      if (typeof s.grade === 'number') setGrade(s.grade);
+      if (typeof s.leak === 'number') setLeak(s.leak);
       if (typeof s.hue === 'number') setHue(s.hue);
+      if (typeof s.clarity === 'number') setClarity(s.clarity);
+      if (typeof s.exp === 'number') setExp(s.exp);
+      if (typeof s.contrast === 'number') setContrast(s.contrast);
+      if (typeof s.saturation === 'number') setSaturation(s.saturation);
+      if (typeof s.warmth === 'number') setWarmth(s.warmth);
+      if (typeof s.tint === 'number') setTint(s.tint);
+      if (typeof s.gamma === 'number') setGamma(s.gamma);
+      if (typeof s.grain === 'number') setGrain(s.grain);
+      if (typeof s.vibrance === 'number') setVibrance(s.vibrance);
+      if (typeof s.filmGrade === 'number') setFilmGrade(s.filmGrade);
       if (typeof s.portraitLocked === 'boolean') setPortraitLocked(s.portraitLocked);
 
     };
@@ -17228,7 +17247,9 @@ function exportDesignJSON(): string {
     details2Size,
 
     // background & FX
-    bgUrl, bgUploadUrl, hue, haze, grade, leak, vignette, bgPosX, bgPosY, bgScale, bgFitMode, clarity,
+    bgUrl, bgUploadUrl, hue, haze, grade, leak, vignette, vignetteStrength,
+    textureOpacity, bgPosX, bgPosY, bgScale, bgFitMode, clarity,
+    exp, contrast, saturation, warmth, tint, gamma, grain, vibrance, filmGrade,
 
     // portrait
     portraitUrl, portraitX, portraitY, portraitScale, portraitLocked, portraitSlots,
@@ -17407,7 +17428,9 @@ function buildHistoryState() {
     details2Size, details2Color,
 
     // background & FX
-    bgUrl, bgUploadUrl, hue, haze, grade, leak, vignette, bgPosX, bgPosY, bgScale, bgFitMode, clarity,
+    bgUrl, bgUploadUrl, hue, haze, grade, leak, vignette, vignetteStrength,
+    textureOpacity, bgPosX, bgPosY, bgScale, bgFitMode, clarity,
+    exp, contrast, saturation, warmth, tint, gamma, grain, vibrance, filmGrade,
 
     // portrait
     portraitUrl, portraitX, portraitY, portraitScale, portraitLocked, portraitSlots,
@@ -17474,7 +17497,9 @@ const historySignature = React.useMemo(() => {
   details2Enabled, details2,
   details2LineHeight, details2Align, details2X, details2Y, details2Rotate,
   details2Size, details2Color,
-  bgUrl, bgUploadUrl, hue, haze, grade, leak, vignette, bgPosX, bgPosY, bgScale, bgFitMode, clarity,
+  bgUrl, bgUploadUrl, hue, haze, grade, leak, vignette, vignetteStrength,
+  textureOpacity, bgPosX, bgPosY, bgScale, bgFitMode, clarity,
+  exp, contrast, saturation, warmth, tint, gamma, grain, vibrance, filmGrade,
   portraitUrl, portraitX, portraitY, portraitScale, portraitLocked, portraitSlots,
   logoUrl, logoX, logoY, logoScale, logoRotate,
   logoSlots,
@@ -18466,9 +18491,14 @@ async function renderExportDataUrl(
     onProgress?.(55);
 
     const exportStyle = getComputedStyle(captureNode);
+    const exportNodeFilter =
+      exportStyle.filter && exportStyle.filter !== "none" ? exportStyle.filter : "";
+    const exportMasterFilter = masterFilter && masterFilter !== "none" ? masterFilter : "";
+    const exportCaptureFilter =
+      [exportNodeFilter, exportMasterFilter].filter(Boolean).join(" ") || "none";
     const forcedStyle: any = {
-      filter: exportStyle.filter,
-      webkitFilter: exportStyle.filter,
+      filter: exportCaptureFilter,
+      webkitFilter: exportCaptureFilter,
       backdropFilter: (exportStyle as any).backdropFilter,
       WebkitBackdropFilter:
         (exportStyle as any).backdropFilter ||
@@ -20615,7 +20645,18 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       applyIfDefined(data.grade, setGrade);
       applyIfDefined(data.leak, setLeak);
       applyIfDefined(data.vignette, setVignette);
+      applyIfDefined(data.vignetteStrength, setVignetteStrength);
+      applyIfDefined(data.textureOpacity, setTextureOpacity);
       applyIfDefined(data.clarity, setClarity);
+      applyIfDefined(data.exp, setExp);
+      applyIfDefined(data.contrast, setContrast);
+      applyIfDefined(data.saturation, setSaturation);
+      applyIfDefined(data.warmth, setWarmth);
+      applyIfDefined(data.tint, setTint);
+      applyIfDefined(data.gamma, setGamma);
+      applyIfDefined(data.grain, setGrain);
+      applyIfDefined(data.vibrance, setVibrance);
+      applyIfDefined(data.filmGrade, setFilmGrade);
       applyIfDefined(data.variety, setVariety);
       applyIfDefined(data.palette, setPalette);
       applyIfDefined(data.genStyle, setGenStyle);
@@ -20982,6 +21023,21 @@ const applyTemplate = React.useCallback<
     // VIGNETTE SETTINGS
     setVignetteStrength(merged.vignetteStrength ?? 0.5);
     setVignette(merged.vignette ?? true);
+    setTextureOpacity((merged as any).textureOpacity ?? 0);
+    setHaze((merged as any).haze ?? 0.5);
+    setGrade((merged as any).grade ?? 0.35);
+    setLeak((merged as any).leak ?? 0.25);
+    setHue((merged as any).hue ?? 0);
+    setClarity((merged as any).clarity ?? 0.15);
+    setExp((merged as any).exp ?? 1);
+    setContrast((merged as any).contrast ?? 1.08);
+    setSaturation((merged as any).saturation ?? 1.10);
+    setWarmth((merged as any).warmth ?? 0.10);
+    setTint((merged as any).tint ?? 0);
+    setGamma((merged as any).gamma ?? 1);
+    setGrain((merged as any).grain ?? 0.15);
+    setVibrance((merged as any).vibrance ?? 0.15);
+    setFilmGrade((merged as any).filmGrade ?? 0.6);
 
     // 1. DETAILS (Main Body)
     setDetailsShadow(merged.detailsShadow ?? true);
@@ -21227,8 +21283,8 @@ const applyTemplate = React.useCallback<
 // =========================================================
 // Apply button handler (shared with Choose-a-Vibe)
 const applyTemplateFromGallery = React.useCallback(
-  (tpl: TemplateSpec, opts?: { targetFormat?: Format; advanceWorkflow?: boolean }) => {
-    if (isStarterPlan && !STARTER_TEMPLATE_IDS.has(tpl.id)) {
+  (tpl: TemplateSpec, opts?: { targetFormat?: Format; advanceWorkflow?: boolean; allowStarterPreview?: boolean }) => {
+    if (isStarterPlan && !opts?.allowStarterPreview && !STARTER_TEMPLATE_IDS.has(tpl.id)) {
       alert(`Trial access includes ${STARTER_TEMPLATE_COUNT} editable templates. Log in and choose a plan to unlock the full template library.`);
       return;
     }
@@ -21950,10 +22006,21 @@ const syncCurrentStateToSession = () => {
     // Global Effects
     hue,
     haze,
+    grade,
+    leak,
     vignette,         // Boolean
     vignetteStrength, // Number
-    //texture,          // ✅ Added
-    //textureOpacity,   // ✅ Added
+    textureOpacity,
+    clarity,
+    exp,
+    contrast,
+    saturation,
+    warmth,
+    tint,
+    gamma,
+    grain,
+    vibrance,
+    filmGrade,
 
     // LIBRARY ITEMS (per-format)
     portraits: portraits?.[format] || [],
@@ -22206,14 +22273,10 @@ const handleTemplateSelect = React.useCallback(
           };
 
           const selectedTemplate = TEMPLATE_GALLERY.find((t) => t.id === key);
-          if (selectedTemplate && isStarterPlan && !STARTER_TEMPLATE_IDS.has(selectedTemplate.id)) {
-            alert(`Trial access includes ${STARTER_TEMPLATE_COUNT} starter templates. Subscribe to unlock the full template library.`);
-            return;
-          }
           const tplId = selectedTemplate?.id ?? vibeToTemplateId[key] ?? TEMPLATE_GALLERY[0]?.id;
           const tpl = selectedTemplate ?? TEMPLATE_GALLERY.find((t) => t.id === tplId);
           if (!tpl) throw new Error("Template not found for vibe: " + key);
-          applyTemplateFromGallery(tpl, { targetFormat: startupFormat });
+          applyTemplateFromGallery(tpl, { targetFormat: startupFormat, allowStarterPreview: true });
         }
       } catch {
         alert("Could not load template.");
@@ -23418,9 +23481,9 @@ const applyHeadlineRushHalftonePreset = React.useCallback(() => {
   setHeadSliceEnabled(false);
   setHeadShadow(false);
   setHeadShadowStrength(0);
-  setHeadExtrudeDepth(8);
+  setHeadExtrudeDepth(0);
   setHeadExtrudeAngle(38);
-  setHeadExtrudeDistance(18);
+  setHeadExtrudeDistance(0);
   setHeadExtrudeColor("#080d13");
   setHeadAlign("center");
   setAlign("center");
@@ -28116,32 +28179,34 @@ style={{ top: STICKY_TOP }}
         />
       </div>
 
-      <div className="grid grid-cols-3 gap-3 mt-2">
-        <Stepper
-          label="3D Depth"
-          value={headExtrudeDepth}
-          setValue={setHeadExtrudeDepth}
-          min={0}
-          max={HEADLINE_EXTRUDE_MAX_DEPTH}
-          step={1}
-        />
-        <Stepper
-          label="3D Angle"
-          value={headExtrudeAngle}
-          setValue={setHeadExtrudeAngle}
-          min={0}
-          max={360}
-          step={1}
-        />
-        <Stepper
-          label="3D Distance"
-          value={headExtrudeDistance}
-          setValue={setHeadExtrudeDistance}
-          min={0}
-          max={HEADLINE_EXTRUDE_MAX_DISTANCE}
-          step={1}
-        />
-      </div>
+      {!headRushEnabled && (
+        <div className="grid grid-cols-3 gap-3 mt-2">
+          <Stepper
+            label="3D Depth"
+            value={headExtrudeDepth}
+            setValue={setHeadExtrudeDepth}
+            min={0}
+            max={HEADLINE_EXTRUDE_MAX_DEPTH}
+            step={1}
+          />
+          <Stepper
+            label="3D Angle"
+            value={headExtrudeAngle}
+            setValue={setHeadExtrudeAngle}
+            min={0}
+            max={360}
+            step={1}
+          />
+          <Stepper
+            label="3D Distance"
+            value={headExtrudeDistance}
+            setValue={setHeadExtrudeDistance}
+            min={0}
+            max={HEADLINE_EXTRUDE_MAX_DISTANCE}
+            step={1}
+          />
+        </div>
+      )}
 
       {headSliceEnabled && (
         <>
@@ -28370,13 +28435,15 @@ style={{ top: STICKY_TOP }}
             }}
           />
         </div>
-        <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
-          <span className="uppercase tracking-[0.12em] opacity-80">3D</span>
-          <ColorDot
-            value={headExtrudeColor}
-            onChange={setHeadExtrudeColor}
-          />
-        </div>
+        {!headRushEnabled && (
+          <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+            <span className="uppercase tracking-[0.12em] opacity-80">3D</span>
+            <ColorDot
+              value={headExtrudeColor}
+              onChange={setHeadExtrudeColor}
+            />
+          </div>
+        )}
       </div>
 
     </div>
@@ -30159,8 +30226,6 @@ style={{ top: STICKY_TOP }}
                       <ColorDot value={headRushDotColor} onChange={setHeadRushDotColor} />
                       <span className="text-[10px] uppercase tracking-wider text-neutral-400">Stripe</span>
                       <ColorDot value={headRushContrastColor} onChange={setHeadRushContrastColor} />
-                      <span className="text-[10px] uppercase tracking-wider text-neutral-400">3D</span>
-                      <ColorDot value={headExtrudeColor} onChange={setHeadExtrudeColor} />
                     </div>
                   )}
                   <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
@@ -30211,30 +30276,6 @@ style={{ top: STICKY_TOP }}
                         suffix="°"
                         onChange={setHeadSkew}
                         rangeClassName="flex-1 accent-emerald-400"
-                      />
-                    </div>
-                    <div>
-                      <InlineSliderInput
-                        label="3D Depth"
-                        value={headExtrudeDepth}
-                        min={0}
-                        max={HEADLINE_EXTRUDE_MAX_DEPTH}
-                        step={1}
-                        precision={0}
-                        onChange={setHeadExtrudeDepth}
-                        rangeClassName="flex-1 accent-cyan-400"
-                      />
-                    </div>
-                    <div>
-                      <InlineSliderInput
-                        label="3D Distance"
-                        value={headExtrudeDistance}
-                        min={0}
-                        max={HEADLINE_EXTRUDE_MAX_DISTANCE}
-                        step={1}
-                        precision={0}
-                        onChange={setHeadExtrudeDistance}
-                        rangeClassName="flex-1 accent-amber-400"
                       />
                     </div>
                   </div>
