@@ -86,7 +86,13 @@ export async function GET(req: Request) {
         .from("analytics_events")
         .select("*")
         .gte("created_at", liveSince)
-        .in("event_name", ["session_started", "session_heartbeat", "session_ended", "page_view"])
+        .in("event_name", [
+          "session_started",
+          "session_heartbeat",
+          "session_ended",
+          "page_view",
+          "export_button_pressed",
+        ])
         .order("created_at", { ascending: false })
         .limit(1000),
     ]);
@@ -181,6 +187,7 @@ export async function GET(req: Request) {
         checkout_succeeded: eventCounts.get("checkout_succeeded") || 0,
         subscriptions_activated: eventCounts.get("subscription_activated") || 0,
         starter_benefits_used: eventCounts.get("starter_trial_benefit_used") || 0,
+        export_button_presses: eventCounts.get("export_button_pressed") || 0,
         ai_generations_started: eventCounts.get("ai_generation_started") || 0,
         ai_generations_succeeded: eventCounts.get("ai_generation_succeeded") || 0,
         ai_generations_failed: eventCounts.get("ai_generation_failed") || 0,

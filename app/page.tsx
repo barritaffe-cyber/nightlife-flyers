@@ -78,7 +78,7 @@ import {
 import { TEXT_SEPARATOR_GRAPHICS, buildSeparatorSvgDataUrl } from "../lib/textSeparators";
 import { SHAPE_GRAPHICS, buildShapeSvgDataUrl, buildShapeSvgMarkup } from "../lib/shapeGraphics";
 import { getPublicLegalName, getPublicSupportEmail } from "../lib/publicIdentity";
-import { getClientTrackingPayload } from "../lib/analytics/client";
+import { getClientTrackingPayload, trackClientEvent } from "../lib/analytics/client";
 import { getDeviceType, getOrCreateDeviceId } from "../lib/auth/device";
 
 const AiBackgroundPanel = dynamic(() => import("../components/editor/AiBackgroundPanel"), {
@@ -14417,11 +14417,68 @@ const mobileFloatPanelClass =
     consumeStarterRenderQuota,
   ]);
 
-  const triggerExportStart = React.useCallback(() => {
-    runAfterNextPaint(() => {
-      void handleExportStart();
-    });
-  }, [handleExportStart]);
+  const triggerExportStart = React.useCallback(
+    (
+      source:
+        | "finish_header"
+        | "export_modal_retry"
+        | "export_modal_rerender" = "finish_header"
+    ) => {
+      void trackClientEvent("export_button_pressed", {
+        properties: {
+          source,
+          format,
+          export_type: exportType,
+          export_scale: exportScale,
+          export_status: exportStatus,
+          is_starter: isStarterPlan,
+          has_auth_session: hasAuthSession,
+          has_paid_access: hasPaidAccess,
+          access_plan: accessPlan,
+          subscription_status: subscriptionStatus,
+          template_id: templateId,
+          template_label: activeTemplate?.label ?? null,
+          has_background: Boolean(bgUrl || bgUploadUrl),
+          headline_length: String(headline || "").length,
+          headline_style: headGlitchEnabled
+            ? "glitch"
+            : headRushEnabled
+            ? "halftone"
+            : headSliceEnabled
+            ? "echo"
+            : "standard",
+          canvas_width: canvasSize.w,
+          canvas_height: canvasSize.h,
+          mobile: isMobileView,
+        },
+      });
+      runAfterNextPaint(() => {
+        void handleExportStart();
+      });
+    }, [
+      accessPlan,
+      activeTemplate?.label,
+      bgUploadUrl,
+      bgUrl,
+      canvasSize.h,
+      canvasSize.w,
+      exportScale,
+      exportStatus,
+      exportType,
+      format,
+      hasAuthSession,
+      hasPaidAccess,
+      handleExportStart,
+      headGlitchEnabled,
+      headRushEnabled,
+      headSliceEnabled,
+      headline,
+      isMobileView,
+      isStarterPlan,
+      subscriptionStatus,
+      templateId,
+    ]
+  );
 
   const buildResumeSnapshot = async () => {
     const historyJson = expandHistorySnapshot(buildHistorySnapshot());
@@ -26551,7 +26608,7 @@ return (
                   small
                   deferHeavy
                   disabled={starterRenderLimitReached || exportStatus === 'rendering'}
-                  onClick={triggerExportStart}
+                  onClick={() => triggerExportStart("finish_header")}
                   title={starterRenderLimitReached ? starterRenderLimitMessage : "Preview and export"}
                 >
                   <span className="whitespace-nowrap">
@@ -26940,7 +26997,7 @@ return (
               <button
                 type="button"
                 className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
-                onClick={triggerExportStart}
+                onClick={() => triggerExportStart("export_modal_retry")}
                 disabled={starterRenderLimitReached}
               >
                 Retry export
@@ -27076,7 +27133,7 @@ return (
               <button
                 type="button"
                 className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
-                onClick={triggerExportStart}
+                onClick={() => triggerExportStart("export_modal_rerender")}
                 disabled={starterRenderLimitReached}
               >
                 Re-render
