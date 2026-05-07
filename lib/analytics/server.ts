@@ -7,7 +7,6 @@ export type AnalyticsEventName =
   | "session_started"
   | "session_heartbeat"
   | "session_ended"
-  | "try_editing_clicked"
   | "tour_started"
   | "help_opened"
   | "signup_started"

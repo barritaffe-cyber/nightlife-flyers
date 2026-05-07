@@ -250,7 +250,6 @@ export async function GET(req: Request) {
         sessions_started: eventCounts.get("session_started") || 0,
         session_heartbeats: eventCounts.get("session_heartbeat") || 0,
         sessions_ended: eventCounts.get("session_ended") || 0,
-        try_editing_clicks: eventCounts.get("try_editing_clicked") || 0,
         help_opens: eventCounts.get("help_opened") || 0,
         tours_started: eventCounts.get("tour_started") || 0,
         signup_started: eventCounts.get("signup_started") || 0,

@@ -2776,6 +2776,7 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
   emojiCanvas?: React.ReactNode;
   flareCanvas?: React.ReactNode;
   showDjTextEditing: boolean;
+  headlineEditCue?: boolean;
 
   
 
@@ -2835,6 +2836,7 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
     emojiCanvas,
     flareCanvas,
     showDjTextEditing,
+    headlineEditCue = false,
     hideUiForExport,
     isLiveDragging = false,
 
@@ -4348,7 +4350,10 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
   data-anim-field
   data-node="headline"
   data-active={isActive("headline") ? "true" : "false"}
-  className="absolute cursor-grab active:cursor-grabbing select-none"
+  className={clsx(
+    "absolute cursor-grab active:cursor-grabbing select-none",
+    headlineEditCue && "nf-onboarding-headline-cue"
+  )}
   
   // 1. SELECT
   onClick={(e) => {
@@ -9674,10 +9679,14 @@ async function addLogosFromFiles(files: FileList) {
 // ===== ONBOARDING STRIP (first-open only) =====
 const ONBOARD_KEY = 'nf:onboarded:v1';
 const HELP_SHIMMER_SEEN_KEY = 'nf:help-shimmer-seen:v1';
-const TRY_EDITING_CLICKED_KEY = 'nf:try-editing-clicked:v1';
+const WELCOME_HELP_PROMPT_SEEN_KEY = 'nf:welcome-help-prompt-seen:v1';
+type WelcomeHelperStage = "tap_headline" | "edit_headline" | "good_job";
 const [showOnboard, setShowOnboard] = useState<boolean>(false);
 const [helpShimmerEligible, setHelpShimmerEligible] = useState<boolean>(false);
-const [tryEditingCtaVisible, setTryEditingCtaVisible] = useState<boolean>(false);
+const [welcomeHelpPromptVisible, setWelcomeHelpPromptVisible] = useState<boolean>(false);
+const [welcomeHelperStage, setWelcomeHelperStage] = useState<WelcomeHelperStage>("tap_headline");
+const [welcomeRewardToastHidden, setWelcomeRewardToastHidden] = useState<boolean>(false);
+const welcomeInitialHeadlineRef = React.useRef<string | null>(null);
 const [tourStep, setTourStep] = useState<number | null>(null);
 const [tourRect, setTourRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
 const [tourTip, setTourTip] = useState<{ top: number; left: number; centered?: boolean } | null>(null);
@@ -9758,9 +9767,16 @@ useEffect(() => {
 useEffect(() => {
   if (!hydrated) return;
   try {
-    setTryEditingCtaVisible(sessionStorage.getItem(TRY_EDITING_CLICKED_KEY) !== '1');
+    const hasSeenWelcome =
+      localStorage.getItem(WELCOME_HELP_PROMPT_SEEN_KEY) === '1' ||
+      localStorage.getItem(HELP_SHIMMER_SEEN_KEY) === '1' ||
+      localStorage.getItem(ONBOARD_KEY) === '1';
+    setWelcomeHelpPromptVisible(!hasSeenWelcome);
+    if (!hasSeenWelcome) {
+      setWelcomeHelperStage("tap_headline");
+    }
   } catch {
-    setTryEditingCtaVisible(false);
+    setWelcomeHelpPromptVisible(false);
   }
 }, [hydrated]);
 
@@ -24011,7 +24027,9 @@ const openSaveExportCta = React.useCallback(() => {
 }, [openCreatorWorkflowTarget]);
 const openWorkflowHelp = React.useCallback((source = "toolbar") => {
   try { localStorage.setItem(HELP_SHIMMER_SEEN_KEY, '1'); } catch {}
+  try { localStorage.setItem(WELCOME_HELP_PROMPT_SEEN_KEY, '1'); } catch {}
   setHelpShimmerEligible(false);
+  setWelcomeHelpPromptVisible(false);
   flushSync(() => {
     setWorkflowHelpOpen(true);
   });
@@ -24084,26 +24102,61 @@ React.useEffect(() => {
   studioAnalyticsContextRef.current = studioAnalyticsContext;
 }, [studioAnalyticsContext]);
 
-const handleTryEditingClick = React.useCallback(
-  (source: "header" | "mobile_action_bar") => {
-    try { sessionStorage.setItem(TRY_EDITING_CLICKED_KEY, '1'); } catch {}
-    setTryEditingCtaVisible(false);
-    void trackClientEvent("try_editing_clicked", {
-      properties: {
-        source,
-        ...studioAnalyticsContextRef.current,
-      },
-    });
-    setUiMode("design");
-    setMobileControlsOpen(true);
-    setMobileControlsTab("design");
-    setSelectedPanel("headline");
-    window.setTimeout(() => {
-      document.querySelector('[data-tour="headline"]')?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 50);
-  },
-  [setSelectedPanel]
-);
+React.useEffect(() => {
+  if (!welcomeHelpPromptVisible) {
+    welcomeInitialHeadlineRef.current = null;
+    return;
+  }
+  if (welcomeInitialHeadlineRef.current == null) {
+    welcomeInitialHeadlineRef.current = headline;
+  }
+}, [headline, welcomeHelpPromptVisible]);
+
+React.useEffect(() => {
+  if (!welcomeHelpPromptVisible || welcomeHelperStage !== "tap_headline") return;
+  if (selectedPanel === "headline") {
+    setWelcomeHelperStage("edit_headline");
+  }
+}, [selectedPanel, welcomeHelperStage, welcomeHelpPromptVisible]);
+
+React.useEffect(() => {
+  if (!welcomeHelpPromptVisible || welcomeHelperStage === "good_job") return;
+  const initialHeadline = welcomeInitialHeadlineRef.current;
+  if (selectedPanel === "headline" && initialHeadline != null && headline !== initialHeadline) {
+    setWelcomeHelperStage("good_job");
+  }
+}, [headline, selectedPanel, welcomeHelperStage, welcomeHelpPromptVisible]);
+
+React.useEffect(() => {
+  if (!welcomeHelpPromptVisible || welcomeHelperStage !== "good_job") {
+    setWelcomeRewardToastHidden(false);
+    return;
+  }
+  setWelcomeRewardToastHidden(false);
+  const id = window.setTimeout(() => {
+    setWelcomeRewardToastHidden(true);
+  }, 4200);
+  return () => window.clearTimeout(id);
+}, [welcomeHelperStage, welcomeHelpPromptVisible]);
+
+const dismissWelcomeHelpPrompt = React.useCallback(() => {
+  try { localStorage.setItem(WELCOME_HELP_PROMPT_SEEN_KEY, '1'); } catch {}
+  setWelcomeHelpPromptVisible(false);
+}, []);
+
+const applyWelcomeCoach3dEffect = React.useCallback(() => {
+  setUiMode("design");
+  setMobileControlsOpen(true);
+  setMobileControlsTab("design");
+  setSelectedPanel("headline");
+  setHeadRushEnabled(false);
+  setHeadExtrudeDepth((value) => Math.max(value, 24));
+  setHeadExtrudeDistance((value) => Math.max(value, 28));
+  setHeadExtrudeAngle(34);
+  setHeadExtrudeColor("#05070b");
+  try { localStorage.setItem(WELCOME_HELP_PROMPT_SEEN_KEY, '1'); } catch {}
+  setWelcomeHelpPromptVisible(false);
+}, []);
 
 React.useEffect(() => {
   if (!hydrated || typeof window === "undefined") return;
@@ -25314,17 +25367,6 @@ const mobileControlsTabs = (
       >
         Undo
       </button>
-      {tryEditingCtaVisible && (
-        <button
-          type="button"
-          onClick={() => handleTryEditingClick("mobile_action_bar")}
-          data-mobile-float-lock="true"
-          className={`${mobileTabButtonClass} border-amber-300/80 bg-amber-300/15 text-amber-100 hover:bg-amber-300/25`}
-          title="Try editing"
-        >
-          Try Editing
-        </button>
-      )}
       <button
         type="button"
         onClick={() => openWorkflowHelp("mobile_action_bar")}
@@ -26634,6 +26676,30 @@ const emojiCanvas = React.useMemo(() => {
     </div>
   );
 }, [emojis, format, onEmojiMove, recordMove]);
+const helperBotVisible =
+  !workflowHelpOpen &&
+  !showOnboard &&
+  tourStep == null &&
+  !showStartupTemplates &&
+  !exportModalOpen;
+const showHeadlineActionPrompt =
+  helperBotVisible && welcomeHelpPromptVisible && welcomeHelperStage !== "good_job";
+const showHeadlineEditCue = showHeadlineActionPrompt && welcomeHelperStage === "tap_headline";
+const showWelcomeRewardToast =
+  helperBotVisible &&
+  welcomeHelpPromptVisible &&
+  welcomeHelperStage === "good_job" &&
+  !welcomeRewardToastHidden;
+const showWelcomeCoachBubble =
+  helperBotVisible && welcomeHelpPromptVisible && welcomeHelperStage === "good_job";
+const headlineActionPromptText =
+  welcomeHelperStage === "edit_headline"
+    ? "Change the headline text"
+    : "Tap the headline to edit text";
+const headlineActionPromptBody =
+  welcomeHelperStage === "edit_headline"
+    ? "Use the text editor that opened. One quick word change is enough."
+    : "Start with the biggest text on the flyer.";
 if (redirectingToLanding) {
   return (
     <main className="min-h-screen bg-[#050608] text-white" aria-label="Opening Nightlife Flyers">
@@ -26950,18 +27016,6 @@ return (
                   draggable={false}
                 />
               </button>
-
-              {tryEditingCtaVisible && !isMobileView && (
-                <button
-                  type="button"
-                  data-mobile-float-lock="true"
-                  onClick={() => handleTryEditingClick("header")}
-                  className="shrink-0 whitespace-nowrap border border-amber-300/80 bg-amber-300/15 px-2 py-[3px] text-[11px] font-semibold text-amber-100 transition-colors hover:bg-amber-300/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
-                  title="Try editing"
-                >
-                  Try Editing
-                </button>
-              )}
 
               <button
                 type="button"
@@ -27486,6 +27540,110 @@ return (
           </>
         )}
       </div>
+    </div>
+  </div>
+)}
+
+{showHeadlineActionPrompt && (
+  <div
+    data-nonexport="true"
+    className="pointer-events-none fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom,0px)+82px)] z-[5050] flex justify-center lg:bottom-8"
+  >
+    <div className="pointer-events-auto w-full max-w-[360px] border border-cyan-300/35 bg-neutral-950/95 p-3 text-white shadow-[0_18px_60px_rgba(0,0,0,0.55)] backdrop-blur">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-200">
+            Start Here
+          </div>
+          <div className="mt-1 text-sm font-semibold leading-5 text-white">
+            {headlineActionPromptText}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={dismissWelcomeHelpPrompt}
+          className="shrink-0 border border-white/10 bg-white/[0.06] px-2 py-1 text-[11px] text-white/70 hover:bg-white/[0.1]"
+          aria-label="Dismiss start prompt"
+        >
+          Close
+        </button>
+      </div>
+      <div className="mt-2 text-[12px] leading-5 text-neutral-300">
+        {headlineActionPromptBody}
+      </div>
+      <div className="mt-3 flex justify-end">
+        <button
+          type="button"
+          onClick={() => {
+            setUiMode("design");
+            setMobileControlsOpen(true);
+            setMobileControlsTab("design");
+            setSelectedPanel("headline");
+            window.setTimeout(() => {
+              canvasRefs.headline?.scrollIntoView({ behavior: "smooth", block: "center" });
+            }, 50);
+          }}
+          className="border border-cyan-300/70 bg-cyan-400/15 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-cyan-100 hover:bg-cyan-400/25"
+        >
+          Show Me
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{showWelcomeRewardToast && (
+  <div
+    data-nonexport="true"
+    className="pointer-events-none fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom,0px)+82px)] z-[5050] flex justify-center lg:bottom-8"
+  >
+    <div className="pointer-events-auto border border-emerald-300/40 bg-emerald-400/12 px-4 py-3 text-sm font-semibold text-emerald-50 shadow-[0_14px_42px_rgba(0,0,0,0.42)] backdrop-blur">
+      Nice. Try adding an effect.
+    </div>
+  </div>
+)}
+
+{showWelcomeCoachBubble && (
+  <div
+    data-nonexport="true"
+    className="pointer-events-none fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom,0px)+22px)] z-[5040] flex justify-end lg:inset-x-auto lg:right-6 lg:bottom-6"
+  >
+    <div className="pointer-events-auto flex max-w-[min(92vw,360px)] items-end gap-2">
+      <div className="relative border border-fuchsia-300/45 bg-neutral-950/95 p-3 text-white shadow-[0_18px_60px_rgba(0,0,0,0.55)] backdrop-blur">
+        <div className="absolute -right-2 bottom-5 h-4 w-4 rotate-45 border-r border-t border-fuchsia-300/45 bg-neutral-950/95" />
+        <button
+          type="button"
+          onClick={dismissWelcomeHelpPrompt}
+          className="absolute right-2 top-2 text-[10px] uppercase tracking-wide text-white/45 hover:text-white/80"
+          aria-label="Dismiss coach prompt"
+        >
+          Close
+        </button>
+        <div className="pr-10 text-[10px] font-semibold uppercase tracking-[0.2em] text-fuchsia-200">
+          Next Move
+        </div>
+        <div className="mt-1 pr-4 text-sm font-semibold leading-5 text-white">
+          Add 3D effect in 1 tap
+        </div>
+        <button
+          type="button"
+          onClick={applyWelcomeCoach3dEffect}
+          className="mt-3 border border-fuchsia-300/70 bg-fuchsia-500/20 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-fuchsia-100 hover:bg-fuchsia-500/30"
+        >
+          Add 3D
+        </button>
+      </div>
+      <button
+        type="button"
+        onClick={() => openWorkflowHelp("coach_bubble")}
+        className="grid h-12 w-12 shrink-0 place-items-center rounded-full border border-fuchsia-300/70 bg-fuchsia-500/25 text-white shadow-[0_16px_42px_rgba(0,0,0,0.5),0_0_28px_rgba(217,70,239,0.35)] hover:bg-fuchsia-500/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-200"
+        aria-label="Open Help"
+        title="Open Help"
+      >
+        <span className="grid h-8 w-8 place-items-center rounded-full border border-white/20 bg-black/35 text-sm font-black">
+          ?
+        </span>
+      </button>
     </div>
   </div>
 )}
@@ -30180,6 +30338,7 @@ style={{ top: STICKY_TOP }}
             emojiCanvas={emojiCanvas}
             flareCanvas={flareCanvas}
             showDjTextEditing={showDjTextEditing}
+            headlineEditCue={showHeadlineEditCue}
           />
           </div>
           

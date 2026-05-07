@@ -159,6 +159,52 @@ html, body {
   }
 }
 
+.nf-onboarding-headline-cue {
+  filter: drop-shadow(0 0 12px rgba(34, 211, 238, 0.55))
+    drop-shadow(0 0 22px rgba(217, 70, 239, 0.28));
+}
+
+.nf-onboarding-headline-cue::before {
+  content: "";
+  position: absolute;
+  inset: -0.08em -0.1em;
+  border: 1px solid rgba(34, 211, 238, 0.58);
+  border-radius: 10px;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+    0 0 18px rgba(34, 211, 238, 0.22);
+  pointer-events: none;
+}
+
+.nf-onboarding-headline-cue::after {
+  content: "";
+  position: absolute;
+  right: -0.14em;
+  top: 13%;
+  width: 0.035em;
+  min-width: 2px;
+  height: 72%;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.7);
+  animation: nfOnboardingCaretBlink 1s steps(1, end) infinite;
+  pointer-events: none;
+}
+
+@keyframes nfOnboardingCaretBlink {
+  0%, 48% {
+    opacity: 1;
+  }
+  49%, 100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nf-onboarding-headline-cue::after {
+    animation: none;
+  }
+}
+
 @keyframes nfExportGoldPulse {
   0%, 100% {
     box-shadow:
