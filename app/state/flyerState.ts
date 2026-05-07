@@ -820,13 +820,10 @@ setFocus: (t: any, panel: any) =>
       const safeValue = sanitizeSessionValue(key, value);
 
       if (s.isLiveDragging) {
-        pendingSessionValuePatch = {
-          ...pendingSessionValuePatch,
-          [fmt]: {
-            ...(pendingSessionValuePatch[fmt] || {}),
-            [key]: safeValue,
-          },
-        };
+        const formatPatch = pendingSessionValuePatch[fmt] || {};
+        if (formatPatch[key] === safeValue) return s;
+        formatPatch[key] = safeValue;
+        pendingSessionValuePatch[fmt] = formatPatch;
         return s;
       }
 

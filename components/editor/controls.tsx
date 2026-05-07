@@ -8,11 +8,11 @@ function clsx(...a: (string | false | null | undefined)[]) {
   return a.filter(Boolean).join(' ');
 }
 
-const controlLabelClass = 'text-[11px] uppercase tracking-[0.12em] text-neutral-400';
+const controlLabelClass = 'text-[9px] uppercase tracking-[0.14em] text-neutral-400';
 const controlFieldClass = 'border border-neutral-700 bg-[#17171b] text-white';
-const controlInputClass = `${controlFieldClass} px-1.5 py-1 text-[11px] text-center`;
+const controlInputClass = `${controlFieldClass} px-1.5 py-1 text-[10px] text-center`;
 const controlButtonClass = 'border border-neutral-700 bg-neutral-900/70 text-neutral-200 transition-colors';
-const controlRangeClass = 'nf-range min-w-0 flex-1 h-2 appearance-none bg-transparent accent-indigo-500';
+const controlRangeClass = 'nf-range min-w-0 flex-1 appearance-none bg-transparent accent-indigo-500';
 
 const panelClass =
   'panel min-w-0 p-4 rounded-xl border border-white/5 bg-neutral-900/80 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.35)] space-y-3';
@@ -91,16 +91,17 @@ function endSliderDragGateSoon() {
   }, 48);
 }
  
- export type StepperProps = {
-   label?: string;
-   value: number;
-   setValue: (n: number) => void;
-   min: number;
+export type StepperProps = {
+  label?: string;
+  value: number;
+  setValue: (n: number) => void;
+  min: number;
    max: number;
    step?: number;
-   digits?: number;
-   disabled?: boolean;
-   className?: string;
+  digits?: number;
+  disabled?: boolean;
+  className?: string;
+  layout?: 'stacked' | 'inline';
  };
  
 export function Stepper({
@@ -113,6 +114,7 @@ export function Stepper({
    digits = 0,
    disabled = false,
    className = '',
+   layout = 'stacked',
 }: StepperProps) {
    const clamp = React.useCallback((n: number) => Math.min(max, Math.max(min, n)), [max, min]);
   const formattedValue = formatNumericValue(
@@ -321,8 +323,76 @@ export function Stepper({
      }
    };
  
+  if (layout === 'inline') {
+    return (
+      <div className={`grid min-w-0 grid-cols-[minmax(120px,1fr)_92px_minmax(96px,132px)] items-center gap-5 ${className}`}>
+        {label && (
+          <label className={`${controlLabelClass} min-w-0 whitespace-nowrap`}>{label}</label>
+        )}
+        <input
+          type="number"
+          min={min}
+          max={max}
+          step={step}
+          value={draftValue}
+          onChange={onNumber}
+          onFocus={() => setIsEditing(true)}
+          onBlur={(e) => {
+            setIsEditing(false);
+            commitNumber(e.target.value);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.currentTarget.blur();
+              return;
+            }
+            if (e.key === 'Escape') {
+              setIsEditing(false);
+              setDraftValue(formattedValue);
+              e.currentTarget.blur();
+              return;
+            }
+          }}
+          disabled={disabled}
+          className={`h-[30px] w-[92px] shrink-0 px-1.5 text-[10px] ${controlFieldClass} text-center`}
+        />
+
+        <input
+          ref={rangeRef}
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          defaultValue={latestRangeValueRef.current}
+          onChange={onRange}
+          onWheel={onWheel}
+          onKeyDown={onKeyDown}
+          onPointerUp={onRangePointerEnd}
+          onPointerCancel={onRangePointerEnd}
+          onPointerDownCapture={onRangePointerDown}
+          onMouseDown={(e) => e.stopPropagation()}
+          onMouseUp={(e) => e.stopPropagation()}
+          onTouchStart={(e) => {
+            e.stopPropagation();
+          }}
+          onTouchEnd={(e) => {
+            e.stopPropagation();
+          }}
+          onTouchMove={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          disabled={disabled}
+          aria-label={label}
+          style={{ touchAction: 'none' }}
+          className={controlRangeClass}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className={`flex flex-col gap-1 ${className}`}>
+    <div className={`flex min-w-0 flex-col gap-1 ${className}`}>
        {label && (
          <label className={controlLabelClass}>{label}</label>
        )}
@@ -353,7 +423,7 @@ export function Stepper({
              }
            }}
            disabled={disabled}
-           className={`w-[52px] ${controlInputClass}`}
+           className={`h-[30px] w-[50px] shrink-0 px-1.5 text-[10px] ${controlFieldClass} text-center`}
          />
  
         <input
@@ -512,7 +582,7 @@ export const Chip = React.memo(function Chip({
       aria-pressed={!!active}
       className={clsx(
         'inline-flex items-center justify-center border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 select-none',
-        small ? 'px-2 py-[3px] text-[11px]' : 'px-3 py-1 text-xs',
+        small ? 'px-2 py-[3px] text-[10px]' : 'px-3 py-1 text-[11px]',
         disabled
           ? 'opacity-40 cursor-not-allowed bg-neutral-900/40 border-neutral-700 text-neutral-400'
           : active
@@ -820,7 +890,7 @@ export function InlineSliderInput({
       <div className={`mb-1 flex min-w-0 items-center justify-between ${controlLabelClass} ${labelClassName || ""}`}>
         <span className="block min-w-0 truncate">{label}</span>
       </div>
-      <div className="flex min-w-0 w-full items-center gap-1">
+      <div className="flex min-w-0 w-full items-center gap-2">
         <input
           ref={rangeRef}
           type="range"
@@ -829,7 +899,7 @@ export function InlineSliderInput({
           step={step}
           defaultValue={latestRangeValueRef.current}
           onChange={handleRangeChange}
-          className={clsx("min-w-0 flex-1", rangeClassName || controlRangeClass)}
+          className={clsx(controlRangeClass, rangeClassName)}
           style={{ touchAction: "none" }}
           onPointerUp={handleRangePointerUp}
           onPointerCancel={handleRangePointerCancel}
@@ -840,7 +910,7 @@ export function InlineSliderInput({
           onTouchEnd={(e) => e.stopPropagation()}
           disabled={disabled}
         />
-        <div className="ml-0.5 flex shrink-0 items-center justify-end gap-0.5 max-w-[50px] sm:ml-1 sm:max-w-[64px]">
+        <div className="flex shrink-0 items-center justify-end gap-1">
           <input
             type="number"
             min={min * displayScale}
@@ -866,11 +936,11 @@ export function InlineSliderInput({
             disabled={disabled}
             className={
               inputClassName ||
-              `h-[26px] w-[44px] min-w-0 rounded-md px-0.5 ${controlInputClass} origin-right scale-[0.74] text-right font-medium tracking-[-0.02em] text-[16px] sm:h-auto sm:w-[48px] sm:scale-100 sm:px-1.5 sm:text-[11px] sm:font-semibold [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`
+              `h-[30px] w-[50px] min-w-0 rounded-md px-1.5 ${controlInputClass} text-right text-[10px] font-medium tracking-normal [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`
             }
             inputMode="decimal"
           />
-          {suffix ? <span className="shrink-0 text-[7px] text-white font-semibold sm:text-[8px]">{suffix}</span> : null}
+          {suffix ? <span className="shrink-0 text-[9px] font-semibold text-white/80">{suffix}</span> : null}
         </div>
       </div>
     </div>
@@ -906,7 +976,7 @@ export function SliderRow({
         disabled={disabled}
         onChange={onChange}
         onCommit={onCommit}
-        rangeClassName={`flex-1 h-1 rounded-lg appearance-none cursor-pointer transition-colors ${
+        rangeClassName={`flex-1 rounded-lg appearance-none cursor-pointer transition-colors ${
           disabled
             ? "bg-neutral-800 accent-neutral-600"
             : "bg-neutral-700 accent-indigo-500 hover:accent-indigo-400"

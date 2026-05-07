@@ -97,6 +97,7 @@ const LibraryPanel = dynamic(() => import("../components/editor/LibraryPanel"), 
 const MAGIC_BLEND_ENABLED = false;
 const HEADLINE_EXTRUDE_REFERENCE_DEPTH = 28;
 const HEADLINE_EXTRUDE_MAX_DEPTH = 72;
+const HEADLINE_EXTRUDE_LIVE_MAX_DEPTH = 6;
 const HEADLINE_EXTRUDE_MAX_DISTANCE = 90;
 const SHAPE_GRAPHIC_SCALE_UI_MAX = 3;
 const SHAPE_GRAPHIC_SCALE_STEP = 0.005;
@@ -3120,6 +3121,7 @@ const headDisplayPx = headSizeAuto ? headlinePx : headManualPx;
 const [headSelH, setHeadSelH] = React.useState(0);
 
 React.useLayoutEffect(() => {
+  if (isLiveDragging) return;
   const root = rootRef.current;
   const head = canvasRefs.headline;
   if (!root || !head) return;
@@ -3129,7 +3131,8 @@ React.useLayoutEffect(() => {
   const update = () => {
     const R = root.getBoundingClientRect();
     const H = head.getBoundingClientRect();
-    setHeadSelH((H.height / R.height) * 100);
+    const next = (H.height / R.height) * 100;
+    setHeadSelH((prev) => (Math.abs(prev - next) < 0.1 ? prev : next));
   };
 
   update();
@@ -3138,13 +3141,14 @@ React.useLayoutEffect(() => {
   ro.observe(root);
  ro.observe(canvasRefs.headline!);
   return () => ro.disconnect();
-}, [headline, headDisplayPx, lineHeight, textColWidth, align, headlineFontTick]);
+}, [align, headDisplayPx, headline, headlineFontTick, isLiveDragging, lineHeight, textColWidth]);
 
 
 useEffect(() => {
+  if (isLiveDragging) return;
   // Manual mode — keep internal size in sync and skip auto-fit
   if (!headSizeAuto) {
-    setHeadlinePx(headManualPx);
+    setHeadlinePx((prev) => (prev === headManualPx ? prev : headManualPx));
     return;
   }
 
@@ -3207,8 +3211,9 @@ useEffect(() => {
 
   // Clamp to the ceiling/floor and commit
   const finalPx = Math.max(minSize, Math.min(sizePx, hardMax));
-  setHeadlinePx(finalPx);
+  setHeadlinePx((prev) => (prev === finalPx ? prev : finalPx));
 }, [
+  isLiveDragging,
   // content & layout
   headline, format, tallHeadline, lineHeight, textColWidth, headX, headY, align,
   // guides
@@ -3347,17 +3352,7 @@ function beginDrag(
     // ignore
   }
 
-  // 2. LOGS & STATE UPDATES (ONE atomic update)
-
-
-  // ✅ ONE state write instead of 3 separate writes (removes spam + reduces input delay)
-  useFlyerState.setState({
-    moveTarget: target,
-    dragging: target,
-    isLiveDragging: true,
-  });
-
-  // 3. CALCULATE OFFSETS
+  // 2. CALCULATE OFFSETS
   const root = rootRef.current;
   if (!root) return;
 
@@ -3369,6 +3364,13 @@ function beginDrag(
   ) {
     return;
   }
+
+  // 3. LOGS & STATE UPDATES (ONE atomic update)
+  useFlyerState.setState({
+    moveTarget: target,
+    dragging: target,
+    isLiveDragging: true,
+  });
 
   const rect = root.getBoundingClientRect();
   const pointerX = e.clientX - rect.left;
@@ -3459,6 +3461,11 @@ function beginIconResize(e: React.PointerEvent, ic: Icon) {
   const rect = root.getBoundingClientRect();
 
   // Tag this as an icon resize (keep a valid MoveTarget)
+  useFlyerState.setState({
+    moveTarget: "icon",
+    dragging: "icon",
+    isLiveDragging: true,
+  });
   drag.current = {
     target: 'icon',
     shapeId: ic.id,
@@ -3489,6 +3496,11 @@ function beginPortraitResize(e: React.PointerEvent) {
   const box = canvasRefs.portrait?.getBoundingClientRect();
   const wPct = box ? (box.width / rect.width) * 100 : portraitScale * 100;
 
+  useFlyerState.setState({
+    moveTarget: "portrait",
+    dragging: "portrait",
+    isLiveDragging: true,
+  });
 
   drag.current = {
     target: 'portrait',
@@ -4365,12 +4377,11 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
   }}
 
   // 2. DRAG START
-  onPointerDown={(e) => {
-    if (isMobileView && !mobileDragEnabled) return;
-    e.preventDefault(); e.stopPropagation();
-    onRecordMove?.("headline", headX, headY, "headline");
-    const el = e.currentTarget as HTMLElement;
-    try { el.setPointerCapture(e.pointerId); } catch {}
+	  onPointerDown={(e) => {
+	    if (isMobileView && !mobileDragEnabled) return;
+	    e.preventDefault(); e.stopPropagation();
+	    const el = e.currentTarget as HTMLElement;
+	    try { el.setPointerCapture(e.pointerId); } catch {}
 
     el.dataset.hdrag = "1";
     el.dataset.px = String(e.clientX);
@@ -4383,7 +4394,11 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     el.dataset.cw = String(b.width);
     el.dataset.ch = String(b.height);
 
-    useFlyerState.getState().setFocus("headline", "headline");
+    const store = useFlyerState.getState();
+    store.setFocus("headline", "headline");
+    store.setMoveTarget("headline");
+    store.setDragging("headline");
+    store.setIsLiveDragging(true);
     el.style.transition = "none";
   }}
 
@@ -4424,10 +4439,10 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
   }}
 
   // 4. END
-  onPointerUp={(e) => {
-    const el = e.currentTarget as HTMLElement;
-    if (el.dataset.hdrag !== "1") return;
-    el.dataset.hdrag = "0";
+	  onPointerUp={(e) => {
+	    const el = e.currentTarget as HTMLElement;
+	    if (el.dataset.hdrag !== "1") return;
+	    el.dataset.hdrag = "0";
     
     // Cancel any pending frame to avoid overwrite
     if ((el as any)._rafId) cancelAnimationFrame((el as any)._rafId);
@@ -4443,20 +4458,38 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     const startLeft = Number(el.dataset.sx);
     const startTop = Number(el.dataset.sy);
 
-    const finalX = startLeft + (dx / cw) * 100;
-    const finalY = startTop + (dy / ch) * 100;
+	    const finalX = startLeft + (dx / cw) * 100;
+	    const finalY = startTop + (dy / ch) * 100;
 
-    // Force final sync
-    el.style.left = `${finalX}%`;
-    el.style.top = `${finalY}%`;
+	    // Force final sync
+	    el.style.left = `${finalX}%`;
+	    el.style.top = `${finalY}%`;
 
-    onHeadMove?.(finalX, finalY);
+	    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+	      onRecordMove?.("headline", startLeft, startTop, "headline");
+	    }
+	    onHeadMove?.(finalX, finalY);
 
     try { el.releasePointerCapture(e.pointerId); } catch {}
+    const store = useFlyerState.getState();
+    store.setDragging(null);
+    store.setIsLiveDragging(false);
     if (isMobileView) onMobileDragEnd?.();
   }}
 
-  style={{
+	  onPointerCancel={(e) => {
+	    const el = e.currentTarget as HTMLElement;
+	    el.dataset.hdrag = "0";
+	    if ((el as any)._rafId) cancelAnimationFrame((el as any)._rafId);
+	    (el as any)._rafId = null;
+	    try { el.releasePointerCapture(e.pointerId); } catch {}
+	    const store = useFlyerState.getState();
+	    store.setDragging(null);
+	    store.setIsLiveDragging(false);
+	    if (isMobileView) onMobileDragEnd?.();
+	  }}
+
+	  style={{
     left: `${headX}%`,
     top: `${headY}%`,
     overflow: 'visible',
@@ -4490,8 +4523,12 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     const estimatedTextHeight = Math.max(headDisplayPx, headDisplayPx * lineHeight * explicitLineCount);
     const exportTextMode = !!hideUiForExport;
     const liveTextPerfMode = !!isLiveDragging && !exportTextMode;
-    const extrudeRenderDepth = liveTextPerfMode ? Math.min(extrudeDepth, 12) : extrudeDepth;
+    const extrudeRenderDepth = liveTextPerfMode
+      ? Math.min(extrudeDepth, HEADLINE_EXTRUDE_LIVE_MAX_DEPTH)
+      : extrudeDepth;
     const extrudeLayerScale = extrudeRenderDepth > 0 ? extrudeDepth / extrudeRenderDepth : 1;
+    const snapExtrudeOffset = (value: number) =>
+      liveTextPerfMode ? Math.round(value) : Math.round(value * 2) / 2;
     const sliceBandCount = Math.max(3, Math.round(headSliceBandCount || 0));
     const sliceEchoDistance = Math.max(0, Number(headSliceEchoDistance) || 0);
     const sliceAreaHeight = estimatedTextHeight + sliceEchoDistance * 2;
@@ -4892,7 +4929,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
                   WebkitTextStrokeWidth: textFx.strokeWidth ? `${textFx.strokeWidth}px` : undefined,
                   WebkitTextStrokeColor: headExtrudeColor,
                   textShadow: "none",
-                  transform: `translate(${(visualLayer * extrudeStepX).toFixed(2)}px, ${(visualLayer * extrudeStepY).toFixed(2)}px)`,
+                  transform: `translate(${snapExtrudeOffset(visualLayer * extrudeStepX)}px, ${snapExtrudeOffset(visualLayer * extrudeStepY)}px)`,
                   zIndex: 0,
                 }}
               >
@@ -4997,8 +5034,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
               Array.from({ length: extrudeRenderDepth }, (_, idx) => {
                 const layer = extrudeRenderDepth - idx;
                 const visualLayer = layer * extrudeLayerScale;
-                const tx = lineBackX + visualLayer * extrudeStepX;
-                const ty = lineBackY + visualLayer * extrudeStepY;
+                const tx = lineBackX + snapExtrudeOffset(visualLayer * extrudeStepX);
+                const ty = lineBackY + snapExtrudeOffset(visualLayer * extrudeStepY);
                 return renderRushTextLayer(
                   `headline-line-extrude-${layer}`,
                   {
@@ -5304,19 +5341,19 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
   className="absolute cursor-grab active:cursor-grabbing select-none"
 
   // 1. SELECT
-  onClick={(e) => {
-    e.stopPropagation();
-    useFlyerState.getState().setMoveTarget("headline2");
-    useFlyerState.getState().setSelectedPanel("head2");
-    onOpenTextFloat?.();
-  }}
+	  onClick={(e) => {
+	    e.stopPropagation();
+	    const store = useFlyerState.getState();
+	    store.setMoveTarget("headline2");
+	    store.setSelectedPanel("head2");
+	    onOpenTextFloat?.();
+	  }}
 
   // 2. DRAG START
-  onPointerDown={(e) => {
-    if (isMobileView && !mobileDragEnabled) return;
-    e.preventDefault(); e.stopPropagation();
-    onRecordMove?.("headline2", head2X, head2Y, "headline2");
-    const el = e.currentTarget as HTMLElement;
+	  onPointerDown={(e) => {
+	    if (isMobileView && !mobileDragEnabled) return;
+	    e.preventDefault(); e.stopPropagation();
+	    const el = e.currentTarget as HTMLElement;
     try { el.setPointerCapture(e.pointerId); } catch {}
 
     el.dataset.hdrag = "1";
@@ -5332,11 +5369,14 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     el.dataset.cw = String(b.width);
     el.dataset.ch = String(b.height);
 
-    useFlyerState.getState().setMoveTarget("headline2");
-    useFlyerState.getState().setSelectedPanel("head2");
+	    const store = useFlyerState.getState();
+	    store.setMoveTarget("headline2");
+	    store.setSelectedPanel("head2");
+	    store.setDragging("headline2");
+	    store.setIsLiveDragging(true);
 
-    el.style.transition = "none";
-  }}
+	    el.style.transition = "none";
+	  }}
 
   // 3. MOVE (Direct Left/Top Update)
   onPointerMove={(e) => {
@@ -5364,10 +5404,10 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
   }}
 
   // 4. END
-  onPointerUp={(e) => {
-    const el = e.currentTarget as HTMLElement;
-    if (el.dataset.hdrag !== "1") return;
-    el.dataset.hdrag = "0";
+	  onPointerUp={(e) => {
+	    const el = e.currentTarget as HTMLElement;
+	    if (el.dataset.hdrag !== "1") return;
+	    el.dataset.hdrag = "0";
 
     const startX = Number(el.dataset.px);
     const startY = Number(el.dataset.py);
@@ -5379,17 +5419,33 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     const startLeft = Number(el.dataset.sx);
     const startTop = Number(el.dataset.sy);
 
-    const finalX = startLeft + (dx / cw) * 100;
-    const finalY = startTop + (dy / ch) * 100;
+	    const finalX = startLeft + (dx / cw) * 100;
+	    const finalY = startTop + (dy / ch) * 100;
 
-    // Sync State
-    onHead2Move?.(finalX, finalY);
+	    // Sync State
+	    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+	      onRecordMove?.("headline2", startLeft, startTop, "headline2");
+	    }
+	    onHead2Move?.(finalX, finalY);
 
     try { el.releasePointerCapture(e.pointerId); } catch {}
-    if (isMobileView) onMobileDragEnd?.();
-  }}
+    const store = useFlyerState.getState();
+    store.setDragging(null);
+	    store.setIsLiveDragging(false);
+	    if (isMobileView) onMobileDragEnd?.();
+	  }}
 
-  style={{
+	  onPointerCancel={(e) => {
+	    const el = e.currentTarget as HTMLElement;
+	    el.dataset.hdrag = "0";
+	    try { el.releasePointerCapture(e.pointerId); } catch {}
+	    const store = useFlyerState.getState();
+	    store.setDragging(null);
+	    store.setIsLiveDragging(false);
+	    if (isMobileView) onMobileDragEnd?.();
+	  }}
+
+	  style={{
     left: `${head2X}%`,
     top: `${head2Y}%`,
     overflow: 'visible',
@@ -5463,19 +5519,19 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
   className="absolute cursor-grab active:cursor-grabbing select-none"
 
   // 1. SELECT
-  onClick={(e) => {
-    e.stopPropagation();
-    useFlyerState.getState().setMoveTarget("details");
-    useFlyerState.getState().setSelectedPanel("details");
-    onOpenTextFloat?.();
-  }}
+	  onClick={(e) => {
+	    e.stopPropagation();
+	    const store = useFlyerState.getState();
+	    store.setMoveTarget("details");
+	    store.setSelectedPanel("details");
+	    onOpenTextFloat?.();
+	  }}
 
   // 2. DRAG START
-  onPointerDown={(e) => {
-    if (isMobileView && !mobileDragEnabled) return;
-    e.preventDefault(); e.stopPropagation();
-    onRecordMove?.("details", detailsX, detailsY, "details");
-    const el = e.currentTarget as HTMLElement;
+	  onPointerDown={(e) => {
+	    if (isMobileView && !mobileDragEnabled) return;
+	    e.preventDefault(); e.stopPropagation();
+	    const el = e.currentTarget as HTMLElement;
     try { el.setPointerCapture(e.pointerId); } catch {}
 
     el.dataset.hdrag = "1";
@@ -5491,11 +5547,14 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     el.dataset.cw = String(b.width);
     el.dataset.ch = String(b.height);
 
-    useFlyerState.getState().setMoveTarget("details");
-    useFlyerState.getState().setSelectedPanel("details");
+	    const store = useFlyerState.getState();
+	    store.setMoveTarget("details");
+	    store.setSelectedPanel("details");
+	    store.setDragging("details");
+	    store.setIsLiveDragging(true);
 
-    el.style.transition = "none";
-  }}
+	    el.style.transition = "none";
+	  }}
 
   // 3. MOVE (Direct Left/Top Update)
   onPointerMove={(e) => {
@@ -5523,10 +5582,10 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
   }}
 
   // 4. END
-  onPointerUp={(e) => {
-    const el = e.currentTarget as HTMLElement;
-    if (el.dataset.hdrag !== "1") return;
-    el.dataset.hdrag = "0";
+	  onPointerUp={(e) => {
+	    const el = e.currentTarget as HTMLElement;
+	    if (el.dataset.hdrag !== "1") return;
+	    el.dataset.hdrag = "0";
 
     const startX = Number(el.dataset.px);
     const startY = Number(el.dataset.py);
@@ -5538,17 +5597,33 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     const startLeft = Number(el.dataset.sx);
     const startTop = Number(el.dataset.sy);
 
-    const finalX = startLeft + (dx / cw) * 100;
-    const finalY = startTop + (dy / ch) * 100;
+	    const finalX = startLeft + (dx / cw) * 100;
+	    const finalY = startTop + (dy / ch) * 100;
 
-    // Sync State
-    onDetailsMove?.(finalX, finalY);
+	    // Sync State
+	    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+	      onRecordMove?.("details", startLeft, startTop, "details");
+	    }
+	    onDetailsMove?.(finalX, finalY);
 
     try { el.releasePointerCapture(e.pointerId); } catch {}
-    if (isMobileView) onMobileDragEnd?.();
-  }}
+    const store = useFlyerState.getState();
+    store.setDragging(null);
+	    store.setIsLiveDragging(false);
+	    if (isMobileView) onMobileDragEnd?.();
+	  }}
 
-  style={{
+	  onPointerCancel={(e) => {
+	    const el = e.currentTarget as HTMLElement;
+	    el.dataset.hdrag = "0";
+	    try { el.releasePointerCapture(e.pointerId); } catch {}
+	    const store = useFlyerState.getState();
+	    store.setDragging(null);
+	    store.setIsLiveDragging(false);
+	    if (isMobileView) onMobileDragEnd?.();
+	  }}
+
+	  style={{
     left: `${detailsX}%`,
     top: `${detailsY}%`,
     overflow: "visible",
@@ -5615,19 +5690,19 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
   className="absolute cursor-grab active:cursor-grabbing select-none"
 
  // 1. SELECT
-  onClick={(e) => {
-    e.stopPropagation();
-    useFlyerState.getState().setMoveTarget("details2");
-    useFlyerState.getState().setSelectedPanel("details2");
-    onOpenTextFloat?.();
-  }}
+	  onClick={(e) => {
+	    e.stopPropagation();
+	    const store = useFlyerState.getState();
+	    store.setMoveTarget("details2");
+	    store.setSelectedPanel("details2");
+	    onOpenTextFloat?.();
+	  }}
 
   // 2. DRAG START
-  onPointerDown={(e) => {
-    if (isMobileView && !mobileDragEnabled) return;
-    e.preventDefault(); e.stopPropagation();
-    onRecordMove?.("details2", details2X, details2Y, "details2");
-    const el = e.currentTarget as HTMLElement;
+	  onPointerDown={(e) => {
+	    if (isMobileView && !mobileDragEnabled) return;
+	    e.preventDefault(); e.stopPropagation();
+	    const el = e.currentTarget as HTMLElement;
     try { el.setPointerCapture(e.pointerId); } catch {}
 
     el.dataset.hdrag = "1";
@@ -5643,11 +5718,14 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     el.dataset.cw = String(b.width);
     el.dataset.ch = String(b.height);
 
-    useFlyerState.getState().setMoveTarget("details2");
-    useFlyerState.getState().setSelectedPanel("details2");
+	    const store = useFlyerState.getState();
+	    store.setMoveTarget("details2");
+	    store.setSelectedPanel("details2");
+	    store.setDragging("details2");
+	    store.setIsLiveDragging(true);
 
-    el.style.transition = "none";
-  }}
+	    el.style.transition = "none";
+	  }}
 
   // 3. MOVE (Direct Left/Top Update)
   onPointerMove={(e) => {
@@ -5675,10 +5753,10 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
   }}
 
   // 4. END
-  onPointerUp={(e) => {
-    const el = e.currentTarget as HTMLElement;
-    if (el.dataset.hdrag !== "1") return;
-    el.dataset.hdrag = "0";
+	  onPointerUp={(e) => {
+	    const el = e.currentTarget as HTMLElement;
+	    if (el.dataset.hdrag !== "1") return;
+	    el.dataset.hdrag = "0";
 
     const startX = Number(el.dataset.px);
     const startY = Number(el.dataset.py);
@@ -5690,17 +5768,33 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     const startLeft = Number(el.dataset.sx);
     const startTop = Number(el.dataset.sy);
 
-    const finalX = startLeft + (dx / cw) * 100;
-    const finalY = startTop + (dy / ch) * 100;
+	    const finalX = startLeft + (dx / cw) * 100;
+	    const finalY = startTop + (dy / ch) * 100;
 
-    // Sync State
-    onDetails2Move?.(finalX, finalY);
+	    // Sync State
+	    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+	      onRecordMove?.("details2", startLeft, startTop, "details2");
+	    }
+	    onDetails2Move?.(finalX, finalY);
 
     try { el.releasePointerCapture(e.pointerId); } catch {}
-    if (isMobileView) onMobileDragEnd?.();
-  }}
+    const store = useFlyerState.getState();
+    store.setDragging(null);
+	    store.setIsLiveDragging(false);
+	    if (isMobileView) onMobileDragEnd?.();
+	  }}
 
-  style={{
+	  onPointerCancel={(e) => {
+	    const el = e.currentTarget as HTMLElement;
+	    el.dataset.hdrag = "0";
+	    try { el.releasePointerCapture(e.pointerId); } catch {}
+	    const store = useFlyerState.getState();
+	    store.setDragging(null);
+	    store.setIsLiveDragging(false);
+	    if (isMobileView) onMobileDragEnd?.();
+	  }}
+
+	  style={{
     left: `${details2X ?? 0}%`,
     top: `${details2Y ?? 0}%`,
     overflow: 'visible',
@@ -5764,19 +5858,19 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
   className="absolute cursor-grab active:cursor-grabbing select-none"
 
   // 1. SELECT
-  onClick={(e) => {
-    e.stopPropagation();
-    useFlyerState.getState().setMoveTarget("venue");
-    useFlyerState.getState().setSelectedPanel("venue");
-    onOpenTextFloat?.();
-  }}
+	  onClick={(e) => {
+	    e.stopPropagation();
+	    const store = useFlyerState.getState();
+	    store.setMoveTarget("venue");
+	    store.setSelectedPanel("venue");
+	    onOpenTextFloat?.();
+	  }}
 
   // 2. DRAG START
-  onPointerDown={(e) => {
-    if (isMobileView && !mobileDragEnabled) return;
-    e.preventDefault(); e.stopPropagation();
-    onRecordMove?.("venue", venueX, venueY, "venue");
-    const el = e.currentTarget as HTMLElement;
+	  onPointerDown={(e) => {
+	    if (isMobileView && !mobileDragEnabled) return;
+	    e.preventDefault(); e.stopPropagation();
+	    const el = e.currentTarget as HTMLElement;
     try { el.setPointerCapture(e.pointerId); } catch {}
 
     el.dataset.hdrag = "1";
@@ -5792,11 +5886,14 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     el.dataset.cw = String(b.width);
     el.dataset.ch = String(b.height);
 
-    useFlyerState.getState().setMoveTarget("venue");
-    useFlyerState.getState().setSelectedPanel("venue");
+	    const store = useFlyerState.getState();
+	    store.setMoveTarget("venue");
+	    store.setSelectedPanel("venue");
+	    store.setDragging("venue");
+	    store.setIsLiveDragging(true);
 
-    el.style.transition = "none";
-  }}
+	    el.style.transition = "none";
+	  }}
 
   // 3. MOVE (Direct Left/Top Update)
   onPointerMove={(e) => {
@@ -5824,10 +5921,10 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
   }}
 
   // 4. END
-  onPointerUp={(e) => {
-    const el = e.currentTarget as HTMLElement;
-    if (el.dataset.hdrag !== "1") return;
-    el.dataset.hdrag = "0";
+	  onPointerUp={(e) => {
+	    const el = e.currentTarget as HTMLElement;
+	    if (el.dataset.hdrag !== "1") return;
+	    el.dataset.hdrag = "0";
 
     const startX = Number(el.dataset.px);
     const startY = Number(el.dataset.py);
@@ -5839,17 +5936,33 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     const startLeft = Number(el.dataset.sx);
     const startTop = Number(el.dataset.sy);
 
-    const finalX = startLeft + (dx / cw) * 100;
-    const finalY = startTop + (dy / ch) * 100;
+	    const finalX = startLeft + (dx / cw) * 100;
+	    const finalY = startTop + (dy / ch) * 100;
 
-    // Sync State
-    onVenueMove?.(finalX, finalY);
+	    // Sync State
+	    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+	      onRecordMove?.("venue", startLeft, startTop, "venue");
+	    }
+	    onVenueMove?.(finalX, finalY);
 
     try { el.releasePointerCapture(e.pointerId); } catch {}
-    if (isMobileView) onMobileDragEnd?.();
-  }}
+    const store = useFlyerState.getState();
+    store.setDragging(null);
+	    store.setIsLiveDragging(false);
+	    if (isMobileView) onMobileDragEnd?.();
+	  }}
 
-  style={{
+	  onPointerCancel={(e) => {
+	    const el = e.currentTarget as HTMLElement;
+	    el.dataset.hdrag = "0";
+	    try { el.releasePointerCapture(e.pointerId); } catch {}
+	    const store = useFlyerState.getState();
+	    store.setDragging(null);
+	    store.setIsLiveDragging(false);
+	    if (isMobileView) onMobileDragEnd?.();
+	  }}
+
+	  style={{
     left: `${venueX}%`,
     top: `${venueY}%`,
     overflow: 'visible',
@@ -5915,19 +6028,19 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
   className="absolute cursor-grab active:cursor-grabbing select-none"
 
  // 1. SELECT
- onClick={(e) => {
-    e.stopPropagation();
-    useFlyerState.getState().setMoveTarget("subtag");
-    useFlyerState.getState().setSelectedPanel("subtag");
-    onOpenTextFloat?.();
-  }}
+	 onClick={(e) => {
+	    e.stopPropagation();
+	    const store = useFlyerState.getState();
+	    store.setMoveTarget("subtag");
+	    store.setSelectedPanel("subtag");
+	    onOpenTextFloat?.();
+	  }}
 
   // 2. DRAG START
-  onPointerDown={(e) => {
-    if (isMobileView && !mobileDragEnabled) return;
-    e.preventDefault(); e.stopPropagation();
-    onRecordMove?.("subtag", subtagX, subtagY, "subtag");
-    const el = e.currentTarget as HTMLElement;
+	  onPointerDown={(e) => {
+	    if (isMobileView && !mobileDragEnabled) return;
+	    e.preventDefault(); e.stopPropagation();
+	    const el = e.currentTarget as HTMLElement;
     try { el.setPointerCapture(e.pointerId); } catch {}
 
     el.dataset.hdrag = "1";
@@ -5943,11 +6056,14 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     el.dataset.cw = String(b.width);
     el.dataset.ch = String(b.height);
 
-    useFlyerState.getState().setMoveTarget("subtag");
-    useFlyerState.getState().setSelectedPanel("subtag");
+	    const store = useFlyerState.getState();
+	    store.setMoveTarget("subtag");
+	    store.setSelectedPanel("subtag");
+	    store.setDragging("subtag");
+	    store.setIsLiveDragging(true);
 
-    el.style.transition = "none";
-  }}
+	    el.style.transition = "none";
+	  }}
 
   // 3. MOVE (Direct Left/Top Update)
   onPointerMove={(e) => {
@@ -5990,18 +6106,34 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     const startLeft = Number(el.dataset.sx);
     const startTop = Number(el.dataset.sy);
 
-    const finalX = startLeft + (dx / cw) * 100;
-    const finalY = startTop + (dy / ch) * 100;
+	    const finalX = startLeft + (dx / cw) * 100;
+	    const finalY = startTop + (dy / ch) * 100;
 
-    // Sync State
-    onSubtagMove?.(finalX, finalY);
+	    // Sync State
+	    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+	      onRecordMove?.("subtag", startLeft, startTop, "subtag");
+	    }
+	    onSubtagMove?.(finalX, finalY);
 
     try { el.releasePointerCapture(e.pointerId); } catch {}
-    if (isMobileView) onMobileDragEnd?.();
-  }}
+    const store = useFlyerState.getState();
+    store.setDragging(null);
+	    store.setIsLiveDragging(false);
+	    if (isMobileView) onMobileDragEnd?.();
+	  }}
 
-  style={{
-    left: `${subtagX}%`,
+	  onPointerCancel={(e) => {
+	    const el = e.currentTarget as HTMLElement;
+	    el.dataset.hdrag = "0";
+	    try { el.releasePointerCapture(e.pointerId); } catch {}
+	    const store = useFlyerState.getState();
+	    store.setDragging(null);
+	    store.setIsLiveDragging(false);
+	    if (isMobileView) onMobileDragEnd?.();
+	  }}
+
+	  style={{
+	    left: `${subtagX}%`,
     top: `${subtagY}%`,
     overflow: 'visible',
     zIndex: dragging === "subtag" ? 999 : subtagLayerZ,
@@ -9679,13 +9811,18 @@ async function addLogosFromFiles(files: FileList) {
 // ===== ONBOARDING STRIP (first-open only) =====
 const ONBOARD_KEY = 'nf:onboarded:v1';
 const HELP_SHIMMER_SEEN_KEY = 'nf:help-shimmer-seen:v1';
-type WelcomeHelperStage = "tap_headline" | "edit_headline" | "good_job";
+type WelcomeHelperStage =
+  | "tap_headline"
+  | "edit_headline"
+  | "edit_text"
+  | "creative_look"
+  | "add_assets"
+  | "open_help";
 const [showOnboard, setShowOnboard] = useState<boolean>(false);
 const [helpShimmerEligible, setHelpShimmerEligible] = useState<boolean>(false);
 const [welcomeHelpPromptVisible, setWelcomeHelpPromptVisible] = useState<boolean>(false);
 const [welcomeHelperStage, setWelcomeHelperStage] = useState<WelcomeHelperStage>("tap_headline");
-const [welcomeRewardToastHidden, setWelcomeRewardToastHidden] = useState<boolean>(false);
-const welcomeInitialHeadlineRef = React.useRef<string | null>(null);
+const welcomeInitialTextSnapshotRef = React.useRef<Record<string, string> | null>(null);
 const [tourStep, setTourStep] = useState<number | null>(null);
 const [tourRect, setTourRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
 const [tourTip, setTourTip] = useState<{ top: number; left: number; centered?: boolean } | null>(null);
@@ -9766,7 +9903,6 @@ useEffect(() => {
 useEffect(() => {
   if (!hydrated) return;
   setWelcomeHelperStage("tap_headline");
-  setWelcomeRewardToastHidden(false);
   setWelcomeHelpPromptVisible(true);
 }, [hydrated]);
 
@@ -22445,7 +22581,7 @@ const [mobileHeadlineStyleFocus, setMobileHeadlineStyleFocus] = React.useState<"
 const [mobileLightingSlide, setMobileLightingSlide] = React.useState<0 | 1 | 2>(0);
 const [projectHelpOpen, setProjectHelpOpen] = React.useState(false);
 const [workflowHelpOpen, setWorkflowHelpOpen] = React.useState(false);
-const shouldShimmerHelp = helpShimmerEligible && !workflowHelpOpen && tourStep == null;
+const shouldShimmerHelp = helpShimmerEligible && !isLiveDragging && !workflowHelpOpen && tourStep == null;
 const [djWorkflowJump, setDjWorkflowJump] = React.useState<null | {
   step: "background" | "mainface" | "lighting" | "design";
   nonce: number;
@@ -24032,7 +24168,7 @@ const openWorkflowHelp = React.useCallback((source = "toolbar") => {
   });
 }, [isMobileView, selectedPanel, uiMode]);
 const startGuidedTourFromHelp = React.useCallback(() => {
-  startTour("help_panel");
+  startTour("guide_panel");
 }, [startTour]);
 const studioAnalyticsContext = React.useMemo(
   () => ({
@@ -24091,46 +24227,131 @@ React.useEffect(() => {
   studioAnalyticsContextRef.current = studioAnalyticsContext;
 }, [studioAnalyticsContext]);
 
-React.useEffect(() => {
-  if (!welcomeHelpPromptVisible) {
-    welcomeInitialHeadlineRef.current = null;
-    return;
-  }
-  if (welcomeInitialHeadlineRef.current == null) {
-    welcomeInitialHeadlineRef.current = headline;
-  }
-}, [headline, welcomeHelpPromptVisible]);
+const welcomeCurrentTextSnapshot = React.useMemo(() => {
+  const next: Record<string, string> = {};
+  const addText = (key: string, value: string, enabled = true) => {
+    const normalized = String(value || "").trim();
+    if (enabled && normalized) next[key] = normalized;
+  };
+
+  addText("headline", headline, !headlineHidden);
+  addText("head2", head2, !!headline2Enabled[format]);
+  addText("details", details);
+  addText("details2", details2, !!details2Enabled[format]);
+  addText("venue", venue);
+  addText("subtag", subtag, !!subtagEnabled[format]);
+  return next;
+}, [
+  details,
+  details2,
+  details2Enabled[format],
+  format,
+  head2,
+  headline,
+  headline2Enabled[format],
+  headlineHidden,
+  subtag,
+  subtagEnabled[format],
+  venue,
+]);
+
+const welcomeTextProgress = React.useMemo(() => {
+  const initial = welcomeInitialTextSnapshotRef.current;
+  const base = initial ?? welcomeCurrentTextSnapshot;
+  const keys = Object.keys(base);
+  const changedKeys = keys.filter((key) => (welcomeCurrentTextSnapshot[key] ?? "") !== base[key]);
+  const changedKeySet = new Set(changedKeys);
+  const otherKeys = keys.filter((key) => key !== "headline");
+  const otherChanged = otherKeys.filter((key) => changedKeySet.has(key)).length;
+  const nextOtherKey = otherKeys.find((key) => !changedKeySet.has(key)) ?? null;
+  return {
+    headlineChanged: changedKeySet.has("headline"),
+    otherRemaining: Math.max(0, otherKeys.length - otherChanged),
+    nextOtherKey,
+  };
+}, [welcomeCurrentTextSnapshot]);
 
 React.useEffect(() => {
+  if (isLiveDragging) return;
+  if (!welcomeHelpPromptVisible) {
+    welcomeInitialTextSnapshotRef.current = null;
+    return;
+  }
+  if (showStartup) return;
+  if (welcomeInitialTextSnapshotRef.current == null) {
+    welcomeInitialTextSnapshotRef.current = welcomeCurrentTextSnapshot;
+  }
+}, [isLiveDragging, showStartup, welcomeCurrentTextSnapshot, welcomeHelpPromptVisible]);
+
+React.useEffect(() => {
+  if (isLiveDragging) return;
   if (!welcomeHelpPromptVisible || welcomeHelperStage !== "tap_headline") return;
   if (selectedPanel === "headline") {
-    setWelcomeHelperStage("edit_headline");
+    setWelcomeHelperStage("open_help");
+    setWelcomeHelpPromptVisible(false);
+    setHelpShimmerEligible(true);
   }
-}, [selectedPanel, welcomeHelperStage, welcomeHelpPromptVisible]);
+}, [isLiveDragging, selectedPanel, welcomeHelperStage, welcomeHelpPromptVisible]);
 
 React.useEffect(() => {
-  if (!welcomeHelpPromptVisible || welcomeHelperStage === "good_job") return;
-  const initialHeadline = welcomeInitialHeadlineRef.current;
-  if (selectedPanel === "headline" && initialHeadline != null && headline !== initialHeadline) {
-    setWelcomeHelperStage("good_job");
-  }
-}, [headline, selectedPanel, welcomeHelperStage, welcomeHelpPromptVisible]);
+  if (isLiveDragging) return;
+  if (!welcomeHelpPromptVisible || welcomeHelperStage !== "edit_headline") return;
+  if (!welcomeTextProgress.headlineChanged) return;
+  setWelcomeHelperStage(welcomeTextProgress.otherRemaining > 0 ? "edit_text" : "creative_look");
+}, [
+  isLiveDragging,
+  welcomeHelperStage,
+  welcomeHelpPromptVisible,
+  welcomeTextProgress.headlineChanged,
+  welcomeTextProgress.otherRemaining,
+]);
 
 React.useEffect(() => {
-  if (!welcomeHelpPromptVisible || welcomeHelperStage !== "good_job") {
-    setWelcomeRewardToastHidden(false);
-    return;
+  if (isLiveDragging) return;
+  if (!welcomeHelpPromptVisible || welcomeHelperStage !== "edit_text") return;
+  if (welcomeTextProgress.headlineChanged && welcomeTextProgress.otherRemaining <= 0) {
+    setWelcomeHelperStage("creative_look");
   }
-  setWelcomeRewardToastHidden(false);
-  const id = window.setTimeout(() => {
-    setWelcomeRewardToastHidden(true);
-  }, 4200);
-  return () => window.clearTimeout(id);
-}, [welcomeHelperStage, welcomeHelpPromptVisible]);
+}, [
+  isLiveDragging,
+  welcomeHelperStage,
+  welcomeHelpPromptVisible,
+  welcomeTextProgress.headlineChanged,
+  welcomeTextProgress.otherRemaining,
+]);
+
+React.useEffect(() => {
+  if (isLiveDragging) return;
+  if (!welcomeHelpPromptVisible || welcomeHelperStage !== "add_assets") return;
+  if (selectedPanel === "icons") {
+    setWelcomeHelperStage("open_help");
+  }
+}, [isLiveDragging, selectedPanel, welcomeHelperStage, welcomeHelpPromptVisible]);
 
 const dismissWelcomeHelpPrompt = React.useCallback(() => {
   setWelcomeHelpPromptVisible(false);
+  setWelcomeHelperStage("open_help");
+  setHelpShimmerEligible(true);
 }, []);
+
+const openWelcomeTextPanel = React.useCallback(() => {
+  const key = welcomeTextProgress.nextOtherKey || "details";
+  const panel =
+    key === "head2"
+      ? "headline"
+      : key === "details2"
+      ? "details"
+      : key === "subtag"
+      ? "venue"
+      : key;
+  setUiMode("design");
+  setMobileControlsOpen(true);
+  setMobileControlsTab("design");
+  setSelectedPanel(panel);
+  window.setTimeout(() => {
+    document.getElementById(`${panel}-panel`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, 50);
+}, [welcomeTextProgress.nextOtherKey]);
 
 const applyWelcomeCoach3dEffect = React.useCallback(() => {
   setUiMode("design");
@@ -24142,8 +24363,16 @@ const applyWelcomeCoach3dEffect = React.useCallback(() => {
   setHeadExtrudeDistance((value) => Math.max(value, 28));
   setHeadExtrudeAngle(34);
   setHeadExtrudeColor("#05070b");
-  setWelcomeHelpPromptVisible(false);
+  setWelcomeHelperStage("add_assets");
+  setWelcomeHelpPromptVisible(true);
 }, []);
+
+const openWelcomeGraphicsPanel = React.useCallback(() => {
+  openCreatorWorkflowTarget("icons", "assets", {
+    uiMode: "design",
+    targetId: "icons-panel",
+  });
+}, [openCreatorWorkflowTarget]);
 
 React.useEffect(() => {
   if (!hydrated || typeof window === "undefined") return;
@@ -24229,12 +24458,16 @@ React.useEffect(() => {
   };
 
   const handlePageHide = () => sendEndingBeacon("pagehide");
-  const handlePointerActivity = () => recordActivity("pointer");
-  const handleKeyboardActivity = () => recordActivity("keyboard");
-  const handleScrollActivity = () => recordActivity("scroll");
-  const handleTouchActivity = () => recordActivity("touch");
-  const handleInputActivity = () => recordActivity("input");
-  const handleChangeActivity = () => recordActivity("change");
+  const recordActivityIfIdle = (type: string) => {
+    if (useFlyerState.getState().isLiveDragging) return;
+    recordActivity(type);
+  };
+  const handlePointerActivity = () => recordActivityIfIdle("pointer");
+  const handleKeyboardActivity = () => recordActivityIfIdle("keyboard");
+  const handleScrollActivity = () => recordActivityIfIdle("scroll");
+  const handleTouchActivity = () => recordActivityIfIdle("touch");
+  const handleInputActivity = () => recordActivityIfIdle("input");
+  const handleChangeActivity = () => recordActivityIfIdle("change");
   const heartbeatId = window.setInterval(() => sendHeartbeat("interval"), HEARTBEAT_MS);
   const passive = { passive: true } as AddEventListenerOptions;
 
@@ -25061,6 +25294,16 @@ const headlineGradientStyleActive = !!textFx.gradient;
 const headlineRushStyleActive = !!headRushEnabled;
 const headlineGlitchStyleActive = !!headGlitchEnabled;
 const headlineLineStyleActive = !!headLineEnabled;
+const headlineFlat3dStyleActive =
+  headline3dStyleActive &&
+  !headlineLineStyleActive &&
+  !headlineRushStyleActive &&
+  !headlineGlitchStyleActive &&
+  !headlineEchoStyleActive;
+const showDesktopHeadline3dControls = headlineFlat3dStyleActive || headlineLineStyleActive;
+const showDesktopHeadlineShadowControls = !!headShadow;
+const showDesktopHeadlineStrokeControls =
+  textFx.strokeWidth > 0 || headlineLineStyleActive || headlineGlitchStyleActive;
 const inferredMobileHeadlineStyleFocus: "3d" | "gradient" | "echo" | "rush" | "glitch" | "line" | null =
   headlineGlitchStyleActive
     ? "glitch"
@@ -25362,9 +25605,9 @@ const mobileControlsTabs = (
           "border-fuchsia-400/70 text-fuchsia-100 bg-fuchsia-500/20 hover:bg-fuchsia-500/30",
           shouldShimmerHelp && "nf-help-shimmer"
         )}
-        title="Open Help"
+        title="Open Guide"
       >
-        Help
+        Guide
       </button>
       <Link
         href="/pricing"
@@ -26664,29 +26907,38 @@ const emojiCanvas = React.useMemo(() => {
   );
 }, [emojis, format, onEmojiMove, recordMove]);
 const helperBotVisible =
+  !isLiveDragging &&
   !workflowHelpOpen &&
   !showOnboard &&
   tourStep == null &&
-  !showStartupTemplates &&
+  !showStartup &&
   !exportModalOpen;
 const showHeadlineActionPrompt =
-  helperBotVisible && welcomeHelpPromptVisible && welcomeHelperStage !== "good_job";
-const showHeadlineEditCue = showHeadlineActionPrompt && welcomeHelperStage === "tap_headline";
-const showWelcomeRewardToast =
   helperBotVisible &&
   welcomeHelpPromptVisible &&
-  welcomeHelperStage === "good_job" &&
-  !welcomeRewardToastHidden;
-const showWelcomeCoachBubble =
-  helperBotVisible && welcomeHelpPromptVisible && welcomeHelperStage === "good_job";
-const headlineActionPromptText =
-  welcomeHelperStage === "edit_headline"
-    ? "Change the headline text"
-    : "Tap the headline to edit text";
-const headlineActionPromptBody =
-  welcomeHelperStage === "edit_headline"
-    ? "Use the text editor that opened. One quick word change is enough."
-    : "Start with the biggest text on the flyer.";
+  welcomeHelperStage === "tap_headline";
+const showHeadlineEditCue = showHeadlineActionPrompt && welcomeHelperStage === "tap_headline";
+const showWelcomeCoachBubble = false;
+const headlineActionPromptText = "Tap the headline to edit text";
+const headlineActionPromptBody = "Start with the biggest text. After that, tap Guide for the next steps.";
+const welcomeCoachTitle =
+  welcomeHelperStage === "creative_look"
+    ? "Now shape the creative look"
+    : welcomeHelperStage === "add_assets"
+    ? "Add graphics and effects"
+    : "Press Guide for more direction";
+const welcomeCoachBody =
+  welcomeHelperStage === "creative_look"
+    ? "Try one strong headline effect, then move on."
+    : welcomeHelperStage === "add_assets"
+    ? "Open Graphics and add icons, flares, or overlays that support the flyer."
+    : "The Guide panel has the full workflow if you want the next steps.";
+const welcomeCoachActionLabel =
+  welcomeHelperStage === "creative_look"
+    ? "Add 3D"
+    : welcomeHelperStage === "add_assets"
+    ? "Open Graphics"
+    : "Guide";
 if (redirectingToLanding) {
   return (
     <main className="min-h-screen bg-[#050608] text-white" aria-label="Opening Nightlife Flyers">
@@ -26898,10 +27150,10 @@ return (
                   "ml-1 text-[12px] px-2 py-[2px] border border-fuchsia-400/70 bg-fuchsia-500/20 hover:bg-fuchsia-500/30 hidden lg:inline-flex text-fuchsia-100 whitespace-nowrap shadow-[0_0_14px_rgba(217,70,239,0.65)]",
                   shouldShimmerHelp && "nf-help-shimmer"
                 )}
-                aria-label="Open Help"
-                title="Open Help"
+                aria-label="Open Guide"
+                title="Open Guide"
               >
-                Help
+                Guide
               </button>
               <button
                 type="button"
@@ -27015,9 +27267,9 @@ return (
                     : "border-neutral-700 bg-neutral-900/70 text-neutral-200 hover:bg-neutral-800",
                   shouldShimmerHelp && "nf-help-shimmer"
                 )}
-                title="Open Help"
+                title="Open Guide"
               >
-                Help
+                Guide
               </button>
 
               {!isMobileView && activeTextLayerKey && (
@@ -27566,6 +27818,9 @@ return (
             setMobileControlsOpen(true);
             setMobileControlsTab("design");
             setSelectedPanel("headline");
+            setWelcomeHelperStage("open_help");
+            setWelcomeHelpPromptVisible(false);
+            setHelpShimmerEligible(true);
             window.setTimeout(() => {
               canvasRefs.headline?.scrollIntoView({ behavior: "smooth", block: "center" });
             }, 50);
@@ -27575,17 +27830,6 @@ return (
           Show Me
         </button>
       </div>
-    </div>
-  </div>
-)}
-
-{showWelcomeRewardToast && (
-  <div
-    data-nonexport="true"
-    className="pointer-events-none fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom,0px)+82px)] z-[5050] flex justify-center lg:bottom-8"
-  >
-    <div className="pointer-events-auto border border-emerald-300/40 bg-emerald-400/12 px-4 py-3 text-sm font-semibold text-emerald-50 shadow-[0_14px_42px_rgba(0,0,0,0.42)] backdrop-blur">
-      Nice. Try adding an effect.
     </div>
   </div>
 )}
@@ -27610,22 +27854,31 @@ return (
           Next Move
         </div>
         <div className="mt-1 pr-4 text-sm font-semibold leading-5 text-white">
-          Add 3D effect in 1 tap
+          {welcomeCoachTitle}
+        </div>
+        <div className="mt-1 max-w-[250px] pr-4 text-[12px] leading-5 text-neutral-300">
+          {welcomeCoachBody}
         </div>
         <button
           type="button"
-          onClick={applyWelcomeCoach3dEffect}
+          onClick={
+            welcomeHelperStage === "creative_look"
+              ? applyWelcomeCoach3dEffect
+              : welcomeHelperStage === "add_assets"
+              ? openWelcomeGraphicsPanel
+              : () => openWorkflowHelp("coach_flow_complete")
+          }
           className="mt-3 border border-fuchsia-300/70 bg-fuchsia-500/20 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-fuchsia-100 hover:bg-fuchsia-500/30"
         >
-          Add 3D
+          {welcomeCoachActionLabel}
         </button>
       </div>
       <button
         type="button"
         onClick={() => openWorkflowHelp("coach_bubble")}
         className="grid h-12 w-12 shrink-0 place-items-center rounded-full border border-fuchsia-300/70 bg-fuchsia-500/25 text-white shadow-[0_16px_42px_rgba(0,0,0,0.5),0_0_28px_rgba(217,70,239,0.35)] hover:bg-fuchsia-500/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-200"
-        aria-label="Open Help"
-        title="Open Help"
+        aria-label="Open Guide"
+        title="Open Guide"
       >
         <span className="grid h-8 w-8 place-items-center rounded-full border border-white/20 bg-black/35 text-sm font-black">
           ?
@@ -28592,7 +28845,7 @@ style={{ top: STICKY_TOP }}
       </div>
 
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <Chip small onClick={applyHeadlineSportsPreset}>
+        <Chip small active={headlineFlat3dStyleActive} onClick={applyHeadlineSportsPreset}>
           Flat 3D
         </Chip>
         <Chip small active={headLineEnabled} onClick={applyHeadlineLinePreset}>
@@ -28621,7 +28874,7 @@ style={{ top: STICKY_TOP }}
         placeholder="ENTER HEADLINE..."
       />
 
-      <div className="grid grid-cols-3 gap-3 mt-2">
+      <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
         <Stepper
           label="Alpha"
           value={textFx.alpha}
@@ -28644,7 +28897,7 @@ style={{ top: STICKY_TOP }}
         <Stepper label="Skew (°)" value={headSkew} setValue={setHeadSkew} min={-45} max={45} step={1} />
       </div>
 
-      <div className="grid grid-cols-3 gap-3 mt-2">
+      <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
         <Stepper
           label="Size px"
           value={headSizeAuto ? headMaxPx : headManualPx}
@@ -28660,6 +28913,17 @@ style={{ top: STICKY_TOP }}
         />
         <Stepper label="Line Height" value={lineHeight} setValue={setLineHeight} min={0.2} max={1.3} step={0.02} digits={2} />
         <Stepper label="Col Width %" value={textColWidth} setValue={setTextColWidth} min={30} max={100} step={1} />
+        {showDesktopHeadlineShadowControls && (
+          <Stepper
+            label="Drop Shadow"
+            value={headShadowStrength}
+            setValue={setHeadShadowStrength}
+            min={0}
+            max={8}
+            step={0.1}
+            digits={1}
+          />
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2 mt-2">
@@ -28689,34 +28953,22 @@ style={{ top: STICKY_TOP }}
         </Chip>
       </div>
 
-      <div className="mt-2 flex items-center gap-3">
-        <span className="w-[110px] shrink-0 text-xs opacity-70">Shadow Strength</span>
-        <Stepper
-          className="flex-1"
-          value={headShadowStrength}
-          setValue={setHeadShadowStrength}
-          min={0}
-          max={8}
-          step={0.1}
-          digits={1}
-        />
-      </div>
+      {showDesktopHeadlineStrokeControls && (
+        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
+          <Stepper
+            label="Stroke Width"
+            value={textFx.strokeWidth}
+            setValue={(n) => setTextFx((v) => ({ ...v, strokeWidth: n }))}
+            min={0}
+            max={8}
+            step={0.1}
+            digits={1}
+          />
+        </div>
+      )}
 
-      <div className="mt-2 flex items-center gap-3">
-        <span className="w-[110px] shrink-0 text-xs opacity-70">Stroke Width</span>
-        <Stepper
-          className="flex-1"
-          value={textFx.strokeWidth}
-          setValue={(n) => setTextFx((v) => ({ ...v, strokeWidth: n }))}
-          min={0}
-          max={8}
-          step={0.1}
-          digits={1}
-        />
-      </div>
-
-      {!headRushEnabled && (
-        <div className="grid grid-cols-3 gap-3 mt-2">
+      {showDesktopHeadline3dControls && (
+        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
           <Stepper
             label="3D Depth"
             value={headExtrudeDepth}
@@ -28745,7 +28997,7 @@ style={{ top: STICKY_TOP }}
       )}
 
       {headLineEnabled && (
-        <div className="grid grid-cols-4 gap-3 mt-2">
+        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
           <Stepper
             label="Front X"
             value={headLineFrontOffsetX}
@@ -28783,7 +29035,7 @@ style={{ top: STICKY_TOP }}
 
       {headSliceEnabled && (
         <>
-          <div className="grid grid-cols-3 gap-3 mt-2">
+          <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
             <Stepper
               label="Band Count"
               value={headSliceBandCount}
@@ -28810,7 +29062,7 @@ style={{ top: STICKY_TOP }}
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-3 mt-2">
+          <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
             <Stepper
               label="Blur"
               value={headSliceBlur}
@@ -28843,7 +29095,7 @@ style={{ top: STICKY_TOP }}
       )}
 
       {headRushEnabled && (
-        <div className="grid grid-cols-2 gap-3 mt-2">
+        <div className="grid grid-cols-2 gap-3 mt-3">
           <Stepper
             label="Dot Size"
             value={headRushDotSize}
@@ -28867,7 +29119,7 @@ style={{ top: STICKY_TOP }}
 
       {headGlitchEnabled && (
         <>
-          <div className="grid grid-cols-2 gap-3 mt-2">
+          <div className="grid grid-cols-2 gap-3 mt-3">
             <Stepper
               label="Intensity"
               value={headGlitchIntensity}
@@ -28904,24 +29156,24 @@ style={{ top: STICKY_TOP }}
               digits={2}
             />
           </div>
-	          <div className="mt-2 grid grid-cols-3 gap-2">
-	            <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
-	              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Red</span>
-	              <ColorDot value={headGlitchRedColor} onChange={setHeadGlitchRedColor} />
-	            </div>
-	            <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
-	              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Green</span>
-	              <ColorDot value={headGlitchMagentaColor} onChange={setHeadGlitchMagentaColor} />
-	            </div>
-	            <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
-	              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Blue</span>
-	              <ColorDot value={headGlitchBlueColor} onChange={setHeadGlitchBlueColor} />
-	            </div>
-	          </div>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Red</span>
+              <ColorDot value={headGlitchRedColor} onChange={setHeadGlitchRedColor} />
+            </div>
+            <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Green</span>
+              <ColorDot value={headGlitchMagentaColor} onChange={setHeadGlitchMagentaColor} />
+            </div>
+            <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Blue</span>
+              <ColorDot value={headGlitchBlueColor} onChange={setHeadGlitchBlueColor} />
+            </div>
+          </div>
         </>
       )}
 
-      <div className="mt-3 grid grid-cols-2 gap-2 min-[420px]:grid-cols-3">
+      <div className="mt-3 grid grid-cols-2 gap-2">
         <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
           <span className="uppercase tracking-[0.12em] opacity-80">Fill</span>
           <ColorDot
@@ -28985,18 +29237,20 @@ style={{ top: STICKY_TOP }}
             </div>
           </>
         )}
-        <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
-          <span className="uppercase tracking-[0.12em] opacity-80">Stroke</span>
-          <ColorDot
-            value={textFx.strokeColor}
-            onChange={(c) => {
-              const next = { ...textFx, strokeColor: c };
-              setTextFx(next);
-              setSessionValue(format, "textFx", next);
-            }}
-          />
-        </div>
-        {!headRushEnabled && (
+        {showDesktopHeadlineStrokeControls && (
+          <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+            <span className="uppercase tracking-[0.12em] opacity-80">Stroke</span>
+            <ColorDot
+              value={textFx.strokeColor}
+              onChange={(c) => {
+                const next = { ...textFx, strokeColor: c };
+                setTextFx(next);
+                setSessionValue(format, "textFx", next);
+              }}
+            />
+          </div>
+        )}
+        {showDesktopHeadline3dControls && (
           <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
             <span className="uppercase tracking-[0.12em] opacity-80">3D</span>
             <ColorDot
@@ -33019,7 +33273,7 @@ style={{ top: STICKY_TOP }}
       <div className="border-b border-white/10 bg-neutral-950/90 px-5 py-4">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-sm uppercase tracking-[0.2em] text-cyan-300">Help</div>
+            <div className="text-sm uppercase tracking-[0.2em] text-cyan-300">Guide</div>
             <div className="mt-1 text-xl font-semibold text-white">Let us build your first flyer.</div>
             <div className="mt-2 text-sm text-neutral-400">
               You already picked a template. Start by editing what is on the canvas.
