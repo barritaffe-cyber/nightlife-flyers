@@ -78,7 +78,13 @@ import {
 import { TEXT_SEPARATOR_GRAPHICS, buildSeparatorSvgDataUrl } from "../lib/textSeparators";
 import { SHAPE_GRAPHICS, buildShapeSvgDataUrl, buildShapeSvgMarkup } from "../lib/shapeGraphics";
 import { getPublicLegalName, getPublicSupportEmail } from "../lib/publicIdentity";
-import { getClientTrackingPayload, sendClientEventBeacon, trackClientEvent } from "../lib/analytics/client";
+import {
+  getClientTrackingPayload,
+  sendClientEventBeacon,
+  trackClientEvent,
+  trackMetaPixelCustomEvent,
+  trackMetaPixelEvent,
+} from "../lib/analytics/client";
 import { getDeviceType, getOrCreateDeviceId } from "../lib/auth/device";
 
 const AiBackgroundPanel = dynamic(() => import("../components/editor/AiBackgroundPanel"), {
@@ -20555,6 +20561,14 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
 
   // ✅ 1. SAVE FUNCTION
   const handleSaveProject = async (source: ProjectSaveSource = "unknown") => {
+    trackMetaPixelEvent("CustomizeProduct", {
+      content_name: "Save Project JSON",
+      content_category: "Nightlife Flyers Studio",
+      source,
+      format,
+      mobile: isMobileView,
+    });
+
     void trackClientEvent("project_save_button_clicked", {
       properties: {
         source,
@@ -22629,6 +22643,7 @@ const [projectSaveReminderRect, setProjectSaveReminderRect] = React.useState<nul
   bottom: number;
 }>(null);
 const projectSaveReminderShownRef = React.useRef(false);
+const firstEditMetaTrackedRef = React.useRef(false);
 const mobileProjectSaveButtonRef = React.useRef<HTMLButtonElement | null>(null);
 const shouldShimmerProjectSave = showProjectSaveReminder && !isLiveDragging;
 const headlinePresetBaselineRef = React.useRef<null | {
@@ -26135,6 +26150,53 @@ React.useEffect(() => {
   if (!sessionDirty.square && !sessionDirty.story) return;
   setShowSaveNotice(true);
 }, [saveNoticeDismissed, sessionDirty.square, sessionDirty.story, storageReady]);
+
+React.useEffect(() => {
+  if (!storageReady) return;
+  if (showStartup || hasSavedDesign) return;
+  if (firstEditMetaTrackedRef.current) return;
+  if (!sessionDirty.square && !sessionDirty.story) return;
+
+  firstEditMetaTrackedRef.current = true;
+  const properties = {
+    format,
+    mobile: isMobileView,
+    ui_mode: uiMode,
+    selected_panel: selectedPanel,
+    mobile_controls_tab: isMobileView ? mobileControlsTab : null,
+    template_id: templateId,
+    template_label: activeTemplate?.label ?? null,
+    is_starter: isStarterPlan,
+    has_auth_session: hasAuthSession,
+    has_paid_access: hasPaidAccess,
+    access_plan: accessPlan,
+    subscription_status: subscriptionStatus,
+    has_background: Boolean(bgUrl || bgUploadUrl),
+  };
+
+  trackMetaPixelCustomEvent("FirstEdit", properties);
+  void trackClientEvent("project_first_edit", { properties });
+}, [
+  accessPlan,
+  activeTemplate?.label,
+  bgUploadUrl,
+  bgUrl,
+  format,
+  hasAuthSession,
+  hasPaidAccess,
+  hasSavedDesign,
+  isMobileView,
+  isStarterPlan,
+  mobileControlsTab,
+  selectedPanel,
+  sessionDirty.square,
+  sessionDirty.story,
+  showStartup,
+  storageReady,
+  subscriptionStatus,
+  templateId,
+  uiMode,
+]);
 
 React.useEffect(() => {
   if (!storageReady) return;

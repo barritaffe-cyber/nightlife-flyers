@@ -5,6 +5,7 @@ import { getPublicSiteUrl } from "../lib/publicIdentity";
 
 const siteUrl = getPublicSiteUrl();
 const googleAdsTagId = "AW-18139633250";
+const metaPixelId = "1949907151927593";
 const siteDescription =
   'Nightlife Flyers is an AI flyer maker for nightlife flyers, club flyers, event flyers, DJ flyers, artist promo flyers, and AI flyers with fast templates, backgrounds, and exports.';
 const siteTitle = 'Nightlife Flyers | AI Flyer Maker for Club, Event, DJ, and Artist Promo Flyers';
@@ -127,11 +128,32 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           `,
           }}
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+            !function(f,b,e,v,n,t,s)
+            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+            n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t,s)}(window, document,'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+            fbq('init', '${metaPixelId}');
+            fbq('track', 'PageView');
+          `,
+          }}
+        />
       </head>
       <body>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
+        <noscript
+          dangerouslySetInnerHTML={{
+            __html: `<img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=${metaPixelId}&ev=PageView&noscript=1" />`,
+          }}
         />
         <AnalyticsTracker />
         {children}

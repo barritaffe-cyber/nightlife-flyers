@@ -2,7 +2,6 @@
 
 import React from "react";
 import Link from "next/link";
-import Script from "next/script";
 import { useSearchParams } from "next/navigation";
 import { trackClientEvent, trackMetaPixelEvent } from "../../lib/analytics/client";
 import { supabaseBrowser } from "../../lib/supabase/client";
@@ -31,7 +30,6 @@ function LoginPageInner() {
   const postAuthHref =
     next || (isStudioPreviewIntent ? "/?studio=1" : selection ? buildBillingCheckoutHref(selection) : "/");
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://nightlife-flyers.com";
-  const metaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID || "";
 
   React.useEffect(() => {
     let active = true;
@@ -313,26 +311,6 @@ function LoginPageInner() {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
-      {metaPixelId ? (
-        <Script
-          id="meta-pixel-login"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              !function(f,b,e,v,n,t,s)
-              {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-              n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-              if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-              n.queue=[];t=b.createElement(e);t.async=!0;
-              t.src=v;s=b.getElementsByTagName(e)[0];
-              s.parentNode.insertBefore(t,s)}(window, document,'script',
-              'https://connect.facebook.net/en_US/fbevents.js');
-              fbq('init', '${metaPixelId}');
-              fbq('track', 'PageView');
-            `,
-          }}
-        />
-      ) : null}
       <Link
         href={isStudioPreviewIntent ? "/landing" : "/"}
         className="absolute left-6 top-6 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"

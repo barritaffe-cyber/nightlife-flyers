@@ -257,3 +257,11 @@ export function trackMetaPixelEvent(event: string, parameters: Record<string, un
     window.fbq("track", event, parameters);
   } catch {}
 }
+
+export function trackMetaPixelCustomEvent(event: string, parameters: Record<string, unknown> = {}) {
+  if (typeof window === "undefined" || typeof window.fbq !== "function") return;
+
+  try {
+    window.fbq("trackCustom", event, parameters);
+  } catch {}
+}
