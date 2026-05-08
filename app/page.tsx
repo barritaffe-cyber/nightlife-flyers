@@ -83,7 +83,6 @@ import {
   sendClientEventBeacon,
   trackClientEvent,
   trackMetaPixelCustomEvent,
-  trackMetaPixelEvent,
 } from "../lib/analytics/client";
 import { getDeviceType, getOrCreateDeviceId } from "../lib/auth/device";
 
@@ -20557,18 +20556,19 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
     | "project_panel"
     | "workflow_guide"
     | "project_help"
+    | "export_json"
     | "unknown";
+
+  const trackCustomizeProductSave = React.useCallback(() => {
+    if (typeof window === "undefined" || typeof window.fbq !== "function") return;
+
+    try {
+      window.fbq("track", "CustomizeProduct");
+    } catch {}
+  }, []);
 
   // ✅ 1. SAVE FUNCTION
   const handleSaveProject = async (source: ProjectSaveSource = "unknown") => {
-    trackMetaPixelEvent("CustomizeProduct", {
-      content_name: "Save Project JSON",
-      content_category: "Nightlife Flyers Studio",
-      source,
-      format,
-      mobile: isMobileView,
-    });
-
     void trackClientEvent("project_save_button_clicked", {
       properties: {
         source,
@@ -20625,6 +20625,13 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
     }
   };
 
+  const startProjectSave = (source: ProjectSaveSource) => {
+    trackCustomizeProductSave();
+    window.setTimeout(() => {
+      void handleSaveProject(source);
+    }, 0);
+  };
+
 // ✅ HANDLER: Upload from "Choose a Vibe" section
   const handleUploadDesignFromVibe = async (file: File) => {
     try {
@@ -20644,6 +20651,8 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
 
 // ✅ HANDLER: Export Design to JSON
   const handleExportJSON = () => {
+    trackCustomizeProductSave();
+
     try {
       const json = JSON.stringify(
         { state: buildPortableProjectState(new Date().toISOString()) },
@@ -27304,9 +27313,7 @@ return (
               <button
                 type="button"
                 onClick={() => {
-                  window.setTimeout(() => {
-                    void handleSaveProject("mobile_reminder");
-                  }, 0);
+                  startProjectSave("mobile_reminder");
                 }}
                 className="h-8 border border-cyan-300/80 bg-cyan-400 px-3 text-[12px] font-semibold text-black hover:bg-cyan-300"
               >
@@ -27514,9 +27521,7 @@ return (
                 data-tour="project-save"
                 data-mobile-float-lock="true"
                 onClick={() => {
-                  window.setTimeout(() => {
-                    void handleSaveProject("mobile_top");
-                  }, 0);
+                  startProjectSave("mobile_top");
                 }}
                 className={clsx(
                   "lg:hidden shrink-0 whitespace-nowrap border border-cyan-300/80 bg-cyan-500/15 px-2 py-[3px] text-[11px] font-semibold uppercase tracking-[0.08em] text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.28)] transition-colors hover:bg-cyan-500/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300",
@@ -33414,9 +33419,7 @@ style={{ top: STICKY_TOP }}
             <button
               type="button"
               onClick={() => {
-                window.setTimeout(() => {
-                  void handleSaveProject("project_panel");
-                }, 0);
+                startProjectSave("project_panel");
               }}
               className={clsx(
                 "w-full text-[12px] px-3 py-2 border border-cyan-300/70 bg-cyan-500/15 text-cyan-50 hover:bg-cyan-500/25",
@@ -33501,9 +33504,7 @@ style={{ top: STICKY_TOP }}
           <button
             type="button"
             onClick={() => {
-              window.setTimeout(() => {
-                void handleSaveProject("workflow_guide");
-              }, 0);
+              startProjectSave("workflow_guide");
             }}
             className="mt-3 border border-cyan-300/80 bg-cyan-400 px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-black hover:bg-cyan-300"
           >
@@ -33701,9 +33702,7 @@ style={{ top: STICKY_TOP }}
           <button
             type="button"
             onClick={() => {
-              window.setTimeout(() => {
-                void handleSaveProject("project_help");
-              }, 0);
+              startProjectSave("project_help");
             }}
             className="mt-3 border border-cyan-300/80 bg-cyan-400 px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-black hover:bg-cyan-300"
           >
