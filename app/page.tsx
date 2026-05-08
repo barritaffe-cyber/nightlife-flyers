@@ -18770,9 +18770,7 @@ async function renderExportDataUrl(
         await forceFontRender(families);
         const injectedFonts = await injectGoogleFontsForExport(captureNode, families);
         restoreExportFonts = injectedFonts.restore;
-        if (isMobileExport) {
-          restoreTextShadowFallback = applyTextShadowFallbackForExport(captureNode);
-        }
+        restoreTextShadowFallback = applyTextShadowFallbackForExport(captureNode);
         await waitForImageUrl(bgUploadUrl || bgUrl);
         await waitForImageUrl(logoUrl);
         if (shouldInlineProxy) {
