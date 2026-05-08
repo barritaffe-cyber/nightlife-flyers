@@ -22713,16 +22713,16 @@ const projectSaveReminderStyle = React.useMemo<React.CSSProperties>(() => {
   if (typeof window === "undefined" || !projectSaveReminderRect) {
     return {
       top: "calc(env(safe-area-inset-top, 0px) + 94px)",
-      left: "12px",
-      right: "12px",
+      left: "6px",
+      right: "6px",
     };
   }
 
-  const width = Math.min(332, Math.max(240, window.innerWidth - 24));
-  const maxLeft = Math.max(12, window.innerWidth - width - 12);
+  const width = Math.min(460, Math.max(280, window.innerWidth - 12));
+  const maxLeft = Math.max(6, window.innerWidth - width - 6);
   const left = Math.min(
     maxLeft,
-    Math.max(12, projectSaveReminderRect.left + projectSaveReminderRect.width / 2 - width / 2)
+    Math.max(6, projectSaveReminderRect.left + projectSaveReminderRect.width / 2 - width / 2)
   );
   return {
     width,
@@ -27199,18 +27199,18 @@ return (
           className="fixed z-[960]"
           style={projectSaveReminderStyle}
         >
-          <div className="relative border border-cyan-300/55 bg-neutral-950/96 p-3 text-white shadow-[0_18px_50px_rgba(0,0,0,0.55),0_0_28px_rgba(34,211,238,0.22)] backdrop-blur">
+          <div className="relative border border-cyan-300/55 bg-neutral-950/96 p-2.5 text-white shadow-[0_18px_50px_rgba(0,0,0,0.55),0_0_28px_rgba(34,211,238,0.22)] backdrop-blur">
             <div className="absolute -top-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 border-l border-t border-cyan-300/55 bg-neutral-950" />
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-300">
               Reminder
             </div>
-            <div className="mt-1 text-sm font-bold text-white">
+            <div className="mt-0.5 text-[13px] font-bold leading-5 text-white">
               Save your design to continue later
             </div>
-            <div className="mt-1 text-[12px] leading-5 text-neutral-300">
+            <div className="mt-0.5 whitespace-nowrap text-[10.5px] leading-4 text-neutral-300">
               Download your file and reopen it anytime on mobile or PC.
             </div>
-            <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
+            <div className="mt-2 grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => {
@@ -27218,7 +27218,7 @@ return (
                     void handleSaveProject();
                   }, 0);
                 }}
-                className="border border-cyan-300/80 bg-cyan-400 px-3 py-2 text-[12px] font-bold uppercase tracking-[0.12em] text-black hover:bg-cyan-300"
+                className="h-8 border border-cyan-300/80 bg-cyan-400 px-3 text-[12px] font-semibold text-black hover:bg-cyan-300"
               >
                 Save Now
               </button>
@@ -27228,7 +27228,7 @@ return (
                   setShowProjectSaveReminder(false);
                   setProjectSaveReminderDismissed(true);
                 }}
-                className="border border-white/10 bg-white/[0.06] px-3 py-2 text-[12px] text-white/75 hover:bg-white/[0.1]"
+                className="h-8 border border-white/10 bg-white/[0.06] px-3 text-[12px] font-semibold text-white/75 hover:bg-white/[0.1]"
                 aria-label="Dismiss save reminder"
               >
                 Later
@@ -27407,7 +27407,7 @@ return (
                 data-mobile-float-lock="true"
                 onClick={() => openWorkflowHelp("toolbar")}
                 className={clsx(
-                  "shrink-0 whitespace-nowrap border px-2 py-[3px] text-[11px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400",
+                  "hidden lg:inline-flex shrink-0 whitespace-nowrap border px-2 py-[3px] text-[11px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400",
                   workflowHelpOpen
                     ? "bg-indigo-600 border-indigo-300 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.12)_inset]"
                     : "border-neutral-700 bg-neutral-900/70 text-neutral-200 hover:bg-neutral-800",
