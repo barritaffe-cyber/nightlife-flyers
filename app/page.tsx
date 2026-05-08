@@ -103,6 +103,7 @@ const SHAPE_GRAPHIC_SCALE_UI_MAX = 3;
 const SHAPE_GRAPHIC_SCALE_STEP = 0.005;
 const SHAPE_GRAPHIC_LENGTH_UI_MAX = 1600;
 const SHAPE_GRAPHIC_LENGTH_STEP = 1;
+const PROJECT_SAVE_REMINDER_FALLBACK_DELAY_MS = 45 * 1000;
 
 
 
@@ -17870,10 +17871,6 @@ function IS_clearIconSlot(i: number) {
 
 // Save current design under a name (localStorage)
 function saveDesign(name: string) {
-  if (isStarterPlan) {
-    alert('Project save is not available on Starter.');
-    return;
-  }
   if (!name || !name.trim()) { alert('Please name the design'); return; }
   const data = exportDesignJSON();
   const thumb = captureThumb();
@@ -20552,10 +20549,6 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
 
   // ✅ 1. SAVE FUNCTION
   const handleSaveProject = async () => {
-    if (isStarterPlan) {
-      alert("Starter plan does not include project save/load. Upgrade or use a pass to unlock project files.");
-      return;
-    }
     try {
       const savedAt = new Date().toISOString();
       const rawData = buildPortableProjectState(savedAt);
@@ -20579,6 +20572,9 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       setProjectFileStatusAndPersist({ kind: "saved", at: savedAt });
+      setShowSaveNotice(false);
+      setShowProjectSaveReminder(false);
+      setProjectSaveReminderDismissed(true);
       
 
     } catch (e) {
@@ -20589,10 +20585,6 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
 
 // ✅ HANDLER: Upload from "Choose a Vibe" section
   const handleUploadDesignFromVibe = async (file: File) => {
-    if (isStarterPlan) {
-      alert("Starter plan does not include project save/load. Upgrade or use a pass to unlock project files.");
-      return false;
-    }
     try {
       const raw = await file.text();
       
@@ -22599,6 +22591,18 @@ const didCheckSavedDesignRef = React.useRef(false);
 const SAVE_NOTICE_DISMISSED_KEY = "nf:saveNoticeDismissed";
 const [saveNoticeDismissed, setSaveNoticeDismissed] = React.useState(false);
 const [showSaveNotice, setShowSaveNotice] = React.useState(false);
+const [showProjectSaveReminder, setShowProjectSaveReminder] = React.useState(false);
+const [projectSaveReminderDismissed, setProjectSaveReminderDismissed] = React.useState(false);
+const [projectSaveReminderRect, setProjectSaveReminderRect] = React.useState<null | {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+  bottom: number;
+}>(null);
+const projectSaveReminderShownRef = React.useRef(false);
+const mobileProjectSaveButtonRef = React.useRef<HTMLButtonElement | null>(null);
+const shouldShimmerProjectSave = showProjectSaveReminder && !isLiveDragging;
 const headlinePresetBaselineRef = React.useRef<null | {
   headlineFamily: string;
   textFx: TextFx;
@@ -22689,6 +22693,49 @@ const formatStatusTimestamp = React.useCallback((raw: string | number | null | u
 const projectFileStatusLabel = React.useMemo(() => {
   return formatStatusTimestamp(projectFileStatus?.at);
 }, [formatStatusTimestamp, projectFileStatus?.at]);
+const updateProjectSaveReminderRect = React.useCallback(() => {
+  if (typeof window === "undefined") return;
+  const node = mobileProjectSaveButtonRef.current;
+  if (!node) {
+    setProjectSaveReminderRect(null);
+    return;
+  }
+  const rect = node.getBoundingClientRect();
+  setProjectSaveReminderRect({
+    top: rect.top,
+    left: rect.left,
+    width: rect.width,
+    height: rect.height,
+    bottom: rect.bottom,
+  });
+}, []);
+const projectSaveReminderStyle = React.useMemo<React.CSSProperties>(() => {
+  if (typeof window === "undefined" || !projectSaveReminderRect) {
+    return {
+      top: "calc(env(safe-area-inset-top, 0px) + 94px)",
+      left: "12px",
+      right: "12px",
+    };
+  }
+
+  const width = Math.min(332, Math.max(240, window.innerWidth - 24));
+  const maxLeft = Math.max(12, window.innerWidth - width - 12);
+  const left = Math.min(
+    maxLeft,
+    Math.max(12, projectSaveReminderRect.left + projectSaveReminderRect.width / 2 - width / 2)
+  );
+  return {
+    width,
+    top: projectSaveReminderRect.bottom + 10,
+    left,
+  };
+}, [projectSaveReminderRect]);
+const openProjectSaveReminder = React.useCallback(() => {
+  if (projectSaveReminderDismissed || projectSaveReminderShownRef.current) return;
+  projectSaveReminderShownRef.current = true;
+  updateProjectSaveReminderRect();
+  setShowProjectSaveReminder(true);
+}, [projectSaveReminderDismissed, updateProjectSaveReminderRect]);
 const floatingAssetRef = React.useRef<HTMLDivElement | null>(null);
 const floatingTextRef = React.useRef<HTMLDivElement | null>(null);
 const floatingBgRef = React.useRef<HTMLDivElement | null>(null);
@@ -26061,6 +26108,56 @@ React.useEffect(() => {
   setShowSaveNotice(true);
 }, [saveNoticeDismissed, sessionDirty.square, sessionDirty.story, storageReady]);
 
+React.useEffect(() => {
+  if (!storageReady) return;
+  if (!isMobileView) return;
+  if (showStartup || hasSavedDesign) return;
+  if (projectSaveReminderDismissed || projectSaveReminderShownRef.current) return;
+  if (sessionDirty.square || sessionDirty.story) {
+    openProjectSaveReminder();
+  }
+}, [
+  hasSavedDesign,
+  isMobileView,
+  openProjectSaveReminder,
+  projectSaveReminderDismissed,
+  sessionDirty.square,
+  sessionDirty.story,
+  showStartup,
+  storageReady,
+]);
+
+React.useEffect(() => {
+  if (!storageReady) return;
+  if (!isMobileView) return;
+  if (showStartup || hasSavedDesign) return;
+  if (projectSaveReminderDismissed || projectSaveReminderShownRef.current) return;
+
+  const timer = window.setTimeout(() => {
+    openProjectSaveReminder();
+  }, PROJECT_SAVE_REMINDER_FALLBACK_DELAY_MS);
+
+  return () => window.clearTimeout(timer);
+}, [
+  hasSavedDesign,
+  isMobileView,
+  openProjectSaveReminder,
+  projectSaveReminderDismissed,
+  showStartup,
+  storageReady,
+]);
+
+React.useEffect(() => {
+  if (!showProjectSaveReminder) return;
+  updateProjectSaveReminderRect();
+  window.addEventListener("resize", updateProjectSaveReminderRect);
+  window.addEventListener("scroll", updateProjectSaveReminderRect, true);
+  return () => {
+    window.removeEventListener("resize", updateProjectSaveReminderRect);
+    window.removeEventListener("scroll", updateProjectSaveReminderRect, true);
+  };
+}, [showProjectSaveReminder, updateProjectSaveReminderRect]);
+
 // =========================================================
 // ✅ IMPLEMENTATION: "Photoshop contrast-copy → select darks → apply to original"
 // Works on rendered URL after generation: builds a proxy classifier mask,
@@ -27055,7 +27152,7 @@ return (
     </AnimatePresence>
 
     <AnimatePresence>
-      {showSaveNotice && !showStartup && !hasSavedDesign && (
+      {showSaveNotice && !showStartup && !hasSavedDesign && !isMobileView && (
         <motion.div
           key="save-notice"
           initial={{ opacity: 0, y: -12 }}
@@ -27070,9 +27167,7 @@ return (
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold text-amber-200">Save your work</div>
                 <div className="mt-1 text-[12px] text-white/75">
-                  {isStarterPlan
-                    ? "Reloads or browser closes can clear this design. Starter does not include project file saves."
-                    : 'Reloads or browser closes can clear unsaved work. Use "Project -> Save Design" to keep a backup file.'}
+                  Reloads or browser closes can clear unsaved work. Use Save Project File to download a portable .json backup that works on PC and mobile.
                 </div>
               </div>
               <button
@@ -27086,6 +27181,57 @@ return (
                 aria-label="Dismiss save notice"
               >
                 ×
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+
+    <AnimatePresence>
+      {showProjectSaveReminder && !showStartup && !hasSavedDesign && isMobileView && (
+        <motion.div
+          key="project-save-reminder"
+          initial={{ opacity: 0, y: -8, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -8, scale: 0.98 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          className="fixed z-[960]"
+          style={projectSaveReminderStyle}
+        >
+          <div className="relative border border-cyan-300/55 bg-neutral-950/96 p-3 text-white shadow-[0_18px_50px_rgba(0,0,0,0.55),0_0_28px_rgba(34,211,238,0.22)] backdrop-blur">
+            <div className="absolute -top-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 border-l border-t border-cyan-300/55 bg-neutral-950" />
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300">
+              Reminder
+            </div>
+            <div className="mt-1 text-sm font-bold text-white">
+              Save your design to continue later
+            </div>
+            <div className="mt-1 text-[12px] leading-5 text-neutral-300">
+              Download your file and reopen it anytime on mobile or PC.
+            </div>
+            <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  window.setTimeout(() => {
+                    void handleSaveProject();
+                  }, 0);
+                }}
+                className="border border-cyan-300/80 bg-cyan-400 px-3 py-2 text-[12px] font-bold uppercase tracking-[0.12em] text-black hover:bg-cyan-300"
+              >
+                Save Now
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowProjectSaveReminder(false);
+                  setProjectSaveReminderDismissed(true);
+                }}
+                className="border border-white/10 bg-white/[0.06] px-3 py-2 text-[12px] text-white/75 hover:bg-white/[0.1]"
+                aria-label="Dismiss save reminder"
+              >
+                Later
               </button>
             </div>
           </div>
@@ -27270,6 +27416,25 @@ return (
                 title="Open Guide"
               >
                 Guide
+              </button>
+
+              <button
+                ref={mobileProjectSaveButtonRef}
+                type="button"
+                data-tour="project-save"
+                data-mobile-float-lock="true"
+                onClick={() => {
+                  window.setTimeout(() => {
+                    void handleSaveProject();
+                  }, 0);
+                }}
+                className={clsx(
+                  "lg:hidden shrink-0 whitespace-nowrap border border-cyan-300/80 bg-cyan-500/15 px-2 py-[3px] text-[11px] font-semibold uppercase tracking-[0.08em] text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.28)] transition-colors hover:bg-cyan-500/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300",
+                  shouldShimmerProjectSave && "nf-project-save-shimmer"
+                )}
+                title="Save your project as a portable .json file"
+              >
+                <span>Save</span>
               </button>
 
               {!isMobileView && activeTextLayerKey && (
@@ -30933,17 +31098,6 @@ style={{ top: STICKY_TOP }}
               </div>
               {showMobileHeadline3dControls && (
                 <>
-                  {activeTextControls.color && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] uppercase tracking-wider text-neutral-400">Fill</span>
-                      <ColorDot
-                        value={activeTextControls.color}
-                        allowNone={!!activeTextControls.allowNoFill}
-                        noneTitle="No fill"
-                        onChange={(v) => activeTextControls.onColor?.(v)}
-                      />
-                    </div>
-                  )}
                   <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
                     <div>
                       <InlineSliderInput
@@ -31128,19 +31282,10 @@ style={{ top: STICKY_TOP }}
               )}
               {showMobileHeadlineRushControls && (
                 <>
-                  {activeTextControls.color && (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[10px] uppercase tracking-wider text-neutral-400">Fill</span>
-                      <ColorDot
-                        value={activeTextControls.color}
-                        allowNone={!!activeTextControls.allowNoFill}
-                        noneTitle="No fill"
-                        onChange={(v) => activeTextControls.onColor?.(v)}
-                      />
-                      <span className="text-[10px] uppercase tracking-wider text-neutral-400">Dots</span>
-                      <ColorDot value={headRushDotColor} onChange={setHeadRushDotColor} />
-                    </div>
-                  )}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] uppercase tracking-wider text-neutral-400">Dots</span>
+                    <ColorDot value={headRushDotColor} onChange={setHeadRushDotColor} />
+                  </div>
                   <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
                     <div>
                       <InlineSliderInput
@@ -31184,17 +31329,6 @@ style={{ top: STICKY_TOP }}
               )}
               {showMobileHeadlineGlitchControls && (
                 <>
-                  {activeTextControls.color && (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[10px] uppercase tracking-wider text-neutral-400">Fill</span>
-                      <ColorDot
-                        value={activeTextControls.color}
-                        allowNone={!!activeTextControls.allowNoFill}
-                        noneTitle="No fill"
-                        onChange={(v) => activeTextControls.onColor?.(v)}
-                      />
-                    </div>
-                  )}
                   <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
                     <div>
                       <InlineSliderInput
@@ -31285,17 +31419,6 @@ style={{ top: STICKY_TOP }}
               )}
               {showMobileHeadlineEchoControls && (
                 <>
-                  {activeTextControls.color && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] uppercase tracking-wider text-neutral-400">Fill</span>
-                      <ColorDot
-                        value={activeTextControls.color}
-                        allowNone={!!activeTextControls.allowNoFill}
-                        noneTitle="No fill"
-                        onChange={(v) => activeTextControls.onColor?.(v)}
-                      />
-                    </div>
-                  )}
                   <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
                     <div>
                       <InlineSliderInput
@@ -33179,23 +33302,24 @@ style={{ top: STICKY_TOP }}
           }
         >
           <div className="space-y-3">
-            {!isStarterPlan && (
-              <div className="border border-white/10 bg-white/[0.03] px-3 py-2.5">
-                <div className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">Project File Safety</div>
-                <div className="mt-1 text-sm font-medium text-white">
-                  {projectFileStatus
-                    ? projectFileStatus.kind === "saved"
-                      ? "Project file backed up"
-                      : "Project file reopened"
-                    : "Save a project file before you leave"}
-                </div>
-                <div className="mt-1 text-[12px] text-neutral-400">
-                  {projectFileStatus && projectFileStatusLabel
-                    ? `${projectFileStatus.kind === "saved" ? "Last saved" : "Last loaded"} ${projectFileStatusLabel}.`
-                    : "Your current work lives in the browser until you save a project file."}
-                </div>
+            <div className="border border-cyan-300/25 bg-cyan-400/[0.05] px-3 py-2.5">
+              <div className="text-[10px] uppercase tracking-[0.16em] text-cyan-300">Project File Safety</div>
+              <div className="mt-1 text-sm font-medium text-white">
+                {projectFileStatus
+                  ? projectFileStatus.kind === "saved"
+                    ? "Project file backed up"
+                    : "Project file reopened"
+                  : "Save a project file before you leave"}
               </div>
-            )}
+              <div className="mt-1 text-[12px] text-neutral-300">
+                {projectFileStatus && projectFileStatusLabel
+                  ? `${projectFileStatus.kind === "saved" ? "Last saved" : "Last loaded"} ${projectFileStatusLabel}.`
+                  : "Your current work lives in the browser until you save a project file."}
+              </div>
+              <div className="mt-2 text-[12px] leading-5 text-cyan-200">
+                <strong className="font-bold text-cyan-300">The .json file works on PC and mobile.</strong>
+              </div>
+            </div>
             {/* Save to a portable .json file */}
             <button
               type="button"
@@ -33204,56 +33328,43 @@ style={{ top: STICKY_TOP }}
                   void handleSaveProject();
                 }, 0);
               }}
-              disabled={isStarterPlan}
-              className="w-full text-[12px] px-3 py-2 border border-white/15 bg-white/[0.08] text-white hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:opacity-50"
+              className={clsx(
+                "w-full text-[12px] px-3 py-2 border border-cyan-300/70 bg-cyan-500/15 text-cyan-50 hover:bg-cyan-500/25",
+                shouldShimmerProjectSave && "nf-project-save-shimmer"
+              )}
               title="Save your current session as a portable file"
             >
-              Save Project File
+              <span>Save Project File</span>
             </button>
 
             {/* Load from a .json file */}
-            {isStarterPlan ? (
-              <button
-                type="button"
-                disabled
-                className="block w-full border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-center text-[12px] opacity-50 cursor-not-allowed"
-              >
-                Load Project File
-              </button>
-            ) : (
-              <label className="block w-full border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-center text-[12px] hover:bg-neutral-800 cursor-pointer">
-                Load Project File
-                <input
-                  type="file"
-                  accept="application/json"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0]; if (!f) return;
-                    const r = new FileReader();
-                    r.onload = () => {
-                      try {
-                        importDesignJSON(String(r.result));
-                        setProjectFileStatusAndPersist({ kind: "loaded", at: new Date().toISOString() });
-                        alert('Loaded ✓');
-                      } catch {
-                        alert('Invalid or unsupported design file');
-                      }
-                    };
-                    r.readAsText(f);
-                    e.currentTarget.value = '';
-                  }}
-                />
-              </label>
-            )}
+            <label className="block w-full border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-center text-[12px] hover:bg-neutral-800 cursor-pointer">
+              Load Project File
+              <input
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0]; if (!f) return;
+                  const r = new FileReader();
+                  r.onload = () => {
+                    try {
+                      importDesignJSON(String(r.result));
+                      setProjectFileStatusAndPersist({ kind: "loaded", at: new Date().toISOString() });
+                      alert('Loaded ✓');
+                    } catch {
+                      alert('Invalid or unsupported design file');
+                    }
+                  };
+                  r.readAsText(f);
+                  e.currentTarget.value = '';
+                }}
+              />
+            </label>
 
             <div className="text-[11px] text-neutral-400">
-              Portable <code>.json</code> project file.
+              Portable <code>.json</code> project file. Save one before closing the browser.
             </div>
-            {isStarterPlan && (
-              <div className="text-[11px] text-amber-300">
-                Starter plan disables project save/load.
-              </div>
-            )}
             <button
               type="button"
               onClick={clearHeavyStorage}
@@ -33290,6 +33401,26 @@ style={{ top: STICKY_TOP }}
       </div>
 
       <div className="max-h-[72vh] overflow-y-auto p-4">
+        <div className="mb-4 border border-cyan-300/45 bg-cyan-400/[0.06] p-3 shadow-[0_0_28px_rgba(34,211,238,0.16)]">
+          <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-cyan-300">
+            Important: Save Your Project
+          </div>
+          <div className="mt-1 text-sm leading-5 text-neutral-200">
+            <strong className="font-bold text-cyan-300">Tap Save Project File and keep the .json file.</strong> That file reopens this design later on PC or mobile, so save it before closing the browser.
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              window.setTimeout(() => {
+                void handleSaveProject();
+              }, 0);
+            }}
+            className="mt-3 border border-cyan-300/80 bg-cyan-400 px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-black hover:bg-cyan-300"
+          >
+            Save Project File
+          </button>
+        </div>
+
         <div className="space-y-3">
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-200">
@@ -33466,14 +33597,28 @@ style={{ top: STICKY_TOP }}
       <div className="px-5 py-4 border-b border-white/10 bg-neutral-950/90">
         <div className="text-sm uppercase tracking-[0.2em] text-cyan-300">Project Guide</div>
         <div className="mt-1 text-lg font-semibold text-white">Save your design file so you can open it on any device.</div>
+        <div className="mt-2 text-sm leading-5 text-neutral-300">
+          <strong className="font-bold text-cyan-300">Very important: the .json project file works on PC and mobile.</strong> Save it before you leave the canvas.
+        </div>
       </div>
 
       <div className="p-5 space-y-2.5 text-sm text-neutral-200">
-        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-          <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">1. Save Project File</div>
+        <div className="rounded-lg border border-cyan-300/35 bg-cyan-400/[0.06] p-3 shadow-[0_0_26px_rgba(34,211,238,0.12)]">
+          <div className="text-xs font-bold uppercase tracking-wide text-cyan-300 mb-1">1. Save Project File</div>
           <div className="text-neutral-300">
-            Download a portable <code>.json</code> file.
+            <strong className="font-bold text-cyan-300">Download a portable <code>.json</code> file.</strong> This is the file that lets you continue later.
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              window.setTimeout(() => {
+                void handleSaveProject();
+              }, 0);
+            }}
+            className="mt-3 border border-cyan-300/80 bg-cyan-400 px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-black hover:bg-cyan-300"
+          >
+            Save Project File
+          </button>
         </div>
 
         <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
@@ -33486,7 +33631,7 @@ style={{ top: STICKY_TOP }}
         <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
           <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">3. Load Project File</div>
           <div className="text-neutral-300">
-            Reopen it on any device and continue where you left off.
+            Reopen the same <code>.json</code> on PC or mobile and continue where you left off.
           </div>
         </div>
 
