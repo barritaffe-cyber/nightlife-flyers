@@ -20545,8 +20545,38 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
     };
   };
 
+  type ProjectSaveSource =
+    | "mobile_reminder"
+    | "mobile_top"
+    | "project_panel"
+    | "workflow_guide"
+    | "project_help"
+    | "unknown";
+
   // ✅ 1. SAVE FUNCTION
-  const handleSaveProject = async () => {
+  const handleSaveProject = async (source: ProjectSaveSource = "unknown") => {
+    void trackClientEvent("project_save_button_clicked", {
+      properties: {
+        source,
+        format,
+        mobile: isMobileView,
+        ui_mode: uiMode,
+        selected_panel: selectedPanel,
+        mobile_controls_tab: isMobileView ? mobileControlsTab : null,
+        template_id: templateId,
+        template_label: activeTemplate?.label ?? null,
+        is_starter: isStarterPlan,
+        has_auth_session: hasAuthSession,
+        has_paid_access: hasPaidAccess,
+        access_plan: accessPlan,
+        subscription_status: subscriptionStatus,
+        has_background: Boolean(bgUrl || bgUploadUrl),
+        save_notice_visible: showSaveNotice,
+        save_reminder_visible: showProjectSaveReminder,
+        project_file_status: projectFileStatus?.kind ?? null,
+      },
+    });
+
     try {
       const savedAt = new Date().toISOString();
       const rawData = buildPortableProjectState(savedAt);
@@ -27213,7 +27243,7 @@ return (
                 type="button"
                 onClick={() => {
                   window.setTimeout(() => {
-                    void handleSaveProject();
+                    void handleSaveProject("mobile_reminder");
                   }, 0);
                 }}
                 className="h-8 border border-cyan-300/80 bg-cyan-400 px-3 text-[12px] font-semibold text-black hover:bg-cyan-300"
@@ -27423,7 +27453,7 @@ return (
                 data-mobile-float-lock="true"
                 onClick={() => {
                   window.setTimeout(() => {
-                    void handleSaveProject();
+                    void handleSaveProject("mobile_top");
                   }, 0);
                 }}
                 className={clsx(
@@ -33323,7 +33353,7 @@ style={{ top: STICKY_TOP }}
               type="button"
               onClick={() => {
                 window.setTimeout(() => {
-                  void handleSaveProject();
+                  void handleSaveProject("project_panel");
                 }, 0);
               }}
               className={clsx(
@@ -33410,7 +33440,7 @@ style={{ top: STICKY_TOP }}
             type="button"
             onClick={() => {
               window.setTimeout(() => {
-                void handleSaveProject();
+                void handleSaveProject("workflow_guide");
               }, 0);
             }}
             className="mt-3 border border-cyan-300/80 bg-cyan-400 px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-black hover:bg-cyan-300"
@@ -33610,7 +33640,7 @@ style={{ top: STICKY_TOP }}
             type="button"
             onClick={() => {
               window.setTimeout(() => {
-                void handleSaveProject();
+                void handleSaveProject("project_help");
               }, 0);
             }}
             className="mt-3 border border-cyan-300/80 bg-cyan-400 px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-black hover:bg-cyan-300"

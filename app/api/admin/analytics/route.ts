@@ -261,6 +261,7 @@ export async function GET(req: Request) {
         subscriptions_activated: eventCounts.get("subscription_activated") || 0,
         starter_benefits_used: eventCounts.get("starter_trial_benefit_used") || 0,
         export_button_presses: eventCounts.get("export_button_pressed") || 0,
+        project_save_clicks: eventCounts.get("project_save_button_clicked") || 0,
         ai_generations_started: eventCounts.get("ai_generation_started") || 0,
         ai_generations_succeeded: eventCounts.get("ai_generation_succeeded") || 0,
         ai_generations_failed: eventCounts.get("ai_generation_failed") || 0,
