@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { resolveAdminUserFromRequest } from "../../../../lib/adminAccess";
-import { IGNORED_ANALYTICS_EMAILS, isIgnoredAnalyticsEmail } from "../../../../lib/analytics/server";
+import {
+  IGNORED_ANALYTICS_EMAILS,
+  isAutomatedAnalyticsUserAgent,
+  isIgnoredAnalyticsEmail,
+  isServerGeneratedTrackingIdentity,
+} from "../../../../lib/analytics/server";
 import { supabaseAdmin } from "../../../../lib/supabase/admin";
 
 type AnalyticsRow = {
@@ -76,6 +81,17 @@ function sessionLabel(row: AnalyticsRow) {
 
 export const runtime = "nodejs";
 const LIVE_SESSION_WINDOW_MS = 2 * 60 * 1000;
+const MIN_ACTIVE_SESSION_SECONDS = 10;
+
+function isHumanAnalyticsRow(row: AnalyticsRow) {
+  return (
+    row &&
+    row.created_at &&
+    !isIgnoredAnalyticsEmail(row.email) &&
+    !isAutomatedAnalyticsUserAgent(row.user_agent) &&
+    !isServerGeneratedTrackingIdentity(row.anon_id, row.session_id)
+  );
+}
 
 export async function GET(req: Request) {
   const adminUser = await resolveAdminUserFromRequest(req);
@@ -119,12 +135,8 @@ export async function GET(req: Request) {
       throw new Error(liveRowsResult.error.message);
     }
 
-    const rows = ((rowsResult.data || []) as AnalyticsRow[]).filter(
-      (row) => row && row.created_at && !isIgnoredAnalyticsEmail(row.email)
-    );
-    const liveRows = ((liveRowsResult.data || []) as AnalyticsRow[]).filter(
-      (row) => row && row.created_at && !isIgnoredAnalyticsEmail(row.email)
-    );
+    const rows = ((rowsResult.data || []) as AnalyticsRow[]).filter(isHumanAnalyticsRow);
+    const liveRows = ((liveRowsResult.data || []) as AnalyticsRow[]).filter(isHumanAnalyticsRow);
     const eventCounts = new Map<string, number>();
     const sourceCounts = new Map<string, number>();
     const pathCounts = new Map<string, number>();
@@ -179,19 +191,30 @@ export async function GET(req: Request) {
     );
     const sessionActiveDurations = Array.from(sessionStats.values()).map((stats) => stats.maxActiveSeconds);
     const sessionEventCounts = Array.from(sessionStats.values()).map((stats) => stats.eventCount);
+    const engagedSessions = Array.from(sessionStats.values()).filter(
+      (stats) => stats.maxActiveSeconds >= MIN_ACTIVE_SESSION_SECONDS
+    );
 
     const liveSessionLatest = new Map<string, AnalyticsRow>();
     const liveSessionEventCounts = new Map<string, number>();
+    const liveSessionActiveSeconds = new Map<string, number>();
     for (const row of liveRows) {
       const key = sessionKey(row);
       liveSessionEventCounts.set(key, (liveSessionEventCounts.get(key) || 0) + 1);
+      liveSessionActiveSeconds.set(
+        key,
+        Math.max(liveSessionActiveSeconds.get(key) || 0, numericProperty(row, "active_seconds") || 0)
+      );
       if (!liveSessionLatest.has(key)) {
         liveSessionLatest.set(key, row);
       }
     }
 
     const liveSessions = Array.from(liveSessionLatest.entries())
-      .filter(([, row]) => row.event_name !== "session_ended")
+      .filter(([key, row]) => {
+        if (row.event_name === "session_ended") return false;
+        return (liveSessionActiveSeconds.get(key) || 0) >= MIN_ACTIVE_SESSION_SECONDS;
+      })
       .map(([key, row]) => ({
         session_key: key.slice(0, 16),
         visitor: sessionLabel(row),
@@ -241,6 +264,8 @@ export async function GET(req: Request) {
         active_sessions: liveSessions.length,
         unique_visitors: visitorIds.size,
         sessions_tracked: sessionStats.size,
+        engaged_sessions: engagedSessions.length,
+        low_engagement_sessions: Math.max(0, sessionStats.size - engagedSessions.length),
         avg_session_duration_seconds: Math.round(average(sessionDurations)),
         avg_active_seconds: Math.round(average(sessionActiveDurations)),
         total_active_seconds: Math.round(sessionActiveDurations.reduce((sum, value) => sum + value, 0)),

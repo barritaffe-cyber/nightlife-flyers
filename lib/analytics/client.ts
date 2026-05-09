@@ -6,6 +6,10 @@ const ANON_ID_KEY = "nightlife_analytics_anon_id";
 const SESSION_ID_KEY = "nightlife_analytics_session_id";
 const ATTRIBUTION_KEY = "nightlife_analytics_attribution_v1";
 let lastKnownAnalyticsEmail: string | null = null;
+const TRACKING_ENABLED = process.env.NEXT_PUBLIC_TRACKING_ENABLED;
+const PRODUCTION_HOSTS = new Set(["www.nightlife-flyers.com", "nightlife-flyers.com"]);
+const AUTOMATED_USER_AGENT_RE =
+  /\b(node|vercel|bot|spider|crawler|crawl|curl|wget|python|go-http-client|axios|undici|headless|lighthouse|pagespeed|pingdom|uptime|monitor)\b/i;
 
 export type ClientTrackingPayload = {
   path: string;
@@ -24,6 +28,25 @@ type StoredAttribution = Omit<ClientTrackingPayload, "path" | "anon_id" | "sessi
 
 function canUseBrowserStorage() {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+}
+
+export function shouldTrackClientAnalytics() {
+  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+
+  const userAgent = navigator.userAgent || "";
+  if (!userAgent || AUTOMATED_USER_AGENT_RE.test(userAgent)) return false;
+
+  const configured = String(TRACKING_ENABLED || "").trim().toLowerCase();
+  if (configured === "false" || configured === "0" || configured === "off") return false;
+  if (configured === "true" || configured === "1" || configured === "on") return true;
+
+  const hostname = window.location.hostname.toLowerCase();
+  if (hostname === "localhost" || hostname === "127.0.0.1" || hostname.endsWith(".local")) {
+    return false;
+  }
+  if (hostname.endsWith(".vercel.app")) return false;
+
+  return PRODUCTION_HOSTS.has(hostname);
 }
 
 function safeStorageGet(storage: Storage, key: string) {
@@ -185,7 +208,7 @@ export async function trackClientEvent(
     properties?: Record<string, unknown>;
   } = {}
 ) {
-  if (typeof window === "undefined") return;
+  if (!shouldTrackClientAnalytics()) return;
 
   const identity = await readSessionIdentity();
   const payload = {
@@ -215,7 +238,7 @@ export function sendClientEventBeacon(
     properties?: Record<string, unknown>;
   } = {}
 ) {
-  if (typeof window === "undefined") return;
+  if (!shouldTrackClientAnalytics()) return;
 
   const payload = {
     event,

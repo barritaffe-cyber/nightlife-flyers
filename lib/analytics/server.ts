@@ -54,6 +54,8 @@ export const IGNORED_ANALYTICS_EMAILS = [
 ] as const;
 
 const IGNORED_ANALYTICS_EMAIL_SET = new Set<string>(IGNORED_ANALYTICS_EMAILS);
+const AUTOMATED_USER_AGENT_RE =
+  /\b(node|vercel|bot|spider|crawler|crawl|curl|wget|python|go-http-client|axios|undici|headless|lighthouse|pagespeed|pingdom|uptime|monitor)\b/i;
 
 function normalizeText(value: unknown, max = 500) {
   const text = typeof value === "string" ? value.trim() : "";
@@ -67,6 +69,15 @@ function normalizeEmail(value: unknown) {
 export function isIgnoredAnalyticsEmail(value: unknown) {
   const email = normalizeEmail(value);
   return email ? IGNORED_ANALYTICS_EMAIL_SET.has(email) : false;
+}
+
+export function isAutomatedAnalyticsUserAgent(value: unknown) {
+  const userAgent = typeof value === "string" ? value.trim() : "";
+  return userAgent ? AUTOMATED_USER_AGENT_RE.test(userAgent) : false;
+}
+
+export function isServerGeneratedTrackingIdentity(anonId?: unknown, sessionId?: unknown) {
+  return String(anonId || "").trim() === "server" || String(sessionId || "").trim() === "server";
 }
 
 function normalizeJsonRecord(value: unknown) {
@@ -119,6 +130,8 @@ export async function insertAnalyticsEvent(
   input: AnalyticsEventInsert
 ) {
   if (isIgnoredAnalyticsEmail(input.email)) return;
+  if (isAutomatedAnalyticsUserAgent(input.userAgent)) return;
+  if (isServerGeneratedTrackingIdentity(input.anonId, input.sessionId)) return;
 
   const { error } = await admin.from("analytics_events").insert({
     event_name: normalizeText(input.eventName, 80),

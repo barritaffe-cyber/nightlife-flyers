@@ -13,6 +13,7 @@ export default function AnalyticsTracker() {
     if (typeof window === "undefined") return;
 
     const currentPath = `${window.location.pathname}${window.location.search}`;
+    if (window.location.pathname === "/") return;
     if (lastTrackedRef.current === currentPath) return;
     lastTrackedRef.current = currentPath;
 
@@ -36,6 +37,7 @@ export default function AnalyticsTracker() {
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
+    if (window.location.pathname === "/") return;
 
     let stopped = false;
 
