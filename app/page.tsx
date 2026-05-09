@@ -20559,13 +20559,41 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
     | "export_json"
     | "unknown";
 
-  const trackCustomizeProductSave = React.useCallback(() => {
-    if (typeof window === "undefined" || typeof window.fbq !== "function") return;
+  const customizeProductIntentTrackedRef = React.useRef(false);
+  const customizeProductIntentPropertiesRef = React.useRef<Record<string, unknown>>({});
 
-    try {
-      window.fbq("track", "CustomizeProduct");
-    } catch {}
-  }, []);
+  const trackCustomizeProductIntent = React.useCallback(
+    (
+      intentSource: "editor_10s" | "first_edit" | "save_json" | "export_json",
+      extraProperties: Record<string, unknown> = {}
+    ) => {
+      if (customizeProductIntentTrackedRef.current) return;
+      if (typeof window === "undefined") return;
+
+      const win = window as Window & {
+        __nightlifeCustomizeProductIntentTracked?: boolean;
+      };
+      if (win.__nightlifeCustomizeProductIntentTracked) {
+        customizeProductIntentTrackedRef.current = true;
+        return;
+      }
+      if (typeof win.fbq !== "function") return;
+
+      const properties = {
+        ...customizeProductIntentPropertiesRef.current,
+        ...extraProperties,
+        intent_source: intentSource,
+      };
+
+      try {
+        win.fbq("track", "CustomizeProduct", properties);
+        customizeProductIntentTrackedRef.current = true;
+        win.__nightlifeCustomizeProductIntentTracked = true;
+        void trackClientEvent("meta_customize_product_intent", { properties });
+      } catch {}
+    },
+    []
+  );
 
   // ✅ 1. SAVE FUNCTION
   const handleSaveProject = async (source: ProjectSaveSource = "unknown") => {
@@ -20626,7 +20654,7 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
   };
 
   const startProjectSave = (source: ProjectSaveSource) => {
-    trackCustomizeProductSave();
+    trackCustomizeProductIntent("save_json", { save_source: source });
     window.setTimeout(() => {
       void handleSaveProject(source);
     }, 0);
@@ -20651,7 +20679,7 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
 
 // ✅ HANDLER: Export Design to JSON
   const handleExportJSON = () => {
-    trackCustomizeProductSave();
+    trackCustomizeProductIntent("export_json");
 
     try {
       const json = JSON.stringify(
@@ -22615,6 +22643,21 @@ React.useEffect(() => {
 /* ===== AUTOSAVE: SMART SAVE/LOAD (BEGIN) ===== */
 const [hasSavedDesign, setHasSavedDesign] = React.useState(false);
 const [uiMode, setUiMode] = React.useState<"design" | "finish">("design");
+customizeProductIntentPropertiesRef.current = {
+  format,
+  mobile: isMobileView,
+  ui_mode: uiMode,
+  selected_panel: selectedPanel,
+  mobile_controls_tab: isMobileView ? mobileControlsTab : null,
+  template_id: templateId,
+  template_label: activeTemplate?.label ?? null,
+  is_starter: isStarterPlan,
+  has_auth_session: hasAuthSession,
+  has_paid_access: hasPaidAccess,
+  access_plan: accessPlan,
+  subscription_status: subscriptionStatus,
+  has_background: Boolean(bgUrl || bgUploadUrl),
+};
 const [floatingEditorVisible, setFloatingEditorVisible] = React.useState(false);
 const [floatingAssetVisible, setFloatingAssetVisible] = React.useState(false);
 const [floatingBgVisible, setFloatingBgVisible] = React.useState(false);
@@ -26163,6 +26206,18 @@ React.useEffect(() => {
 React.useEffect(() => {
   if (!storageReady) return;
   if (showStartup || hasSavedDesign) return;
+  if (customizeProductIntentTrackedRef.current) return;
+
+  const timer = window.setTimeout(() => {
+    trackCustomizeProductIntent("editor_10s");
+  }, 10000);
+
+  return () => window.clearTimeout(timer);
+}, [hasSavedDesign, showStartup, storageReady, trackCustomizeProductIntent]);
+
+React.useEffect(() => {
+  if (!storageReady) return;
+  if (showStartup || hasSavedDesign) return;
   if (firstEditMetaTrackedRef.current) return;
   if (!sessionDirty.square && !sessionDirty.story) return;
 
@@ -26183,6 +26238,7 @@ React.useEffect(() => {
     has_background: Boolean(bgUrl || bgUploadUrl),
   };
 
+  trackCustomizeProductIntent("first_edit");
   trackMetaPixelCustomEvent("FirstEdit", properties);
   void trackClientEvent("project_first_edit", { properties });
 }, [
@@ -26204,6 +26260,7 @@ React.useEffect(() => {
   storageReady,
   subscriptionStatus,
   templateId,
+  trackCustomizeProductIntent,
   uiMode,
 ]);
 
