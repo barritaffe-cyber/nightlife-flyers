@@ -22602,6 +22602,19 @@ const handleTemplateSelect = React.useCallback(
           const tpl = selectedTemplate ?? TEMPLATE_GALLERY.find((t) => t.id === tplId);
           if (!tpl) throw new Error("Template not found for vibe: " + key);
           applyTemplateFromGallery(tpl, { targetFormat: startupFormat, allowStarterPreview: true });
+          void trackClientEvent("template_selected", {
+            properties: {
+              source: "startup",
+              selection_type: selectedTemplate ? "template_card" : "vibe",
+              startup_key: key,
+              template_id: tpl.id,
+              template_label: tpl.label,
+              format: startupFormat,
+              mobile: isMobileView,
+              guest_mode: isGuestTrial,
+              is_starter: isStarterPlan,
+            },
+          });
         }
       } catch {
         alert("Could not load template.");
@@ -22627,7 +22640,16 @@ const handleTemplateSelect = React.useCallback(
     });
 
   },
-  [applyStartupBackground, applyTemplate, applyTemplateFromGallery, isStarterPlan, scrollToArtboard, setTextStyle]
+  [
+    applyStartupBackground,
+    applyTemplate,
+    applyTemplateFromGallery,
+    isGuestTrial,
+    isMobileView,
+    isStarterPlan,
+    scrollToArtboard,
+    setTextStyle,
+  ]
 );
 // === /STARTUP SCREEN ===
 

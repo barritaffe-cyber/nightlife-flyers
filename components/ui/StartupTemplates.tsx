@@ -3,6 +3,7 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { trackClientEvent } from "../../lib/analytics/client";
 
 export type StartupBuildPayload = {
   backgroundFile: File;
@@ -112,6 +113,51 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
   const [backgroundFile, setBackgroundFile] = React.useState<File | null>(null);
   const [backgroundPreview, setBackgroundPreview] = React.useState<string | null>(null);
   const [localError, setLocalError] = React.useState<string | null>(null);
+  const pickerSeenRef = React.useRef(new Set<string>());
+  const pickerScrolledRef = React.useRef(new Set<string>());
+
+  const pickerSurface = React.useMemo(() => {
+    if (screen === "entry" && guestMode) return "startup_guest_entry";
+    if (screen === "advanced") return "startup_advanced";
+    return null;
+  }, [guestMode, screen]);
+
+  React.useEffect(() => {
+    if (!pickerSurface || !templateOptions.length) return;
+    if (pickerSeenRef.current.has(pickerSurface)) return;
+    pickerSeenRef.current.add(pickerSurface);
+    void trackClientEvent("template_picker_seen", {
+      properties: {
+        source: "startup",
+        surface: pickerSurface,
+        screen,
+        guest_mode: guestMode,
+        template_count: templateOptions.length,
+      },
+    });
+  }, [guestMode, pickerSurface, screen, templateOptions.length]);
+
+  const trackPickerScrolled = React.useCallback(
+    (event: React.UIEvent<HTMLDivElement>) => {
+      if (!pickerSurface || pickerScrolledRef.current.has(pickerSurface)) return;
+      const node = event.currentTarget;
+      if (node.scrollTop < 24) return;
+      pickerScrolledRef.current.add(pickerSurface);
+      void trackClientEvent("template_picker_scrolled", {
+        properties: {
+          source: "startup",
+          surface: pickerSurface,
+          screen,
+          guest_mode: guestMode,
+          template_count: templateOptions.length,
+          scroll_top: Math.round(node.scrollTop),
+          scroll_height: Math.round(node.scrollHeight),
+          viewport_height: Math.round(node.clientHeight),
+        },
+      });
+    },
+    [guestMode, pickerSurface, screen, templateOptions.length]
+  );
 
   React.useEffect(() => {
     if (!backgroundFile) {
@@ -211,12 +257,26 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
     await onLoadProjectFile(file);
   };
 
-  const renderTemplateCard = (template: StartupTemplateOption) => (
+  const renderTemplateCard = (template: StartupTemplateOption, index: number) => (
     <button
       key={template.key}
       type="button"
       disabled={buildForYouLoading}
-      onClick={() => onSelect(template.key)}
+      onClick={() => {
+        void trackClientEvent("template_card_tapped", {
+          properties: {
+            source: "startup",
+            surface: pickerSurface || "startup_template_grid",
+            screen,
+            guest_mode: guestMode,
+            template_id: template.key,
+            template_label: template.label,
+            template_index: index,
+            template_count: templateOptions.length,
+          },
+        });
+        onSelect(template.key);
+      }}
       className={advancedTemplateCardClass}
     >
       <div className="aspect-[1.35] w-full overflow-hidden bg-black">
@@ -257,7 +317,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
         transition={{ duration: 0.4, ease: "easeOut" }}
         className="fixed inset-0 z-[999] bg-black/90 backdrop-blur-sm flex items-center justify-center"
       >
-        <div className={modalClassName}>
+        <div className={modalClassName} onScroll={trackPickerScrolled}>
           {screen === "entry" ? (
             guestMode ? (
               <div className="flex min-h-full flex-col justify-center text-left">
