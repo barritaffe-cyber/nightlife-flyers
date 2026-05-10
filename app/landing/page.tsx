@@ -1,73 +1,15 @@
 "use client";
 
-import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Check, Shield, Sparkles, Zap } from "lucide-react";
-import PublicSiteFooter from "../../components/ui/PublicSiteFooter";
-import {
-  getPublicSupportPhone,
-  getPublicTransactionCurrency,
-} from "../../lib/publicIdentity";
-
-const outcomes = [
-  "Open the studio before login",
-  "Tap text, color, flares, and 3D style",
-  "Save or export when the flyer is ready",
-];
-
-const premiumPoints = [
-  {
-    title: "Real-time studio feel",
-    body: "Fast editing, live canvas previews, and export-ready flyer layouts built for tonight's promo cycle.",
-    icon: Zap,
-  },
-  {
-    title: "Nightlife-grade visuals",
-    body: "Neon type, club lighting, artist-forward compositions, and templates that feel made for flyers.",
-    icon: Sparkles,
-  },
-  {
-    title: "Total Creative Autonomy",
-    body: "No more waiting on designers. No more back-and-forth emails. You own the engine and control the output.",
-    icon: ArrowRight,
-  },
-  {
-    title: "No subscription required",
-    body: "Start with Night Pass for one-off work, then move into Creator or Studio when volume picks up.",
-    icon: Shield,
-  },
-];
+import { ArrowRight } from "lucide-react";
 
 const studioPreviewHref = "/?studio=1";
 
 export default function LandingPage() {
-  const supportPhone = getPublicSupportPhone();
-  const currency = getPublicTransactionCurrency();
-  const [foundingRemaining, setFoundingRemaining] = React.useState<number | null>(null);
-
-  React.useEffect(() => {
-    let cancelled = false;
-    const loadFoundingOffer = async () => {
-      try {
-        const res = await fetch("/api/billing/founding-offer");
-        const json = await res.json().catch(() => null);
-        const remaining = Number(json?.remaining_slots);
-        if (!cancelled && res.ok && Number.isFinite(remaining)) {
-          setFoundingRemaining(Math.max(0, remaining));
-        }
-      } catch {}
-    };
-
-    void loadFoundingOffer();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#050608] text-white">
-      <section className="relative min-h-[640px] overflow-hidden sm:min-h-[720px] lg:min-h-[760px]">
+      <section className="relative flex min-h-screen flex-col overflow-hidden">
         <div className="absolute inset-0">
           <video
             className="h-full w-full object-cover object-center opacity-[0.86] brightness-[0.82] saturate-[1.16]"
@@ -89,12 +31,12 @@ export default function LandingPage() {
             className="-z-10 object-cover object-center"
           />
         </div>
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,6,8,0.92)_0%,rgba(5,6,8,0.68)_42%,rgba(5,6,8,0.26)_100%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,6,8,0.48)_0%,rgba(5,6,8,0.08)_38%,#050608_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,6,8,0.93)_0%,rgba(5,6,8,0.74)_44%,rgba(5,6,8,0.32)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,6,8,0.54)_0%,rgba(5,6,8,0.12)_38%,#050608_100%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_42%,rgba(0,229,255,0.18)_0%,rgba(255,43,214,0.10)_30%,rgba(5,6,8,0)_60%)]" />
 
         <header className="relative z-20">
-          <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
+          <div className="mx-auto flex w-full max-w-7xl items-center px-4 py-3 sm:px-6">
             <Link
               href="/landing"
               className="inline-flex items-center gap-2 drop-shadow-[0_2px_18px_rgba(0,0,0,0.75)]"
@@ -115,155 +57,50 @@ export default function LandingPage() {
                 NIGHTLIFE FLYERS
               </span>
             </Link>
-            <Link
-              href={studioPreviewHref}
-              className="rounded-lg bg-cyan-300 px-3 py-2 text-xs font-black text-black shadow-[0_0_26px_rgba(103,232,249,0.24)] transition hover:bg-white"
-            >
-              Start Making Flyer
-            </Link>
           </div>
         </header>
 
-        <div className="relative z-10 mx-auto flex min-h-[560px] w-full max-w-7xl items-center px-4 pb-12 pt-8 sm:min-h-[640px] sm:px-6 lg:min-h-[680px]">
-          <div className="w-full max-w-3xl">
-              <h1
-                className="max-w-3xl text-[2.9rem] leading-[0.9] text-white sm:text-6xl lg:text-7xl"
-                style={{ fontFamily: '"Nexa-Heavy", "Segoe UI", sans-serif' }}
-              >
-                Create 3D nightclub flyers on your phone
-              </h1>
-
-              <div className="mt-7 flex flex-col gap-3 sm:mt-8 sm:flex-row">
-                <Link
-                  href={studioPreviewHref}
-                  className="inline-flex min-h-14 items-center justify-center gap-2 rounded-lg bg-cyan-300 px-7 text-base font-black text-black shadow-[0_0_38px_rgba(103,232,249,0.3)] transition hover:bg-white"
-                >
-                  Start Making Flyer
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="border-y border-white/10 bg-[#080a0f] px-4 py-10 sm:px-6">
-        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-200/80">
-              From idea to post
-            </div>
-            <h2
-              className="mt-3 text-3xl leading-tight sm:text-4xl"
-              style={{ fontFamily: '"Nexa-Heavy", "Segoe UI", sans-serif' }}
+        <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 items-center px-4 pb-14 pt-8 sm:px-6">
+          <div className="max-w-3xl">
+            <h1
+              className="max-w-3xl text-[3.35rem] font-black leading-[0.9] text-white sm:text-7xl lg:text-8xl"
+              style={{
+                fontFamily:
+                  '"Coolvetica Hv Comp", "Arial Rounded MT Bold", "Segoe UI", sans-serif',
+              }}
             >
-              Keep the same premium energy from upload to export.
-            </h2>
-          </div>
-          <div className="grid gap-3 text-sm text-white/78 sm:grid-cols-3">
-            {outcomes.map((item) => (
-              <div key={item} className="flex items-center gap-2 sm:items-start">
-                <Check className="h-4 w-4 shrink-0 text-cyan-200" />
-                <span>{item}</span>
-              </div>
-            ))}
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {premiumPoints.map((item) => (
-              <div key={item.title} className="border border-white/10 bg-white/[0.035] p-4">
-                <item.icon className="h-5 w-5 text-cyan-200" />
-                <h3 className="mt-3 text-sm font-semibold text-white">{item.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-white/64">{item.body}</p>
-              </div>
-            ))}
+              Pull up. Make tonight look alive.
+            </h1>
+
+            <div className="mt-6 max-w-2xl space-y-4 text-base leading-7 text-white/82 sm:text-lg sm:leading-8">
+              <p className="text-xl font-semibold text-cyan-100 sm:text-2xl">
+                Pick a vibe and make something loud.
+              </p>
+              <p>
+                This studio was built for promoters, DJs, nightlife brands, and creators who want
+                flyers that actually feel alive: glowing text, layered 3D visuals, cinematic energy,
+                all straight from your phone or desktop.
+              </p>
+              <p>No pressure. No design degree. Just jump in and start creating.</p>
+              <p className="font-semibold text-white">👇 Open the studio and make your first flyer.</p>
+            </div>
+
+            <Link
+              href={studioPreviewHref}
+              className="mt-8 inline-flex min-h-14 items-center justify-center gap-2 rounded-lg bg-cyan-300 px-7 text-sm font-black tracking-[0.1em] text-black shadow-[0_0_42px_rgba(103,232,249,0.34)] transition hover:bg-white sm:text-base"
+            >
+              OPEN FLYER STUDIO
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+
+            <p className="mt-8 max-w-2xl border-l-2 border-cyan-300/70 pl-4 text-sm leading-6 text-white/72">
+              <span className="font-bold text-cyan-100">Small note:</span> Nightlife Flyers is still
+              growing and evolving. If you run into bugs, have ideas, or want to help shape the
+              future of the app, tap the logo inside the studio and send us feedback directly.
+            </p>
           </div>
         </div>
       </section>
-
-      <section className="px-4 py-12 sm:px-6">
-        <div className="mx-auto max-w-7xl">
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.76fr)] lg:items-start">
-            <div>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-fuchsia-200/80">
-                Access
-              </div>
-              <h2
-                className="mt-3 max-w-3xl text-3xl leading-tight sm:text-4xl"
-                style={{ fontFamily: '"Nexa-Heavy", "Segoe UI", sans-serif' }}
-              >
-                Start small for tonight. Upgrade when flyers become weekly.
-              </h2>
-            </div>
-          </div>
-
-          <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.76fr)] lg:items-start">
-            <div className="grid gap-3 sm:grid-cols-3">
-              {[
-                {
-                  name: "Night Pass",
-                  price: "$12",
-                  body: "24-hour paid workflow for one-off flyers. No subscription required.",
-                  href: "/billing/checkout?offer=night-pass",
-                  founding: false,
-                },
-                {
-                  name: "Creator",
-                  price: "$19/mo",
-                  body: "Weekly flyer production with clean exports.",
-                  href: "/billing/checkout?plan=creator&billing=monthly",
-                  founding: true,
-                },
-                {
-                  name: "Studio",
-                  price: "$39/mo",
-                  body: "Higher volume, more headroom, and multi-brand tools.",
-                  href: "/billing/checkout?plan=studio&billing=monthly",
-                  founding: true,
-                },
-              ].map(({ name, price, body, href, founding }) => (
-                <Link
-                  key={name}
-                  href={href}
-                  className="border border-white/10 bg-white/[0.035] p-4 transition hover:border-cyan-200/40 hover:bg-white/[0.06]"
-                >
-                  <div className="flex min-h-6 items-start justify-between gap-2">
-                    <div className="text-sm font-semibold text-white">{name}</div>
-                    {founding ? (
-                      <div className="rounded-full border border-cyan-200/25 bg-cyan-300/[0.12] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-cyan-100">
-                        Founding 50
-                      </div>
-                    ) : null}
-                  </div>
-                  <div className="mt-3 text-3xl font-black text-white">{price}</div>
-                  {founding ? (
-                    <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-100/80">
-                      {foundingRemaining == null
-                        ? "20% founding access available"
-                        : `${foundingRemaining} founder spots remain`}
-                    </div>
-                  ) : null}
-                  <p className="mt-2 text-sm leading-6 text-white/64">{body}</p>
-                </Link>
-              ))}
-            </div>
-
-            <div className="border border-white/10 bg-white/[0.025] p-5 text-sm text-white/68">
-              <div className="space-y-3 leading-6">
-                <div>Digital flyer-design service with instant account access after successful payment.</div>
-                <div>Transaction currency: {currency}.</div>
-                <div>
-                  Support:{" "}
-                  <Link href="/contact" className="text-white underline underline-offset-4">
-                    Contact us
-                  </Link>
-                  {supportPhone ? <span>{` · ${supportPhone}`}</span> : null}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <PublicSiteFooter />
     </main>
   );
 }
