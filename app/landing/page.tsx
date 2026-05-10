@@ -11,9 +11,9 @@ import {
 } from "../../lib/publicIdentity";
 
 const outcomes = [
-  "Try the studio before login",
-  "Edit text, color, flares, and glitch type",
-  "Export or save when you are ready",
+  "Open the studio before login",
+  "Tap text, color, flares, and 3D style",
+  "Save or export when the flyer is ready",
 ];
 
 const premiumPoints = [
@@ -65,11 +65,6 @@ export default function LandingPage() {
     };
   }, []);
 
-  const foundingStatus =
-    foundingRemaining == null
-      ? "Founding 50 Status: limited spots remaining."
-      : `Founding 50 Status: ${foundingRemaining} spots remaining.`;
-
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#050608] text-white">
       <section className="relative min-h-[640px] overflow-hidden sm:min-h-[720px] lg:min-h-[760px]">
@@ -120,68 +115,33 @@ export default function LandingPage() {
                 NIGHTLIFE FLYERS
               </span>
             </Link>
-            <div className="flex items-center gap-2 drop-shadow-[0_2px_18px_rgba(0,0,0,0.75)]">
-              <Link
-                href="/pricing"
-                className="rounded-lg border border-white/18 bg-black/24 px-3 py-2 text-xs font-semibold text-white/86 backdrop-blur-md transition hover:border-white/35 hover:bg-black/34"
-              >
-                Pricing
-              </Link>
-              <Link
-                href={studioPreviewHref}
-                className="rounded-lg bg-white px-3 py-2 text-xs font-bold text-black transition hover:bg-cyan-100"
-              >
-                Try Studio
-              </Link>
-            </div>
+            <Link
+              href={studioPreviewHref}
+              className="rounded-lg bg-cyan-300 px-3 py-2 text-xs font-black text-black shadow-[0_0_26px_rgba(103,232,249,0.24)] transition hover:bg-white"
+            >
+              Start Making Flyer
+            </Link>
           </div>
         </header>
 
         <div className="relative z-10 mx-auto flex min-h-[560px] w-full max-w-7xl items-center px-4 pb-12 pt-8 sm:min-h-[640px] sm:px-6 lg:min-h-[680px]">
           <div className="w-full max-w-3xl">
-              <Link
-                href="/billing/checkout?plan=creator&billing=monthly"
-                className="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 border border-cyan-200/20 bg-cyan-300/[0.08] px-3 py-1.5 text-[10px] font-semibold uppercase leading-5 tracking-[0.12em] text-cyan-100 backdrop-blur-sm transition hover:border-cyan-100/40 hover:bg-cyan-300/[0.12] sm:text-[11px] sm:tracking-[0.16em]"
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-cyan-300 shadow-[0_0_16px_rgba(103,232,249,0.9)]" />
-                {foundingStatus}
-              </Link>
-
               <h1
-                className="mt-4 max-w-3xl text-[2.9rem] leading-[0.9] text-white sm:mt-5 sm:text-6xl lg:text-7xl"
+                className="max-w-3xl text-[2.9rem] leading-[0.9] text-white sm:text-6xl lg:text-7xl"
                 style={{ fontFamily: '"Nexa-Heavy", "Segoe UI", sans-serif' }}
               >
-                Try the Neural Flyer Studio Before You Sign Up.
+                Create 3D nightclub flyers on your phone
               </h1>
 
-              <p className="mt-4 max-w-2xl text-base leading-7 text-white/78 sm:mt-5 sm:text-lg">
-                Open the workstation, touch the design, change the look, then sign in only when you are ready to export or save.
-              </p>
-
-              <div className="mt-6 flex flex-col gap-3 sm:mt-7 sm:flex-row">
+              <div className="mt-7 flex flex-col gap-3 sm:mt-8 sm:flex-row">
                 <Link
                   href={studioPreviewHref}
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-cyan-300 px-5 text-sm font-black text-black shadow-[0_0_34px_rgba(103,232,249,0.24)] transition hover:bg-white"
+                  className="inline-flex min-h-14 items-center justify-center gap-2 rounded-lg bg-cyan-300 px-7 text-base font-black text-black shadow-[0_0_38px_rgba(103,232,249,0.3)] transition hover:bg-white"
                 >
-                  Try Studio Free
+                  Start Making Flyer
                   <ArrowRight className="h-4 w-4" />
                 </Link>
-                <Link
-                  href="/billing/checkout?plan=creator&billing=monthly"
-                  className="inline-flex min-h-12 items-center justify-center rounded-lg border border-white/18 bg-white/[0.05] px-5 text-sm font-semibold text-white transition hover:border-white/35 hover:bg-white/[0.09]"
-                >
-                  Secure Founding Spot
-                </Link>
               </div>
-
-            <div className="mt-6 grid gap-2 border-y border-white/10 py-4 text-sm text-white/78 sm:mt-8 sm:max-w-xl sm:grid-cols-3 sm:border-y-0 sm:py-0">
-              {outcomes.map((item) => (
-                <div key={item} className="flex items-center gap-2 sm:items-start">
-                  <Check className="h-4 w-4 shrink-0 text-cyan-200" />
-                  <span>{item}</span>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </section>
@@ -198,6 +158,14 @@ export default function LandingPage() {
             >
               Keep the same premium energy from upload to export.
             </h2>
+          </div>
+          <div className="grid gap-3 text-sm text-white/78 sm:grid-cols-3">
+            {outcomes.map((item) => (
+              <div key={item} className="flex items-center gap-2 sm:items-start">
+                <Check className="h-4 w-4 shrink-0 text-cyan-200" />
+                <span>{item}</span>
+              </div>
+            ))}
           </div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {premiumPoints.map((item) => (
