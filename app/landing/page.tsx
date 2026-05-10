@@ -9,10 +9,10 @@ const studioPreviewHref = "/?studio=1";
 export default function LandingPage() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#050608] text-white">
-      <section className="relative flex min-h-screen flex-col overflow-hidden">
-        <div className="absolute inset-0">
+      <section className="relative isolate flex min-h-screen flex-col overflow-hidden">
+        <div className="absolute inset-0 -z-20" aria-hidden="true">
           <video
-            className="h-full w-full object-cover object-center opacity-[0.86] brightness-[0.82] saturate-[1.16]"
+            className="h-full w-full object-cover object-center opacity-[0.48] brightness-[0.6] saturate-[1.05] blur-[1px]"
             autoPlay
             muted
             loop
@@ -28,53 +28,47 @@ export default function LandingPage() {
             fill
             priority
             sizes="100vw"
-            className="-z-10 object-cover object-center"
+            className="object-cover object-center opacity-40"
           />
         </div>
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,6,8,0.93)_0%,rgba(5,6,8,0.74)_44%,rgba(5,6,8,0.32)_100%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,6,8,0.54)_0%,rgba(5,6,8,0.12)_38%,#050608_100%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_42%,rgba(0,229,255,0.18)_0%,rgba(255,43,214,0.10)_30%,rgba(5,6,8,0)_60%)]" />
+        <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(5,6,8,0.98)_0%,rgba(5,6,8,0.9)_48%,rgba(5,6,8,0.68)_100%)]" />
+        <div className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(5,6,8,0.68)_0%,rgba(5,6,8,0.22)_38%,#050608_100%)]" />
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_72%_42%,rgba(0,229,255,0.12)_0%,rgba(255,43,214,0.08)_30%,rgba(5,6,8,0)_60%)]" />
 
-        <header className="relative z-20">
-          <div className="mx-auto flex w-full max-w-7xl items-center px-4 py-3 sm:px-6">
+        <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 items-center px-6 py-10 sm:px-8 lg:px-10">
+          <div className="max-w-4xl">
             <Link
               href="/landing"
-              className="inline-flex items-center gap-2 drop-shadow-[0_2px_18px_rgba(0,0,0,0.75)]"
+              className="mb-7 inline-flex items-center gap-3 drop-shadow-[0_2px_18px_rgba(0,0,0,0.75)] sm:mb-9"
               aria-label="Nightlife Flyers home"
             >
               <Image
                 src="/branding/nf-logo.png"
                 alt="Nightlife Flyers"
-                width={48}
-                height={48}
-                className="h-10 w-10 rounded-full ring-1 ring-cyan-100/45 shadow-[0_0_28px_rgba(103,232,249,0.28)] sm:h-12 sm:w-12"
+                width={64}
+                height={64}
+                className="h-14 w-14 rounded-full ring-1 ring-cyan-100/45 shadow-[0_0_32px_rgba(103,232,249,0.32)] sm:h-16 sm:w-16"
                 priority
               />
-              <span
-                className="hidden text-xs tracking-[0.24em] text-white sm:block"
-                style={{ fontFamily: '"LEMONMILK-Bold", "Segoe UI", sans-serif' }}
-              >
-                NIGHTLIFE FLYERS
+              <span className="text-sm font-black text-white sm:text-base">
+                Nightlife Flyers
               </span>
             </Link>
-          </div>
-        </header>
 
-        <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 items-center px-4 pb-14 pt-8 sm:px-6">
-          <div className="max-w-3xl">
             <h1
-              className="max-w-3xl text-[3.35rem] font-black leading-[0.9] text-white sm:text-7xl lg:text-8xl"
+              className="max-w-4xl text-[4rem] font-black leading-[0.88] text-white drop-shadow-[0_4px_28px_rgba(0,0,0,0.82)] sm:text-7xl lg:text-[8.75rem]"
               style={{
                 fontFamily:
-                  '"Coolvetica Hv Comp", "Arial Rounded MT Bold", "Segoe UI", sans-serif',
+                  'ui-rounded, "SF Pro Rounded", "Aptos Rounded", "Arial Rounded MT Bold", "Avenir Next", "Segoe UI", sans-serif',
               }}
             >
-              Pull up. Make tonight look alive.
+              <span className="block">Make tonight</span>
+              <span className="block">look alive.</span>
             </h1>
 
             <div className="mt-6 max-w-2xl space-y-4 text-base leading-7 text-white/82 sm:text-lg sm:leading-8">
               <p className="text-xl font-semibold text-cyan-100 sm:text-2xl">
-                Pick a vibe and make something loud.
+                Pull up, pick a vibe, and make something loud.
               </p>
               <p>
                 This studio was built for promoters, DJs, nightlife brands, and creators who want
@@ -82,7 +76,7 @@ export default function LandingPage() {
                 all straight from your phone or desktop.
               </p>
               <p>No pressure. No design degree. Just jump in and start creating.</p>
-              <p className="font-semibold text-white">👇 Open the studio and make your first flyer.</p>
+              <p className="font-semibold text-white">Open the studio and make your first flyer.</p>
             </div>
 
             <Link
