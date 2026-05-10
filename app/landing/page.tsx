@@ -56,10 +56,12 @@ export default function LandingPage() {
             </Link>
 
             <h1
-              className="max-w-4xl text-[4rem] font-black leading-[0.88] text-white drop-shadow-[0_4px_28px_rgba(0,0,0,0.82)] sm:text-7xl lg:text-[8.75rem]"
+              className="max-w-4xl text-[4.35rem] font-normal leading-[0.92] text-white drop-shadow-[0_4px_28px_rgba(0,0,0,0.86)] sm:text-[5.6rem] lg:text-[9rem]"
               style={{
                 fontFamily:
-                  'ui-rounded, "SF Pro Rounded", "Aptos Rounded", "Arial Rounded MT Bold", "Avenir Next", "Segoe UI", sans-serif',
+                  '"Nexa-ExtraLight", "Avenir Next", "Segoe UI", ui-rounded, sans-serif',
+                textShadow:
+                  "0 0 1px rgba(255,255,255,0.9), 0 8px 34px rgba(0,0,0,0.88)",
               }}
             >
               <span className="block">Make tonight</span>
