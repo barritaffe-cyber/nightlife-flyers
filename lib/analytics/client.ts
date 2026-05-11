@@ -1,7 +1,5 @@
 "use client";
 
-import { supabaseBrowser } from "../supabase/client";
-
 const ANON_ID_KEY = "nightlife_analytics_anon_id";
 const SESSION_ID_KEY = "nightlife_analytics_session_id";
 const ATTRIBUTION_KEY = "nightlife_analytics_attribution_v1";
@@ -186,6 +184,7 @@ export function getClientTrackingPayload(path?: string): ClientTrackingPayload {
 
 async function readSessionIdentity() {
   try {
+    const { supabaseBrowser } = await import("../supabase/client");
     const supabase = supabaseBrowser();
     const { data } = await supabase.auth.getSession();
     lastKnownAnalyticsEmail = data.session?.user?.email || lastKnownAnalyticsEmail;

@@ -271,6 +271,8 @@ export async function GET(req: Request) {
         total_active_seconds: Math.round(sessionActiveDurations.reduce((sum, value) => sum + value, 0)),
         avg_events_per_session: Math.round(average(sessionEventCounts)),
         page_views: eventCounts.get("page_view") || 0,
+        landing_cta_clicks: eventCounts.get("landing_cta_clicked") || 0,
+        studio_entries: eventCounts.get("studio_entry_loaded") || 0,
         pricing_views: eventCounts.get("pricing_view") || 0,
         sessions_started: eventCounts.get("session_started") || 0,
         session_heartbeats: eventCounts.get("session_heartbeat") || 0,

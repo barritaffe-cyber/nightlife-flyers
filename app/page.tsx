@@ -24590,6 +24590,26 @@ React.useEffect(() => {
     };
   };
 
+  const currentUrl = new URL(window.location.href);
+  const entryProperties = {
+    ...studioAnalyticsContextRef.current,
+    entry_path: `${currentUrl.pathname}${currentUrl.search}`,
+    studio_param: currentUrl.searchParams.get("studio"),
+    guest_param: currentUrl.searchParams.get("guest"),
+    skip_landing_param: currentUrl.searchParams.get("skipLanding"),
+    from_landing_ad: currentUrl.searchParams.get("from_landing_ad"),
+    has_fbclid: currentUrl.searchParams.has("fbclid"),
+    has_google_click_id:
+      currentUrl.searchParams.has("gclid") ||
+      currentUrl.searchParams.has("gbraid") ||
+      currentUrl.searchParams.has("wbraid"),
+    referrer: document.referrer || null,
+    visibility_state: document.visibilityState,
+  };
+
+  void trackClientEvent("studio_entry_loaded", {
+    properties: entryProperties,
+  });
   void trackClientEvent("page_view", {
     properties: {
       ...studioAnalyticsContextRef.current,

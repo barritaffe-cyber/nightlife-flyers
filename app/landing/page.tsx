@@ -3,10 +3,21 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { sendClientEventBeacon } from "../../lib/analytics/client";
 
 const studioPreviewHref = "/?studio=1";
 
 export default function LandingPage() {
+  const trackLandingCtaClick = () => {
+    sendClientEventBeacon("landing_cta_clicked", {
+      properties: {
+        cta: "open_flyer_studio",
+        destination: studioPreviewHref,
+        source: "landing_hero",
+      },
+    });
+  };
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#050608] text-white">
       <section className="relative isolate flex min-h-screen flex-col overflow-hidden">
@@ -83,6 +94,7 @@ export default function LandingPage() {
 
             <Link
               href={studioPreviewHref}
+              onClick={trackLandingCtaClick}
               className="mt-8 inline-flex min-h-14 items-center justify-center gap-2 rounded-lg bg-cyan-300 px-7 text-sm font-black tracking-[0.1em] text-black shadow-[0_0_42px_rgba(103,232,249,0.34)] transition hover:bg-white sm:text-base"
             >
               OPEN FLYER STUDIO

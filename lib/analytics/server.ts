@@ -3,6 +3,8 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 
 export type AnalyticsEventName =
   | "page_view"
+  | "landing_cta_clicked"
+  | "studio_entry_loaded"
   | "pricing_view"
   | "session_started"
   | "session_heartbeat"
