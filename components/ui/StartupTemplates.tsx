@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import React from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { trackClientEvent } from "../../lib/analytics/client";
 
 export type StartupBuildPayload = {
@@ -36,6 +36,7 @@ interface StartupTemplatesProps {
   buildForYouLoading: boolean;
   buildForYouError: string | null;
   onBuildForYou: (payload: StartupBuildPayload) => Promise<void> | void;
+  onLoadLadiesNightTest?: () => void;
   guestMode?: boolean;
   templateOptions?: ReadonlyArray<StartupTemplateOption>;
   djBackgroundOptions: ReadonlyArray<{
@@ -88,6 +89,15 @@ const categories = [
   },
 ] as const;
 
+const GUEST_PICKER_TEMPLATE_IDS = [
+  "square_center_hero_nightlife",
+  "miami2",
+  "edm_stage_co2",
+  "bottle_service",
+  "hiphop_graffiti",
+  "disco_mirrorball",
+] as const;
+
 function hasAnyText(payload: StartupBuildPayload["currentText"]) {
   return Object.values(payload).some((value) => String(value || "").trim().length > 0);
 }
@@ -99,11 +109,13 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
   buildForYouLoading,
   buildForYouError,
   onBuildForYou,
+  onLoadLadiesNightTest,
   guestMode = false,
   templateOptions = [],
   djBackgroundOptions,
 }) => {
   const [screen, setScreen] = React.useState<"entry" | "advanced" | "build" | "dj">("entry");
+  const prefersReducedMotion = useReducedMotion();
   const [headline, setHeadline] = React.useState("");
   const [head2, setHead2] = React.useState("");
   const [details, setDetails] = React.useState("");
@@ -113,8 +125,28 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
   const [backgroundFile, setBackgroundFile] = React.useState<File | null>(null);
   const [backgroundPreview, setBackgroundPreview] = React.useState<string | null>(null);
   const [localError, setLocalError] = React.useState<string | null>(null);
+  const [guestMoreOpen, setGuestMoreOpen] = React.useState(false);
   const pickerSeenRef = React.useRef(new Set<string>());
   const pickerScrolledRef = React.useRef(new Set<string>());
+  const guestOrderedTemplates = React.useMemo(() => {
+    if (!guestMode) return templateOptions;
+    const preferredTemplates = GUEST_PICKER_TEMPLATE_IDS.flatMap((templateId) => {
+      const template = templateOptions.find((item) => item.key === templateId);
+      return template ? [template] : [];
+    });
+    const preferredKeys = new Set(preferredTemplates.map((template) => template.key));
+    return [
+      ...preferredTemplates,
+      ...templateOptions.filter((template) => !preferredKeys.has(template.key)),
+    ];
+  }, [guestMode, templateOptions]);
+  const guestFeaturedTemplate = guestMode ? guestOrderedTemplates[0] : null;
+  const guestSecondaryTemplates = guestMode ? guestOrderedTemplates.slice(1, 5) : [];
+  const guestExtraTemplates = guestMode && guestMoreOpen ? guestOrderedTemplates.slice(5) : [];
+  const guestVisibleTemplateCount =
+    guestMode && guestFeaturedTemplate
+      ? 1 + guestSecondaryTemplates.length + guestExtraTemplates.length
+      : templateOptions.length;
 
   const pickerSurface = React.useMemo(() => {
     if (screen === "entry" && guestMode) return "startup_guest_entry";
@@ -133,9 +165,10 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
         screen,
         guest_mode: guestMode,
         template_count: templateOptions.length,
+        visible_template_count: guestVisibleTemplateCount,
       },
     });
-  }, [guestMode, pickerSurface, screen, templateOptions.length]);
+  }, [guestMode, guestVisibleTemplateCount, pickerSurface, screen, templateOptions.length]);
 
   const trackPickerScrolled = React.useCallback(
     (event: React.UIEvent<HTMLDivElement>) => {
@@ -150,13 +183,14 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
           screen,
           guest_mode: guestMode,
           template_count: templateOptions.length,
+          visible_template_count: guestVisibleTemplateCount,
           scroll_top: Math.round(node.scrollTop),
           scroll_height: Math.round(node.scrollHeight),
           viewport_height: Math.round(node.clientHeight),
         },
       });
     },
-    [guestMode, pickerSurface, screen, templateOptions.length]
+    [guestMode, guestVisibleTemplateCount, pickerSurface, screen, templateOptions.length]
   );
 
   React.useEffect(() => {
@@ -257,25 +291,49 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
     await onLoadProjectFile(file);
   };
 
+  const trackTemplateTapped = React.useCallback(
+    (
+      template: StartupTemplateOption,
+      index: number,
+      options: { featured?: boolean; surface?: string } = {}
+    ) => {
+      void trackClientEvent("template_card_tapped", {
+        properties: {
+          source: "startup",
+          surface: options.surface || pickerSurface || "startup_template_grid",
+          screen,
+          guest_mode: guestMode,
+          template_id: template.key,
+          template_label: template.label,
+          template_index: index,
+          template_count: templateOptions.length,
+          visible_template_count: guestVisibleTemplateCount,
+          featured: Boolean(options.featured),
+        },
+      });
+    },
+    [guestMode, guestVisibleTemplateCount, pickerSurface, screen, templateOptions.length]
+  );
+
+  const selectTemplate = React.useCallback(
+    (
+      template: StartupTemplateOption,
+      index: number,
+      options: { featured?: boolean; surface?: string } = {}
+    ) => {
+      trackTemplateTapped(template, index, options);
+      onSelect(template.key);
+    },
+    [onSelect, trackTemplateTapped]
+  );
+
   const renderTemplateCard = (template: StartupTemplateOption, index: number) => (
     <button
       key={template.key}
       type="button"
       disabled={buildForYouLoading}
       onClick={() => {
-        void trackClientEvent("template_card_tapped", {
-          properties: {
-            source: "startup",
-            surface: pickerSurface || "startup_template_grid",
-            screen,
-            guest_mode: guestMode,
-            template_id: template.key,
-            template_label: template.label,
-            template_index: index,
-            template_count: templateOptions.length,
-          },
-        });
-        onSelect(template.key);
+        selectTemplate(template, index);
       }}
       className={advancedTemplateCardClass}
     >
@@ -285,6 +343,8 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
             src={template.preview}
             alt={template.label}
             className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+            loading={index < 2 ? "eager" : "lazy"}
+            decoding="async"
             draggable={false}
           />
         ) : (
@@ -308,6 +368,124 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
     </button>
   );
 
+  const renderGuestSecondaryTemplateCard = (template: StartupTemplateOption, index: number) => (
+    <button
+      key={template.key}
+      type="button"
+      disabled={buildForYouLoading}
+      onClick={() => selectTemplate(template, index, { surface: "startup_guest_secondary" })}
+      className="group relative overflow-hidden border border-white/10 bg-white/[0.035] text-left text-white shadow-[0_12px_30px_rgba(0,0,0,0.22)] transition hover:border-cyan-200/40 hover:bg-white/[0.06] disabled:opacity-60"
+    >
+      <div className="aspect-[1.18] w-full overflow-hidden bg-black">
+        {template.preview ? (
+          <img
+            src={template.preview}
+            alt={template.label}
+            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.025]"
+            loading="lazy"
+            decoding="async"
+            draggable={false}
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-xs text-neutral-500">Template</div>
+        )}
+      </div>
+      <div className="flex min-h-[54px] items-center justify-between gap-2 px-2.5 py-2.5">
+        <div className="min-w-0 truncate text-[12px] font-semibold text-white">{template.label}</div>
+        <div className="shrink-0 text-[9px] font-semibold uppercase tracking-[0.16em] text-cyan-100/60 transition group-hover:text-cyan-100">
+          Start
+        </div>
+      </div>
+    </button>
+  );
+
+  const renderGuestFeaturedTemplateCard = (template: StartupTemplateOption) => (
+    <motion.button
+      key={template.key}
+      type="button"
+      disabled={buildForYouLoading}
+      onClick={() => selectTemplate(template, 0, { featured: true, surface: "startup_guest_featured" })}
+      animate={
+        prefersReducedMotion
+          ? undefined
+          : {
+              y: [0, -2, 0],
+              scale: [1, 1.006, 1],
+              boxShadow: [
+                "0 22px 70px rgba(0,0,0,0.42), 0 0 0 rgba(103,232,249,0)",
+                "0 24px 78px rgba(0,0,0,0.48), 0 0 30px rgba(103,232,249,0.18)",
+                "0 22px 70px rgba(0,0,0,0.42), 0 0 0 rgba(103,232,249,0)",
+              ],
+            }
+      }
+      transition={
+        prefersReducedMotion
+          ? undefined
+          : {
+              duration: 3.8,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }
+      }
+      className="group relative w-full overflow-hidden border border-cyan-200/35 bg-[linear-gradient(180deg,rgba(17,24,35,0.96),rgba(6,8,13,0.98))] text-left text-white shadow-[0_22px_70px_rgba(0,0,0,0.42)] transition hover:border-cyan-100/60 disabled:opacity-60"
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(103,232,249,0.18),rgba(217,70,239,0.08)_38%,transparent_70%)]" />
+      <div className="relative aspect-[1.12] w-full overflow-hidden bg-black sm:aspect-[1.28]">
+        {template.preview ? (
+          <motion.img
+            src={template.preview}
+            alt={template.label}
+            className="h-full w-full object-cover"
+            draggable={false}
+            loading="eager"
+            decoding="async"
+            animate={prefersReducedMotion ? undefined : { scale: [1.01, 1.035, 1.01] }}
+            transition={
+              prefersReducedMotion
+                ? undefined
+                : {
+                    duration: 6,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }
+            }
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-sm text-neutral-500">Template</div>
+        )}
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,transparent_48%,rgba(0,0,0,0.74)_100%)]" />
+        {!prefersReducedMotion && (
+          <motion.div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 w-1/3 -skew-x-12 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent)]"
+            initial={{ x: "-140%" }}
+            animate={{ x: "340%" }}
+            transition={{ duration: 3.6, repeat: Infinity, repeatDelay: 1.4, ease: "easeInOut" }}
+          />
+        )}
+        <div className="pointer-events-none absolute left-4 top-4 border border-cyan-200/50 bg-black/45 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-100 shadow-[0_0_20px_rgba(34,211,238,0.18)] backdrop-blur">
+          Tap a flyer to start
+        </div>
+        <div className="absolute inset-x-0 bottom-0 p-4">
+          <div className="flex items-end justify-between gap-4">
+            <div className="min-w-0">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-100/75">
+                Featured starter
+              </div>
+              <div className="mt-1 truncate text-2xl font-black leading-7 text-white sm:text-3xl">
+                {template.label}
+              </div>
+              <div className="mt-1 line-clamp-1 text-xs text-neutral-200">{template.desc}</div>
+            </div>
+            <div className="shrink-0 bg-cyan-300 px-3 py-2 text-[11px] font-black uppercase tracking-[0.14em] text-black shadow-[0_0_24px_rgba(103,232,249,0.28)] transition group-hover:bg-white">
+              Start
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.button>
+  );
+
   return (
     <AnimatePresence>
       <motion.div
@@ -325,15 +503,51 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                   <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-200/75">
                     Try the studio
                   </div>
-                  <h2 className="mt-2 text-2xl font-semibold text-white">Pick one template to start</h2>
+                  <h2 className="mt-2 text-2xl font-semibold text-white">Tap a flyer to start</h2>
                   <p className="mt-2 text-sm text-neutral-400">
-                    Choose any template and start editing before you sign up.
+                    Pick a look, then edit the event name before you sign up.
                   </p>
                 </div>
 
-                <div className="mx-auto mt-5 grid w-full max-w-[680px] grid-cols-1 gap-3 sm:grid-cols-2">
-                  {templateOptions.map(renderTemplateCard)}
-                </div>
+                {guestFeaturedTemplate ? (
+                  <>
+                    <div className="mx-auto mt-5 w-full max-w-[680px]">
+                      {renderGuestFeaturedTemplateCard(guestFeaturedTemplate)}
+                    </div>
+
+                    {guestSecondaryTemplates.length ? (
+                      <div className="mx-auto mt-3 grid w-full max-w-[680px] grid-cols-2 gap-2.5">
+                        {guestSecondaryTemplates.map((template, index) =>
+                          renderGuestSecondaryTemplateCard(template, index + 1)
+                        )}
+                      </div>
+                    ) : null}
+
+                    {guestExtraTemplates.length ? (
+                      <div className="mx-auto mt-3 grid w-full max-w-[680px] grid-cols-2 gap-2.5 sm:grid-cols-3">
+                        {guestExtraTemplates.map((template, index) =>
+                          renderGuestSecondaryTemplateCard(template, index + 5)
+                        )}
+                      </div>
+                    ) : null}
+
+                    {guestOrderedTemplates.length > 5 ? (
+                      <div className="mx-auto mt-3 flex w-full max-w-[680px] justify-center">
+                        <button
+                          type="button"
+                          onClick={() => setGuestMoreOpen((open) => !open)}
+                          className="border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/70 transition hover:border-cyan-200/30 hover:bg-white/[0.07] hover:text-cyan-100"
+                        >
+                          {guestMoreOpen ? "Show fewer" : "More styles"}
+                        </button>
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <div className="mx-auto mt-5 w-full max-w-[680px] border border-white/10 bg-white/[0.03] p-6 text-center text-sm text-neutral-400">
+                    Templates are loading.
+                  </div>
+                )}
 
                 <div className="mx-auto mt-4 max-w-[680px] text-center text-[11px] text-neutral-500">
                   You can switch templates later inside Nightlife Flyers.
@@ -514,7 +728,26 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                 </div>
               </div>
 
-              <div className="mt-3 grid gap-4 text-left md:grid-cols-2">
+              <div className="mt-3 grid gap-4 text-left md:grid-cols-3">
+                {onLoadLadiesNightTest && (
+                  <div className={advancedCardClass}>
+                    <div className={advancedLabelClass}>
+                      Center Hero
+                    </div>
+                    <div className="mt-2 text-sm text-neutral-200">
+                      Open the centered cutout sample with all flyer text fields already placed.
+                    </div>
+                    <button
+                      type="button"
+                      onClick={onLoadLadiesNightTest}
+                      disabled={buildForYouLoading}
+                      className={advancedButtonClass + " mt-4 w-full"}
+                    >
+                      Center Hero Test
+                    </button>
+                  </div>
+                )}
+
                 <div className={advancedCardClass}>
                   <div className={advancedLabelClass}>
                     Build From Background

@@ -122,9 +122,13 @@ type Props = {
   autoLayoutReferenceUrl: string | null;
   autoLayoutLoading: boolean;
   autoLayoutError: string | null;
+  geometryFitLoading?: boolean;
+  geometryFitError?: string | null;
   onAutoLayoutReferenceUpload: (file: File) => void;
   onClearAutoLayoutReference: () => void;
   onAutoLayoutFromBackground: () => void;
+  onFitTemplateGeometry?: () => void;
+  onLoadLadiesNightTest?: () => void;
   genStyle: GenStyle;
   setGenStyle: (s: GenStyle) => void;
    presetKey: string;
@@ -189,9 +193,13 @@ function AiBackgroundPanel({
   autoLayoutReferenceUrl,
   autoLayoutLoading,
   autoLayoutError,
+  geometryFitLoading = false,
+  geometryFitError = null,
   onAutoLayoutReferenceUpload,
   onClearAutoLayoutReference,
   onAutoLayoutFromBackground,
+  onFitTemplateGeometry,
+  onLoadLadiesNightTest,
   genStyle,
   setGenStyle,
    presetKey,
@@ -429,8 +437,31 @@ function AiBackgroundPanel({
            {showAutoLayoutTools && (
              <div className="space-y-3 border-t border-white/10 pt-3">
                <div className={editorSectionMetaClass}>
-                 Upload the exact scene you want to keep. Best results have one strong focal area and clear space for text.
+                 Upload the exact scene you want to keep. If a cutout subject is on the canvas, layout composes around that subject.
                </div>
+
+               {onLoadLadiesNightTest && (
+                 <button
+                   type="button"
+                   onClick={onLoadLadiesNightTest}
+                   className={`w-full ${editorSecondaryButtonClass}`}
+                 >
+                   Load Center Hero Test
+                 </button>
+               )}
+
+               {onFitTemplateGeometry && (
+                 <button
+                   type="button"
+                   onClick={onFitTemplateGeometry}
+                   disabled={geometryFitLoading}
+                   className={`w-full ${editorSecondaryButtonClass}`}
+                 >
+                   {geometryFitLoading ? "Fitting Geometry..." : "Fit Cutout To Template Geometry"}
+                 </button>
+               )}
+
+               {geometryFitError && <div className="text-[11px] text-amber-300">{geometryFitError}</div>}
 
                <div className="space-y-2">
                  <label className="block text-[11px] text-neutral-300">
@@ -480,7 +511,7 @@ function AiBackgroundPanel({
                  disabled={!creatorAutoLayoutEnabled || !autoLayoutReferenceUrl || autoLayoutLoading}
                  className={`w-full ${editorPrimaryButtonClass}`}
                >
-                 {autoLayoutLoading ? "Analyzing Scene..." : "Analyze + Apply Layout"}
+                 {autoLayoutLoading ? "Composing Scene..." : "Compose + Apply Layout"}
                </button>
 
                {autoLayoutError && <div className="text-[11px] text-amber-300">{autoLayoutError}</div>}

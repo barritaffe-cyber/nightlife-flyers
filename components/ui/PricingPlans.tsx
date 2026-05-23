@@ -142,13 +142,13 @@ const plans: readonly Plan[] = [
 const offers: readonly Offer[] = [
   {
     id: 'night-pass',
-    name: 'Night Pass',
+    name: 'Event Pass',
     audience: 'For one-off flyers and quick promo runs',
     tagline: 'One-time access to the paid workflow when you only need the studio for a short run.',
     icon: Sparkles,
     gradient:
       'bg-gradient-to-br from-cyan-700/20 via-sky-900/20 to-black border-cyan-500/30',
-    price: 12,
+    price: 9,
     details: [
       '24-hour access window',
       'Clean exports during the pass',
@@ -156,7 +156,7 @@ const offers: readonly Offer[] = [
       'Does not include Extract Subject',
       'No recurring billing',
     ],
-    cta: 'Get Night Pass',
+    cta: 'Get Event Pass',
   },
   {
     id: 'weekend-pass',
@@ -166,7 +166,7 @@ const offers: readonly Offer[] = [
     icon: Shield,
     gradient:
       'bg-gradient-to-br from-emerald-700/20 via-teal-900/20 to-black border-emerald-500/30',
-    price: 24,
+    price: 14,
     details: [
       '72-hour access window',
       'Clean exports during the pass',
@@ -387,7 +387,7 @@ export default function PricingPlans() {
             Pick a Plan That Matches Your Workflow
           </motion.h1>
           <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-white/72 sm:text-base">
-            Start with a Night Pass or Weekend Pass for short runs, or choose Creator or Studio for weekly production and higher-volume brand workflows.
+            Start with an Event Pass or Weekend Pass for short runs, or choose Creator or Studio for weekly production and higher-volume brand workflows.
           </p>
 
           <div className="mt-6 inline-flex items-center gap-1 rounded-full border border-white/[0.08] bg-black/35 p-1 shadow-[0_18px_48px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md">

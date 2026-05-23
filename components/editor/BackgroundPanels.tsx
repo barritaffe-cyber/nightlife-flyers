@@ -30,8 +30,75 @@ import {
 } from './controls';
 import { removeBackgroundLocal } from '../../lib/removeBgLocal';
 import { EXTRACT_SUBJECT_CLEANUP } from '../../lib/cleanupCutoutUrl';
+import type { ScenePack } from '../../lib/scenePacks';
+
+type ExtractedLayerPlacement = {
+  sourceRect: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    centerX: number;
+    centerY: number;
+  };
+  canvas: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    scale: number;
+  };
+  cropSize: {
+    width: number;
+    height: number;
+  };
+  background: {
+    scale: number;
+    posX: number;
+    posY: number;
+    fitMode: boolean;
+  };
+};
+
+type ExtractedLayerSlot = {
+  src: string;
+  placement?: ExtractedLayerPlacement;
+  createdAt?: number;
+};
+
+type ExtractedLayerPayload = {
+  src: string;
+  x: number;
+  y: number;
+  scale: number;
+  placement: ExtractedLayerPlacement;
+};
+
+type SceneBuilderPalette = {
+  bgFrom: string;
+  bgTo: string;
+  primary?: string;
+  secondary?: string;
+  accent?: string;
+  neutral?: string;
+};
+
+type ExtractedPortraitLayer = {
+  id: string;
+  url: string;
+  x?: number;
+  y?: number;
+  scale?: number;
+  extraction?: ExtractedLayerPlacement;
+};
 
 type Props = {
+  format?: 'square' | 'story';
+  scenePacks?: ReadonlyArray<ScenePack>;
+  activeScenePackId?: string | null;
+  onScenePackSelect?: (pack: ScenePack) => void;
+  onSubjectUploadClick?: () => void;
+  onEditHeadlineClick?: () => void;
   presetBackgrounds?: ReadonlyArray<{
     id: string;
     name: string;
@@ -39,6 +106,17 @@ type Props = {
   }>;
   presetBackgroundLabel?: string;
   onPresetBackgroundSelect?: (src: string) => void;
+  currentPalette?: SceneBuilderPalette;
+  originalPalette?: SceneBuilderPalette | null;
+  onPaletteChange?: (palette: SceneBuilderPalette) => void;
+  onOriginalPaletteReset?: () => void;
+  onGeneratedPaletteApply?: () => void;
+  layoutOptions?: ReadonlyArray<{
+    id: string;
+    label: string;
+  }>;
+  activeLayoutId?: string | null;
+  onLayoutSelect?: (id: string) => void;
   allowUploads?: boolean;
   selectedPanel: string | null;
   setSelectedPanel: (v: string | null) => void;
@@ -63,6 +141,8 @@ type Props = {
   vibeUploadInputRef: React.RefObject<HTMLInputElement | null>;
   handleUploadDesignFromVibe: (file: File) => Promise<void>;
   bgScale: number;
+  bgPosX?: number;
+  bgPosY?: number;
   bgBlur: number;
   setHue: (v: number) => void;
   setVignette: (v: boolean) => void;
@@ -90,13 +170,30 @@ type Props = {
   setSubjectPose?: (v: string) => void;
   showAiTools?: boolean;
   enableExtractSubject?: boolean;
-  onPlaceExtractedLayer?: (src: string) => void;
+  extractedPortraitLayers?: ReadonlyArray<ExtractedPortraitLayer>;
+  onSelectExtractedPortrait?: (id: string) => void;
+  onRemoveExtractedPortrait?: (id: string) => void;
+  onPlaceExtractedLayer?: (payload: ExtractedLayerPayload) => void;
 };
 
 function BackgroundPanels({
+  format = 'square',
+  scenePacks = [],
+  activeScenePackId = null,
+  onScenePackSelect,
+  onSubjectUploadClick,
+  onEditHeadlineClick,
   presetBackgrounds = [],
   presetBackgroundLabel = 'Background Picks',
   onPresetBackgroundSelect,
+  currentPalette,
+  originalPalette,
+  onPaletteChange,
+  onOriginalPaletteReset,
+  onGeneratedPaletteApply,
+  layoutOptions = [],
+  activeLayoutId = null,
+  onLayoutSelect,
   allowUploads = true,
   selectedPanel,
   setSelectedPanel,
@@ -119,6 +216,8 @@ function BackgroundPanels({
   vibeUploadInputRef,
   handleUploadDesignFromVibe,
   bgScale,
+  bgPosX = 50,
+  bgPosY = 50,
   bgFitMode,
   setBgFitMode,
   bgBlur,
@@ -148,6 +247,9 @@ function BackgroundPanels({
   setSubjectPose,
   showAiTools = true,
   enableExtractSubject = false,
+  extractedPortraitLayers = [],
+  onSelectExtractedPortrait,
+  onRemoveExtractedPortrait,
   onPlaceExtractedLayer,
 }: Props) {
   const MAX_EXTRACT_SLOTS = 4;
@@ -157,33 +259,278 @@ function BackgroundPanels({
   const previewRef = React.useRef<HTMLImageElement | null>(null);
   const selectionViewportRef = React.useRef<HTMLDivElement | null>(null);
   const currentBackgroundSrc = bgUploadUrl || bgUrl;
-  const [extractSlots, setExtractSlots] = React.useState<string[]>(() => {
+  const showScenePresets = false;
+  const isHexColor = React.useCallback((value: string) => /^#[0-9a-f]{6}$/i.test(value), []);
+  const normalizeHex = React.useCallback((value: string, fallback: string) => {
+    const raw = String(value || '').trim();
+    if (/^#[0-9a-f]{6}$/i.test(raw)) return raw.toUpperCase();
+    if (/^#[0-9a-f]{3}$/i.test(raw)) {
+      return `#${raw[1]}${raw[1]}${raw[2]}${raw[2]}${raw[3]}${raw[3]}`.toUpperCase();
+    }
+    return fallback;
+  }, []);
+  const mixHex = React.useCallback(
+    (a: string, b: string, amount: number) => {
+      const left = normalizeHex(a, '#111111').slice(1);
+      const right = normalizeHex(b, '#FFFFFF').slice(1);
+      const t = Math.max(0, Math.min(1, amount));
+      const la = [0, 2, 4].map((i) => parseInt(left.slice(i, i + 2), 16));
+      const rb = [0, 2, 4].map((i) => parseInt(right.slice(i, i + 2), 16));
+      return `#${la
+        .map((v, i) => Math.round(v + (rb[i] - v) * t).toString(16).padStart(2, '0'))
+        .join('')}`.toUpperCase();
+    },
+    [normalizeHex]
+  );
+  const hexToHsl = React.useCallback(
+    (hex: string) => {
+      const clean = normalizeHex(hex, '#111111').slice(1);
+      const r = parseInt(clean.slice(0, 2), 16) / 255;
+      const g = parseInt(clean.slice(2, 4), 16) / 255;
+      const b = parseInt(clean.slice(4, 6), 16) / 255;
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const diff = max - min;
+      let h = 0;
+      const l = (max + min) / 2;
+      let s = 0;
+
+      if (diff) {
+        s = diff / (1 - Math.abs(2 * l - 1));
+        if (max === r) h = ((g - b) / diff) % 6;
+        else if (max === g) h = (b - r) / diff + 2;
+        else h = (r - g) / diff + 4;
+        h *= 60;
+        if (h < 0) h += 360;
+      }
+
+      return { h, s: Math.max(0, Math.min(100, s * 100)), l: Math.max(0, Math.min(100, l * 100)) };
+    },
+    [normalizeHex]
+  );
+  const hslToHex = React.useCallback((h: number, s: number, l: number) => {
+    const hue = ((h % 360) + 360) % 360;
+    const sat = Math.max(0, Math.min(100, s)) / 100;
+    const light = Math.max(0, Math.min(100, l)) / 100;
+    const c = (1 - Math.abs(2 * light - 1)) * sat;
+    const x = c * (1 - Math.abs(((hue / 60) % 2) - 1));
+    const m = light - c / 2;
+    let r = 0;
+    let g = 0;
+    let b = 0;
+
+    if (hue < 60) [r, g, b] = [c, x, 0];
+    else if (hue < 120) [r, g, b] = [x, c, 0];
+    else if (hue < 180) [r, g, b] = [0, c, x];
+    else if (hue < 240) [r, g, b] = [0, x, c];
+    else if (hue < 300) [r, g, b] = [x, 0, c];
+    else [r, g, b] = [c, 0, x];
+
+    return `#${[r, g, b]
+      .map((value) => Math.round((value + m) * 255).toString(16).padStart(2, '0'))
+      .join('')}`.toUpperCase();
+  }, []);
+  const hueDistance = React.useCallback((a: number, b: number) => {
+    const diff = Math.abs((((a - b) % 360) + 540) % 360 - 180);
+    return Math.min(180, diff);
+  }, []);
+  const pickSeparatedHue = React.useCallback(
+    (avoid: number[], candidates: number[]) => {
+      return candidates
+        .map((hue) => ({
+          hue: ((hue % 360) + 360) % 360,
+          score: avoid.reduce((sum, current) => sum + hueDistance(hue, current), 0),
+        }))
+        .sort((a, b) => b.score - a.score)[0]?.hue ?? candidates[0] ?? 250;
+    },
+    [hueDistance]
+  );
+  const scenePalette = React.useMemo(() => {
+    const base = normalizeHex(
+      currentPalette?.secondary || currentPalette?.bgFrom || '#101015',
+      '#101015'
+    );
+    const primary = normalizeHex(
+      currentPalette?.primary || currentPalette?.bgTo || '#F3DFC1',
+      '#F3DFC1'
+    );
+    const accent = normalizeHex(currentPalette?.accent || '#D21F3C', '#D21F3C');
+    return {
+      bgFrom: base,
+      bgTo: normalizeHex(currentPalette?.bgTo || mixHex(base, '#000000', 0.35), mixHex(base, '#000000', 0.35)),
+      secondary: base,
+      primary,
+      accent,
+      neutral: normalizeHex(currentPalette?.neutral || mixHex(primary, '#FFFFFF', 0.45), mixHex(primary, '#FFFFFF', 0.45)),
+    };
+  }, [currentPalette, mixHex, normalizeHex]);
+  const originalScenePalette = React.useMemo(() => {
+    if (!originalPalette) return null;
+    const base = normalizeHex(
+      originalPalette.secondary || originalPalette.bgFrom || '#101015',
+      '#101015'
+    );
+    const primary = normalizeHex(
+      originalPalette.primary || originalPalette.bgTo || '#F3DFC1',
+      '#F3DFC1'
+    );
+    const accent = normalizeHex(originalPalette.accent || '#D21F3C', '#D21F3C');
+    return {
+      bgFrom: base,
+      bgTo: normalizeHex(originalPalette.bgTo || mixHex(base, '#000000', 0.35), mixHex(base, '#000000', 0.35)),
+      secondary: base,
+      primary,
+      accent,
+      neutral: normalizeHex(originalPalette.neutral || mixHex(primary, '#FFFFFF', 0.45), mixHex(primary, '#FFFFFF', 0.45)),
+    };
+  }, [mixHex, normalizeHex, originalPalette]);
+  const recommendedPalettes = React.useMemo(
+    () => {
+      const baseHsl = hexToHsl(scenePalette.secondary);
+      const primaryHsl = hexToHsl(scenePalette.primary);
+      const warmHue = baseHsl.s < 12 ? 330 : baseHsl.h;
+      const luxuryHue = primaryHsl.s > 18 ? primaryHsl.h : 43;
+      const coolHue = (warmHue + 190) % 360;
+      const warmEnergyHue = pickSeparatedHue(
+        [warmHue, luxuryHue],
+        [(warmHue + 165) % 360, 250, 196, 344]
+      );
+      const coolEnergyHue = pickSeparatedHue(
+        [coolHue, warmEnergyHue, luxuryHue],
+        [344, 196, 250, 31]
+      );
+
+      const warmBase = hslToHex(warmHue, Math.max(baseHsl.s + 16, 42), 8);
+      const warmShadow = hslToHex(warmHue, Math.max(baseHsl.s + 20, 48), 4);
+      const warmLuxury = hslToHex(luxuryHue, Math.max(primaryHsl.s + 20, 68), 70);
+      const coolBase = hslToHex(coolHue, 58, 7);
+      const coolShadow = hslToHex(coolHue, 64, 3);
+
+      return [
+        {
+          id: 'warm-luxury-energy',
+          label: 'Warm Luxury',
+          palette: {
+            ...scenePalette,
+            bgFrom: warmBase,
+            bgTo: warmShadow,
+            secondary: warmBase,
+            primary: warmLuxury,
+            neutral: hslToHex(luxuryHue, 34, 93),
+            accent: hslToHex(warmEnergyHue, 92, 58),
+          },
+        },
+        {
+          id: 'cool-electric-contrast',
+          label: 'Cool Electric',
+          palette: {
+            ...scenePalette,
+            bgFrom: coolBase,
+            bgTo: coolShadow,
+            secondary: coolBase,
+            primary: hslToHex(coolHue, 20, 94),
+            neutral: hslToHex(coolHue, 18, 88),
+            accent: hslToHex(coolEnergyHue, 94, 60),
+          },
+        },
+      ];
+    },
+    [hexToHsl, hslToHex, pickSeparatedHue, scenePalette]
+  );
+  const applyScenePalette = React.useCallback(
+    (patch: Partial<SceneBuilderPalette>) => {
+      const nextBase = normalizeHex(
+        patch.secondary || patch.bgFrom || scenePalette.secondary,
+        scenePalette.secondary
+      );
+      const nextPrimary = normalizeHex(patch.primary || scenePalette.primary, scenePalette.primary);
+      const nextAccent = normalizeHex(patch.accent || scenePalette.accent, scenePalette.accent);
+      const next: SceneBuilderPalette = {
+        bgFrom: nextBase,
+        bgTo: normalizeHex(patch.bgTo || mixHex(nextBase, '#000000', 0.35), mixHex(nextBase, '#000000', 0.35)),
+        secondary: nextBase,
+        primary: nextPrimary,
+        accent: nextAccent,
+        neutral: normalizeHex(patch.neutral || mixHex(nextPrimary, '#FFFFFF', 0.45), mixHex(nextPrimary, '#FFFFFF', 0.45)),
+      };
+      onPaletteChange?.(next);
+    },
+    [mixHex, normalizeHex, onPaletteChange, scenePalette]
+  );
+  const resetToOriginalPalette = React.useCallback(() => {
+    if (onOriginalPaletteReset) {
+      onOriginalPaletteReset();
+      return;
+    }
+    if (originalScenePalette) applyScenePalette(originalScenePalette);
+  }, [applyScenePalette, onOriginalPaletteReset, originalScenePalette]);
+  const emptyExtractSlots = React.useCallback(
+    () => Array.from({ length: MAX_EXTRACT_SLOTS }, () => ({ src: '' })),
+    []
+  );
+  const normalizeExtractSlot = React.useCallback((slot: any): ExtractedLayerSlot => {
+    if (typeof slot === 'string') return { src: slot };
+    if (slot && typeof slot === 'object' && typeof slot.src === 'string') {
+      return {
+        src: slot.src,
+        placement: slot.placement && typeof slot.placement === 'object' ? slot.placement : undefined,
+        createdAt: typeof slot.createdAt === 'number' ? slot.createdAt : undefined,
+      };
+    }
+    return { src: '' };
+  }, []);
+  const normalizeExtractSlots = React.useCallback(
+    (raw: any): ExtractedLayerSlot[] =>
+      Array.from({ length: MAX_EXTRACT_SLOTS }, (_, i) => normalizeExtractSlot(raw?.[i])),
+    [normalizeExtractSlot]
+  );
+  const [extractSlots, setExtractSlots] = React.useState<ExtractedLayerSlot[]>(() => {
     try {
       const raw = localStorage.getItem('nf:sceneExtractSlots');
       if (raw) {
         const parsed = JSON.parse(raw);
-        return Array.from({ length: MAX_EXTRACT_SLOTS }, (_, i) => parsed?.[i] ?? '');
+        return Array.from({ length: MAX_EXTRACT_SLOTS }, (_, i) => {
+          const slot = parsed?.[i];
+          if (typeof slot === 'string') return { src: slot };
+          if (slot && typeof slot === 'object' && typeof slot.src === 'string') {
+            return {
+              src: slot.src,
+              placement: slot.placement && typeof slot.placement === 'object' ? slot.placement : undefined,
+              createdAt: typeof slot.createdAt === 'number' ? slot.createdAt : undefined,
+            };
+          }
+          return { src: '' };
+        });
       }
     } catch {}
-    return Array(MAX_EXTRACT_SLOTS).fill('');
+    return emptyExtractSlots();
   });
   const [extractMode, setExtractMode] = React.useState(false);
   const [extracting, setExtracting] = React.useState(false);
   const [extractError, setExtractError] = React.useState<string | null>(null);
   const [extractPreviewUrl, setExtractPreviewUrl] = React.useState<string | null>(null);
+  const [extractPreviewPlacement, setExtractPreviewPlacement] =
+    React.useState<ExtractedLayerPlacement | null>(null);
+  const portraitExtractLayers = React.useMemo(
+    () => extractedPortraitLayers.slice(0, MAX_EXTRACT_SLOTS),
+    [extractedPortraitLayers]
+  );
+  const extractSlotCount = onPlaceExtractedLayer
+    ? portraitExtractLayers.length
+    : extractSlots.filter((slot) => !!slot.src).length;
   const [extractPath, setExtractPath] = React.useState<Array<{ x: number; y: number }>>([]);
   const dragStartRef = React.useRef<Array<{ x: number; y: number }> | null>(null);
   const panStartRef = React.useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
   const [extractZoom, setExtractZoom] = React.useState(1);
   const [extractPan, setExtractPan] = React.useState({ x: 0, y: 0 });
 
-  const persistExtractSlots = React.useCallback((next: string[]) => {
-    const normalized = Array.from({ length: MAX_EXTRACT_SLOTS }, (_, i) => next[i] ?? '');
+  const persistExtractSlots = React.useCallback((next: ExtractedLayerSlot[]) => {
+    const normalized = normalizeExtractSlots(next);
     setExtractSlots(normalized);
     try {
       localStorage.setItem('nf:sceneExtractSlots', JSON.stringify(normalized));
     } catch {}
-  }, []);
+  }, [normalizeExtractSlots]);
 
   const loadImage = React.useCallback((src: string) => {
     return new Promise<HTMLImageElement>((resolve, reject) => {
@@ -193,6 +540,101 @@ function BackgroundPanels({
       img.src = src;
     });
   }, []);
+
+  const clampNumber = React.useCallback((value: number, min: number, max: number) => {
+    return Math.max(min, Math.min(max, value));
+  }, []);
+
+  const getPreviewImageRect = React.useCallback((rect: DOMRect) => {
+    const img = previewRef.current;
+    const iw = img?.naturalWidth || img?.width || 0;
+    const ih = img?.naturalHeight || img?.height || 0;
+    if (!iw || !ih || !rect.width || !rect.height) {
+      return { left: 0, top: 0, width: rect.width, height: rect.height };
+    }
+    const imageRatio = iw / ih;
+    const viewportRatio = rect.width / rect.height;
+    if (imageRatio >= viewportRatio) {
+      const width = rect.width;
+      const height = width / imageRatio;
+      return { left: 0, top: (rect.height - height) / 2, width, height };
+    }
+    const height = rect.height;
+    const width = height * imageRatio;
+    return { left: (rect.width - width) / 2, top: 0, width, height };
+  }, []);
+
+  const sourcePointToViewportPoint = React.useCallback(
+    (point: { x: number; y: number }) => {
+      const viewport = selectionViewportRef.current;
+      const rect = viewport?.getBoundingClientRect();
+      if (!rect) return point;
+      const imageRect = getPreviewImageRect(rect);
+      return {
+        x: clampNumber((imageRect.left + point.x * imageRect.width) / Math.max(1, rect.width), 0, 1),
+        y: clampNumber((imageRect.top + point.y * imageRect.height) / Math.max(1, rect.height), 0, 1),
+      };
+    },
+    [clampNumber, getPreviewImageRect]
+  );
+
+  const buildExtractionPlacement = React.useCallback(
+    (args: {
+      iw: number;
+      ih: number;
+      minX: number;
+      maxX: number;
+      minY: number;
+      maxY: number;
+      cropW: number;
+      cropH: number;
+    }): ExtractedLayerPlacement => {
+      const canvas = format === 'story' ? { width: 540, height: 960 } : { width: 540, height: 540 };
+      const baseScale = bgFitMode
+        ? Math.min(canvas.width / args.iw, canvas.height / args.ih)
+        : Math.max(canvas.width / args.iw, canvas.height / args.ih);
+      const scaleFactor = baseScale * Math.max(0.01, Number.isFinite(bgScale) ? bgScale : 1);
+      const displayW = args.iw * scaleFactor;
+      const displayH = args.ih * scaleFactor;
+      const offsetX = (canvas.width - displayW) * (clampNumber(bgPosX, 0, 100) / 100);
+      const offsetY = (canvas.height - displayH) * (clampNumber(bgPosY, 0, 100) / 100);
+      const centerSourceX = ((args.minX + args.maxX) / 2) * args.iw;
+      const centerSourceY = ((args.minY + args.maxY) / 2) * args.ih;
+      const canvasX = ((offsetX + centerSourceX * scaleFactor) / canvas.width) * 100;
+      const canvasY = ((offsetY + centerSourceY * scaleFactor) / canvas.height) * 100;
+      const canvasW = ((args.maxX - args.minX) * args.iw * scaleFactor / canvas.width) * 100;
+      const canvasH = ((args.maxY - args.minY) * args.ih * scaleFactor / canvas.height) * 100;
+
+      return {
+        sourceRect: {
+          x: Number((args.minX * 100).toFixed(2)),
+          y: Number((args.minY * 100).toFixed(2)),
+          width: Number(((args.maxX - args.minX) * 100).toFixed(2)),
+          height: Number(((args.maxY - args.minY) * 100).toFixed(2)),
+          centerX: Number((((args.minX + args.maxX) / 2) * 100).toFixed(2)),
+          centerY: Number((((args.minY + args.maxY) / 2) * 100).toFixed(2)),
+        },
+        canvas: {
+          x: Number(clampNumber(canvasX, 0, 100).toFixed(2)),
+          y: Number(clampNumber(canvasY, 0, 100).toFixed(2)),
+          width: Number(Math.max(0.1, canvasW).toFixed(2)),
+          height: Number(Math.max(0.1, canvasH).toFixed(2)),
+          scale: Number(clampNumber(scaleFactor, 0.05, 4).toFixed(3)),
+        },
+        cropSize: {
+          width: args.cropW,
+          height: args.cropH,
+        },
+        background: {
+          scale: Number((Number.isFinite(bgScale) ? bgScale : 1).toFixed(3)),
+          posX: Number(clampNumber(bgPosX, 0, 100).toFixed(2)),
+          posY: Number(clampNumber(bgPosY, 0, 100).toFixed(2)),
+          fitMode: !!bgFitMode,
+        },
+      };
+    },
+    [bgFitMode, bgPosX, bgPosY, bgScale, clampNumber, format]
+  );
 
   React.useEffect(() => {
     if (!extractMode) return;
@@ -214,11 +656,12 @@ function BackgroundPanels({
       (localX - rect.width / 2 - extractPan.x * rect.width) / extractZoom + rect.width / 2;
     const adjustedY =
       (localY - rect.height / 2 - extractPan.y * rect.height) / extractZoom + rect.height / 2;
+    const imageRect = getPreviewImageRect(rect);
     return {
-      x: Math.max(0, Math.min(1, adjustedX / rect.width)),
-      y: Math.max(0, Math.min(1, adjustedY / rect.height)),
+      x: clampNumber((adjustedX - imageRect.left) / Math.max(1, imageRect.width), 0, 1),
+      y: clampNumber((adjustedY - imageRect.top) / Math.max(1, imageRect.height), 0, 1),
     };
-  }, [extractPan.x, extractPan.y, extractZoom]);
+  }, [clampNumber, extractPan.x, extractPan.y, extractZoom, getPreviewImageRect]);
 
   const extractCropFromCurrentBackground = React.useCallback(async () => {
     if (!currentBackgroundSrc || extractPath.length < MIN_LASSO_POINTS) return;
@@ -255,36 +698,76 @@ function BackgroundPanels({
       const removed = await removeBackgroundLocal(cropUrl, {
         cleanup: EXTRACT_SUBJECT_CLEANUP,
       });
+      const placement = buildExtractionPlacement({
+        iw,
+        ih,
+        minX,
+        maxX,
+        minY,
+        maxY,
+        cropW,
+        cropH,
+      });
       setExtractPreviewUrl(removed);
+      setExtractPreviewPlacement(placement);
     } catch (err: any) {
       setExtractPreviewUrl(null);
+      setExtractPreviewPlacement(null);
       setExtractError(err?.message || 'Extraction failed.');
     } finally {
       setExtracting(false);
     }
-  }, [currentBackgroundSrc, extractPath, loadImage]);
+  }, [buildExtractionPlacement, currentBackgroundSrc, extractPath, loadImage]);
 
   const createExtractedLayer = React.useCallback(() => {
     if (!extractPreviewUrl) return;
-    const slotIndex = extractSlots.findIndex((slot) => !slot);
-    if (slotIndex === -1) {
-      setExtractError('Clear one of the 4 subject slots first.');
+    if (!extractPreviewPlacement) {
+      setExtractError('Preview the cutout again so placement coordinates can be created.');
       return;
     }
-    const next = [...extractSlots];
-    next[slotIndex] = extractPreviewUrl;
-    persistExtractSlots(next);
-    onPlaceExtractedLayer?.(extractPreviewUrl);
+    const usesPortraitStore = extractedPortraitLayers.length > 0 || !!onPlaceExtractedLayer;
+    const slotIndex = usesPortraitStore
+      ? extractSlotCount
+      : extractSlots.findIndex((slot) => !slot.src);
+    if (slotIndex < 0 || slotIndex >= MAX_EXTRACT_SLOTS) {
+      setExtractError('Remove one of the 4 portrait cutouts first.');
+      return;
+    }
+    if (!usesPortraitStore) {
+      const next = [...extractSlots];
+      next[slotIndex] = {
+        src: extractPreviewUrl,
+        placement: extractPreviewPlacement,
+        createdAt: Date.now(),
+      };
+      persistExtractSlots(next);
+    }
+    onPlaceExtractedLayer?.({
+      src: extractPreviewUrl,
+      x: extractPreviewPlacement.canvas.x,
+      y: extractPreviewPlacement.canvas.y,
+      scale: extractPreviewPlacement.canvas.scale,
+      placement: extractPreviewPlacement,
+    });
     setExtractMode(false);
     setExtractPath([]);
     setExtractPreviewUrl(null);
+    setExtractPreviewPlacement(null);
     setExtractZoom(1);
     setExtractPan({ x: 0, y: 0 });
-  }, [extractPreviewUrl, extractSlots, onPlaceExtractedLayer, persistExtractSlots]);
+  }, [
+    extractPreviewPlacement,
+    extractPreviewUrl,
+    extractSlotCount,
+    extractSlots,
+    extractedPortraitLayers.length,
+    onPlaceExtractedLayer,
+    persistExtractSlots,
+  ]);
 
   const clearExtractedLayer = React.useCallback((idx: number) => {
     const next = [...extractSlots];
-    next[idx] = '';
+    next[idx] = { src: '' };
     persistExtractSlots(next);
   }, [extractSlots, persistExtractSlots]);
 
@@ -296,6 +779,7 @@ function BackgroundPanels({
     dragStartRef.current = [startPoint];
     setExtractPath([startPoint]);
     setExtractPreviewUrl(null);
+    setExtractPreviewPlacement(null);
     setExtractError(null);
     try {
       event.currentTarget.setPointerCapture(event.pointerId);
@@ -477,7 +961,248 @@ function BackgroundPanels({
             }}
           />
 
-          {presetBackgrounds.length > 0 && (
+          <div className={`${editorSectionCardClass} mb-3`}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className={editorSectionTitleClass}>Color Palette</div>
+              </div>
+              <div
+                className="mt-0.5 flex h-7 w-28 overflow-hidden rounded-md border border-white/10"
+                aria-hidden="true"
+              >
+                {[
+                  { key: 'secondary', color: scenePalette.secondary },
+                  { key: 'bgTo', color: scenePalette.bgTo },
+                  { key: 'primary', color: scenePalette.primary },
+                  { key: 'neutral', color: scenePalette.neutral },
+                  { key: 'accent', color: scenePalette.accent },
+                ].map((swatch) => (
+                  <span key={swatch.key} className="flex-1" style={{ backgroundColor: swatch.color }} />
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-3 grid grid-cols-5 gap-2">
+              {[
+                { key: 'secondary' as const, label: 'Base', value: scenePalette.secondary },
+                { key: 'bgTo' as const, label: 'Shadow', value: scenePalette.bgTo },
+                { key: 'primary' as const, label: 'Main', value: scenePalette.primary },
+                { key: 'neutral' as const, label: 'Meta', value: scenePalette.neutral },
+                { key: 'accent' as const, label: 'Accent', value: scenePalette.accent },
+              ].map((item) => (
+                <label key={item.key} className="min-w-0 space-y-1">
+                  <span className="block text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
+                    {item.label}
+                  </span>
+                  <input
+                    type="color"
+                    value={isHexColor(item.value) ? item.value : '#ffffff'}
+                    onChange={(event) => applyScenePalette({ [item.key]: event.target.value })}
+                    className="h-9 w-full cursor-pointer rounded-md border border-white/10 bg-neutral-950 p-1"
+                    aria-label={`${item.label} color`}
+                  />
+                  <input
+                    value={item.value}
+                    onChange={(event) => {
+                      const value = event.target.value.trim();
+                      if (isHexColor(value)) applyScenePalette({ [item.key]: value });
+                    }}
+                    className="h-7 w-full rounded-md border border-white/10 bg-black/30 px-2 text-[10px] uppercase text-neutral-300 outline-none focus:border-cyan-400/70"
+                    aria-label={`${item.label} hex`}
+                  />
+                </label>
+              ))}
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {originalScenePalette ? (
+                <button
+                  key="original-template-palette"
+                  type="button"
+                  className="rounded-lg border border-white/10 bg-black/24 p-2 text-left transition hover:border-white/25 hover:bg-white/[0.04]"
+                  onClick={resetToOriginalPalette}
+                >
+                  <div className="mb-2 flex h-5 overflow-hidden rounded border border-white/10">
+                    {[
+                      { key: 'secondary', color: originalScenePalette.secondary },
+                      { key: 'bgTo', color: originalScenePalette.bgTo },
+                      { key: 'primary', color: originalScenePalette.primary },
+                      { key: 'neutral', color: originalScenePalette.neutral },
+                      { key: 'accent', color: originalScenePalette.accent },
+                    ].map((swatch) => (
+                      <span key={swatch.key} className="flex-1" style={{ backgroundColor: swatch.color }} />
+                    ))}
+                  </div>
+                  <div className="text-[11px] font-medium text-neutral-200">Original</div>
+                </button>
+              ) : null}
+              {onGeneratedPaletteApply ? (
+                <button
+                  key="generated-template-palette"
+                  type="button"
+                  className="rounded-lg border border-white/10 bg-black/24 p-2 text-left transition hover:border-white/25 hover:bg-white/[0.04]"
+                  onClick={onGeneratedPaletteApply}
+                >
+                  <div className="mb-2 flex h-5 overflow-hidden rounded border border-white/10">
+                    {[
+                      { key: 'secondary', color: scenePalette.secondary },
+                      { key: 'bgTo', color: scenePalette.bgTo },
+                      { key: 'primary', color: scenePalette.primary },
+                      { key: 'neutral', color: scenePalette.neutral },
+                      { key: 'accent', color: scenePalette.accent },
+                    ].map((swatch) => (
+                      <span key={swatch.key} className="flex-1" style={{ backgroundColor: swatch.color }} />
+                    ))}
+                  </div>
+                  <div className="text-[11px] font-medium text-neutral-200">Generated</div>
+                </button>
+              ) : null}
+              {recommendedPalettes.map((rec) => (
+                <button
+                  key={rec.id}
+                  type="button"
+                  className="rounded-lg border border-white/10 bg-black/24 p-2 text-left transition hover:border-white/25 hover:bg-white/[0.04]"
+                  onClick={() => applyScenePalette(rec.palette)}
+                >
+                  <div className="mb-2 flex h-5 overflow-hidden rounded border border-white/10">
+                    {[
+                      { key: 'secondary', color: rec.palette.secondary },
+                      { key: 'bgTo', color: rec.palette.bgTo },
+                      { key: 'primary', color: rec.palette.primary },
+                      { key: 'neutral', color: rec.palette.neutral },
+                      { key: 'accent', color: rec.palette.accent },
+                    ].map((swatch) => (
+                      <span key={swatch.key} className="flex-1" style={{ backgroundColor: swatch.color }} />
+                    ))}
+                  </div>
+                  <div className="text-[11px] font-medium text-neutral-200">{rec.label}</div>
+                </button>
+              ))}
+            </div>
+
+            {layoutOptions.length > 0 && (
+              <div className="mt-4 border-t border-white/10 pt-3">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <div className={editorSectionTitleClass}>Layout</div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {layoutOptions.map((option) => {
+                    const isActive = activeLayoutId === option.id;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className={clsx(
+                          "h-10 rounded-lg border px-3 text-[12px] font-semibold uppercase tracking-[0.14em] transition",
+                          isActive
+                            ? "border-cyan-300/80 bg-cyan-300 text-black shadow-[0_0_18px_rgba(34,211,238,0.22)]"
+                            : "border-white/10 bg-black/24 text-neutral-300 hover:border-white/25 hover:bg-white/[0.04]"
+                        )}
+                        onClick={() => onLayoutSelect?.(option.id)}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {showScenePresets && scenePacks.length > 0 && (
+            <div className="mb-3 border-b border-white/10 pb-3">
+              <div className={editorSectionEyebrowClass}>Scene Packs</div>
+              <div className={editorSectionMetaClass}>Build with movable graphics, flares, textures, and emoji accents.</div>
+              <div className="grid grid-cols-2 gap-2">
+                {scenePacks.map((pack, index) => {
+                  const isActive = activeScenePackId === pack.id || currentBackgroundSrc === pack.background;
+                  const isFeatured = index === 0;
+                  return (
+                    <button
+                      key={pack.id}
+                      type="button"
+                      className={clsx(
+                        isActive ? editorItemCardActiveClass : editorItemCardClass,
+                        "group overflow-hidden text-left",
+                        isFeatured && "col-span-2"
+                      )}
+                      onClick={() => onScenePackSelect?.(pack)}
+                    >
+                      <div className={clsx("relative bg-black", editorThumbClass, isFeatured ? "aspect-[1.9/1]" : "aspect-square")}>
+                        <img
+                          src={pack.preview}
+                          alt={pack.name}
+                          className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                          draggable={false}
+                          loading={isFeatured ? "eager" : "lazy"}
+                        />
+                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/82 via-black/14 to-transparent" />
+                        <div
+                          className="pointer-events-none absolute inset-x-0 bottom-0 h-1"
+                          style={{ background: `linear-gradient(90deg, ${pack.defaultTextColor}, ${pack.accentColor})` }}
+                        />
+                        <div className="absolute bottom-2 left-2 right-2 min-w-0">
+                          <div className="truncate text-[12px] font-semibold text-white">{pack.name}</div>
+                          <div className="truncate text-[10px] text-neutral-300">{pack.mood}</div>
+                        </div>
+                        {isFeatured && (
+                          <div className="absolute right-2 top-2 rounded-full border border-white/20 bg-black/55 px-2 py-1 text-[10px] font-medium text-white">
+                            Start here
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between gap-2 px-1 py-2 text-[10px] text-neutral-400">
+                        <span>{isActive ? "Editable scene loaded" : "Build editable scene"}</span>
+                        <span style={{ color: pack.accentColor }}>{isActive ? "Next below" : "Tap"}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              {(() => {
+                const activePack = scenePacks.find((pack) => activeScenePackId === pack.id || currentBackgroundSrc === pack.background);
+                if (!activePack) return null;
+                return (
+                  <div className="mt-3 rounded-lg border border-white/10 bg-black/30 p-3">
+                    <div className="text-[12px] font-semibold text-white">
+                      {activePack.name} scene loaded
+                    </div>
+                    <div className="mt-1 text-[11px] leading-4 text-neutral-400">
+                      This pack added separate movable layers. Click any prop, flare, texture, or emoji on the canvas to adjust it.
+                    </div>
+                    <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                      <button
+                        type="button"
+                        className={editorPrimaryButtonClass}
+                        onClick={onSubjectUploadClick}
+                      >
+                        Add Subject
+                      </button>
+                      {showAiTools && onGenerateSubject ? (
+                        <button
+                          type="button"
+                          className={editorUploadActionClass}
+                          onClick={onGenerateSubject}
+                          disabled={isGeneratingSubject}
+                        >
+                          {isGeneratingSubject ? "Generating..." : "Generate Subject"}
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        className={editorUploadActionClass}
+                        onClick={onEditHeadlineClick}
+                      >
+                        Edit Event Name
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {showScenePresets && presetBackgrounds.length > 0 && (
             <div className="mb-3 border-b border-white/10 pb-3">
               <div className={editorSectionEyebrowClass}>{presetBackgroundLabel}</div>
               <div className={editorSectionMetaClass}>Use a ready-made scene and keep moving.</div>
@@ -772,7 +1497,10 @@ function BackgroundPanels({
                           preserveAspectRatio="none"
                         >
                           <polygon
-                            points={extractPath.map((point) => `${point.x * 100},${point.y * 100}`).join(' ')}
+                            points={extractPath
+                              .map((point) => sourcePointToViewportPoint(point))
+                              .map((point) => `${point.x * 100},${point.y * 100}`)
+                              .join(' ')}
                             fill="rgba(34,211,238,0.16)"
                             stroke="rgba(103,232,249,0.9)"
                             strokeWidth="0.6"
@@ -800,6 +1528,7 @@ function BackgroundPanels({
                       onClick={() => {
                         setExtractMode(true);
                         setExtractPreviewUrl(null);
+                        setExtractPreviewPlacement(null);
                         setExtractError(null);
                       }}
                     >
@@ -822,6 +1551,7 @@ function BackgroundPanels({
                       setExtractMode(false);
                       setExtractPath([]);
                       setExtractPreviewUrl(null);
+                      setExtractPreviewPlacement(null);
                       setExtractError(null);
                     }}
                   >
@@ -843,6 +1573,7 @@ function BackgroundPanels({
                     <button
                       type="button"
                       className={editorPrimaryButtonClass}
+                      disabled={extractSlotCount >= MAX_EXTRACT_SLOTS}
                       onClick={createExtractedLayer}
                     >
                       Create Layer
@@ -855,41 +1586,103 @@ function BackgroundPanels({
                 ) : null}
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {extractSlots.map((src, i) => (
-                    <div key={`extract-slot-${i}`} className={editorUploadHolderClass}>
-                      <div className="text-[12px] font-medium text-white">Layer {i + 1}</div>
-                      <div className={clsx(editorUploadPreviewClass, "h-28")}>
-                        {src ? (
-                          <img
-                            src={src}
-                            alt={`Extracted layer ${i + 1}`}
-                            className="h-full w-full object-contain bg-white/5"
-                            draggable={false}
-                          />
-                        ) : (
-                          <div className="text-[11px] leading-6 text-neutral-400">No layer stored.</div>
-                        )}
+                  {onPlaceExtractedLayer
+                    ? Array.from({ length: MAX_EXTRACT_SLOTS }, (_, i) => portraitExtractLayers[i] || null).map(
+	                        (layer, i) => {
+	                          const src = layer?.url || "";
+	                          const placement = layer?.extraction;
+	                          const displayX = Number(layer?.x ?? placement?.canvas.x);
+	                          const displayY = Number(layer?.y ?? placement?.canvas.y);
+	                          return (
+	                            <div key={`extract-portrait-${layer?.id || i}`} className={editorUploadHolderClass}>
+	                              <div className="flex items-center justify-between gap-2">
+	                                <div className="text-[12px] font-medium text-white">Portrait Cutout {i + 1}</div>
+	                                {src ? (
+	                                  <div className="text-[10px] text-neutral-500">
+	                                    {Number.isFinite(displayX) ? Math.round(displayX) : "--"}%,{" "}
+	                                    {Number.isFinite(displayY) ? Math.round(displayY) : "--"}%
+	                                  </div>
+	                                ) : null}
+	                              </div>
+                              <div className={clsx(editorUploadPreviewClass, "h-28")}>
+                                {src ? (
+                                  <img
+                                    src={src}
+                                    alt={`Portrait cutout ${i + 1}`}
+                                    className="h-full w-full object-contain bg-white/5"
+                                    draggable={false}
+                                  />
+                                ) : (
+                                  <div className="text-[11px] leading-6 text-neutral-400">No portrait cutout stored.</div>
+                                )}
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <button
+                                  type="button"
+                                  className={editorUploadPlaceClass}
+                                  disabled={!layer?.id}
+                                  onClick={() => layer?.id && onSelectExtractedPortrait?.(layer.id)}
+                                >
+                                  Select
+                                </button>
+                                <button
+                                  type="button"
+                                  className={editorUploadClearClass}
+                                  disabled={!layer?.id}
+                                  onClick={() => layer?.id && onRemoveExtractedPortrait?.(layer.id)}
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        }
+                      )
+                    : extractSlots.map((slot, i) => {
+                        const src = slot.src;
+                        return (
+                      <div key={`extract-slot-${i}`} className={editorUploadHolderClass}>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-[12px] font-medium text-white">Layer {i + 1}</div>
+                          {src && slot.placement ? (
+                            <div className="text-[10px] text-neutral-500">
+                              {Math.round(slot.placement.canvas.x)}%, {Math.round(slot.placement.canvas.y)}%
+                            </div>
+                          ) : null}
+                        </div>
+                        <div className={clsx(editorUploadPreviewClass, "h-28")}>
+                          {src ? (
+                            <img
+                              src={src}
+                              alt={`Extracted layer ${i + 1}`}
+                              className="h-full w-full object-contain bg-white/5"
+                              draggable={false}
+                            />
+                          ) : (
+                            <div className="text-[11px] leading-6 text-neutral-400">No layer stored.</div>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            className={editorUploadPlaceClass}
+                            disabled
+                            onClick={() => {}}
+                          >
+                            Place
+                          </button>
+                          <button
+                            type="button"
+                            className={editorUploadClearClass}
+                            disabled={!src}
+                            onClick={() => clearExtractedLayer(i)}
+                          >
+                            Clear
+                          </button>
+                        </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          className={editorUploadPlaceClass}
-                          disabled={!src}
-                          onClick={() => src && onPlaceExtractedLayer?.(src)}
-                        >
-                          Place
-                        </button>
-                        <button
-                          type="button"
-                          className={editorUploadClearClass}
-                          disabled={!src}
-                          onClick={() => clearExtractedLayer(i)}
-                        >
-                          Clear
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                        );
+                      })}
                 </div>
               </div>
             )}

@@ -573,6 +573,23 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                     </div>
                     <div>
                       <InlineSliderInput
+                        label="Label Line Height"
+                        value={Number((sel as any).labelLineHeight ?? 1)}
+                        min={0.6}
+                        max={1.8}
+                        step={0.05}
+                        precision={2}
+                        disabled={locked}
+                        onChange={(next) =>
+                          updatePortraitRaf.current?.(sel.id, {
+                            labelLineHeight: next,
+                          })
+                        }
+                        rangeClassName="flex-1 h-1 appearance-none cursor-pointer bg-neutral-700 accent-violet-500"
+                      />
+                    </div>
+                    <div>
+                      <InlineSliderInput
                         label="Label Y Offset"
                         value={Number((sel as any).labelOffsetY ?? 0)}
                         min={isShapeGraphic ? -60 : -30}
@@ -1041,6 +1058,19 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                         disabled={locked}
                         onChange={(next) => update({ labelSize: next })}
                         rangeClassName="flex-1 h-1 appearance-none cursor-pointer bg-neutral-700 accent-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <InlineSliderInput
+                        label="Label Line Height"
+                        value={Number((sel as any).labelLineHeight ?? 1)}
+                        min={0.6}
+                        max={1.8}
+                        step={0.05}
+                        precision={2}
+                        disabled={locked}
+                        onChange={(next) => update({ labelLineHeight: next })}
+                        rangeClassName="flex-1 h-1 appearance-none cursor-pointer bg-neutral-700 accent-violet-500"
                       />
                     </div>
                     <div>
