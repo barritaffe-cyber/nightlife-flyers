@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="260" viewBox="0 0 96 260">
+  <defs>
+    <filter id="railGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#ff2b4f" flood-opacity=".7"/>
+    </filter>
+  </defs>
+  <g fill="none" stroke="#fff7e8" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" filter="url(#railGlow)">
+    <path d="M36 45C24 39 22 22 35 14C50 4 70 14 72 32C74 50 55 62 39 53L24 58Z"/>
+    <path d="M43 26C49 37 55 42 63 44"/>
+    <path d="M64 94V148"/>
+    <path d="M64 94C56 105 48 107 36 103V130C48 134 56 132 64 124"/>
+    <path d="M64 148C56 154 44 149 43 139C42 131 50 125 59 127"/>
+    <rect x="22" y="184" width="52" height="52" rx="14"/>
+    <circle cx="48" cy="210" r="13"/>
+    <circle cx="64" cy="198" r="2"/>
+  </g>
+</svg>

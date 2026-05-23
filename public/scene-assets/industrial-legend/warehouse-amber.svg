@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3b1520"/>
+      <stop offset="0.36" stop-color="#8c3b22"/>
+      <stop offset="0.72" stop-color="#231628"/>
+      <stop offset="1" stop-color="#0d0c18"/>
+    </linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1c121c"/>
+      <stop offset="0.56" stop-color="#28151c"/>
+      <stop offset="1" stop-color="#090815"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="37%" cy="31%" r="42%">
+      <stop offset="0" stop-color="#ffc15a" stop-opacity=".86"/>
+      <stop offset=".24" stop-color="#ff6d27" stop-opacity=".44"/>
+      <stop offset=".62" stop-color="#882934" stop-opacity=".12"/>
+      <stop offset="1" stop-color="#100b18" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vignette" cx="50%" cy="47%" r="72%">
+      <stop offset=".44" stop-color="#000" stop-opacity="0"/>
+      <stop offset=".78" stop-color="#050511" stop-opacity=".54"/>
+      <stop offset="1" stop-color="#02020a" stop-opacity=".9"/>
+    </radialGradient>
+    <pattern id="brick" width="92" height="44" patternUnits="userSpaceOnUse">
+      <path d="M0 0H92M0 44H92M0 0V44M46 0V22M92 0V44M0 22H92M23 22V44M69 22V44" fill="none" stroke="#ffb26a" stroke-opacity=".09" stroke-width="2"/>
+    </pattern>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
+  </defs>
+  <rect width="1080" height="1080" fill="url(#sky)"/>
+  <rect width="1080" height="1080" fill="url(#sun)"/>
+  <path d="M-40 628C142 554 282 510 512 500C742 490 922 552 1120 626V1080H-40Z" fill="url(#floor)"/>
+  <path d="M84 0H1080V642C904 570 743 536 512 548C312 558 176 594 84 644Z" fill="#27131d" opacity=".62"/>
+  <path d="M74 0H1080V640H74Z" fill="url(#brick)" opacity=".72"/>
+  <path d="M30 0H104L88 674H0V0Z" fill="#130b14" opacity=".88"/>
+  <path d="M886 0H1048L1104 670H918Z" fill="#120a13" opacity=".78"/>
+  <path d="M135 0H164L112 660H82Z" fill="#090911" opacity=".75"/>
+  <path d="M716 0H747L813 656H777Z" fill="#090911" opacity=".67"/>
+  <path d="M0 708C181 650 332 621 516 621C708 621 892 653 1080 715V1080H0Z" fill="#090815" opacity=".38"/>
+  <path d="M282 592L-12 1080M492 578L392 1080M616 580L705 1080M807 598L1112 1080" stroke="#f2b262" stroke-opacity=".09" stroke-width="6"/>
+  <path d="M145 238C270 192 412 166 564 170C716 174 858 206 1008 268" fill="none" stroke="#ffb95d" stroke-opacity=".18" stroke-width="5"/>
+  <path d="M122 286C289 238 438 220 604 232C767 244 908 288 1038 352" fill="none" stroke="#fff0bf" stroke-opacity=".08" stroke-width="3"/>
+  <g opacity=".42">
+    <rect x="638" y="118" width="202" height="250" fill="#090912" opacity=".62"/>
+    <path d="M668 142H815M668 190H815M668 238H815M668 286H815M668 334H815M668 142V344M718 142V344M768 142V344M815 142V344" stroke="#ffc470" stroke-opacity=".2" stroke-width="3"/>
+  </g>
+  <g opacity=".25">
+    <rect x="164" y="116" width="174" height="226" fill="#0b0911" opacity=".66"/>
+    <path d="M190 142H314M190 192H314M190 242H314M190 292H314M190 142V320M252 142V320M314 142V320" stroke="#ff9f5a" stroke-opacity=".2" stroke-width="3"/>
+  </g>
+  <ellipse cx="525" cy="760" rx="432" ry="80" fill="#f9933e" opacity=".14" filter="url(#soft)"/>
+  <rect width="1080" height="1080" fill="url(#vignette)"/>
+</svg>
