@@ -5,6 +5,7 @@ import React from "react";
 import Link from "next/link";
 import { Smartphone, Sparkles, Square } from "lucide-react";
 import { sendClientEventBeacon } from "../../../lib/analytics/client";
+import NightlifePreloader from "../../../components/ui/NightlifePreloader";
 
 const FORMAT_CHOICES = [
   { format: "square", label: "Post", cta: "Start Post", Icon: Square },
@@ -107,6 +108,13 @@ function querySuffixFromLocation() {
 export default function NightlifeStarterPage() {
   const [querySuffix, setQuerySuffix] = React.useState("");
   const [featuredSampleIndex, setFeaturedSampleIndex] = React.useState(0);
+  const [featuredHeroReady, setFeaturedHeroReady] = React.useState(false);
+  const [starterPreloading, setStarterPreloading] = React.useState(true);
+  const [starterMinimumElapsed, setStarterMinimumElapsed] = React.useState(false);
+  const [openingEditor, setOpeningEditor] = React.useState<{
+    label: string;
+    format: string;
+  } | null>(null);
 
   React.useEffect(() => {
     setQuerySuffix(querySuffixFromLocation());
@@ -119,11 +127,46 @@ export default function NightlifeStarterPage() {
     });
   }, []);
 
+  const finishStarterPreload = React.useCallback(() => {
+    setStarterPreloading(false);
+    try {
+      window.sessionStorage.setItem("nf:nightlifeStarterPreloaderSeen", "1");
+    } catch {}
+  }, []);
+
+  React.useEffect(() => {
+    try {
+      if (window.sessionStorage.getItem("nf:nightlifeStarterPreloaderSeen")) {
+        setStarterPreloading(false);
+        return;
+      }
+    } catch {}
+
+    const minTimer = window.setTimeout(() => setStarterMinimumElapsed(true), 700);
+    const fallbackTimer = window.setTimeout(finishStarterPreload, 2400);
+    return () => {
+      window.clearTimeout(minTimer);
+      window.clearTimeout(fallbackTimer);
+    };
+  }, [finishStarterPreload]);
+
+  React.useEffect(() => {
+    if (featuredHeroReady && starterMinimumElapsed) {
+      finishStarterPreload();
+    }
+  }, [featuredHeroReady, finishStarterPreload, starterMinimumElapsed]);
+
   React.useEffect(() => {
     const timer = window.setInterval(() => {
       setFeaturedSampleIndex((index) => (index + 1) % FEATURED_TEMPLATE.samples.length);
     }, 2600);
     return () => window.clearInterval(timer);
+  }, []);
+
+  React.useEffect(() => {
+    const clearOpeningState = () => setOpeningEditor(null);
+    window.addEventListener("pageshow", clearOpeningState);
+    return () => window.removeEventListener("pageshow", clearOpeningState);
   }, []);
 
   const trackTemplateClick = React.useCallback((templateId: string, label: string, format: string, featured = false) => {
@@ -138,11 +181,56 @@ export default function NightlifeStarterPage() {
     });
   }, []);
 
+  const handleEditorLinkClick = React.useCallback(
+    (
+      event: React.MouseEvent<HTMLAnchorElement>,
+      templateId: string,
+      label: string,
+      format: string,
+      featured = false
+    ) => {
+      trackTemplateClick(templateId, label, format, featured);
+
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+
+      setOpeningEditor({
+        label,
+        format: format === "story" ? "story" : "post",
+      });
+    },
+    [trackTemplateClick]
+  );
+
   const featuredPostHref = buildEditorHref(FEATURED_TEMPLATE.id, "square", querySuffix);
   const featuredStoryHref = buildEditorHref(FEATURED_TEMPLATE.id, "story", querySuffix);
 
   return (
     <main className="min-h-screen bg-[#070709] text-white">
+      {starterPreloading ? (
+        <NightlifePreloader
+          surface="overlay"
+          title="Loading flyer templates"
+          subtitle="Pulling in finished post and story starters."
+        />
+      ) : null}
+
+      {openingEditor ? (
+        <NightlifePreloader
+          surface="overlay"
+          title="Opening editor"
+          subtitle={`Loading ${openingEditor.label} as an editable ${openingEditor.format}.`}
+        />
+      ) : null}
+
       <section className="relative isolate overflow-hidden">
         <div className="absolute inset-0 -z-20 bg-[radial-gradient(circle_at_48%_12%,rgba(255,43,214,0.25),transparent_34%),radial-gradient(circle_at_78%_24%,rgba(49,194,246,0.18),transparent_36%),linear-gradient(180deg,#0b0711_0%,#070709_64%,#030304_100%)]" />
         <div className="absolute inset-x-0 top-0 -z-10 h-[420px] bg-[linear-gradient(180deg,rgba(255,255,255,0.06),transparent)]" />
@@ -184,7 +272,9 @@ export default function NightlifeStarterPage() {
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <Link
                   href={featuredPostHref}
-                  onClick={() => trackTemplateClick(FEATURED_TEMPLATE.id, FEATURED_TEMPLATE.label, "square", true)}
+                  onClick={(event) =>
+                    handleEditorLinkClick(event, FEATURED_TEMPLATE.id, FEATURED_TEMPLATE.label, "square", true)
+                  }
                   className="inline-flex min-h-14 items-center justify-center gap-2 bg-cyan-300 px-5 text-sm font-black uppercase tracking-[0.12em] text-black shadow-[0_0_42px_rgba(49,194,246,0.34)] transition hover:bg-white"
                 >
                   <Square className="h-4 w-4" />
@@ -192,7 +282,9 @@ export default function NightlifeStarterPage() {
                 </Link>
                 <Link
                   href={featuredStoryHref}
-                  onClick={() => trackTemplateClick(FEATURED_TEMPLATE.id, FEATURED_TEMPLATE.label, "story", true)}
+                  onClick={(event) =>
+                    handleEditorLinkClick(event, FEATURED_TEMPLATE.id, FEATURED_TEMPLATE.label, "story", true)
+                  }
                   className="inline-flex min-h-14 items-center justify-center gap-2 border border-cyan-200/35 bg-cyan-200/[0.07] px-5 text-sm font-black uppercase tracking-[0.12em] text-cyan-50 transition hover:border-white/45 hover:bg-white/[0.1]"
                 >
                   <Smartphone className="h-4 w-4" />
@@ -233,6 +325,8 @@ export default function NightlifeStarterPage() {
                         index === featuredSampleIndex ? "opacity-100" : "opacity-0"
                       }`}
                       loading="eager"
+                      onLoad={index === 0 ? () => setFeaturedHeroReady(true) : undefined}
+                      onError={index === 0 ? () => setFeaturedHeroReady(true) : undefined}
                       draggable={false}
                     />
                   ))}
@@ -263,8 +357,14 @@ export default function NightlifeStarterPage() {
                     <Link
                       key={`featured-${formatChoice}`}
                       href={buildEditorHref(FEATURED_TEMPLATE.id, formatChoice, querySuffix)}
-                      onClick={() =>
-                        trackTemplateClick(FEATURED_TEMPLATE.id, FEATURED_TEMPLATE.label, formatChoice, true)
+                      onClick={(event) =>
+                        handleEditorLinkClick(
+                          event,
+                          FEATURED_TEMPLATE.id,
+                          FEATURED_TEMPLATE.label,
+                          formatChoice,
+                          true
+                        )
                       }
                       className={`inline-flex min-h-11 items-center justify-center gap-2 px-4 text-[11px] font-black uppercase tracking-[0.14em] transition ${
                         formatChoice === "square"
@@ -323,7 +423,9 @@ export default function NightlifeStarterPage() {
                         <Link
                           key={`${template.id}-${formatChoice}`}
                           href={buildEditorHref(template.id, formatChoice, querySuffix)}
-                          onClick={() => trackTemplateClick(template.id, template.label, formatChoice)}
+                          onClick={(event) =>
+                            handleEditorLinkClick(event, template.id, template.label, formatChoice)
+                          }
                           className={`inline-flex min-h-9 items-center justify-center gap-1.5 px-2 text-[10px] font-black uppercase tracking-[0.12em] transition ${
                             formatChoice === "square"
                               ? "bg-cyan-200 text-black hover:bg-white"
