@@ -12043,6 +12043,16 @@ const STARTER_TEMPLATE_PREVIEWS: Record<string, string> = {
   'new-york': '/samples/optimized/new-york.webp',
 };
 
+function toOptimizedTemplatePreview(preview: string | undefined) {
+  const match = String(preview || '').match(/^\/templates\/([^/?#]+)\.(?:jpe?g|png)([?#].*)?$/i);
+  return match ? `/template-previews/900/${match[1]}.webp${match[2] || ''}` : preview;
+}
+
+RAW_TEMPLATE_GALLERY.forEach((template) => {
+  const preview = toOptimizedTemplatePreview(template.preview);
+  if (preview) template.preview = preview;
+});
+
 Object.entries(STARTER_TEMPLATE_PREVIEWS).forEach(([id, preview]) => {
   const template = RAW_TEMPLATE_GALLERY.find((item) => item.id === id);
   if (template) {

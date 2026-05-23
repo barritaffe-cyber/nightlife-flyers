@@ -98,6 +98,40 @@ const GUEST_PICKER_TEMPLATE_IDS = [
   "disco_mirrorball",
 ] as const;
 
+const MOBILE_UPLOAD_MAX_IMAGE = 1400;
+
+function buildTemplatePreviewSrcSet(preview: string | null | undefined) {
+  const src = typeof preview === "string" ? preview : "";
+  if (!src.startsWith("/template-previews/900/")) return undefined;
+  return `${src.replace("/template-previews/900/", "/template-previews/720/")} 720w, ${src} 900w`;
+}
+
+async function fileToDownscaledDataUrl(file: File, maxDim = MOBILE_UPLOAD_MAX_IMAGE) {
+  const originalUrl = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const node = new Image();
+      node.onload = () => resolve(node);
+      node.onerror = () => reject(new Error("Could not read the uploaded background."));
+      node.src = originalUrl;
+    });
+    const max = Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height);
+    if (!max) throw new Error("Could not read the uploaded background.");
+    const scale = Math.min(1, maxDim / max);
+    const width = Math.max(1, Math.round((img.naturalWidth || img.width) * scale));
+    const height = Math.max(1, Math.round((img.naturalHeight || img.height) * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Could not process the uploaded background.");
+    ctx.drawImage(img, 0, 0, width, height);
+    return canvas.toDataURL("image/jpeg", 0.86);
+  } finally {
+    URL.revokeObjectURL(originalUrl);
+  }
+}
+
 function hasAnyText(payload: StartupBuildPayload["currentText"]) {
   return Object.values(payload).some((value) => String(value || "").trim().length > 0);
 }
@@ -249,12 +283,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
   const handleDjBackgroundUpload = async (file?: File | null) => {
     if (!file) return;
     setLocalError(null);
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ""));
-      reader.onerror = () => reject(new Error("Could not read the uploaded background."));
-      reader.readAsDataURL(file);
-    }).catch((err) => {
+    const dataUrl = await fileToDownscaledDataUrl(file).catch((err) => {
       setLocalError(err instanceof Error ? err.message : "Could not read the uploaded background.");
       return null;
     });
@@ -343,8 +372,12 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
             src={template.preview}
             alt={template.label}
             className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+            width={450}
+            height={334}
             loading={index < 2 ? "eager" : "lazy"}
             decoding="async"
+            srcSet={buildTemplatePreviewSrcSet(template.preview)}
+            sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 220px"
             draggable={false}
           />
         ) : (
@@ -382,8 +415,12 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
             src={template.preview}
             alt={template.label}
             className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.025]"
+            width={360}
+            height={305}
             loading="lazy"
             decoding="async"
+            srcSet={buildTemplatePreviewSrcSet(template.preview)}
+            sizes="(max-width: 640px) 45vw, 220px"
             draggable={false}
           />
         ) : (
@@ -436,9 +473,13 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
             src={template.preview}
             alt={template.label}
             className="h-full w-full object-cover"
+            width={680}
+            height={607}
             draggable={false}
             loading="eager"
             decoding="async"
+            srcSet={buildTemplatePreviewSrcSet(template.preview)}
+            sizes="(max-width: 720px) 92vw, 680px"
             animate={prefersReducedMotion ? undefined : { scale: [1.01, 1.035, 1.01] }}
             transition={
               prefersReducedMotion
@@ -656,6 +697,11 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                         src={background.src}
                         alt={background.name}
                         className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+                        width={360}
+                        height={450}
+                        loading="lazy"
+                        decoding="async"
+                        draggable={false}
                       />
                     </div>
                     <div className="px-3 py-2">
@@ -917,6 +963,10 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                           src={backgroundPreview}
                           alt="Background preview"
                           className="max-h-[280px] w-full object-cover"
+                          width={420}
+                          height={280}
+                          loading="lazy"
+                          decoding="async"
                         />
                       ) : (
                         <div>

@@ -87,6 +87,8 @@ const TEMPLATE_CARDS = [
   },
 ] as const;
 
+type StarterTemplateCard = (typeof TEMPLATE_CARDS)[number];
+
 function buildEditorHref(templateId: string, format: string, querySuffix: string) {
   return `/?studio=1&template=${encodeURIComponent(templateId)}&format=${encodeURIComponent(
     format
@@ -103,6 +105,111 @@ function querySuffixFromLocation() {
   });
   const text = params.toString();
   return text ? `&${text}` : "";
+}
+
+function DeferredTemplateCard({
+  template,
+  querySuffix,
+  onEditorLinkClick,
+}: {
+  template: StarterTemplateCard;
+  querySuffix: string;
+  onEditorLinkClick: (
+    event: React.MouseEvent<HTMLAnchorElement>,
+    templateId: string,
+    label: string,
+    format: string
+  ) => void;
+}) {
+  const ref = React.useRef<HTMLElement | null>(null);
+  const [visible, setVisible] = React.useState(false);
+
+  React.useEffect(() => {
+    if (visible) return;
+    const node = ref.current;
+    if (!node) return;
+    if (!("IntersectionObserver" in window)) {
+      setVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "420px 0px" }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [visible]);
+
+  return (
+    <article
+      ref={ref}
+      className="group min-h-[330px] overflow-hidden border border-white/10 bg-white/[0.035] transition hover:border-cyan-200/40 hover:bg-white/[0.06]"
+    >
+      {visible ? (
+        <>
+          <div className="relative aspect-[1.02] overflow-hidden bg-black">
+            <img
+              src={template.preview}
+              alt={`${template.label} rendered flyer preview`}
+              className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+              width={720}
+              height={720}
+              loading="lazy"
+              decoding="async"
+              sizes="(max-width: 767px) 50vw, 33vw"
+              draggable={false}
+            />
+            <div className="absolute left-2 top-2 border border-cyan-100/30 bg-black/55 px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-cyan-100 backdrop-blur">
+              Post + Story
+            </div>
+          </div>
+          <div className="min-h-[146px] p-3">
+            <div className="text-sm font-black leading-tight text-white">{template.label}</div>
+            <div className="mt-1 line-clamp-2 text-[11px] leading-4 text-white/58">
+              {template.description}
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {FORMAT_CHOICES.map(({ format: formatChoice, label, Icon }) => (
+                <Link
+                  key={`${template.id}-${formatChoice}`}
+                  href={buildEditorHref(template.id, formatChoice, querySuffix)}
+                  onClick={(event) =>
+                    onEditorLinkClick(event, template.id, template.label, formatChoice)
+                  }
+                  className={`inline-flex min-h-9 items-center justify-center gap-1.5 px-2 text-[10px] font-black uppercase tracking-[0.12em] transition ${
+                    formatChoice === "square"
+                      ? "bg-cyan-200 text-black hover:bg-white"
+                      : "border border-white/15 bg-white/[0.04] text-white hover:border-cyan-100/40 hover:bg-white/[0.08]"
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="aspect-[1.02] bg-white/[0.04]" />
+          <div className="min-h-[146px] p-3">
+            <div className="h-4 w-2/3 bg-white/[0.06]" />
+            <div className="mt-3 h-3 w-full bg-white/[0.045]" />
+            <div className="mt-2 h-3 w-4/5 bg-white/[0.045]" />
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="h-9 bg-white/[0.05]" />
+              <div className="h-9 bg-white/[0.05]" />
+            </div>
+          </div>
+        </>
+      )}
+    </article>
+  );
 }
 
 export default function NightlifeStarterPage() {
@@ -399,55 +506,14 @@ export default function NightlifeStarterPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-            {TEMPLATE_CARDS.map((template) => {
-              return (
-                <article
-                  key={template.id}
-                  className="group overflow-hidden border border-white/10 bg-white/[0.035] transition hover:border-cyan-200/40 hover:bg-white/[0.06]"
-                >
-                  <div className="relative aspect-[1.02] overflow-hidden bg-black">
-                    <img
-                      src={template.preview}
-                      alt={`${template.label} rendered flyer preview`}
-                      className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-                      width={720}
-                      height={720}
-                      loading="lazy"
-                      decoding="async"
-                      draggable={false}
-                    />
-                    <div className="absolute left-2 top-2 border border-cyan-100/30 bg-black/55 px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-cyan-100 backdrop-blur">
-                      Post + Story
-                    </div>
-                  </div>
-                  <div className="min-h-[146px] p-3">
-                    <div className="text-sm font-black leading-tight text-white">{template.label}</div>
-                    <div className="mt-1 line-clamp-2 text-[11px] leading-4 text-white/58">
-                      {template.description}
-                    </div>
-                    <div className="mt-3 grid grid-cols-2 gap-2">
-                      {FORMAT_CHOICES.map(({ format: formatChoice, label, Icon }) => (
-                        <Link
-                          key={`${template.id}-${formatChoice}`}
-                          href={buildEditorHref(template.id, formatChoice, querySuffix)}
-                          onClick={(event) =>
-                            handleEditorLinkClick(event, template.id, template.label, formatChoice)
-                          }
-                          className={`inline-flex min-h-9 items-center justify-center gap-1.5 px-2 text-[10px] font-black uppercase tracking-[0.12em] transition ${
-                            formatChoice === "square"
-                              ? "bg-cyan-200 text-black hover:bg-white"
-                              : "border border-white/15 bg-white/[0.04] text-white hover:border-cyan-100/40 hover:bg-white/[0.08]"
-                          }`}
-                        >
-                          <Icon className="h-3.5 w-3.5" />
-                          {label}
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
+            {TEMPLATE_CARDS.map((template) => (
+              <DeferredTemplateCard
+                key={template.id}
+                template={template}
+                querySuffix={querySuffix}
+                onEditorLinkClick={handleEditorLinkClick}
+              />
+            ))}
           </div>
         </div>
       </section>

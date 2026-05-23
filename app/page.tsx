@@ -596,6 +596,19 @@ async function blobToDataURL(b: Blob): Promise<string> {
   });
 }
 
+const MOBILE_MAX_IMAGE = 1400;
+const DESKTOP_MAX_IMAGE = 2200;
+
+type DownscaleOutputType = "image/png" | "image/jpeg" | "image/webp";
+
+function getRuntimeMaxImageDimension() {
+  if (typeof window === "undefined") return DESKTOP_MAX_IMAGE;
+  const ua = typeof navigator === "undefined" ? "" : navigator.userAgent;
+  const isMobileRuntime =
+    window.innerWidth < 768 || /iPhone|iPad|Android/i.test(ua);
+  return isMobileRuntime ? MOBILE_MAX_IMAGE : DESKTOP_MAX_IMAGE;
+}
+
 /** Ensure the given families are actually loaded before we rasterize. */
 async function waitForFamilies(
   families: (string | undefined)[],
@@ -1808,6 +1821,12 @@ function canonicalizeTemplateTags(tags: string[]): string[] {
   return Array.from(out);
 }
 
+function buildTemplatePreviewSrcSet(preview: string | null | undefined) {
+  const src = typeof preview === "string" ? preview : "";
+  if (!src.startsWith("/template-previews/900/")) return undefined;
+  return `${src.replace("/template-previews/900/", "/template-previews/720/")} 720w, ${src} 900w`;
+}
+
 /* ===== TEMPLATE GALLERY (UPDATED) ===== */
 /* ===== TEMPLATE GALLERY (LOCAL, SELF-CONTAINED) ===== */
 const TemplateGalleryPanel = React.memo(({
@@ -1906,6 +1925,12 @@ const TemplateGalleryPanel = React.memo(({
                 src={t.preview}
                 alt={t.label}
                 className="w-full h-[120px] object-cover block"
+                width={360}
+                height={360}
+                loading="lazy"
+                decoding="async"
+                srcSet={buildTemplatePreviewSrcSet(t.preview)}
+                sizes="(max-width: 767px) 45vw, 180px"
                 draggable={false}
               />
               <div className="absolute left-2 top-2 flex gap-1 flex-wrap">
@@ -13208,7 +13233,11 @@ export default function Page() {
       }
     };
 
-    const rawUrl = await toBase64(file);
+    const rawUrl = await downscaleDataUrlIfNeeded(
+      await toBase64(file),
+      undefined,
+      type === "bg" ? "image/jpeg" : undefined
+    );
 
     if (type === 'bg') {
       setBlendBackground(rawUrl);
@@ -13218,7 +13247,7 @@ export default function Page() {
       setIsCuttingOut(true);
       try {
         const cutoutBlobUrl = await removeBackgroundLocal(rawUrl);
-        const cutoutBase64 = await blobToBase64(cutoutBlobUrl);
+        const cutoutBase64 = await downscaleDataUrlIfNeeded(await blobToBase64(cutoutBlobUrl));
         const usableCutout = await hasUsableTransparency(cutoutBase64);
         if (!usableCutout) {
           throw new Error("Background removal did not produce a transparent cutout.");
@@ -14557,10 +14586,9 @@ const [rmFeather, setRmFeather]   = useState<number>(2);
 const [enablePortraitOverlay, setEnablePortraitOverlay] = useState<boolean>(true);
 
 const downscaleDataUrlIfNeeded = React.useCallback(
-  (dataUrl: string, maxDim = 1800) =>
+  (dataUrl: string, maxDim = getRuntimeMaxImageDimension(), outputType?: DownscaleOutputType) =>
     new Promise<string>((resolve) => {
       if (typeof window === "undefined") return resolve(dataUrl);
-      if (window.innerWidth >= 1024) return resolve(dataUrl);
       if (!dataUrl.startsWith("data:image/")) return resolve(dataUrl);
       const img = new Image();
       img.onload = () => {
@@ -14575,7 +14603,12 @@ const downscaleDataUrlIfNeeded = React.useCallback(
         const ctx = canvas.getContext("2d");
         if (!ctx) return resolve(dataUrl);
         ctx.drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL("image/png", 0.92));
+        const mime =
+          outputType ||
+          (dataUrl.startsWith("data:image/png") || dataUrl.startsWith("data:image/webp")
+            ? "image/png"
+            : "image/jpeg");
+        resolve(canvas.toDataURL(mime, mime === "image/png" ? undefined : 0.86));
       };
       img.onerror = () => resolve(dataUrl);
       img.src = dataUrl;
@@ -14589,7 +14622,7 @@ const setPortraitUrlSafe = React.useCallback(
       setPortraitUrl(null);
       return;
     }
-    const next = await downscaleDataUrlIfNeeded(src, 1800);
+    const next = await downscaleDataUrlIfNeeded(src);
     setPortraitUrl(next);
   },
   [downscaleDataUrlIfNeeded]
@@ -14853,16 +14886,10 @@ async function addLogosFromFiles(files: FileList) {
   const arr = Array.from(files);
   if (arr.length === 0) return;
 
-  // Read all as DataURL
-  const reads = arr.map(f => new Promise<string>((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result));
-    r.onerror = reject;
-    r.readAsDataURL(f);
-  }));
-
   try {
-    const urls = await Promise.all(reads);
+    const urls = await Promise.all(
+      arr.map(async (file) => downscaleDataUrlIfNeeded(await fileToDataURL(file)))
+    );
     // Set first as active logo
     setLogoUrl(urls[0] || null);
     // Add all to library
@@ -15682,7 +15709,7 @@ const triggerUpload = () => {
   }
   bgRightRef.current?.click();
 };
-const onOnboardUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+const onOnboardUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
   if (isStarterPlan) {
     alert("Starter plan disables uploads. Upgrade or use a pass to unlock background uploads.");
     e.currentTarget.value = '';
@@ -15690,9 +15717,11 @@ const onOnboardUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
   }
   const f = e.target.files?.[0];
   if (!f) return;
-  const r = new FileReader();
-  r.onload = () => { setBgUploadUrl(String(r.result)); setBgUrl(null); setFormat('square'); markOnboarded(); };
-  r.readAsDataURL(f);
+  const dataUrl = await downscaleDataUrlIfNeeded(await blobToDataURL(f), undefined, "image/jpeg");
+  setBgUploadUrl(dataUrl);
+  setBgUrl(null);
+  setFormat('square');
+  markOnboarded();
   e.currentTarget.value = '';
 };
 
@@ -15704,7 +15733,7 @@ const bgRightRef = useRef<HTMLInputElement>(null);
 const openBgPicker = () => bgRightRef.current?.click();
 
 // Handle a file chosen from the right panel
-const onRightBgFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+const onRightBgFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
   if (isStarterPlan) {
     alert("Starter plan disables uploads. Upgrade or use a pass to unlock background uploads.");
     e.currentTarget.value = '';
@@ -15712,18 +15741,15 @@ const onRightBgFile = (e: React.ChangeEvent<HTMLInputElement>) => {
   }
   const f = e.target.files?.[0];
   if (!f) return;
-  const r = new FileReader();
-  r.onload = () => {
-    setBgUploadUrl(String(r.result));
-    setBgUrl(null);         // prefer the upload
-    setFormat('square');    // safe default canvas size
-    setBgFitMode(false);
-    setBgScale(1.3);        // slight “fill” zoom
-    setBgPosX(50);          // center
-    setBgPosY(50);          // center
-    transitionCueRef.current?.("background");
-  };
-  r.readAsDataURL(f);
+  const dataUrl = await downscaleDataUrlIfNeeded(await blobToDataURL(f), undefined, "image/jpeg");
+  setBgUploadUrl(dataUrl);
+  setBgUrl(null);         // prefer the upload
+  setFormat('square');    // safe default canvas size
+  setBgFitMode(false);
+  setBgScale(1.3);        // slight “fill” zoom
+  setBgPosX(50);          // center
+  setBgPosY(50);          // center
+  transitionCueRef.current?.("background");
   e.currentTarget.value = ''; // allow re-selecting same file later
 };
 
@@ -15861,8 +15887,8 @@ function onLogoSlotFile(e: React.ChangeEvent<HTMLInputElement>) {
   }
 
   const reader = new FileReader();
-  reader.onload = () => {
-    const dataUrl = String(reader.result || '');
+  reader.onload = async () => {
+    const dataUrl = await downscaleDataUrlIfNeeded(String(reader.result || ''));
     const applyLogo = () => {
       setLogoSlots(prev => {
         const next = [...prev];
@@ -16368,7 +16394,7 @@ async function onLogoFile(e: React.ChangeEvent<HTMLInputElement>) {
   if (!file || idx == null) return;
 
   try {
-    const dataUrl = await IS_fileToDataURL(file); // reuse your existing fileToDataURL
+    const dataUrl = await downscaleDataUrlIfNeeded(await IS_fileToDataURL(file)); // reuse your existing fileToDataURL
     if (isStarterPlan) {
       const consumed = await consumeStarterTrialBenefit("upload");
       if (!consumed) return;
@@ -16401,14 +16427,14 @@ async function onPortraitSlotFile(e: React.ChangeEvent<HTMLInputElement>) {
     setRemovingBg(true);
 
     // 1. Convert to base64 (reuse existing helper)
-    const originalUrl = await blobToDataURL(file);
+    const originalUrl = await downscaleDataUrlIfNeeded(await blobToDataURL(file));
 
     // 2. Process locally
     // Note: ensure removeBackgroundLocal is imported/available
     const cutDataUrl = await removeBackgroundLocal(originalUrl, {
       cleanup: EXTRACT_SUBJECT_CLEANUP,
     });
-    const scaledCut = await downscaleDataUrlIfNeeded(cutDataUrl, 1800);
+    const scaledCut = await downscaleDataUrlIfNeeded(cutDataUrl);
     if (isStarterPlan) {
       const consumed = await consumeStarterTrialBenefit("upload");
       if (!consumed) return;
@@ -21318,15 +21344,20 @@ const [genCandidates, setGenCandidates] = useState<string[]>([]); // b64/url of 
 
 const handleAutoLayoutReferenceUpload = React.useCallback((file: File) => {
   const reader = new FileReader();
-  reader.onload = () => {
-    setAutoLayoutReferenceUrl(String(reader.result || ""));
+  reader.onload = async () => {
+    const nextUrl = await downscaleDataUrlIfNeeded(
+      String(reader.result || ""),
+      undefined,
+      "image/jpeg"
+    );
+    setAutoLayoutReferenceUrl(nextUrl);
     setAutoLayoutError(null);
   };
   reader.onerror = () => {
     setAutoLayoutError("Could not read the uploaded background.");
   };
   reader.readAsDataURL(file);
-}, []);
+}, [downscaleDataUrlIfNeeded]);
 
 const clearAutoLayoutReference = React.useCallback(() => {
   setAutoLayoutReferenceUrl(null);
@@ -22961,11 +22992,11 @@ const prepareReplacementSubject = React.useCallback(
     }
     try {
       setReplaceSubjectBusy(true);
-      const sourceUrl = await blobToDataURL(file);
+      const sourceUrl = await downscaleDataUrlIfNeeded(await blobToDataURL(file));
       const cutDataUrl = await removeBackgroundLocal(sourceUrl, {
         cleanup: EXTRACT_SUBJECT_CLEANUP,
       });
-      const cutoutUrl = await downscaleDataUrlIfNeeded(cutDataUrl, 1800);
+      const cutoutUrl = await downscaleDataUrlIfNeeded(cutDataUrl);
       const direction = await analyzeSubjectCreativeDirection(cutoutUrl);
       setSubjectPaletteDecision({
         portraitId: selectedPortrait.id,
@@ -23272,6 +23303,7 @@ const generateSubjectForBackground = async () => {
       throw new Error("OpenAI returned an empty subject image.");
     }
 
+    dataUrl = await downscaleDataUrlIfNeeded(dataUrl);
     const originalLen = dataUrl.length;
     let cutout = dataUrl;
     try {
@@ -23301,7 +23333,7 @@ const generateSubjectForBackground = async () => {
       cutout = dataUrl;
     }
 
-    const finalCutout = await downscaleDataUrlIfNeeded(cutout, 1800);
+    const finalCutout = await downscaleDataUrlIfNeeded(cutout);
     // If removal shrank the payload below 70% of original, keep the original to avoid amputations
     const tooSmall =
       finalCutout.startsWith("data:image/") &&
@@ -23309,7 +23341,7 @@ const generateSubjectForBackground = async () => {
 
     if (!isValidPortraitSource(finalCutout) || tooSmall) {
       // fallback to original (no removal) to preserve full subject
-      const fallback = await downscaleDataUrlIfNeeded(dataUrl, 1800);
+      const fallback = await downscaleDataUrlIfNeeded(dataUrl);
       if (!isValidPortraitSource(fallback)) {
         throw new Error("Subject render returned an empty image.");
       }
@@ -24573,21 +24605,22 @@ const onUploadPortraitAndRemoveBg = async (files: FileList | null) => {
     setRemovingBg(true);
 
     // 1. Convert to base64
-    const originalUrl = await blobToDataURL(file);
+    const originalUrl = await downscaleDataUrlIfNeeded(await blobToDataURL(file));
     
     // Show instant preview while processing
     setPortraitUrl(originalUrl);
 
     // 2. Process locally
     const cutDataUrl = await removeBackgroundLocal(originalUrl);
+    const scaledCutout = await downscaleDataUrlIfNeeded(cutDataUrl);
     if (isStarterPlan) {
       const consumed = await consumeStarterTrialBenefit("upload");
       if (!consumed) return;
     }
 
     // 3. Update state & Library
-    setPortraitUrl(cutDataUrl);
-    addToPortraitLibrary(cutDataUrl);
+    setPortraitUrl(scaledCutout);
+    addToPortraitLibrary(scaledCutout);
 
   } catch (err: any) {
 
@@ -25493,7 +25526,7 @@ async function IS_onIconSlotFile(e: React.ChangeEvent<HTMLInputElement>) {
   if (!file || idx == null) return;
 
   try {
-    const dataUrl = await IS_fileToDataURL(file);
+    const dataUrl = await downscaleDataUrlIfNeeded(await IS_fileToDataURL(file));
     IS_persistIconSlots(
       IS_iconSlots.map((s, i) => (i === idx ? dataUrl : s))
     );
@@ -30202,14 +30235,15 @@ const requestAutoLayout = React.useCallback(
   [applyGenerationQuota]
 );
 
-const readFileAsDataUrl = React.useCallback((file: File) => {
-  return new Promise<string>((resolve, reject) => {
+const readFileAsDataUrl = React.useCallback(async (file: File) => {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result || ""));
     reader.onerror = () => reject(new Error("Could not read the uploaded background."));
     reader.readAsDataURL(file);
   });
-}, []);
+  return downscaleDataUrlIfNeeded(dataUrl, undefined, "image/jpeg");
+}, [downscaleDataUrlIfNeeded]);
 
 const [startupBuildError, setStartupBuildError] = React.useState<string | null>(null);
 
@@ -39613,9 +39647,10 @@ style={{ top: STICKY_TOP }}
                     const file = e.target.files?.[0];
                     if (!file) return;
                     const r = new FileReader();
-                    r.onload = () => {
+                    r.onload = async () => {
+                      const logoUrl = await downscaleDataUrlIfNeeded(String(r.result || ""));
                       const next = [...logoSlots];
-                      next[i] = String(r.result);
+                      next[i] = logoUrl;
 
                       setLogoSlots(next);
                       try {
@@ -45573,13 +45608,14 @@ style={{ top: STICKY_TOP }}
                     }
                     try {
                       setRemovingBg(true);
-                      const originalUrl = await blobToDataURL(file);
+                      const originalUrl = await downscaleDataUrlIfNeeded(await blobToDataURL(file));
                       const cutDataUrl = await removeBackgroundLocal(originalUrl, {
                         cleanup: EXTRACT_SUBJECT_CLEANUP,
                       });
+                      const scaledCutout = await downscaleDataUrlIfNeeded(cutDataUrl);
                       setPortraitSlots((prev) => {
                         const next = [...prev];
-                        next[i] = cutDataUrl;
+                        next[i] = scaledCutout;
                         try {
                           localStorage.setItem("nf:portraitSlots", JSON.stringify(next));
                         } catch {}
@@ -46336,7 +46372,14 @@ style={{ top: STICKY_TOP }}
                       const f = e.target.files?.[0];
                       if (!f) return;
                       const r = new FileReader();
-                      r.onload = () => setCinematicRefUrl(String(r.result));
+                      r.onload = async () => {
+                        const nextUrl = await downscaleDataUrlIfNeeded(
+                          String(r.result || ""),
+                          undefined,
+                          "image/jpeg"
+                        );
+                        setCinematicRefUrl(nextUrl);
+                      };
                       r.readAsDataURL(f);
                     }}
                   />
