@@ -3848,6 +3848,7 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
   onIconResize?: (id: string, size: number) => void;
   onRecordMove?: (kind: any, x: number, y: number, id?: string) => void;
   isMobileView?: boolean;
+  renderGlassHeadlineFx?: boolean;
   onClearIconSelection?: () => void;
   
   selIconId?: string | null;
@@ -3931,6 +3932,7 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
     onEmojiMove,
     onAlignmentPositionPreview,
     isMobileView,
+    renderGlassHeadlineFx = true,
     mobileDragEnabled = false,
     onMobileDragEnd,
     onOpenTextFloat,
@@ -5933,7 +5935,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	    const sliceActive = false;
 	    const mainSliceShadow = "none";
 	    const rushActive = !!headRushEnabled && !glitchActive && !kineticActive && !dashStrokeActive && !doodleStackActive && !goldBlockActive && !quantumActive && !verticalStretchActive && !pure3dActive;
-	    const glassActive = !!headGlassEnabled && !glitchActive && !kineticActive && !dashStrokeActive && !doodleStackActive && !goldBlockActive && !cyberEmbossActive && !quantumActive && !verticalStretchActive && !pure3dActive && !rushActive && !sliceActive;
+	    const glassActive = !!renderGlassHeadlineFx && !!headGlassEnabled && !glitchActive && !kineticActive && !dashStrokeActive && !doodleStackActive && !goldBlockActive && !cyberEmbossActive && !quantumActive && !verticalStretchActive && !pure3dActive && !rushActive && !sliceActive;
 	    const rawGlassLineHeight = Number(lineHeight);
 	    const glassSafeLineHeight = glassActive
 	      ? Math.max(
@@ -18916,10 +18918,20 @@ const [bgBlur, setBgBlur] = useState(0);
     ].join(' ');
   }, [exp, contrast, saturation, warmth, tint, gamma, vibrance]);
 
+  const mobileMasterFilter = React.useMemo(() => {
+    const film = Math.max(0, Math.min(1, Number.isFinite(filmGrade) ? filmGrade : 0));
+    return [
+      masterFilter,
+      `contrast(${(1 + film * 0.1).toFixed(3)})`,
+      `saturate(${(1 - film * 0.06).toFixed(3)})`,
+      `brightness(${(1 - film * 0.025).toFixed(3)})`,
+    ].join(" ");
+  }, [filmGrade, masterFilter]);
+
   const masterFilterCss = React.useMemo(() => {
     const base = masterFilter;
-    return isMobileView ? base : `url(#master-grade) ${base}`;
-  }, [isMobileView, masterFilter]);
+    return isMobileView ? mobileMasterFilter : `url(#master-grade) ${base}`;
+  }, [isMobileView, masterFilter, mobileMasterFilter]);
 
   // film grain as an overlay (works with html-to-image)
   const grainStyle: React.CSSProperties = React.useMemo(() => ({
@@ -21136,7 +21148,6 @@ const mobileCompositeStressMode =
   !hideUiForExport &&
   (headGlitchEnabled || headGlassEnabled || activeCanvasFlareCount > 0) &&
   (activeCanvasObjectCount >= 2 || !!bgUploadUrl || !!bgUrl);
-const canvasMasterFilterCss = mobileCompositeStressMode ? "none" : masterFilterCss;
 
 
 
@@ -31437,6 +31448,8 @@ React.useEffect(() => {
 /* ===== AUTOSAVE: SMART SAVE/LOAD (BEGIN) ===== */
 const [hasSavedDesign, setHasSavedDesign] = React.useState(false);
 const [uiMode, setUiMode] = React.useState<"design" | "finish">("design");
+const mobileRenderFxPreviewEnabled = hideUiForExport || !isMobileView || uiMode === "finish";
+const canvasMasterFilterCss = mobileRenderFxPreviewEnabled ? masterFilterCss : "none";
 customizeProductIntentPropertiesRef.current = {
   format,
   mobile: isMobileView,
@@ -42612,6 +42625,7 @@ style={{ top: STICKY_TOP }}
             onClearIconSelection={handleClearIconSelection}
             onBgScale={setBgScale}
             isMobileView={isMobileView}
+            renderGlassHeadlineFx={mobileRenderFxPreviewEnabled}
             mobileDragEnabled={mobileDragEnabled}
             onMobileDragEnd={handleMobileDragEnd}
             onOpenTextFloat={() => {
