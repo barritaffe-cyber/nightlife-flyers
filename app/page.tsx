@@ -6492,7 +6492,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	    const neonPulseSvgHeight =
 	      headDisplayPx + Math.max(0, neonPulseLines.length - 1) * neonPulseLineAdvance + neonPulsePad * 2;
 	    const neonPulseFirstLineY = neonPulsePad + headDisplayPx * 0.78;
-	    const neonPulseGlowActive = glitchGlow > 0.015;
+	    const neonPulsePerfMode = !!isMobileView || !!isLiveDragging;
+	    const neonPulseGlowActive = glitchGlow > 0.015 && !neonPulsePerfMode;
 	    const neonPulseWideStroke = Math.max(1.8, 2.2 + glitchIntensity * 3 + glitchGlow * 5);
 	    const neonPulseRimStroke = Math.max(2.2, 2.4 + glitchIntensity * 1.9 + glitchGlow * 1.2);
 	    const neonPulseTubeStroke = Math.max(1.45, 1.65 + glitchIntensity * 1.85);
@@ -9641,26 +9642,59 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
                   <stop offset="72%" stopColor={neonPulseEndColor} />
                   <stop offset="100%" stopColor={neonPulseEndColor} />
                 </linearGradient>
-                <filter
-                  id={neonPulseGlowFilterId}
-                  x="-40%"
-                  y="-60%"
-                  width="180%"
-                  height="220%"
-                  colorInterpolationFilters="sRGB"
-                >
-                  <feGaussianBlur stdDeviation={(0.18 + glitchGlow * 0.8).toFixed(2)} result="glow1" />
-                  <feGaussianBlur stdDeviation={(0.9 + glitchGlow * 2.8).toFixed(2)} result="glow2" />
-                  <feGaussianBlur stdDeviation={(2.2 + glitchGlow * 6.8).toFixed(2)} result="glow3" />
-                  <feMerge>
-                    <feMergeNode in="glow3" />
-                    <feMergeNode in="glow2" />
-                    <feMergeNode in="glow1" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
+                {!neonPulsePerfMode && (
+                  <filter
+                    id={neonPulseGlowFilterId}
+                    x="-40%"
+                    y="-60%"
+                    width="180%"
+                    height="220%"
+                    colorInterpolationFilters="sRGB"
+                  >
+                    <feGaussianBlur stdDeviation={(0.18 + glitchGlow * 0.8).toFixed(2)} result="glow1" />
+                    <feGaussianBlur stdDeviation={(0.9 + glitchGlow * 2.8).toFixed(2)} result="glow2" />
+                    <feGaussianBlur stdDeviation={(2.2 + glitchGlow * 6.8).toFixed(2)} result="glow3" />
+                    <feMerge>
+                      <feMergeNode in="glow3" />
+                      <feMergeNode in="glow2" />
+                      <feMergeNode in="glow1" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                )}
               </defs>
-              {[
+              {(neonPulsePerfMode
+                ? [
+                    {
+                      key: "rim",
+                      stroke: "rgba(1,10,24,0.72)",
+                      strokeWidth: neonPulseRimStroke,
+                      opacity: 0.52,
+                      filter: "none",
+                    },
+                    {
+                      key: "tube",
+                      stroke: `url(#${neonPulseGradientId})`,
+                      strokeWidth: neonPulseTubeStroke,
+                      opacity: 0.95,
+                      filter: "none",
+                    },
+                    {
+                      key: "core",
+                      stroke: neonPulseCoreColor,
+                      strokeWidth: neonPulseCoreStroke,
+                      opacity: 0.78,
+                      filter: "none",
+                    },
+                    {
+                      key: "edge",
+                      stroke: "rgba(255,255,255,0.82)",
+                      strokeWidth: neonPulseEdgeStroke,
+                      opacity: 0.38 + glitchIntensity * 0.1,
+                      filter: "none",
+                    },
+                  ]
+                : [
                 {
                   key: "wide",
                   stroke: `url(#${neonPulseGradientId})`,
@@ -9698,7 +9732,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
                   opacity: 0.34 + glitchIntensity * 0.1,
                   filter: "none",
                 },
-              ].map((layer) => (
+              ]).map((layer) => (
                 <text
                   key={`headline-neon-pulse-${layer.key}`}
                   x={neonPulseSvgX}
