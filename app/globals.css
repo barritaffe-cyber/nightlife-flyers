@@ -695,6 +695,13 @@ html, body {
   font-display: swap;
 }
 @font-face {
+  font-family: "TR2N";
+  src: url("/fonts/Tr2n.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
   font-family: "DS-Digital";
   src: url("/fonts/DS-DIGIB.TTF") format("truetype");
   font-weight: 100 900;
