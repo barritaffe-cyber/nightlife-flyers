@@ -1520,10 +1520,10 @@ const STUDIO_GRAPHIC_STICKERS = [
 
 const FLARE_LIBRARY = [
   { id: "flare01", src: "/flares/flare01.png", name: "Warm Flare" },
-  { id: "flare02", src: "/flares/flare02.png", name: "Bright Flare" },
-  { id: "flareBlue01", src: "/flares/flareBlue01.png", name: "Blue Streak" },
+  { id: "flare02", src: "/flares/optimized/flare02.png", name: "Bright Flare" },
+  { id: "flareBlue01", src: "/flares/optimized/flareBlue01.png", name: "Blue Streak" },
   { id: "flareBlue03", src: "/flares/flareBlue03.png", name: "Blue Glow" },
-  { id: "sun01", src: "/flares/sun01.png", name: "Warm Sun" },
+  { id: "sun01", src: "/flares/optimized/sun01.png", name: "Warm Sun" },
   { id: "sun02", src: "/flares/sun02.png", name: "Cool Sun" },
   { id: "sun03", src: "/flares/sun03.png", name: "Red Sun" },
   { id: "sun04", src: "/flares/sun04.png", name: "Green Sun" },
@@ -1531,13 +1531,13 @@ const FLARE_LIBRARY = [
   { id: "cloud01", src: "/clouds/cloud01.png", name: "Cloud 01", tintMode: "colorize" },
   { id: "cloud02", src: "/clouds/cloud02.png", name: "Cloud 02", tintMode: "colorize" },
   { id: "cloud03", src: "/clouds/cloud03.png", name: "Cloud 03", tintMode: "colorize" },
-  { id: "cloud04", src: "/clouds/cloud04.png", name: "Cloud 04", tintMode: "colorize" },
+  { id: "cloud04", src: "/clouds/optimized/cloud04.png", name: "Cloud 04", tintMode: "colorize" },
 ] as const;
 
 const STUDIO_FLARE_LIBRARY = [
-  { id: "flare03", src: "/flares/flare03.png", name: "Amber Burst" },
-  { id: "flareBlue02", src: "/flares/flareBlue02.png", name: "Deep Blue Beam" },
-  { id: "flareBlack", src: "/flares/flareBlack.png", name: "Black Flare" },
+  { id: "flare03", src: "/flares/optimized/flare03.png", name: "Amber Burst" },
+  { id: "flareBlue02", src: "/flares/optimized/flareBlue02.png", name: "Deep Blue Beam" },
+  { id: "flareBlack", src: "/flares/optimized/flareBlack.png", name: "Black Flare" },
   { id: "white01", src: "/flares/white01.png", name: "White Flare" },
 ] as const;
 
@@ -1559,6 +1559,64 @@ const normalizeAssetLookupValue = (value: string | null | undefined) => {
   return text.split("?")[0]?.split("#")[0] || "";
 };
 
+const RUNTIME_OPTIMIZED_ASSET_URLS: Record<string, string> = {
+  "/flares/flare02.png": "/flares/optimized/flare02.png",
+  "/flares/flare03.png": "/flares/optimized/flare03.png",
+  "/flares/flareBlack.png": "/flares/optimized/flareBlack.png",
+  "/flares/flareBlue01.png": "/flares/optimized/flareBlue01.png",
+  "/flares/flareBlue02.png": "/flares/optimized/flareBlue02.png",
+  "/flares/sun01.png": "/flares/optimized/sun01.png",
+  "/clouds/cloud04.png": "/clouds/optimized/cloud04.png",
+  "/scene-assets/mojito/cutout.png": "/scene-assets/mojito/optimized/cutout.png",
+};
+
+const splitRuntimeAssetUrl = (value: string) => {
+  const queryIndex = value.indexOf("?");
+  const hashIndex = value.indexOf("#");
+  const cutIndex =
+    queryIndex >= 0 && hashIndex >= 0
+      ? Math.min(queryIndex, hashIndex)
+      : queryIndex >= 0
+      ? queryIndex
+      : hashIndex;
+
+  return cutIndex >= 0
+    ? { base: value.slice(0, cutIndex), suffix: value.slice(cutIndex) }
+    : { base: value, suffix: "" };
+};
+
+const resolveRuntimeAssetUrl = (value: string | null | undefined) => {
+  const text = typeof value === "string" ? value.trim() : "";
+  if (!text || text.startsWith("data:") || text.startsWith("blob:")) return text;
+
+  const { base, suffix } = splitRuntimeAssetUrl(text);
+  let lookup = base;
+  let absoluteOrigin = "";
+
+  if (/^https?:\/\//i.test(base)) {
+    try {
+      const url = new URL(base);
+      const currentOrigin =
+        typeof window !== "undefined" ? window.location.origin : "";
+      if (!currentOrigin || url.origin !== currentOrigin) return text;
+      lookup = url.pathname;
+      absoluteOrigin = url.origin;
+    } catch {
+      return text;
+    }
+  }
+
+  const optimized = RUNTIME_OPTIMIZED_ASSET_URLS[lookup];
+  if (!optimized) return text;
+  return `${absoluteOrigin}${optimized}${suffix}`;
+};
+
+const normalizeRuntimeAssetRecord = (item: any) => {
+  if (!item || typeof item !== "object" || typeof item.url !== "string") return item;
+  const url = resolveRuntimeAssetUrl(item.url);
+  return url && url !== item.url ? { ...item, url } : item;
+};
+
 const CENTER_HERO_BOTTOM_STRIP_IDS = new Set([
   "center_hero_burgundy_bottom_bar",
   "center_teal_bottom_bar",
@@ -1578,10 +1636,10 @@ const resolveCanvasAssetName = (asset: any) => {
   if (isCenterHeroBottomStripAsset(asset)) return "Bottom Strip";
 
   const baseId = String(asset.id || "").split("_")[1] || "";
-  const assetUrl = normalizeAssetLookupValue(String(asset.url || ""));
+  const assetUrl = normalizeAssetLookupValue(resolveRuntimeAssetUrl(String(asset.url || "")));
 
   const matchByUrl = <T,>(items: readonly T[], getSrc: (item: T) => string) =>
-    items.find((item) => normalizeAssetLookupValue(getSrc(item)) === assetUrl) || null;
+    items.find((item) => normalizeAssetLookupValue(resolveRuntimeAssetUrl(getSrc(item))) === assetUrl) || null;
 
   const textureById = STUDIO_TEXTURE_LIBRARY.find((item) => item.id === baseId);
   const textureByUrl = matchByUrl(STUDIO_TEXTURE_LIBRARY, (item) => item.src);
@@ -11396,24 +11454,31 @@ function normalizeDesignJson(design: any, currentFormat: string) {
     ...sessionState,
   };
 
+  const normalizeFormatItems = (items: any[], key: "portraits" | "emojis") =>
+    key === "portraits" ? items.map(normalizeRuntimeAssetRecord) : items;
+
   const readSessionArray = (fmt: Format, key: "portraits" | "emojis") => {
     const bucket = sessionRoot?.[fmt]?.[key];
-    return Array.isArray(bucket) ? bucket : [];
+    return Array.isArray(bucket) ? normalizeFormatItems(bucket, key) : [];
   };
 
   const normalizeByFormatArray = (value: any, key: "portraits" | "emojis") => {
     if (value && typeof value === "object" && !Array.isArray(value)) {
       return {
-        square: Array.isArray(value.square) ? value.square : readSessionArray("square", key),
-        story: Array.isArray(value.story) ? value.story : readSessionArray("story", key),
+        square: Array.isArray(value.square)
+          ? normalizeFormatItems(value.square, key)
+          : readSessionArray("square", key),
+        story: Array.isArray(value.story)
+          ? normalizeFormatItems(value.story, key)
+          : readSessionArray("story", key),
       };
     }
     if (Array.isArray(value)) {
       return {
         square:
-          targetFmt === "square" ? value : readSessionArray("square", key),
+          targetFmt === "square" ? normalizeFormatItems(value, key) : readSessionArray("square", key),
         story:
-          targetFmt === "story" ? value : readSessionArray("story", key),
+          targetFmt === "story" ? normalizeFormatItems(value, key) : readSessionArray("story", key),
       };
     }
     return {
@@ -21034,7 +21099,7 @@ const mobileCompositeStressMode =
   !hideUiForExport &&
   (headGlitchEnabled || headGlassEnabled || activeCanvasFlareCount > 0) &&
   (activeCanvasObjectCount >= 2 || !!bgUploadUrl || !!bgUrl);
-const canvasMasterFilterCss = masterFilterCss;
+const canvasMasterFilterCss = mobileCompositeStressMode ? "none" : masterFilterCss;
 
 
 
@@ -26833,7 +26898,8 @@ const portraitCanvas = React.useMemo(() => {
     const isSelected = selectedPortraitId === p.id;
     const locked = !!p.locked;
     const { isLogo, isFlare, isSticker, isExtracted } = classify(p);
-    const isImageSticker = isSticker && typeof (p as any).svgTemplate !== "string" && !!p.url;
+    const runtimeUrl = resolveRuntimeAssetUrl(p.url);
+    const isImageSticker = isSticker && typeof (p as any).svgTemplate !== "string" && !!runtimeUrl;
     const useAlphaBoundsHit =
       (p as any).hitTestMode === "alpha-bounds" ||
       !!(p as any).isNightlifeGraphic ||
@@ -27195,7 +27261,7 @@ const portraitCanvas = React.useMemo(() => {
             touchAction: "none",
           }}
         >
-          {p.url && (
+          {runtimeUrl && (
             <div
               data-hit-bounds="true"
               data-hit-mode={useAlphaBoundsHit ? "alpha-bounds" : undefined}
@@ -27218,7 +27284,7 @@ const portraitCanvas = React.useMemo(() => {
                 data-hit-source="true"
                 data-hit-mode={useAlphaBoundsHit ? "alpha-bounds" : undefined}
                 data-hit-precision={isExtracted ? "high" : undefined}
-                src={p.url}
+                src={runtimeUrl}
                 crossOrigin="anonymous"
                 alt=""
                 draggable={false}
@@ -27242,7 +27308,7 @@ const portraitCanvas = React.useMemo(() => {
               />
               {showPosterOverlay && (
                 <img
-                  src={p.url}
+                  src={runtimeUrl}
                   crossOrigin="anonymous"
                   alt=""
                   draggable={false}
@@ -27267,7 +27333,7 @@ const portraitCanvas = React.useMemo(() => {
               {showPopOverlay && (
                 <>
                   <img
-                    src={p.url}
+                    src={runtimeUrl}
                     crossOrigin="anonymous"
                     alt=""
                     draggable={false}
@@ -27289,7 +27355,7 @@ const portraitCanvas = React.useMemo(() => {
                     }}
                   />
                   <img
-                    src={p.url}
+                    src={runtimeUrl}
                     crossOrigin="anonymous"
                     alt=""
                     draggable={false}
@@ -27308,7 +27374,7 @@ const portraitCanvas = React.useMemo(() => {
                     }}
                   />
                   <img
-                    src={p.url}
+                    src={runtimeUrl}
                     crossOrigin="anonymous"
                     alt=""
                     draggable={false}
@@ -27331,7 +27397,7 @@ const portraitCanvas = React.useMemo(() => {
               {showNeoOverlay && (
                 <>
                   <img
-                    src={p.url}
+                    src={runtimeUrl}
                     crossOrigin="anonymous"
                     alt=""
                     draggable={false}
@@ -27353,7 +27419,7 @@ const portraitCanvas = React.useMemo(() => {
                     }}
                   />
                   <img
-                    src={p.url}
+                    src={runtimeUrl}
                     crossOrigin="anonymous"
                     alt=""
                     draggable={false}
@@ -27372,7 +27438,7 @@ const portraitCanvas = React.useMemo(() => {
                     }}
                   />
                   <img
-                    src={p.url}
+                    src={runtimeUrl}
                     crossOrigin="anonymous"
                     alt=""
                     draggable={false}
@@ -27395,7 +27461,7 @@ const portraitCanvas = React.useMemo(() => {
               {showComicOverlay && (
                 <>
                   <img
-                    src={p.url}
+                    src={runtimeUrl}
                     crossOrigin="anonymous"
                     alt=""
                     draggable={false}
@@ -27414,7 +27480,7 @@ const portraitCanvas = React.useMemo(() => {
                     }}
                   />
                   <img
-                    src={p.url}
+                    src={runtimeUrl}
                     crossOrigin="anonymous"
                     alt=""
                     draggable={false}
@@ -27436,7 +27502,7 @@ const portraitCanvas = React.useMemo(() => {
                     }}
                   />
                   <img
-                    src={p.url}
+                    src={runtimeUrl}
                     crossOrigin="anonymous"
                     alt=""
                     draggable={false}
@@ -27455,7 +27521,7 @@ const portraitCanvas = React.useMemo(() => {
                     }}
                   />
                   <img
-                    src={p.url}
+                    src={runtimeUrl}
                     crossOrigin="anonymous"
                     alt=""
                     draggable={false}
@@ -27478,7 +27544,7 @@ const portraitCanvas = React.useMemo(() => {
               {!suppressDuplicateImageLayers && portraitFilterPreset === "halftone" && (
                 <>
                   <img
-                    src={p.url}
+                    src={runtimeUrl}
                     crossOrigin="anonymous"
                     alt=""
                     draggable={false}
@@ -27505,7 +27571,7 @@ const portraitCanvas = React.useMemo(() => {
               {showSubjectLighting && (
                 <>
                   <img
-                    src={p.url}
+                    src={runtimeUrl}
                     crossOrigin="anonymous"
                     alt=""
                     draggable={false}
@@ -27524,7 +27590,7 @@ const portraitCanvas = React.useMemo(() => {
                     }}
                   />
                   <img
-                    src={p.url}
+                    src={runtimeUrl}
                     crossOrigin="anonymous"
                     alt=""
                     draggable={false}
@@ -27545,7 +27611,7 @@ const portraitCanvas = React.useMemo(() => {
                     }}
                   />
                   <img
-                    src={p.url}
+                    src={runtimeUrl}
                     crossOrigin="anonymous"
                     alt=""
                     draggable={false}
@@ -27566,7 +27632,7 @@ const portraitCanvas = React.useMemo(() => {
                     }}
                   />
                   <img
-                    src={p.url}
+                    src={runtimeUrl}
                     crossOrigin="anonymous"
                     alt=""
                     draggable={false}
@@ -27735,6 +27801,8 @@ const flareCanvas = React.useMemo(() => {
         const isSelected = selectedPortraitId === p.id;
         const locked = !!p.locked;
         const isDragging = dragging === "icon" && isSelected;
+        const runtimeUrl = resolveRuntimeAssetUrl(p.url);
+        if (!runtimeUrl) return null;
         const tintDeg = Number((p as any).tint ?? 0);
         const isTextureAsset =
           !!(p as any).isTexture ||
@@ -27933,7 +28001,7 @@ const flareCanvas = React.useMemo(() => {
                 <TintedTextureImage
                   data-hit-bounds="true"
                   data-hit-source="true"
-                  src={p.url}
+                  src={runtimeUrl}
                   hue={tintDeg}
                   style={{
                     transform: `scale(${p.scale ?? 1}) rotate(${(p as any).rotation ?? 0}deg)`,
@@ -27951,7 +28019,7 @@ const flareCanvas = React.useMemo(() => {
               <img
                   data-hit-bounds="true"
                   data-hit-source="true"
-                  src={p.url}
+                  src={runtimeUrl}
                   alt=""
                   draggable={false}
                   style={{
@@ -29457,6 +29525,8 @@ const applyTemplate = React.useCallback<
 
             if (svgTemplate) {
               url = rebuildSvgDataUrl(svgTemplate, iconColor || "#ffffff");
+            } else {
+              url = resolveRuntimeAssetUrl(url);
             }
 
             return {
@@ -36568,6 +36638,27 @@ React.useEffect(() => {
   didCheckSavedDesignRef.current = true;
 
   try {
+    const clearResumeIntent = () => {
+      try { sessionStorage.removeItem("nf:resume"); } catch {}
+      try { localStorage.removeItem("nf:resume"); } catch {}
+      try { sessionStorage.removeItem(RESUME_META_KEY); } catch {}
+      try { localStorage.removeItem(RESUME_META_KEY); } catch {}
+      try { sessionStorage.removeItem(RESUME_DESIGN_KEY); } catch {}
+    };
+    const params = new URLSearchParams(window.location.search);
+    const hasDirectTemplateLaunch =
+      params.has("template") ||
+      params.get("starter") === "nightlife" ||
+      params.has("leftAlign") ||
+      params.get("test") === "ladies-night" ||
+      params.get("ladiesNightTest") === "1";
+
+    if (hasDirectTemplateLaunch) {
+      clearResumeIntent();
+      setHasSavedDesign(false);
+      return;
+    }
+
     const saved =
       sessionStorage.getItem(RESUME_DESIGN_KEY) ||
       localStorage.getItem("nf:lastDesign");
@@ -36598,11 +36689,7 @@ React.useEffect(() => {
     }
 
     if (!saved) {
-      try { sessionStorage.removeItem("nf:resume"); } catch {}
-      try { localStorage.removeItem("nf:resume"); } catch {}
-      try { sessionStorage.removeItem(RESUME_META_KEY); } catch {}
-      try { localStorage.removeItem(RESUME_META_KEY); } catch {}
-      try { sessionStorage.removeItem(RESUME_DESIGN_KEY); } catch {}
+      clearResumeIntent();
       setHasSavedDesign(false);
       return;
     }
@@ -36611,19 +36698,11 @@ React.useEffect(() => {
       applyHistorySnapshot(saved);
       setShowStartup(false);
       setHasSavedDesign(false);
-      try { sessionStorage.removeItem("nf:resume"); } catch {}
-      try { localStorage.removeItem("nf:resume"); } catch {}
-      try { sessionStorage.removeItem(RESUME_META_KEY); } catch {}
-      try { localStorage.removeItem(RESUME_META_KEY); } catch {}
-      try { sessionStorage.removeItem(RESUME_DESIGN_KEY); } catch {}
+      clearResumeIntent();
       return;
     }
 
-    try { sessionStorage.removeItem("nf:resume"); } catch {}
-    try { localStorage.removeItem("nf:resume"); } catch {}
-    try { sessionStorage.removeItem(RESUME_META_KEY); } catch {}
-    try { localStorage.removeItem(RESUME_META_KEY); } catch {}
-    try { sessionStorage.removeItem(RESUME_DESIGN_KEY); } catch {}
+    clearResumeIntent();
     try { localStorage.removeItem("nf:lastDesign"); } catch {}
     setHasSavedDesign(true);
     setHasSavedDesign(false);
