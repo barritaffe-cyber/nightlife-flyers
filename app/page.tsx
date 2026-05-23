@@ -29048,7 +29048,11 @@ const applyTemplate = React.useCallback<
     const variant: Partial<TemplateBase> =
       tpl.formats?.[fmt] ?? tpl.formats?.square ?? tpl.base ?? {};
     const variantBgUrl =
-      typeof (variant as any).backgroundUrl === "string"
+      typeof (variant as any).bgUploadUrl === "string"
+        ? String((variant as any).bgUploadUrl)
+        : typeof (variant as any).bgUrl === "string"
+        ? String((variant as any).bgUrl)
+        : typeof (variant as any).backgroundUrl === "string"
         ? String((variant as any).backgroundUrl)
         : "";
     const resolvedBgUrl = variantBgUrl || tpl.preview || "";
@@ -29762,12 +29766,19 @@ const applyTemplateFromGallery = React.useCallback(
       templateBgScaleRef.current = variant.bgScale;
       setBgScale(variant.bgScale);
     }
-    const resolvedBgUrl =
-      (typeof (variant as any).backgroundUrl === "string" &&
-        String((variant as any).backgroundUrl)) ||
-      tpl.preview ||
-      "";
-    if (resolvedBgUrl) {
+    const variantBgUploadUrl =
+      typeof (variant as any).bgUploadUrl === "string" ? String((variant as any).bgUploadUrl) : "";
+    const variantBgUrl =
+      typeof (variant as any).bgUrl === "string" ? String((variant as any).bgUrl) : "";
+    const variantBackgroundUrl =
+      typeof (variant as any).backgroundUrl === "string"
+        ? String((variant as any).backgroundUrl)
+        : "";
+    const resolvedBgUrl = variantBgUploadUrl || variantBgUrl || variantBackgroundUrl || tpl.preview || "";
+    if (variantBgUploadUrl) {
+      setBgUploadUrl(variantBgUploadUrl);
+      setBgUrl(null);
+    } else if (resolvedBgUrl) {
       setBgUploadUrl(null);
       setBgUrl(resolvedBgUrl);
     }
@@ -30399,6 +30410,8 @@ function mergeStartupVariant(
     backgroundUrl:
       typeof base?.backgroundUrl === "string" && base.backgroundUrl.trim().length > 0
         ? base.backgroundUrl
+        : typeof (base as any)?.bgUrl === "string" && (base as any).bgUrl.trim().length > 0
+        ? String((base as any).bgUrl)
         : preview,
     ...overrides,
   };
