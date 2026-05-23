@@ -26838,7 +26838,7 @@ useEffect(() => {
 const portraitCanvas = React.useMemo(() => {
   const list = portraits[format] || [];
   const mobileLiveAssetMode = !!isMobileView;
-  const liveAssetMaxSide = mobileLiveAssetMode ? "110vh" : "140vh";
+  const liveAssetMaxSide = "140vh";
 
   const classify = (item: any) => {
     const id = String(item?.id || "");
@@ -27818,7 +27818,7 @@ const flareCanvas = React.useMemo(() => {
   const list = portraits?.[format] || [];
   const flares = list.filter((p: any) => !!(p as any).isFlare && !(p as any).isSticker);
   const mobileLiveFlareMode = !!isMobileView;
-  const flareMaxSide = mobileLiveFlareMode ? "110vh" : "140vh";
+  const flareMaxSide = "140vh";
 
   return (
     <div

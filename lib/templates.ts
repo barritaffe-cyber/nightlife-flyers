@@ -3002,6 +3002,11 @@ const NOCTURNE_LAYOUT2_SQUARE = cloneSavedTemplateVariant(
   'square',
   NOCTURNE_LAYOUT1_SQUARE
 );
+const NOCTURNE_STORY = cloneSavedTemplateVariant(
+  nocturneStoryData as unknown as SavedTemplateStateJson,
+  'story',
+  NOCTURNE_LAYOUT1_SQUARE
+);
 const SUGAR_RUSH_LAYOUT1_SQUARE = cloneSavedTemplateVariant(
   sugarRushLayout1Data as unknown as SavedTemplateStateJson,
   'square'
@@ -3056,7 +3061,8 @@ const MOJITO_LAYOUT2_STORY = cloneSavedTemplateVariant(
 );
 const TECHNO_WAREHOUSE_STORY = cloneSavedTemplateVariant(
   technoStoryData as unknown as SavedTemplateStateJson,
-  'story'
+  'story',
+  EDM_STAGE_CO2_LAYOUT1_STORY
 );
 const BLACK_TIE_LAYOUT1_SQUARE = cloneSavedTemplateVariant(
   blackTieLayout1Data as unknown as SavedTemplateStateJson,
@@ -3529,6 +3535,9 @@ export function getCenterHeroLayoutVariant(
     resolvedTemplateId === 'ladies_night_center_hero'
       ? RAW_TEMPLATE_GALLERY.find((template) => template.id === resolvedTemplateId)
       : SQUARE_NIGHTLIFE_LAYOUT_TEMPLATES.find((template) => template.id === resolvedTemplateId);
+  if (resolvedTemplateId === 'ladies_night_center_hero' && format === 'story') {
+    return cloneTemplateBase(NOCTURNE_STORY);
+  }
   const base =
     centerHeroTemplate?.formats?.[format] ??
     centerHeroTemplate?.formats?.square ??
@@ -3569,7 +3578,7 @@ export function getEdmStageCo2LayoutVariant(
   format: Format = 'square'
 ): TemplateBase | null {
   if (format === 'story') {
-    return cloneTemplateBase(EDM_STAGE_CO2_LAYOUT1_STORY);
+    return cloneTemplateBase(TECHNO_WAREHOUSE_STORY);
   }
   return cloneTemplateBase(layoutId === 'layout2' ? EDM_STAGE_CO2_LAYOUT2_SQUARE : EDM_STAGE_CO2_LAYOUT1_SQUARE);
 }
@@ -11949,7 +11958,7 @@ if (edmStageCo2Template) {
   edmStageCo2Template.formats = {
     ...(edmStageCo2Template.formats ?? {}),
     square: EDM_STAGE_CO2_LAYOUT1_SQUARE,
-    story: EDM_STAGE_CO2_LAYOUT1_STORY,
+    story: TECHNO_WAREHOUSE_STORY,
   };
 }
 
@@ -11969,11 +11978,7 @@ if (ladiesNightCenterHeroTemplate) {
   ladiesNightCenterHeroTemplate.formats = {
     ...(ladiesNightCenterHeroTemplate.formats ?? {}),
     square: NOCTURNE_LAYOUT1_SQUARE,
-    story: cloneSavedTemplateVariant(
-      nocturneStoryData as unknown as SavedTemplateStateJson,
-      'story',
-      ladiesNightCenterHeroTemplate.formats?.story ?? NOCTURNE_LAYOUT1_SQUARE
-    ),
+    story: NOCTURNE_STORY,
   };
 }
 
@@ -12024,9 +12029,31 @@ if (fantasyTemplate) {
 
 const newYorkTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'new-york');
 if (newYorkTemplate) {
+  if (!NEW_YORK_SQUARE.backgroundUrl) {
+    NEW_YORK_SQUARE.backgroundUrl =
+      newYorkTemplate.formats?.square?.backgroundUrl ??
+      newYorkTemplate.base?.backgroundUrl ??
+      newYorkTemplate.preview;
+  }
+  const newYorkStory = cloneSavedTemplateVariant(
+    newYorkData as unknown as SavedTemplateStateJson,
+    'story',
+    newYorkTemplate.formats?.story ??
+      newYorkTemplate.formats?.square ??
+      newYorkTemplate.base ??
+      NEW_YORK_SQUARE
+  );
+  if (!newYorkStory.backgroundUrl) {
+    newYorkStory.backgroundUrl =
+      newYorkTemplate.formats?.story?.backgroundUrl ??
+      newYorkTemplate.formats?.square?.backgroundUrl ??
+      newYorkTemplate.base?.backgroundUrl ??
+      newYorkTemplate.preview;
+  }
   newYorkTemplate.formats = {
     ...(newYorkTemplate.formats ?? {}),
     square: NEW_YORK_SQUARE,
+    story: newYorkStory,
   };
 }
 
