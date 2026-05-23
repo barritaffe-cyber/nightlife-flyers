@@ -656,7 +656,8 @@ const LADIES_NIGHT_SQUARE_ASSETS: Emoji[] = [
 ];
 
 const SUGAR_RUSH_ASSET_PATHS = {
-  background: "/scene-assets/sugar-rush/background.jpg",
+  fullBackground: "/scene-assets/sugar-rush/background.jpg",
+  background: "/scene-assets/sugar-rush/background-editor.jpg",
   subject: "/scene-assets/sugar-rush/subject-cutout.png",
 } as const;
 
@@ -2965,6 +2966,28 @@ const cloneSavedTemplateVariant = (
   return next;
 };
 
+const replaceTemplateAssetPaths = (
+  base: TemplateBase,
+  replacements: Record<string, string>
+): TemplateBase => {
+  const replaceValue = (value: unknown): unknown => {
+    if (typeof value === 'string') {
+      return replacements[value] ?? value;
+    }
+    if (Array.isArray(value)) {
+      return value.map(replaceValue);
+    }
+    if (value && typeof value === 'object') {
+      return Object.fromEntries(
+        Object.entries(value).map(([key, item]) => [key, replaceValue(item)])
+      );
+    }
+    return value;
+  };
+
+  return replaceValue(base) as TemplateBase;
+};
+
 const EDM_STAGE_CO2_LAYOUT1_SQUARE = cloneSavedTemplateVariant(
   edmStageCo2Layout1Data as unknown as SavedTemplateStateJson,
   'square'
@@ -3015,6 +3038,21 @@ const SUGAR_RUSH_LAYOUT2_SQUARE = cloneSavedTemplateVariant(
   sugarRushLayout2Data as unknown as SavedTemplateStateJson,
   'square',
   SUGAR_RUSH_LAYOUT1_SQUARE
+);
+const SUGAR_RUSH_ASSET_REPLACEMENTS = {
+  [SUGAR_RUSH_ASSET_PATHS.fullBackground]: SUGAR_RUSH_ASSET_PATHS.background,
+} as const;
+const SUGAR_RUSH_SAFE_LAYOUT1_SQUARE = replaceTemplateAssetPaths(
+  SUGAR_RUSH_LAYOUT1_SQUARE,
+  SUGAR_RUSH_ASSET_REPLACEMENTS
+);
+const SUGAR_RUSH_SAFE_LAYOUT1_STORY = replaceTemplateAssetPaths(
+  SUGAR_RUSH_LAYOUT1_STORY,
+  SUGAR_RUSH_ASSET_REPLACEMENTS
+);
+const SUGAR_RUSH_SAFE_LAYOUT2_SQUARE = replaceTemplateAssetPaths(
+  SUGAR_RUSH_LAYOUT2_SQUARE,
+  SUGAR_RUSH_ASSET_REPLACEMENTS
 );
 const LUXE_LAYOUT1_SQUARE = cloneSavedTemplateVariant(
   luxeLayout1Data as unknown as SavedTemplateStateJson,
@@ -3579,9 +3617,11 @@ export function getSugarRushLayoutVariant(
   format: Format = 'square'
 ): TemplateBase | null {
   if (format === 'story') {
-    return cloneTemplateBase(SUGAR_RUSH_LAYOUT1_STORY);
+    return cloneTemplateBase(SUGAR_RUSH_SAFE_LAYOUT1_STORY);
   }
-  return cloneTemplateBase(layoutId === 'layout2' ? SUGAR_RUSH_LAYOUT2_SQUARE : SUGAR_RUSH_LAYOUT1_SQUARE);
+  return cloneTemplateBase(
+    layoutId === 'layout2' ? SUGAR_RUSH_SAFE_LAYOUT2_SQUARE : SUGAR_RUSH_SAFE_LAYOUT1_SQUARE
+  );
 }
 
 export function getLuxeLayoutVariant(
@@ -11955,8 +11995,8 @@ const sugarRushTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id ==
 if (sugarRushTemplate) {
   sugarRushTemplate.formats = {
     ...(sugarRushTemplate.formats ?? {}),
-    square: SUGAR_RUSH_LAYOUT1_SQUARE,
-    story: SUGAR_RUSH_LAYOUT1_STORY,
+    square: SUGAR_RUSH_SAFE_LAYOUT1_SQUARE,
+    story: SUGAR_RUSH_SAFE_LAYOUT1_STORY,
   };
 }
 

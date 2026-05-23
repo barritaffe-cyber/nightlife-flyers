@@ -20,6 +20,14 @@ function isPaidLandingClick(searchParams: URLSearchParams) {
 export function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
+  if (pathname === "/" && searchParams.has("/studio")) {
+    const studioUrl = request.nextUrl.clone();
+    const studioValue = studioUrl.searchParams.get("/studio") || "1";
+    studioUrl.searchParams.delete("/studio");
+    studioUrl.searchParams.set("studio", studioValue);
+    return NextResponse.redirect(studioUrl);
+  }
+
   if (pathname === "/landing" && isPaidLandingClick(searchParams)) {
     const studioUrl = request.nextUrl.clone();
     studioUrl.pathname = "/";
@@ -32,5 +40,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/landing"],
+  matcher: ["/", "/landing"],
 };
