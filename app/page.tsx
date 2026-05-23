@@ -6492,8 +6492,9 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	    const neonPulseSvgHeight =
 	      headDisplayPx + Math.max(0, neonPulseLines.length - 1) * neonPulseLineAdvance + neonPulsePad * 2;
 	    const neonPulseFirstLineY = neonPulsePad + headDisplayPx * 0.78;
-	    const neonPulsePerfMode = !!isMobileView || !!isLiveDragging;
-	    const neonPulseGlowActive = glitchGlow > 0.015 && !neonPulsePerfMode;
+	    const neonPulseLiteGlowMode = !!isMobileView || !!isLiveDragging;
+	    const neonPulseSvgGlowActive = glitchGlow > 0.015 && !neonPulseLiteGlowMode;
+	    const neonPulseLiteGlowActive = glitchGlow > 0.015 && neonPulseLiteGlowMode;
 	    const neonPulseWideStroke = Math.max(1.8, 2.2 + glitchIntensity * 3 + glitchGlow * 5);
 	    const neonPulseRimStroke = Math.max(2.2, 2.4 + glitchIntensity * 1.9 + glitchGlow * 1.2);
 	    const neonPulseTubeStroke = Math.max(1.45, 1.65 + glitchIntensity * 1.85);
@@ -6501,6 +6502,12 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	    const neonPulseEdgeStroke = Math.max(0.25, 0.38 + glitchRgbSplit * 0.025);
 	    const neonPulseSvgX = headAlign === "left" ? "0%" : headAlign === "right" ? "100%" : "50%";
 	    const neonPulseTextAnchor = (headAlign === "left" ? "start" : headAlign === "right" ? "end" : "middle") as "start" | "middle" | "end";
+	    const neonPulseLiteTubeGlow = neonPulseLiteGlowActive
+	      ? `drop-shadow(0 0 ${(1.2 + glitchGlow * 2.6).toFixed(1)}px ${hexToRgba(neonPulseMidColor, 0.38)}) drop-shadow(0 0 ${(2.6 + glitchGlow * 4.2).toFixed(1)}px ${hexToRgba(neonPulseEndColor, 0.24)})`
+	      : "none";
+	    const neonPulseLiteCoreGlow = neonPulseLiteGlowActive
+	      ? `drop-shadow(0 0 ${(0.8 + glitchGlow * 1.7).toFixed(1)}px rgba(255,255,255,0.45))`
+	      : "none";
 	    const glitchGlowDropShadow =
 	      glitchGlow > 0 && !liveTextPerfMode
 	        ? `drop-shadow(0 0 ${(2 + glitchGlow * 10).toFixed(1)}px rgba(255,255,255,${(0.08 + glitchGlow * 0.22).toFixed(2)}))`
@@ -9642,7 +9649,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
                   <stop offset="72%" stopColor={neonPulseEndColor} />
                   <stop offset="100%" stopColor={neonPulseEndColor} />
                 </linearGradient>
-                {!neonPulsePerfMode && (
+                {!neonPulseLiteGlowMode && (
                   <filter
                     id={neonPulseGlowFilterId}
                     x="-40%"
@@ -9663,8 +9670,15 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
                   </filter>
                 )}
               </defs>
-              {(neonPulsePerfMode
+              {(neonPulseLiteGlowMode
                 ? [
+                    {
+                      key: "wide",
+                      stroke: `url(#${neonPulseGradientId})`,
+                      strokeWidth: neonPulseWideStroke,
+                      opacity: Math.min(0.16, Math.max(0.05, glitchGlow * 0.14)),
+                      filter: "none",
+                    },
                     {
                       key: "rim",
                       stroke: "rgba(1,10,24,0.72)",
@@ -9677,14 +9691,14 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
                       stroke: `url(#${neonPulseGradientId})`,
                       strokeWidth: neonPulseTubeStroke,
                       opacity: 0.95,
-                      filter: "none",
+                      filter: neonPulseLiteTubeGlow,
                     },
                     {
                       key: "core",
                       stroke: neonPulseCoreColor,
                       strokeWidth: neonPulseCoreStroke,
                       opacity: 0.78,
-                      filter: "none",
+                      filter: neonPulseLiteCoreGlow,
                     },
                     {
                       key: "edge",
@@ -9714,14 +9728,14 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
                   stroke: `url(#${neonPulseGradientId})`,
                   strokeWidth: neonPulseTubeStroke,
                   opacity: 0.9,
-                  filter: neonPulseGlowActive ? `url(#${neonPulseGlowFilterId})` : "none",
+                  filter: neonPulseSvgGlowActive ? `url(#${neonPulseGlowFilterId})` : "none",
                 },
                 {
                   key: "core",
                   stroke: neonPulseCoreColor,
                   strokeWidth: neonPulseCoreStroke,
                   opacity: 0.74,
-                  filter: neonPulseGlowActive
+                  filter: neonPulseSvgGlowActive
                     ? `drop-shadow(0 0 ${(0.8 + glitchGlow * 2.2).toFixed(1)}px rgba(255,255,255,0.5)) drop-shadow(0 0 ${(1.6 + glitchGlow * 4.8).toFixed(1)}px ${hexToRgba(neonPulseMidColor, 0.34)})`
                     : "none",
                 },
