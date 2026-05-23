@@ -3,59 +3,85 @@
 
 import React from "react";
 import Link from "next/link";
-import { ArrowRight, Sparkles, Zap } from "lucide-react";
+import { Smartphone, Sparkles, Square } from "lucide-react";
 import { sendClientEventBeacon } from "../../../lib/analytics/client";
+
+const FORMAT_CHOICES = [
+  { format: "square", label: "Post", cta: "Start Post", Icon: Square },
+  { format: "story", label: "Story", cta: "Start Story", Icon: Smartphone },
+] as const;
 
 const FEATURED_TEMPLATE = {
   id: "sugar_rush",
-  label: "Sugar Rush",
-  eyebrow: "Featured nightlife starter",
-  description: "Neon pop party flyer with loud color, layered effects, and editable club copy.",
+  label: "Birthday Bash Flyer",
+  eyebrow: "Post-ready club flyer",
+  description: "A bright club flyer for birthdays, party hosts, DJs, and weekend events.",
   samples: ["/samples/sugar-rush.png", "/samples/sugar-rush2.png"],
   format: "square",
 };
 
 const TEMPLATE_CARDS = [
   {
-    id: "edm_tunnel",
-    label: "EDM Laser",
-    description: "Cyber rave layout with laser energy, stacked metadata, and social icons.",
-    preview: "/templates/edm_tunnel.jpg",
-    format: "story",
+    id: "blk_tie",
+    label: "Black Tie Flyer",
+    description: "Formal luxury flyer with polished gold accents and updated post/story layouts.",
+    preview: "/samples/black-tie.png",
+    format: "square",
+  },
+  {
+    id: "luxe",
+    label: "VIP Lounge Flyer",
+    description: "Magenta lounge portrait with polished VIP event copy.",
+    preview: "/samples/vip-lounge.png",
+    format: "square",
   },
   {
     id: "edm_stage_co2",
-    label: "NEURAL//CORE",
-    description: "Techno night system flyer with modular festival information blocks.",
-    preview: "/templates/edm_stage_co2.jpg",
+    label: "Techno / Afterhours Flyer",
+    description: "Dark system flyer for underground, cyber, and late-night events.",
+    preview: "/samples/techno.png",
+    format: "square",
+  },
+  {
+    id: "afrobeat_rooftop",
+    label: "Afrobeat Rooftop Flyer",
+    description: "Sunset Afrobeat flyer with updated square/story layouts and social details.",
+    preview: "/samples/afro.png",
     format: "square",
   },
   {
     id: "square_center_hero_nightlife",
-    label: "AURA",
-    description: "Subject-first club flyer with a huge title lane and premium depth.",
-    preview: "/scene-assets/center-hero/background.jpg",
+    label: "DJ Night Flyer",
+    description: "Cinematic portrait layout for upscale nightlife and guest DJs.",
+    preview: "/samples/dj-night.png",
     format: "square",
   },
   {
-    id: "bottle_service",
-    label: "Bottle Service",
-    description: "Luxury nightlife promo for lounges, VIP events, and upscale nights.",
-    preview: "/templates/bottle_service.jpg",
+    id: "ladies_night_center_hero",
+    label: "Ladies Night Flyer",
+    description: "Fashion-forward neon nightlife flyer with matching square and story layouts.",
+    preview: "/samples/nocturne.png",
     format: "square",
   },
   {
-    id: "disco_mirrorball",
-    label: "Mirrorball Bloom",
-    description: "Disco-inspired party look with glow, shine, and dance-floor energy.",
-    preview: "/templates/disco_mirrorball.jpg",
+    id: "kpop_pastel_led",
+    label: "Cocktail Night Flyer",
+    description: "Fresh mojito-style flyer for lounges, bars, happy hour, and drink specials.",
+    preview: "/samples/mojito.png",
     format: "square",
   },
   {
-    id: "hiphop_graffiti",
-    label: "Hip Hop Block Party",
-    description: "Street promo styling for DJs, artists, showcases, and release events.",
-    preview: "/templates/hiphop_graffiti.jpg",
+    id: "fantasy",
+    label: "Fantasy Flyer",
+    description: "Dream-glow event flyer with surreal color, soft neon, and polished post/story layouts.",
+    preview: "/samples/fantasy.png",
+    format: "square",
+  },
+  {
+    id: "new-york",
+    label: "New York Flyer",
+    description: "Midnight city energy with bold nightlife copy and a rendered post layout.",
+    preview: "/samples/new-york.png",
     format: "square",
   },
 ] as const;
@@ -100,18 +126,20 @@ export default function NightlifeStarterPage() {
     return () => window.clearInterval(timer);
   }, []);
 
-  const trackTemplateClick = React.useCallback((templateId: string, label: string, featured = false) => {
+  const trackTemplateClick = React.useCallback((templateId: string, label: string, format: string, featured = false) => {
     sendClientEventBeacon("nightlife_starter_template_tapped", {
       properties: {
         source: "nightlife_starter_page",
         template_id: templateId,
         template_label: label,
+        template_format: format,
         featured,
       },
     });
   }, []);
 
-  const featuredHref = buildEditorHref(FEATURED_TEMPLATE.id, FEATURED_TEMPLATE.format, querySuffix);
+  const featuredPostHref = buildEditorHref(FEATURED_TEMPLATE.id, "square", querySuffix);
+  const featuredStoryHref = buildEditorHref(FEATURED_TEMPLATE.id, "story", querySuffix);
 
   return (
     <main className="min-h-screen bg-[#070709] text-white">
@@ -141,46 +169,57 @@ export default function NightlifeStarterPage() {
             <div className="order-2 lg:order-1">
               <div className="inline-flex items-center gap-2 border border-cyan-200/20 bg-cyan-200/[0.06] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-100">
                 <Sparkles className="h-3.5 w-3.5" />
-                Pick a flyer first
+                Nightlife flyer maker
               </div>
               <h1 className="mt-4 max-w-3xl text-[3.2rem] font-black leading-[0.88] tracking-normal text-white sm:text-[4.8rem] lg:text-[6.7rem]">
-                Pick a vibe. Make the flyer. Fill the room.
+                Create cinematic nightlife flyers in minutes.
               </h1>
               <p className="mt-5 max-w-xl text-base leading-7 text-white/72 sm:text-lg">
-                Start with a finished club flyer, change the text, swap images, and export in just minutes. Built for DJs, promoters, lounges, birthdays, rave nights, and club events.
+                Pick a finished club flyer, change the text, swap images, adjust the colors, and publish.
               </p>
               <p className="mt-3 max-w-xl text-sm leading-6 text-cyan-100/76">
-                Each template includes fast generated color palettes, so users can upgrade the mood
-                in one click without rebuilding the design.
+                Every flyer includes editable post and story formats. Color palettes make it easy to try fast variations without rebuilding the design.
               </p>
 
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <Link
-                  href={featuredHref}
-                  onClick={() => trackTemplateClick(FEATURED_TEMPLATE.id, FEATURED_TEMPLATE.label, true)}
+                  href={featuredPostHref}
+                  onClick={() => trackTemplateClick(FEATURED_TEMPLATE.id, FEATURED_TEMPLATE.label, "square", true)}
                   className="inline-flex min-h-14 items-center justify-center gap-2 bg-cyan-300 px-5 text-sm font-black uppercase tracking-[0.12em] text-black shadow-[0_0_42px_rgba(49,194,246,0.34)] transition hover:bg-white"
                 >
-                  Customize Sugar Rush
-                  <ArrowRight className="h-4 w-4" />
+                  <Square className="h-4 w-4" />
+                  Start Post
+                </Link>
+                <Link
+                  href={featuredStoryHref}
+                  onClick={() => trackTemplateClick(FEATURED_TEMPLATE.id, FEATURED_TEMPLATE.label, "story", true)}
+                  className="inline-flex min-h-14 items-center justify-center gap-2 border border-cyan-200/35 bg-cyan-200/[0.07] px-5 text-sm font-black uppercase tracking-[0.12em] text-cyan-50 transition hover:border-white/45 hover:bg-white/[0.1]"
+                >
+                  <Smartphone className="h-4 w-4" />
+                  Start Story
                 </Link>
                 <a
                   href="#templates"
                   className="inline-flex min-h-14 items-center justify-center border border-white/15 bg-white/[0.04] px-5 text-sm font-black uppercase tracking-[0.12em] text-white transition hover:border-white/30 hover:bg-white/[0.08]"
                 >
-                  See more styles
+                  Pick another vibe
                 </a>
               </div>
 
               <div className="mt-6 grid max-w-xl grid-cols-3 gap-2 text-center text-[10px] font-bold uppercase tracking-[0.13em] text-white/58">
-                <div className="border border-white/10 bg-white/[0.035] px-2 py-3">Pick</div>
-                <div className="border border-white/10 bg-white/[0.035] px-2 py-3">Edit</div>
-                <div className="border border-white/10 bg-white/[0.035] px-2 py-3">Export</div>
+                <div className="border border-white/10 bg-white/[0.035] px-2 py-3">
+                  Post + Story
+                </div>
+                <div className="border border-white/10 bg-white/[0.035] px-2 py-3">
+                  Fast Color Swaps
+                </div>
+                <div className="border border-white/10 bg-white/[0.035] px-2 py-3">
+                  Export Ready
+                </div>
               </div>
             </div>
 
-            <Link
-              href={featuredHref}
-              onClick={() => trackTemplateClick(FEATURED_TEMPLATE.id, FEATURED_TEMPLATE.label, true)}
+            <article
               className="group order-1 block overflow-hidden border border-fuchsia-200/25 bg-black shadow-[0_26px_90px_rgba(0,0,0,0.62)] transition hover:border-cyan-100/55 lg:order-2"
             >
               <div className="relative overflow-hidden bg-black p-2 sm:p-3">
@@ -201,9 +240,6 @@ export default function NightlifeStarterPage() {
                 <div className="absolute left-6 top-6 border border-cyan-200/35 bg-black/55 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-100 backdrop-blur">
                   {FEATURED_TEMPLATE.eyebrow}
                 </div>
-                <div className="absolute bottom-6 left-6 right-6 border border-fuchsia-200/25 bg-black/60 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-white/86 backdrop-blur">
-                  Color palettes generate fast alternate looks
-                </div>
                 <div className="absolute right-6 top-6 flex gap-1.5">
                   {FEATURED_TEMPLATE.samples.map((sample, index) => (
                     <span
@@ -215,19 +251,34 @@ export default function NightlifeStarterPage() {
                   ))}
                 </div>
               </div>
-              <div className="flex items-end justify-between gap-4 border-t border-white/10 bg-[#09090d] p-4">
+              <div className="flex flex-col gap-4 border-t border-white/10 bg-[#09090d] p-4 sm:flex-row sm:items-end sm:justify-between">
                 <div className="min-w-0">
                   <div className="text-3xl font-black leading-none">{FEATURED_TEMPLATE.label}</div>
                   <div className="mt-1 max-w-md text-sm leading-5 text-white/68">
                     {FEATURED_TEMPLATE.description}
                   </div>
                 </div>
-                <div className="hidden shrink-0 items-center gap-2 bg-white px-4 py-3 text-[11px] font-black uppercase tracking-[0.14em] text-black sm:inline-flex">
-                  Start
-                  <Zap className="h-3.5 w-3.5" />
+                <div className="grid shrink-0 grid-cols-2 gap-2">
+                  {FORMAT_CHOICES.map(({ format: formatChoice, label, Icon }) => (
+                    <Link
+                      key={`featured-${formatChoice}`}
+                      href={buildEditorHref(FEATURED_TEMPLATE.id, formatChoice, querySuffix)}
+                      onClick={() =>
+                        trackTemplateClick(FEATURED_TEMPLATE.id, FEATURED_TEMPLATE.label, formatChoice, true)
+                      }
+                      className={`inline-flex min-h-11 items-center justify-center gap-2 px-4 text-[11px] font-black uppercase tracking-[0.14em] transition ${
+                        formatChoice === "square"
+                          ? "bg-white text-black hover:bg-cyan-200"
+                          : "border border-white/18 bg-white/[0.05] text-white hover:border-cyan-200/45 hover:bg-white/[0.09]"
+                      }`}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      {label}
+                    </Link>
+                  ))}
                 </div>
               </div>
-            </Link>
+            </article>
           </div>
         </div>
       </section>
@@ -237,41 +288,55 @@ export default function NightlifeStarterPage() {
           <div className="mb-4 flex items-end justify-between gap-4">
             <div>
               <div className="text-[10px] font-black uppercase tracking-[0.22em] text-fuchsia-200/70">
-                More nightlife starters
+                More starter flyers
               </div>
-              <h2 className="mt-1 text-2xl font-black">Choose the closest vibe</h2>
+              <h2 className="mt-1 text-2xl font-black">Pick a finished look, then choose the layout</h2>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
             {TEMPLATE_CARDS.map((template) => {
-              const href = buildEditorHref(template.id, template.format, querySuffix);
               return (
-                <Link
+                <article
                   key={template.id}
-                  href={href}
-                  onClick={() => trackTemplateClick(template.id, template.label)}
                   className="group overflow-hidden border border-white/10 bg-white/[0.035] transition hover:border-cyan-200/40 hover:bg-white/[0.06]"
                 >
-                  <div className="aspect-[1.02] overflow-hidden bg-black">
+                  <div className="relative aspect-[1.02] overflow-hidden bg-black">
                     <img
                       src={template.preview}
-                      alt={`${template.label} flyer background`}
+                      alt={`${template.label} rendered flyer preview`}
                       className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
                       loading="lazy"
                       draggable={false}
                     />
+                    <div className="absolute left-2 top-2 border border-cyan-100/30 bg-black/55 px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-cyan-100 backdrop-blur">
+                      Post + Story
+                    </div>
                   </div>
-                  <div className="min-h-[112px] p-3">
+                  <div className="min-h-[146px] p-3">
                     <div className="text-sm font-black leading-tight text-white">{template.label}</div>
                     <div className="mt-1 line-clamp-2 text-[11px] leading-4 text-white/58">
                       {template.description}
                     </div>
-                    <div className="mt-3 text-[10px] font-black uppercase tracking-[0.16em] text-cyan-100/75">
-                      Customize
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      {FORMAT_CHOICES.map(({ format: formatChoice, label, Icon }) => (
+                        <Link
+                          key={`${template.id}-${formatChoice}`}
+                          href={buildEditorHref(template.id, formatChoice, querySuffix)}
+                          onClick={() => trackTemplateClick(template.id, template.label, formatChoice)}
+                          className={`inline-flex min-h-9 items-center justify-center gap-1.5 px-2 text-[10px] font-black uppercase tracking-[0.12em] transition ${
+                            formatChoice === "square"
+                              ? "bg-cyan-200 text-black hover:bg-white"
+                              : "border border-white/15 bg-white/[0.04] text-white hover:border-cyan-100/40 hover:bg-white/[0.08]"
+                          }`}
+                        >
+                          <Icon className="h-3.5 w-3.5" />
+                          {label}
+                        </Link>
+                      ))}
                     </div>
                   </div>
-                </Link>
+                </article>
               );
             })}
           </div>
