@@ -5884,7 +5884,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     const explicitLineCount = Math.max(1, headlineText.split("\n").length);
     const estimatedTextHeight = Math.max(headDisplayPx, headDisplayPx * lineHeight * explicitLineCount);
     const exportTextMode = !!hideUiForExport;
-    const liveTextPerfMode = !!isLiveDragging && !exportTextMode;
+    const mobileLiveTextPerfMode = !!isMobileView && !exportTextMode;
+    const liveTextPerfMode = (!!isLiveDragging || mobileLiveTextPerfMode) && !exportTextMode;
     const extrudeRenderDepth = liveTextPerfMode
       ? Math.min(extrudeDepth, HEADLINE_EXTRUDE_LIVE_MAX_DEPTH)
       : extrudeDepth;
@@ -6373,7 +6374,6 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	    const neonPulseEdgeStroke = Math.max(0.25, 0.38 + glitchRgbSplit * 0.025);
 	    const neonPulseSvgX = headAlign === "left" ? "0%" : headAlign === "right" ? "100%" : "50%";
 	    const neonPulseTextAnchor = (headAlign === "left" ? "start" : headAlign === "right" ? "end" : "middle") as "start" | "middle" | "end";
-	    const mobileLiveTextPerfMode = !!isMobileView && !exportTextMode;
 	    const glitchGlowDropShadow =
 	      glitchGlow > 0 && !mobileLiveTextPerfMode
 	        ? `drop-shadow(0 0 ${(2 + glitchGlow * 10).toFixed(1)}px rgba(255,255,255,${(0.08 + glitchGlow * 0.22).toFixed(2)}))`
@@ -7566,7 +7566,18 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	          }, undefined, true),
 	        ]
 	      : [];
-	    const glassCssLayerSpecs = liveTextPerfMode
+	    const mobileGlassLiveLayerKeys = new Set([
+	      "headline-glass-00b-pink-back-stroke",
+	      "headline-glass-01-main-edge-glow",
+	      "headline-glass-08-glass-body",
+	      "headline-glass-10b-svg-specular-gradient",
+	      "headline-glass-11b-svg-edge-gradient",
+	      "headline-glass-12-sharp-highlight",
+	      "headline-glass-15-final-white-edge",
+	    ]);
+	    const glassCssLayerSpecs = mobileLiveTextPerfMode
+	      ? psgGlassCssLayerSpecs.filter((layer) => mobileGlassLiveLayerKeys.has(layer.key))
+	      : liveTextPerfMode
 	      ? psgGlassCssLayerSpecs.filter((layer) => layer.live)
 	      : psgGlassCssLayerSpecs;
 	    const glassLayerSpecs: Array<{
@@ -26838,7 +26849,7 @@ useEffect(() => {
 const portraitCanvas = React.useMemo(() => {
   const list = portraits[format] || [];
   const mobileLiveAssetMode = !!isMobileView;
-  const liveAssetMaxSide = "140vh";
+  const liveAssetMaxSide = mobileLiveAssetMode ? "1400px" : "2200px";
 
   const classify = (item: any) => {
     const id = String(item?.id || "");
@@ -27818,7 +27829,7 @@ const flareCanvas = React.useMemo(() => {
   const list = portraits?.[format] || [];
   const flares = list.filter((p: any) => !!(p as any).isFlare && !(p as any).isSticker);
   const mobileLiveFlareMode = !!isMobileView;
-  const flareMaxSide = "140vh";
+  const flareMaxSide = mobileLiveFlareMode ? "1400px" : "2200px";
 
   return (
     <div
