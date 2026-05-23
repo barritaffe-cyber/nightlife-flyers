@@ -26804,8 +26804,8 @@ useEffect(() => {
 // === PORTRAIT LAYER BEGIN (Consolidated: Handles Portraits AND Flares) ===
 const portraitCanvas = React.useMemo(() => {
   const list = portraits[format] || [];
-  const mobileLiveAssetMode = !!isMobileView;
-  const liveAssetMaxSide = mobileLiveAssetMode ? "110vh" : "140vh";
+  const mobileLiveAssetMode = !!isMobileView && !hideUiForExport;
+  const liveAssetMaxSide = mobileLiveAssetMode ? "74vh" : "140vh";
 
   const classify = (item: any) => {
     const id = String(item?.id || "");
@@ -27082,7 +27082,9 @@ const portraitCanvas = React.useMemo(() => {
       }, 180);
     };
 
-    const portraitBaseFilter = reduceDragEffects
+    const portraitBaseFilter = mobileLiveAssetMode
+      ? "none"
+      : reduceDragEffects
       ? tintFilter
       : mergeCssFilters(showSubjectLighting ? baseFilter : combinedFilter, mainFaceToneFilter);
 
@@ -27783,9 +27785,12 @@ const portraitCanvas = React.useMemo(() => {
 // === FLARE OVERLAY LAYER (Dynamic from state, with own drag/select) ===
 const flareCanvas = React.useMemo(() => {
   const list = portraits?.[format] || [];
-  const flares = list.filter((p: any) => !!(p as any).isFlare && !(p as any).isSticker);
-  const mobileLiveFlareMode = !!isMobileView;
-  const flareMaxSide = mobileLiveFlareMode ? "110vh" : "140vh";
+  const rawFlares = list.filter((p: any) => !!(p as any).isFlare && !(p as any).isSticker);
+  const mobileLiveFlareMode = !!isMobileView && !hideUiForExport;
+  const flares = mobileLiveFlareMode
+    ? rawFlares.filter((p: any, index: number) => index < 4 || p.id === selectedPortraitId)
+    : rawFlares;
+  const flareMaxSide = mobileLiveFlareMode ? "76vh" : "140vh";
 
   return (
     <div
@@ -27808,19 +27813,20 @@ const flareCanvas = React.useMemo(() => {
           !!(p as any).isTexture ||
           /^flare_paint\d+_/i.test(String((p as any).id || "")) ||
           /^Paint\s/i.test(String((p as any).label || ""));
-        const effectiveBlendMode = isTextureAsset
+        const effectiveBlendMode = mobileLiveFlareMode
+          ? "normal"
+          : isTextureAsset
           ? ((p as any).blendMode === "screen" || (p as any).blendMode === "overlay" || !(p as any).blendMode
               ? (tintDeg !== 0 ? "color" : "overlay")
               : (p as any).blendMode)
           : "screen";
-        const effectiveOpacity = isTextureAsset
-          ? ((p as any).opacity === 0.45 || (p as any).opacity == null
-              ? 0.85
-              : (p as any).opacity)
+        const rawOpacity = isTextureAsset
+          ? ((p as any).opacity === 0.45 || (p as any).opacity == null ? 0.85 : (p as any).opacity)
           : ((p as any).opacity ?? 1);
+        const effectiveOpacity = mobileLiveFlareMode ? Math.min(0.72, Number(rawOpacity) || 1) : rawOpacity;
         const tintMode = (p as any).tintMode ?? (isTextureAsset ? "colorize" : "hue");
         const flareFilter =
-          tintDeg === 0
+          mobileLiveFlareMode || tintDeg === 0
             ? "none"
             : tintMode === "colorize"
             ? `sepia(1) saturate(80) hue-rotate(${tintDeg}deg) brightness(0.95) contrast(1.1)`
