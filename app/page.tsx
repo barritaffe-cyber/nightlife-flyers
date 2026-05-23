@@ -10,8 +10,22 @@ import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import Link from 'next/link';
 import { createPortal, flushSync } from "react-dom";
 import { useShallow } from "zustand/react/shallow";
-import { TEMPLATE_GALLERY } from '../lib/templates';
-import type { TemplateSpec } from '../lib/templates';
+import {
+  CENTER_HERO_BOTTOM_STRIP_SVG,
+  CENTER_HERO_LAYOUT_OPTIONS,
+  getCenterHeroLayoutVariant,
+  getBlackTieLayoutVariant,
+  getEdmStageCo2LayoutVariant,
+  getEdmTunnelLayoutVariant,
+  getLuxeLayoutVariant,
+  getMojitoLayoutVariant,
+  getSugarRushLayoutVariant,
+  TEMPLATE_GALLERY,
+} from '../lib/templates';
+import type { CenterHeroLayoutId, TemplateSpec } from '../lib/templates';
+import { getVisualRecipe } from "../lib/visualRecipes";
+import { SCENE_PACKS, type ScenePack } from "../lib/scenePacks";
+import { contrastRatio, createDirectedPalette, darkenHex, getBackgroundTreatment } from "../lib/colorPaletteDirector";
 import { motion, AnimatePresence } from "framer-motion"; 
 import dynamic from "next/dynamic";
 import { alignHeadline } from "../lib/alignHeadline";
@@ -19,6 +33,15 @@ import { isActiveUtil } from '../lib/isActiveUtil';
 import { sharedRootRef, setRootRef } from "../lib/rootRefUtil";
 import { getRootRef } from "../lib/rootRefUtil";
 import { deriveMoodStyleSignal } from "../lib/moodStyleSignal";
+import {
+  analyzeSubjectCreativeDirection,
+  buildDirectedBackgroundPrompt,
+  darken,
+  fallbackCreativeDirection,
+  lighten,
+  tintHueForColor,
+  type CreativeDirection,
+} from "../lib/artDirectionDirector";
 import { useFlyerState, type Format, type PortraitLighting } from "../app/state/flyerState";
 import type { Emoji } from "../app/types/emoji";
 import { canvasRefs } from "../lib/canvasRefs";
@@ -40,6 +63,7 @@ import {
   Chip,
   Stepper,
   ColorDot,
+  PaletteColorProvider,
   SliderRow,
   InlineSliderInput,
   editorHelperTextClass,
@@ -77,6 +101,8 @@ import {
 } from "../lib/djBrandKit";
 import { TEXT_SEPARATOR_GRAPHICS, buildSeparatorSvgDataUrl } from "../lib/textSeparators";
 import { SHAPE_GRAPHICS, buildShapeSvgDataUrl, buildShapeSvgMarkup } from "../lib/shapeGraphics";
+import { coordinatePlanToEditorPatch, createOptimizedCoordinatePlan, type FlyerStyle, type SubjectCrop, type SubjectOrientation } from "../lib/coordinateDirector";
+import { computeStrictSubjectAutoLayoutPatch } from "../lib/strictAutoLayoutSubjectPipeline";
 import { getPublicLegalName, getPublicSupportEmail } from "../lib/publicIdentity";
 import {
   getClientTrackingPayload,
@@ -104,11 +130,146 @@ const HEADLINE_EXTRUDE_REFERENCE_DEPTH = 28;
 const HEADLINE_EXTRUDE_MAX_DEPTH = 72;
 const HEADLINE_EXTRUDE_LIVE_MAX_DEPTH = 6;
 const HEADLINE_EXTRUDE_MAX_DISTANCE = 90;
+const HEADLINE_GLASS_DEFAULTS = {
+  primaryColor: "#FF2BBF",
+  secondaryColor: "#FF8ADF",
+  highlightColor: "#FFF4FF",
+  blur: 4,
+  glow: 16,
+  stroke: 4.4,
+  fillAlpha: 0.24,
+} as const;
+const HEADLINE_GLASS_MIN_LINE_HEIGHT = 0;
+const HEADLINE_GLASS_DEFAULT_LINE_HEIGHT = 0.86;
+const HEADLINE_GLASS_MAX_LINE_HEIGHT = 1.4;
+const HEADLINE_KINETIC_DEFAULTS = {
+  textColor: "#FFFFFF",
+  topColor: "#FF2BD6",
+  bottomColor: "#00EAFF",
+  sliceOffsetX: 35,
+  sliceOffsetY: 3,
+  shadowOpacity: 1,
+} as const;
+const HEADLINE_DASH_STROKE_DEFAULTS = {
+  colors: ["#F2385A", "#F5A503", "#E9F1DF", "#56D9CD", "#3AA1BF"],
+  dash: 70,
+  gap: 10,
+  strokeWidth: 3,
+  frame: 0,
+} as const;
+const HEADLINE_DOODLE_STACK_DEFAULTS = {
+  colors: ["#FFF8EC", "#FEB944", "#FE6842", "#DF5584", "#5A5CA8"],
+  strokeColor: "#2F2F2F",
+  layerCount: 5,
+  angleX: -8,
+  angleY: 4,
+  rotate: -1.8,
+  spread: 1,
+} as const;
+const HEADLINE_PURE_3D_DEFAULTS = {
+  layers: 20,
+  zStep: 1.5,
+  frame: 0.5,
+  faceColor: "#FFFFFF",
+  edgeColor: "#0077EA",
+  shadowColor: "#00366B",
+} as const;
+const HEADLINE_GOLD_BLOCK_DEFAULTS = {
+  lightColor: "#FFF07A",
+  midColor: "#F3B11C",
+  darkColor: "#8A4706",
+  strokeColor: "#050505",
+  strokeWidth: 18,
+  texture: 0.92,
+  roughness: 0.58,
+} as const;
+const HEADLINE_QUANTUM_DEFAULTS = {
+  cyanColor: "#00F6FF",
+  blueColor: "#18A7FF",
+  highlightColor: "#FFFFFF",
+  purpleColor: "#A100FF",
+  magentaColor: "#FF2BD6",
+  strokeWidth: 0.5,
+  splitOffset: 7,
+  glowEnabled: false,
+  glow: 0.78,
+  scanlineOpacity: 0.2,
+  streakOpacity: 1,
+} as const;
+const HEADLINE_RETRO_ENGRAVED_DEFAULTS = {
+  faceColor: "#35322A",
+  paperColor: "#EBE7E0",
+  shadowEnabled: true,
+  shadowAlpha: 1,
+} as const;
+const HEADLINE_VERTICAL_STRETCH_DEFAULTS = {
+  scaleY: 1.8,
+  scaleX: 0.82,
+  shadowOpacity: 0.35,
+} as const;
+const HEADLINE_HALFTONE_DEFAULTS = {
+  dotSize: 7.8,
+  dotSpacing: 9,
+} as const;
+const HEADLINE_GLITCH_DEFAULTS = {
+  intensity: 0.55,
+  rgbSplit: 17,
+  noise: 0.3,
+  glow: 0.8,
+} as const;
+const HEADLINE_LEGACY_SLICE_DEFAULTS = {
+  bandCount: 0,
+  bandGap: 0,
+  echoDistance: 0,
+  topColor: "#FF2BD6",
+  midColor: "#8B4DFF",
+  bottomColor: "#00EAFF",
+  blur: 0,
+  fade: 0,
+  shadowStrength: 0,
+} as const;
 const SHAPE_GRAPHIC_SCALE_UI_MAX = 3;
 const SHAPE_GRAPHIC_SCALE_STEP = 0.005;
 const SHAPE_GRAPHIC_LENGTH_UI_MAX = 1600;
 const SHAPE_GRAPHIC_LENGTH_STEP = 1;
 const PROJECT_SAVE_REMINDER_FALLBACK_DELAY_MS = 45 * 1000;
+
+const COORDINATE_READER_TARGETS = new Set<string>([
+  "headline",
+  "headline2",
+  "head2",
+  "details",
+  "details2",
+  "venue",
+  "subtag",
+  "presenter",
+  "leftRail",
+  "rightRail",
+  "date",
+  "price",
+  "qr",
+  "portrait",
+  "logo",
+  "background",
+  "icon",
+]);
+
+const TEMPLATE_LABEL_PANEL_KEYS = ["presenter", "date", "leftRail", "rightRail", "price"] as const;
+type TemplateLabelPanelKey = (typeof TEMPLATE_LABEL_PANEL_KEYS)[number];
+
+function isTemplateLabelPanelKey(value: string | null | undefined): value is TemplateLabelPanelKey {
+  return TEMPLATE_LABEL_PANEL_KEYS.includes(value as TemplateLabelPanelKey);
+}
+
+function resolveCoordinateReaderTarget(
+  moveTarget: MoveTarget,
+  selectedPanel: string | null
+) {
+  if (selectedPanel && COORDINATE_READER_TARGETS.has(selectedPanel)) {
+    return selectedPanel === "head2" ? "headline2" : selectedPanel;
+  }
+  return moveTarget;
+}
 
 
 
@@ -218,19 +379,6 @@ function rgbToHex(color: LightingRgb) {
   return `#${[color.r, color.g, color.b]
     .map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0"))
     .join("")}`;
-}
-
-function interpolateThreeColorRamp(
-  t: number,
-  topHex: string,
-  midHex: string,
-  bottomHex: string
-) {
-  const clamped = Math.max(0, Math.min(1, t));
-  if (clamped <= 0.5) {
-    return rgbToHex(mixRgb(hexToRgb(topHex), hexToRgb(midHex), clamped / 0.5));
-  }
-  return rgbToHex(mixRgb(hexToRgb(midHex), hexToRgb(bottomHex), (clamped - 0.5) / 0.5));
 }
 
 function mixRgb(a: LightingRgb, b: LightingRgb, amount: number): LightingRgb {
@@ -535,6 +683,210 @@ function hslToRgb(h: number, s: number, l: number): [number, number, number] {
   ];
 }
 
+type TemplateBackgroundPaletteSample = {
+  rgb: LightingRgb;
+  hex: string;
+  count: number;
+  h: number;
+  s: number;
+  l: number;
+  lum: number;
+};
+
+const templateBackgroundPaletteCache = new Map<string, Palette>();
+
+function rgbToHslForTemplatePalette(color: LightingRgb) {
+  const rn = color.r / 255;
+  const gn = color.g / 255;
+  const bn = color.b / 255;
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  const d = max - min;
+  const l = (max + min) / 2;
+  let h = 0;
+  let s = 0;
+
+  if (d) {
+    s = d / (1 - Math.abs(2 * l - 1));
+    if (max === rn) h = ((gn - bn) / d) % 6;
+    else if (max === gn) h = (bn - rn) / d + 2;
+    else h = (rn - gn) / d + 4;
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+
+  return {
+    h,
+    s: Math.max(0, Math.min(1, s)),
+    l: Math.max(0, Math.min(1, l)),
+  };
+}
+
+function normalizePaletteHexString(hex: string, fallback = "#FFFFFF") {
+  const value = String(hex || "").trim();
+  if (!/^#[0-9a-f]{6}$/i.test(value)) return fallback;
+  return value.toUpperCase();
+}
+
+function paletteHexFromRgb(color: LightingRgb) {
+  return rgbToHex(color).toUpperCase();
+}
+
+function paletteHexFromHsl(h: number, s: number, l: number) {
+  const [r, g, b] = hslToRgb(h, s, l);
+  return paletteHexFromRgb({ r, g, b });
+}
+
+function hueDistance(a: number, b: number) {
+  const diff = Math.abs((((a - b) % 360) + 540) % 360 - 180);
+  return Math.min(180, diff);
+}
+
+function rgbDistance(a: LightingRgb, b: LightingRgb) {
+  const dr = a.r - b.r;
+  const dg = a.g - b.g;
+  const db = a.b - b.b;
+  return Math.sqrt(dr * dr + dg * dg + db * db);
+}
+
+function pickTemplatePaletteSample(
+  samples: TemplateBackgroundPaletteSample[],
+  predicate: (sample: TemplateBackgroundPaletteSample) => boolean,
+  score: (sample: TemplateBackgroundPaletteSample) => number
+) {
+  let winner: TemplateBackgroundPaletteSample | null = null;
+  let bestScore = -Infinity;
+  for (const sample of samples) {
+    if (!predicate(sample)) continue;
+    const nextScore = score(sample);
+    if (nextScore > bestScore) {
+      bestScore = nextScore;
+      winner = sample;
+    }
+  }
+  return winner;
+}
+
+function resolveTemplateBackgroundPaletteSource(tpl: TemplateSpec, fmt: Format) {
+  const variant: any = tpl.formats?.[fmt] ?? tpl.formats?.square ?? tpl.base ?? {};
+  const candidates = [
+    variant.backgroundUrl,
+    variant.bgUploadUrl,
+    variant.bgUrl,
+    tpl.preview,
+  ];
+  return String(candidates.find((candidate) => typeof candidate === "string" && candidate.trim()) || "").trim();
+}
+
+async function analyzeTemplateBackgroundPalette(src: string): Promise<Palette | null> {
+  const raw = String(src || "").trim();
+  if (!raw || typeof window === "undefined" || typeof document === "undefined") return null;
+
+  let cacheKey = raw;
+  try {
+    cacheKey = new URL(raw, window.location.href).toString();
+  } catch {}
+
+  const cached = templateBackgroundPaletteCache.get(cacheKey);
+  if (cached) return { ...cached };
+
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const node = new Image();
+      node.crossOrigin = "anonymous";
+      node.decoding = "async";
+      node.onload = () => resolve(node);
+      node.onerror = () => reject(new Error("Failed to load template background for palette analysis."));
+      node.src = cacheKey;
+    });
+
+    const naturalWidth = img.naturalWidth || img.width || 1;
+    const naturalHeight = img.naturalHeight || img.height || 1;
+    const maxSide = 180;
+    const scale = Math.min(1, maxSide / Math.max(naturalWidth, naturalHeight));
+    const width = Math.max(1, Math.round(naturalWidth * scale));
+    const height = Math.max(1, Math.round(naturalHeight * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return null;
+
+    ctx.drawImage(img, 0, 0, width, height);
+    const data = ctx.getImageData(0, 0, width, height).data;
+    const buckets = new Map<string, { r: number; g: number; b: number; count: number }>();
+
+    for (let i = 0; i < data.length; i += 4) {
+      const alpha = data[i + 3];
+      if (alpha < 180) continue;
+
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const key = `${Math.round(r / 24) * 24},${Math.round(g / 24) * 24},${Math.round(b / 24) * 24}`;
+      const bucket = buckets.get(key);
+      if (bucket) {
+        bucket.r += r;
+        bucket.g += g;
+        bucket.b += b;
+        bucket.count += 1;
+      } else {
+        buckets.set(key, { r, g, b, count: 1 });
+      }
+    }
+
+    const samples = Array.from(buckets.values())
+      .map((bucket) => {
+        const rgb = {
+          r: Math.round(bucket.r / bucket.count),
+          g: Math.round(bucket.g / bucket.count),
+          b: Math.round(bucket.b / bucket.count),
+        };
+        const hsl = rgbToHslForTemplatePalette(rgb);
+        return {
+          rgb,
+          hex: paletteHexFromRgb(rgb),
+          count: bucket.count,
+          h: hsl.h,
+          s: hsl.s,
+          l: hsl.l,
+          lum: luminanceOfRgb(rgb),
+        };
+      })
+      .sort((a, b) => b.count - a.count);
+
+    if (!samples.length) return null;
+
+    const directedPalette = createDirectedPalette(
+      samples.map((sample) => ({
+        hex: sample.hex,
+        h: sample.h,
+        s: sample.s,
+        l: sample.l,
+        weight: sample.count,
+      }))
+    );
+    const baseHex = directedPalette.atmosphericColor?.hex || directedPalette.dominant.hex;
+    const luxuryHex = directedPalette.luxuryColor?.hex || directedPalette.support.hex;
+    const energyHex = directedPalette.energyColor?.hex || directedPalette.accent.hex;
+    const neutralHex = directedPalette.readabilityColor?.hex || directedPalette.support.hex;
+    const shadowHex = directedPalette.shadowColor?.hex || darkenHex(baseHex, 45);
+
+    const palette: Palette = {
+      bgFrom: baseHex,
+      bgTo: shadowHex,
+      secondary: baseHex,
+      primary: luxuryHex,
+      neutral: neutralHex,
+      accent: energyHex,
+    };
+    templateBackgroundPaletteCache.set(cacheKey, { ...palette });
+    return palette;
+  } catch {
+    return null;
+  }
+}
+
 const tintedTextureCache = new Map<string, string>();
 
 function TintedTextureImage({
@@ -828,6 +1180,53 @@ function buildPremiumTextShadow(strength: number = 1, glow: number = 0) {
   return shadows.join(',');
 }
 
+function buildSupportingTextShadow(strength: number = 1, glow: number = 0) {
+  const s = Math.max(0, Number(strength) || 0);
+  const g = Math.max(0, Number(glow) || 0);
+  if (s <= 0 && g <= 0) return "none";
+
+  const depth = Math.max(0.35, s);
+  const edgeAlpha = Math.min(0.78, 0.34 + 0.12 * depth);
+  const contactAlpha = Math.min(0.68, 0.24 + 0.1 * depth);
+  const midAlpha = Math.min(0.48, 0.16 + 0.075 * depth);
+  const ambientAlpha = Math.min(0.34, 0.1 + 0.055 * depth);
+  const shadows = [
+    `0 0 1.1px rgba(0,0,0,${edgeAlpha.toFixed(3)})`,
+    `0 ${Math.max(0.8, 1.35 * depth).toFixed(2)}px ${Math.max(1.4, 2.4 * depth).toFixed(2)}px rgba(0,0,0,${contactAlpha.toFixed(3)})`,
+    `0 ${Math.max(2.8, 4.8 * depth).toFixed(2)}px ${Math.max(5.5, 10.5 * depth).toFixed(2)}px rgba(0,0,0,${midAlpha.toFixed(3)})`,
+    `0 ${Math.max(7, 10.5 * depth).toFixed(2)}px ${Math.max(14, 24 * depth).toFixed(2)}px rgba(0,0,0,${ambientAlpha.toFixed(3)})`,
+  ];
+
+  if (g > 0) {
+    shadows.push(
+      `0 0 ${Math.max(7, 11 * g).toFixed(2)}px rgba(255,255,255,${Math.min(0.28, 0.1 + 0.055 * g).toFixed(3)})`
+    );
+  }
+
+  return shadows.join(',');
+}
+
+function buildPremiumDropShadowFilter(strength: number = 1, glow: number = 0) {
+  const s = Math.max(0, Number(strength) || 0);
+  const g = Math.max(0, Number(glow) || 0);
+  if (s <= 0 && g <= 0) return "none";
+
+  const a1 = Math.min(0.72, 0.24 + 0.085 * s);
+  const a2 = Math.min(0.56, 0.18 + 0.07 * s);
+  const a3 = Math.min(0.42, 0.12 + 0.055 * s);
+  const filters = [
+    `drop-shadow(0 ${Math.max(1, 2.2 * s).toFixed(2)}px ${Math.max(2, 3.6 * s).toFixed(2)}px rgba(0,0,0,${a1}))`,
+    `drop-shadow(0 ${Math.max(3, 6.2 * s).toFixed(2)}px ${Math.max(5, 9.5 * s).toFixed(2)}px rgba(0,0,0,${a2}))`,
+    `drop-shadow(0 ${Math.max(7, 12.5 * s).toFixed(2)}px ${Math.max(10, 20 * s).toFixed(2)}px rgba(0,0,0,${a3}))`,
+  ];
+  if (g > 0) {
+    filters.push(
+      `drop-shadow(0 0 ${Math.max(8, 12 * g).toFixed(2)}px rgba(255,255,255,${Math.min(0.32, 0.14 + 0.065 * g)}))`
+    );
+  }
+  return filters.join(" ");
+}
+
 
 /* ===== BLOCK: MINI-UTILS (END) ===== */
 
@@ -919,6 +1318,7 @@ function installKeyboardNudge(getters: {
 const CINEMATIC_REF_LIBRARY = [
   { id: "glass-blue", label: "Glass Blue", src: "/cinematic-refs/glass-blue.png" },
   { id: "chrome-purple", label: "Chrome Purple", src: "/cinematic-refs/chrome-purple.png" },
+  { id: "tech-silver", label: "Tech Silver", src: "/cinematic-refs/tech-silver.png" },
   { id: "gold-smoke", label: "Gold Smoke", src: "/cinematic-refs/gold-smoke.png" },
   { id: "neon-red", label: "Neon Red", src: "/cinematic-refs/neon-red.png" },
   { id: "luxe-gold", label: "Luxe Gold", src: "/cinematic-refs/luxe-gold.png" },
@@ -931,6 +1331,7 @@ const CINEMATIC_REF_LIBRARY = [
   { id: "pink", label: "Pink", src: "/cinematic-refs/pink.png" },
   { id: "gold-drip", label: "Gold Drip", src: "/cinematic-refs/gold-drip.png" },
   { id: "pink-diamond", label: "Pink Diamond", src: "/cinematic-refs/pink-diamond.png" },
+  { id: "ruby-silver", label: "Ruby Silver", src: "/cinematic-refs/ruby-silver.jpg" },
 ] as const;
 
 const WRAP_LIBRARY = [
@@ -1050,6 +1451,7 @@ const NIGHTLIFE_GRAPHICS = [
 ] as const;
 
 const SOCIAL_MEDIA_STICKERS = [
+  { id: "facebook", src: "https://cdn-icons-png.flaticon.com/512/2504/2504903.png", name: "Facebook" },
   { id: "instagram", src: "https://cdn-icons-png.flaticon.com/512/4138/4138124.png", name: "Instagram" },
   { id: "twitter", src: "https://cdn-icons-png.flaticon.com/512/5969/5969020.png", name: "Twitter / X" },
   { id: "tiktok", src: "https://cdn-icons-png.flaticon.com/512/3046/3046121.png", name: "TikTok" },
@@ -1084,6 +1486,7 @@ const GRAPHIC_STICKERS = [
   { id: "pin", src: "https://cdn-icons-png.flaticon.com/512/149/149059.png", name: "Pin" },
   { id: "vinyl2", src: "https://cdn-icons-png.flaticon.com/512/1834/1834342.png", name: "Vinyl Record" },
   { id: "margarita", src: "https://cdn-icons-png.flaticon.com/512/362/362504.png", name: "Margarita" },
+  { id: "sparks01", src: "/sparks/sparks01.png", name: "Sparks" },
 ] as const;
 
 const STUDIO_NIGHTLIFE_GRAPHICS = [
@@ -1124,6 +1527,7 @@ const FLARE_LIBRARY = [
   { id: "sun02", src: "/flares/sun02.png", name: "Cool Sun" },
   { id: "sun03", src: "/flares/sun03.png", name: "Red Sun" },
   { id: "sun04", src: "/flares/sun04.png", name: "Green Sun" },
+  { id: "sparks01", src: "/sparks/sparks01.png", name: "Sparks" },
   { id: "cloud01", src: "/clouds/cloud01.png", name: "Cloud 01", tintMode: "colorize" },
   { id: "cloud02", src: "/clouds/cloud02.png", name: "Cloud 02", tintMode: "colorize" },
   { id: "cloud03", src: "/clouds/cloud03.png", name: "Cloud 03", tintMode: "colorize" },
@@ -1155,11 +1559,23 @@ const normalizeAssetLookupValue = (value: string | null | undefined) => {
   return text.split("?")[0]?.split("#")[0] || "";
 };
 
+const CENTER_HERO_BOTTOM_STRIP_IDS = new Set([
+  "center_hero_burgundy_bottom_bar",
+  "center_teal_bottom_bar",
+]);
+
+const isCenterHeroBottomStripAsset = (asset: any) => {
+  const id = String(asset?.id || "").toLowerCase();
+  return CENTER_HERO_BOTTOM_STRIP_IDS.has(id) || /center.*(bottom|torn).*bar/.test(id);
+};
+
 const resolveCanvasAssetName = (asset: any) => {
   if (!asset) return null;
 
   const explicitLabel = typeof asset.label === "string" ? asset.label.trim() : "";
   if (explicitLabel) return explicitLabel;
+
+  if (isCenterHeroBottomStripAsset(asset)) return "Bottom Strip";
 
   const baseId = String(asset.id || "").split("_")[1] || "";
   const assetUrl = normalizeAssetLookupValue(String(asset.url || ""));
@@ -1257,11 +1673,62 @@ const TAG_ORDER = [
 const TAG_ORDER_SET = new Set<string>(TAG_ORDER);
 
 const STARTER_TEMPLATE_CHOICES = [
-  { ids: ["sunset_yacht", "yacht_escape"], label: "Sunset Yacht — Ocean Luxe" },
+  { ids: ["blk_tie"], label: "Black Tie Flyer" },
+  { ids: ["luxe"], label: "VIP Lounge Flyer" },
+  { ids: ["ladies_night_center_hero"], label: "Ladies Night Flyer" },
+  { ids: ["square_center_hero_nightlife"], label: "DJ Night Flyer" },
+  { ids: ["sunset_yacht", "yacht_escape"], label: "Yacht Party Flyer" },
   { ids: ["disco_mirrorball"] },
   { ids: ["new-york"] },
   { ids: ["mardi_gras"] },
 ] as const;
+const PINNED_TEMPLATE_IDS = ["blk_tie", "luxe", "ladies_night_center_hero"] as const;
+const TRAILING_TEMPLATE_IDS = ["edm_tunnel"] as const;
+const pinFeaturedTemplates = (items: TemplateSpec[]) => {
+  const pinned = PINNED_TEMPLATE_IDS.flatMap((id) =>
+    items.find((template) => template.id === id) ?? []
+  );
+  const pinnedIds = new Set(PINNED_TEMPLATE_IDS);
+  const trailing = TRAILING_TEMPLATE_IDS.flatMap((id) =>
+    items.find((template) => template.id === id) ?? []
+  );
+  const trailingIds = new Set(TRAILING_TEMPLATE_IDS);
+  return [
+    ...pinned,
+    ...items.filter(
+      (template) =>
+        !pinnedIds.has(template.id as any) &&
+        !trailingIds.has(template.id as any)
+    ),
+    ...trailing,
+  ];
+};
+const CENTER_HERO_TEMPLATE_IDS = new Set([
+  "square_center_hero_nightlife",
+]);
+const isCenterHeroTemplateId = (id: string | null | undefined) =>
+  !!id && CENTER_HERO_TEMPLATE_IDS.has(id);
+const NOCTURNE_TEMPLATE_IDS = new Set(["ladies_night_center_hero"]);
+const isNocturneTemplateId = (id: string | null | undefined) =>
+  !!id && NOCTURNE_TEMPLATE_IDS.has(id);
+const EDM_TUNNEL_TEMPLATE_IDS = new Set(["edm_tunnel"]);
+const isEdmTunnelTemplateId = (id: string | null | undefined) =>
+  !!id && EDM_TUNNEL_TEMPLATE_IDS.has(id);
+const EDM_STAGE_CO2_TEMPLATE_IDS = new Set(["edm_stage_co2"]);
+const isEdmStageCo2TemplateId = (id: string | null | undefined) =>
+  !!id && EDM_STAGE_CO2_TEMPLATE_IDS.has(id);
+const SUGAR_RUSH_TEMPLATE_IDS = new Set(["sugar_rush"]);
+const isSugarRushTemplateId = (id: string | null | undefined) =>
+  !!id && SUGAR_RUSH_TEMPLATE_IDS.has(id);
+const LUXE_TEMPLATE_IDS = new Set(["luxe"]);
+const isLuxeTemplateId = (id: string | null | undefined) =>
+  !!id && LUXE_TEMPLATE_IDS.has(id);
+const MOJITO_TEMPLATE_IDS = new Set(["kpop_pastel_led"]);
+const isMojitoTemplateId = (id: string | null | undefined) =>
+  !!id && MOJITO_TEMPLATE_IDS.has(id);
+const BLACK_TIE_TEMPLATE_IDS = new Set(["blk_tie"]);
+const isBlackTieTemplateId = (id: string | null | undefined) =>
+  !!id && BLACK_TIE_TEMPLATE_IDS.has(id);
 const STARTER_TEMPLATE_IDS = new Set<string>(
   STARTER_TEMPLATE_CHOICES.flatMap((choice) => [...choice.ids])
 );
@@ -1538,7 +2005,344 @@ type GenStyle = 'urban' | 'neon' | 'vintage' | 'tropical';
 
 
 // add this near your other types
-type Palette = { bgFrom: string; bgTo: string };
+type Palette = {
+  bgFrom: string;
+  bgTo: string;
+  primary?: string;
+  secondary?: string;
+  accent?: string;
+  neutral?: string;
+};
+type PaletteRole = "base" | "primary" | "secondary" | "accent" | "neutral";
+
+function normalizeGlassGlowColor(value: string, fallback: string) {
+  const normalized = normalizePaletteHexString(value, fallback);
+  const hsl = rgbToHslForTemplatePalette(hexToRgb(normalized));
+  const isWashedWarm = hsl.l > 0.62 && hsl.h >= 28 && hsl.h <= 74;
+  const isFlatNeutral = hsl.s < 0.08 && hsl.l > 0.72;
+  return isWashedWarm || isFlatNeutral ? fallback : normalized;
+}
+
+function resolveGlassPaletteColors(source: Partial<Palette> | null | undefined) {
+  const paletteSource = source || {};
+  const primary = normalizeGlassGlowColor(
+    String(paletteSource.primary || paletteSource.accent || paletteSource.bgTo || HEADLINE_GLASS_DEFAULTS.primaryColor),
+    HEADLINE_GLASS_DEFAULTS.primaryColor
+  );
+  let secondary = normalizeGlassGlowColor(
+    String(paletteSource.accent || paletteSource.neutral || paletteSource.primary || HEADLINE_GLASS_DEFAULTS.secondaryColor),
+    HEADLINE_GLASS_DEFAULTS.secondaryColor
+  );
+  if (rgbDistance(hexToRgb(primary), hexToRgb(secondary)) < 34) {
+    secondary = normalizeGlassGlowColor(
+      String(paletteSource.bgTo || paletteSource.secondary || HEADLINE_GLASS_DEFAULTS.secondaryColor),
+      HEADLINE_GLASS_DEFAULTS.secondaryColor
+    );
+  }
+  const neutral = normalizePaletteHexString(String(paletteSource.neutral || ""), "");
+  const neutralHsl = neutral ? rgbToHslForTemplatePalette(hexToRgb(neutral)) : null;
+  const neutralIsCoolLight =
+    !!neutral &&
+    luminanceOfRgb(hexToRgb(neutral)) > 145 &&
+    (!neutralHsl || neutralHsl.s < 0.08 || (neutralHsl.h >= 155 && neutralHsl.h <= 300));
+  const highlightColor = neutralIsCoolLight ? neutral : HEADLINE_GLASS_DEFAULTS.highlightColor;
+
+  return {
+    primaryColor: primary,
+    secondaryColor: secondary,
+    highlightColor,
+  };
+}
+
+function resolveKineticPaletteColors(source: Partial<Palette> | null | undefined) {
+  const paletteSource = source || {};
+  const textColor = normalizePaletteHexString(
+    String(paletteSource.neutral || paletteSource.primary || HEADLINE_KINETIC_DEFAULTS.textColor),
+    HEADLINE_KINETIC_DEFAULTS.textColor
+  );
+  const topColor = normalizeGlassGlowColor(
+    String(paletteSource.accent || paletteSource.primary || HEADLINE_KINETIC_DEFAULTS.topColor),
+    HEADLINE_KINETIC_DEFAULTS.topColor
+  );
+  let bottomColor = normalizeGlassGlowColor(
+    String(paletteSource.primary || paletteSource.bgTo || paletteSource.neutral || HEADLINE_KINETIC_DEFAULTS.bottomColor),
+    HEADLINE_KINETIC_DEFAULTS.bottomColor
+  );
+  if (rgbDistance(hexToRgb(topColor), hexToRgb(bottomColor)) < 34) {
+    bottomColor = normalizeGlassGlowColor(
+      String(paletteSource.bgTo || paletteSource.secondary || HEADLINE_KINETIC_DEFAULTS.bottomColor),
+      HEADLINE_KINETIC_DEFAULTS.bottomColor
+    );
+  }
+
+  return {
+    textColor,
+    topColor,
+    bottomColor,
+  };
+}
+
+function resolvePure3dPaletteColors(source: Partial<Palette> | null | undefined) {
+  const paletteSource = source || {};
+  const faceColor = normalizePaletteHexString(
+    String(paletteSource.neutral || paletteSource.primary || HEADLINE_PURE_3D_DEFAULTS.faceColor),
+    HEADLINE_PURE_3D_DEFAULTS.faceColor
+  );
+  const edgeColor = normalizeGlassGlowColor(
+    String(paletteSource.accent || paletteSource.primary || paletteSource.bgTo || HEADLINE_PURE_3D_DEFAULTS.edgeColor),
+    HEADLINE_PURE_3D_DEFAULTS.edgeColor
+  );
+  const shadowColor = normalizePaletteHexString(
+    String(paletteSource.bgTo || paletteSource.secondary || darkenHex(edgeColor, 38)),
+    darkenHex(edgeColor, 38)
+  );
+
+  return {
+    faceColor,
+    edgeColor,
+    shadowColor,
+  };
+}
+
+function resolveGoldBlockPaletteColors(source: Partial<Palette> | null | undefined) {
+  const paletteSource = source || {};
+  const lightColor = normalizePaletteHexString(
+    String(paletteSource.neutral || paletteSource.primary || HEADLINE_GOLD_BLOCK_DEFAULTS.lightColor),
+    HEADLINE_GOLD_BLOCK_DEFAULTS.lightColor
+  );
+  const midColor = normalizePaletteHexString(
+    String(paletteSource.accent || paletteSource.primary || HEADLINE_GOLD_BLOCK_DEFAULTS.midColor),
+    HEADLINE_GOLD_BLOCK_DEFAULTS.midColor
+  );
+  const darkColor = normalizePaletteHexString(
+    String(paletteSource.bgTo || paletteSource.secondary || darkenHex(midColor, 42)),
+    HEADLINE_GOLD_BLOCK_DEFAULTS.darkColor
+  );
+
+  return {
+    lightColor,
+    midColor,
+    darkColor,
+  };
+}
+
+function resolveQuantumPaletteColors(source: Partial<Palette> | null | undefined) {
+  const paletteSource = source || {};
+  const cyanColor = normalizeGlassGlowColor(
+    String(paletteSource.accent || paletteSource.neutral || HEADLINE_QUANTUM_DEFAULTS.cyanColor),
+    HEADLINE_QUANTUM_DEFAULTS.cyanColor
+  );
+  const blueColor = normalizeGlassGlowColor(
+    String(paletteSource.primary || paletteSource.bgTo || HEADLINE_QUANTUM_DEFAULTS.blueColor),
+    HEADLINE_QUANTUM_DEFAULTS.blueColor
+  );
+  const purpleColor = normalizeGlassGlowColor(
+    String(paletteSource.secondary || paletteSource.bgFrom || HEADLINE_QUANTUM_DEFAULTS.purpleColor),
+    HEADLINE_QUANTUM_DEFAULTS.purpleColor
+  );
+  let magentaColor = normalizeGlassGlowColor(
+    String(paletteSource.accent || paletteSource.primary || HEADLINE_QUANTUM_DEFAULTS.magentaColor),
+    HEADLINE_QUANTUM_DEFAULTS.magentaColor
+  );
+  if (rgbDistance(hexToRgb(cyanColor), hexToRgb(magentaColor)) < 34) {
+    magentaColor = normalizeGlassGlowColor(
+      String(paletteSource.bgTo || paletteSource.secondary || HEADLINE_QUANTUM_DEFAULTS.magentaColor),
+      HEADLINE_QUANTUM_DEFAULTS.magentaColor
+    );
+  }
+  const neutral = normalizePaletteHexString(String(paletteSource.neutral || ""), "");
+  const highlightColor = neutral && luminanceOfRgb(hexToRgb(neutral)) > 150
+    ? neutral
+    : HEADLINE_QUANTUM_DEFAULTS.highlightColor;
+
+  return {
+    cyanColor,
+    blueColor,
+    highlightColor,
+    purpleColor,
+    magentaColor,
+  };
+}
+
+function resolveDashStrokePaletteColors(source: Partial<Palette> | null | undefined) {
+  const paletteSource = source || {};
+  const candidates = [
+    paletteSource.accent,
+    paletteSource.primary,
+    paletteSource.neutral,
+    paletteSource.secondary,
+    paletteSource.bgTo,
+  ];
+  return HEADLINE_DASH_STROKE_DEFAULTS.colors.map((fallback, index) =>
+    normalizeGlassGlowColor(String(candidates[index] || fallback), fallback)
+  );
+}
+
+function resolveDashStrokeFrameColors(colors: string[], frame: number) {
+  const normalizedColors = HEADLINE_DASH_STROKE_DEFAULTS.colors.map((fallback, index) =>
+    normalizePaletteHexString(String(colors[index] || ""), fallback)
+  );
+  const colorCount = normalizedColors.length;
+  if (!colorCount) return normalizedColors;
+
+  const clampedFrame = Math.max(0, Math.min(1, Number.isFinite(Number(frame)) ? Number(frame) : 0));
+  const cyclePosition = clampedFrame * colorCount;
+  const wholeStep = Math.floor(cyclePosition);
+  const blend = cyclePosition - wholeStep;
+
+  return normalizedColors.map((_, index) => {
+    const fromColor = normalizedColors[(index + wholeStep) % colorCount];
+    const toColor = normalizedColors[(index + wholeStep + 1) % colorCount];
+    return rgbToHex(mixRgb(hexToRgb(fromColor), hexToRgb(toColor), blend)).toUpperCase();
+  });
+}
+
+function resolveRetroEngravedPaletteColors(source: Partial<Palette> | null | undefined) {
+  const paletteSource = source || {};
+  const faceColor = normalizePaletteHexString(
+    String(paletteSource.primary || paletteSource.accent || paletteSource.bgTo || HEADLINE_RETRO_ENGRAVED_DEFAULTS.faceColor),
+    HEADLINE_RETRO_ENGRAVED_DEFAULTS.faceColor
+  );
+  const raisedColor = normalizePaletteHexString(
+    String(paletteSource.neutral || paletteSource.bgFrom || HEADLINE_RETRO_ENGRAVED_DEFAULTS.paperColor),
+    HEADLINE_RETRO_ENGRAVED_DEFAULTS.paperColor
+  );
+  let shadowColor = normalizePaletteHexString(
+    String(paletteSource.bgTo || paletteSource.secondary || paletteSource.primary || HEADLINE_RETRO_ENGRAVED_DEFAULTS.faceColor),
+    HEADLINE_RETRO_ENGRAVED_DEFAULTS.faceColor
+  );
+  if (rgbDistance(hexToRgb(faceColor), hexToRgb(shadowColor)) < 28) {
+    shadowColor = darkenHex(faceColor, 28);
+  }
+
+  return {
+    faceColor,
+    raisedColor,
+    borderColor: shadowColor,
+    shadowColor,
+  };
+}
+
+function hueFromPaletteColor(hex: string | undefined | null) {
+  const normalized = normalizePaletteHexString(String(hex || ""), "");
+  if (!normalized) return null;
+  const hsl = rgbToHslForTemplatePalette(hexToRgb(normalized));
+  if (hsl.s < 0.06) return null;
+  return hsl.h;
+}
+
+function normalizeHueDegrees(value: number) {
+  return ((value % 360) + 360) % 360;
+}
+
+function toSignedHueDegrees(value: number) {
+  const normalized = normalizeHueDegrees(value);
+  return normalized > 180 ? normalized - 360 : normalized;
+}
+
+function resolveBackgroundSourceHue(src: string | null | undefined) {
+  const source = String(src || "").toLowerCase();
+  if (/(edm_tunnel|fire|flame|pyro|co2|stage)/.test(source)) return 24;
+  return 0;
+}
+
+function resolveBackgroundTreatmentHue(src: string | null | undefined, palette: Palette) {
+  const hues = [
+    hueFromPaletteColor(palette.secondary),
+    hueFromPaletteColor(palette.bgFrom),
+    hueFromPaletteColor(palette.bgTo),
+    hueFromPaletteColor(palette.primary),
+    hueFromPaletteColor(palette.accent),
+  ].filter((hue): hue is number => typeof hue === "number" && Number.isFinite(hue));
+
+  if (hues.length) return hues[0];
+
+  const source = String(src || "").toLowerCase();
+  if (/(edm_tunnel|fire|flame|pyro|co2|stage)/.test(source)) return 24;
+
+  return 220;
+}
+
+function paletteHueToSliderValue(palette: Palette, src: string | null | undefined) {
+  const targetHue = resolveBackgroundTreatmentHue("", palette);
+  const sourceHue = resolveBackgroundSourceHue(src);
+  return Math.round(toSignedHueDegrees(targetHue - sourceHue));
+}
+
+function optionalPaletteHex(value: unknown) {
+  return normalizePaletteHexString(String(value || ""), "") || undefined;
+}
+
+function resolveOriginalTemplatePalette(source: Partial<Palette>, variant?: any): Palette {
+  const primary =
+    optionalPaletteHex(source.primary) ??
+    optionalPaletteHex(variant?.textFx?.color) ??
+    optionalPaletteHex(variant?.headColor) ??
+    optionalPaletteHex(variant?.details2Color) ??
+    "#F3DFC1";
+  const secondary =
+    optionalPaletteHex(source.secondary) ??
+    optionalPaletteHex(source.bgFrom) ??
+    optionalPaletteHex(variant?.subtagBgColor) ??
+    optionalPaletteHex(variant?.headExtrudeColor) ??
+    "#0B0B0D";
+  const accent =
+    optionalPaletteHex(source.accent) ??
+    optionalPaletteHex(variant?.details2Color) ??
+    optionalPaletteHex(variant?.head2Fx?.color) ??
+    optionalPaletteHex(variant?.head2Color) ??
+    primary;
+  const neutral =
+    optionalPaletteHex(source.neutral) ??
+    optionalPaletteHex(variant?.bodyColor) ??
+    optionalPaletteHex(variant?.venueColor) ??
+    primary;
+  const bgFrom = optionalPaletteHex(source.bgFrom) ?? secondary;
+  const bgTo =
+    optionalPaletteHex(source.bgTo) ??
+    optionalPaletteHex(variant?.headExtrudeColor) ??
+    "#121216";
+
+  return {
+    bgFrom,
+    bgTo,
+    primary,
+    secondary,
+    accent,
+    neutral,
+  };
+}
+
+function cloneTemplateSessionVariant(source: Partial<TemplateBase> | undefined): Partial<TemplateBase> {
+  const base = source ?? {};
+  return {
+    ...base,
+    palette: base.palette ? { ...base.palette } : undefined,
+    textFx: base.textFx ? { ...base.textFx } : undefined,
+    head2Fx: base.head2Fx ? { ...base.head2Fx } : undefined,
+    textLayerOffset: base.textLayerOffset ? { ...base.textLayerOffset } : undefined,
+    subjectVisibleRect: base.subjectVisibleRect ? { ...base.subjectVisibleRect } : undefined,
+    mainTitleRect: base.mainTitleRect ? { ...base.mainTitleRect } : undefined,
+    ghostTitleRect: base.ghostTitleRect ? { ...base.ghostTitleRect } : undefined,
+    scriptRect: base.scriptRect ? { ...base.scriptRect } : undefined,
+    leftMetaRect: base.leftMetaRect ? { ...base.leftMetaRect } : undefined,
+    rightMetaRect: base.rightMetaRect ? { ...base.rightMetaRect } : undefined,
+    priceRect: base.priceRect ? { ...base.priceRect } : undefined,
+    footerRect: base.footerRect ? { ...base.footerRect } : undefined,
+    textZones: base.textZones
+      ? Object.fromEntries(
+          Object.entries(base.textZones).map(([key, zone]) => [key, { ...zone }])
+        )
+      : undefined,
+    emojiList: Array.isArray(base.emojiList)
+      ? base.emojiList.map((item) => ({ ...item }))
+      : undefined,
+    emojis: Array.isArray(base.emojis)
+      ? base.emojis.map((item) => ({ ...item }))
+      : undefined,
+  };
+}
+
 type TextFx = {
   uppercase: boolean;
   bold: boolean;
@@ -1595,6 +2399,7 @@ type HalftoneHeadlineSvgProps = {
   maxDot?: number;
   minDot?: number;
   strokeWidth?: number;
+  hitTest?: boolean;
 };
 
 function escapeSvgAttr(value: string) {
@@ -1603,6 +2408,10 @@ function escapeSvgAttr(value: string) {
     .replace(/"/g, "&quot;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+function svgBackgroundImage(svg: string) {
+  return `url("data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}")`;
 }
 
 const HalftoneHeadlineSvg = React.memo(function HalftoneHeadlineSvg({
@@ -1625,6 +2434,7 @@ const HalftoneHeadlineSvg = React.memo(function HalftoneHeadlineSvg({
   maxDot = 7.8,
   minDot = 1.2,
   strokeWidth = 0,
+  hitTest = false,
 }: HalftoneHeadlineSvgProps) {
   const reactId = React.useId().replace(/:/g, "");
   const maskId = `halftone-text-mask-${reactId}`;
@@ -1633,7 +2443,8 @@ const HalftoneHeadlineSvg = React.memo(function HalftoneHeadlineSvg({
   const dotRows = 38;
   const dotCols = 95;
   const safeFontSize = Math.max(8, Number(fontSize) || 72);
-  const safeLineHeight = Math.max(0.52, Math.min(1.4, Number(lineHeight) || 0.84));
+  const rawLineHeight = Number(lineHeight);
+  const safeLineHeight = Math.max(0, Math.min(1.4, Number.isFinite(rawLineHeight) ? rawLineHeight : 0.84));
   const safeMaxDot = Math.max(minDot, Math.min(14, Number(maxDot) || 7.8));
   const letterSpacing = Number.isFinite(letterSpacingEm) ? letterSpacingEm : -0.075;
   const letterSpacingPx = letterSpacing * safeFontSize;
@@ -1727,6 +2538,18 @@ const HalftoneHeadlineSvg = React.memo(function HalftoneHeadlineSvg({
       <g mask={`url(#${maskId})`}>
         <image href={dotFieldHref} x={0} y={0} width={width} height={height} preserveAspectRatio="none" />
       </g>
+      {hitTest && (
+        renderSvgText("rgba(0,0,0,0.001)", {
+          stroke: "rgba(0,0,0,0.001)",
+          strokeWidth: Math.max(8, safeFontSize * 0.055, Number(strokeWidth) || 0),
+          paintOrder: "stroke fill",
+          style: {
+            cursor: "grab",
+            pointerEvents: "visiblePainted",
+            userSelect: "none",
+          },
+        })
+      )}
     </svg>
   );
 });
@@ -2513,6 +3336,90 @@ function renderWithDoubleBreaks(text: string): React.ReactNode {
 
 // === DOUBLE BREAK RENDERER (END) ===
 
+type TextPixelHitLayerProps = {
+  text: string;
+  align?: Align;
+  fontFamily?: string;
+  fontSize: number;
+  fontWeight?: number;
+  fontStyle?: React.CSSProperties["fontStyle"];
+  lineHeight?: number;
+  letterSpacing?: string;
+  uppercase?: boolean;
+  doubleBreaks?: boolean;
+  strokeWidth?: number;
+  cursor?: React.CSSProperties["cursor"];
+};
+
+function TextPixelHitLayer({
+  text,
+  align = "left",
+  fontFamily = "Inter",
+  fontSize,
+  fontWeight = 700,
+  fontStyle = "normal",
+  lineHeight = 1,
+  letterSpacing = "0em",
+  uppercase = false,
+  doubleBreaks = false,
+  strokeWidth = 2,
+  cursor = "grab",
+}: TextPixelHitLayerProps) {
+  const safeFontSize = Math.max(1, Number(fontSize) || 12);
+  const safeLineHeight = Math.max(0.05, Number(lineHeight) || 1);
+  const lines = String(text || "").replace(/\r\n?/g, "\n").split("\n");
+  const lineAdvance = safeFontSize * safeLineHeight * (doubleBreaks ? 2 : 1);
+  const pad = Math.max(6, safeFontSize * 0.22, strokeWidth * 2);
+  const height = pad * 2 + safeFontSize * 1.25 + Math.max(0, lines.length - 1) * lineAdvance;
+  const x = align === "right" ? "100%" : align === "center" ? "50%" : "0%";
+  const textAnchor = align === "right" ? "end" : align === "center" ? "middle" : "start";
+
+  return (
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      className="absolute left-0 top-0 overflow-visible"
+      width="100%"
+      height={height}
+      style={{
+        width: "100%",
+        height: `${height}px`,
+        pointerEvents: "none",
+        zIndex: 1000,
+      }}
+    >
+      <text
+        x={x}
+        y={pad + safeFontSize * 0.82}
+        textAnchor={textAnchor}
+        dominantBaseline="alphabetic"
+        fontFamily={fontFamily}
+        fontSize={safeFontSize}
+        fontWeight={fontWeight}
+        fontStyle={fontStyle}
+        letterSpacing={letterSpacing}
+        fill="#000"
+        fillOpacity={0.001}
+        stroke="#000"
+        strokeOpacity={0.001}
+        strokeWidth={Math.max(1, strokeWidth)}
+        paintOrder="stroke fill"
+        style={{
+          cursor,
+          pointerEvents: "visiblePainted",
+          userSelect: "none",
+        }}
+      >
+        {lines.map((line, index) => (
+          <tspan key={`text-hit-${index}`} x={x} dy={index === 0 ? 0 : lineAdvance}>
+            {(uppercase ? line.toUpperCase() : line) || " "}
+          </tspan>
+        ))}
+      </text>
+    </svg>
+  );
+}
+
 /* ===== BLOCK: HEADLINE TYPE HELPERS (BEGIN) ===== */
 // Simple “hang width” in ems for opening punctuation
 const HANG_MAP: Record<string, number> = {
@@ -2566,12 +3473,23 @@ function renderHeadlineRich(
   }
 ) {
   const lines = String(text || "").split("\n");
+  const numericLineHeight =
+    typeof opts.lineHeight === "number"
+      ? opts.lineHeight
+      : typeof opts.lineHeight === "string" && opts.lineHeight.trim() !== ""
+      ? Number(opts.lineHeight)
+      : NaN;
+  const useTightLineAdvance =
+    Number.isFinite(numericLineHeight) && numericLineHeight >= 0 && numericLineHeight < 1;
 
   return (
     <span style={{ display: "block", width: "100%" }}>
       {lines.map((ln, idx) => {
         const isFirst = idx === 0;
         const isLast = idx === lines.length - 1;
+        const baseLineStyle = opts.lineStyle || {};
+        const tightMarginTop =
+          useTightLineAdvance && idx > 0 ? `${numericLineHeight - 1}em` : undefined;
 
         const hang =
           opts.opticalMargin && ln.length ? (HANG_MAP[ln[0]] || 0) : 0;
@@ -2591,10 +3509,12 @@ function renderHeadlineRich(
                 marginLeft: hang ? `-${hang}em` : undefined,
                 paddingLeft: hang ? `${hang}em` : undefined,
                 
-                // Use the passed line height
-                lineHeight: (opts.lineHeight ?? "inherit"),
-                
-                ...(opts.lineStyle || {}),
+                ...baseLineStyle,
+
+                // Preserve the requested line advance without letting very low
+                // CSS line-height collapse the paint box.
+                lineHeight: useTightLineAdvance ? 1 : (opts.lineHeight ?? "inherit"),
+                marginTop: tightMarginTop ?? baseLineStyle.marginTop,
               }}
             >
               {ln === "" ? "\u00A0" : applyKerning(ln, opts.kerningFix)}
@@ -2620,6 +3540,23 @@ type CanvasPortraitPlacement = {
   centerY: number;
   width: number;
   height: number;
+  visualMass?: {
+    silhouetteBounds: {
+      centerX: number;
+      centerY: number;
+      width: number;
+      height: number;
+    };
+    massCenter: {
+      x: number;
+      y: number;
+    };
+    occupiedRatio: number;
+    edgeComplexity: number;
+    verticalWeight: number;
+    horizontalWeight: number;
+    visualPressure: number;
+  } | null;
 };
 
 type Icon = {
@@ -2675,6 +3612,60 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
   headSizeAuto: boolean; headManualPx: number; headMaxPx: number;  
   subtagAlign: Align;
   subtagColor: string;
+  presenterEnabled?: boolean;
+  presenter?: string;
+  presenterX?: number;
+  presenterY?: number;
+  presenterWidth?: number;
+  presenterSize?: number;
+  presenterLineHeight?: number;
+  presenterFamily?: string;
+  presenterColor?: string;
+  presenterAlign?: Align;
+  presenterRotation?: number;
+  leftRailEnabled?: boolean;
+  leftRail?: string;
+  leftRailX?: number;
+  leftRailY?: number;
+  leftRailSize?: number;
+  leftRailLineHeight?: number;
+  leftRailFamily?: string;
+  leftRailColor?: string;
+  leftRailRotation?: number;
+  rightRailEnabled?: boolean;
+  rightRail?: string;
+  rightRailX?: number;
+  rightRailY?: number;
+  rightRailSize?: number;
+  rightRailLineHeight?: number;
+  rightRailFamily?: string;
+  rightRailColor?: string;
+  rightRailRotation?: number;
+  dateEnabled?: boolean;
+  date?: string;
+  dateX?: number;
+  dateY?: number;
+  dateSize?: number;
+  dateLineHeight?: number;
+  dateFamily?: string;
+  dateColor?: string;
+  dateAlign?: Align;
+  dateRotation?: number;
+  priceEnabled?: boolean;
+  price?: string;
+  priceX?: number;
+  priceY?: number;
+  priceSize?: number;
+  priceLineHeight?: number;
+  priceScale?: number;
+  priceFamily?: string;
+  priceColor?: string;
+  priceAlign?: Align;
+  qrEnabled?: boolean;
+  qrX?: number;
+  qrY?: number;
+  qrScale?: number;
+  qrImageUrl?: string | null;
 
   textureOpacity: number;
 
@@ -2690,7 +3681,7 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
   bgLocked: boolean;
   setBgLocked: (v: boolean) => void;
 
-  headRotate: number; headSkew: number; headSliceEnabled: boolean; headSliceBandCount: number; headSliceBandGap: number; headSliceEchoDistance: number; headSliceTopColor: string; headSliceMidColor: string; headSliceBottomColor: string; headSliceBlur: number; headSliceFade: number; headSliceShadowStrength: number; headRushEnabled: boolean; headRushDotColor: string; headRushContrastColor: string; headRushDotSize: number; headRushDotSpacing: number; headRushShadowOffset: number; headLineEnabled: boolean; headLineFrontOffsetX: number; headLineFrontOffsetY: number; headLineBackOffsetX: number; headLineBackOffsetY: number; headGlitchEnabled: boolean; headGlitchIntensity: number; headGlitchRgbSplit: number; headGlitchNoise: number; headGlitchGlow: number; headGlitchRedColor: string; headGlitchMagentaColor: string; headGlitchBlueColor: string; headGlitchYellowColor: string; headExtrudeDepth: number; headExtrudeAngle: number; headExtrudeDistance: number; headExtrudeColor: string; head2Rotate: number; head2Skew: number; detailsRotate: number; details2Rotate: number; venueRotate: number; subtagRotate: number; logoRotate: number;
+  headRotate: number; headSkew: number; headSliceEnabled: boolean; headSliceBandCount: number; headSliceBandGap: number; headSliceEchoDistance: number; headSliceTopColor: string; headSliceMidColor: string; headSliceBottomColor: string; headSliceBlur: number; headSliceFade: number; headSliceShadowStrength: number; headRushEnabled: boolean; headRushDotColor: string; headRushContrastColor: string; headRushDotSize: number; headRushDotSpacing: number; headRushShadowOffset: number; headLineEnabled: boolean; headLineFrontOffsetX: number; headLineFrontOffsetY: number; headLineBackOffsetX: number; headLineBackOffsetY: number; headGlassEnabled: boolean; headGlassPrimaryColor: string; headGlassSecondaryColor: string; headGlassHighlightColor: string; headGlassBlur: number; headGlassGlow: number; headGlassStroke: number; headGlassFillAlpha: number; headKineticEnabled: boolean; headKineticTextColor: string; headKineticTopColor: string; headKineticBottomColor: string; headKineticSliceOffsetX: number; headKineticSliceOffsetY: number; headKineticShadowOpacity: number; headDashStrokeEnabled: boolean; headColorStrokeEnabled: boolean; headDashStrokePaletteLinked: boolean; headDashStrokeColors: string[]; headDashStrokeFrame: number; headColorStrokeFrame: number; headDoodleAngleX: number; headDoodleAngleY: number; headDoodleRotate: number; headDoodleSpread: number; headPure3dEnabled: boolean; headPure3dPaletteLinked: boolean; headPure3dFaceColor: string; headPure3dEdgeColor: string; headPure3dShadowColor: string; headPure3dFrame: number; headGoldBlockEnabled: boolean; headGoldBlockPaletteLinked: boolean; headGoldBlockLightColor: string; headGoldBlockMidColor: string; headGoldBlockDarkColor: string; headGoldBlockStrokeColor: string; headGoldBlockStrokeWidth: number; headGoldBlockTexture: number; headGoldBlockRoughness: number; headCyberEmbossEnabled: boolean; headRetroShadowEnabled: boolean; headRetroShadowAlpha: number; headQuantumEnabled: boolean; headQuantumCyanColor: string; headQuantumBlueColor: string; headQuantumHighlightColor: string; headQuantumPurpleColor: string; headQuantumMagentaColor: string; headQuantumStrokeWidth: number; headQuantumSplitOffset: number; headQuantumGlowEnabled: boolean; headQuantumGlow: number; headQuantumScanlineOpacity: number; headQuantumStreakOpacity: number; headVerticalStretchEnabled: boolean; headVerticalStretchScaleY: number; headVerticalStretchScaleX: number; headVerticalStretchShadowOpacity: number; headGlitchEnabled: boolean; headGlitchIntensity: number; headGlitchRgbSplit: number; headGlitchNoise: number; headGlitchGlow: number; headGlitchRedColor: string; headGlitchMagentaColor: string; headGlitchBlueColor: string; headGlitchYellowColor: string; headExtrudeDepth: number; headExtrudeAngle: number; headExtrudeDistance: number; headExtrudeColor: string; head2Rotate: number; head2Skew: number; detailsRotate: number; details2Rotate: number; venueRotate: number; subtagRotate: number; logoRotate: number;
   portraitBoxW: number; portraitBoxH: number; portraitLocked?: boolean; hideUiForExport?: boolean; isLiveDragging?: boolean; headAlign: Align;
   onTogglePortraitLock: () => void;
   details2Uppercase?: boolean;
@@ -2761,6 +3752,12 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
   onDetails2Move?: (x: number, y: number) => void; 
   onVenueMove?: (x: number, y: number) => void; 
   onSubtagMove?: (x: number, y: number) => void; 
+  onPresenterMove?: (x: number, y: number) => void;
+  onLeftRailMove?: (x: number, y: number) => void;
+  onRightRailMove?: (x: number, y: number) => void;
+  onDateMove?: (x: number, y: number) => void;
+  onPriceMove?: (x: number, y: number) => void;
+  onQrMove?: (x: number, y: number) => void;
   onBgMove?: (x: number, y: number) => void;
   onBgScale?: (s: number) => void;
   onHead2Move?: (x: number, y: number) => void;
@@ -2775,10 +3772,17 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
 
   //EMOJI
   onEmojiMove?: (id: string, x: number, y: number) => void;
+  onAlignmentPositionPreview?: (
+    target: NonNullable<MoveTarget>,
+    x: number,
+    y: number,
+    id?: string | null
+  ) => void;
 
   mobileDragEnabled?: boolean;
   onMobileDragEnd?: () => void;
   onOpenTextFloat?: () => void;
+  onOpenAssetFloat?: () => void;
   portraitCanvas?: React.ReactNode;
   emojiCanvas?: React.ReactNode;
   flareCanvas?: React.ReactNode;
@@ -2790,7 +3794,7 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
 }>((p, ref) => {
   // ✅ CLEAN DESTRUCTURE — do NOT put type annotations here.
   const {
-    headRotate, headSkew, headSliceEnabled, headSliceBandCount, headSliceBandGap, headSliceEchoDistance, headSliceTopColor, headSliceMidColor, headSliceBottomColor, headSliceBlur, headSliceFade, headSliceShadowStrength, headRushEnabled, headRushDotColor, headRushContrastColor, headRushDotSize, headRushDotSpacing, headRushShadowOffset, headLineEnabled, headLineFrontOffsetX, headLineFrontOffsetY, headLineBackOffsetX, headLineBackOffsetY, headGlitchEnabled, headGlitchIntensity, headGlitchRgbSplit, headGlitchNoise, headGlitchGlow, headGlitchRedColor, headGlitchMagentaColor, headGlitchBlueColor, headGlitchYellowColor, headExtrudeDepth, headExtrudeAngle, headExtrudeDistance, headExtrudeColor, head2Rotate, head2Skew, detailsRotate, details2Rotate, venueRotate, subtagRotate, logoRotate, headAlign,
+    headRotate, headSkew, headSliceEnabled, headSliceBandCount, headSliceBandGap, headSliceEchoDistance, headSliceTopColor, headSliceMidColor, headSliceBottomColor, headSliceBlur, headSliceFade, headSliceShadowStrength, headRushEnabled, headRushDotColor, headRushContrastColor, headRushDotSize, headRushDotSpacing, headRushShadowOffset, headLineEnabled, headLineFrontOffsetX, headLineFrontOffsetY, headLineBackOffsetX, headLineBackOffsetY, headGlassEnabled, headGlassPrimaryColor, headGlassSecondaryColor, headGlassHighlightColor, headGlassBlur, headGlassGlow, headGlassStroke, headGlassFillAlpha, headKineticEnabled, headKineticTextColor, headKineticTopColor, headKineticBottomColor, headKineticSliceOffsetX, headKineticSliceOffsetY, headKineticShadowOpacity, headDashStrokeEnabled, headColorStrokeEnabled, headDashStrokePaletteLinked, headDashStrokeColors, headDashStrokeFrame, headColorStrokeFrame, headDoodleAngleX, headDoodleAngleY, headDoodleRotate, headDoodleSpread, headPure3dEnabled, headPure3dPaletteLinked, headPure3dFaceColor, headPure3dEdgeColor, headPure3dShadowColor, headPure3dFrame, headGoldBlockEnabled, headGoldBlockPaletteLinked, headGoldBlockLightColor, headGoldBlockMidColor, headGoldBlockDarkColor, headGoldBlockStrokeColor, headGoldBlockStrokeWidth, headGoldBlockTexture, headGoldBlockRoughness, headCyberEmbossEnabled, headRetroShadowEnabled, headRetroShadowAlpha, headQuantumEnabled, headQuantumCyanColor, headQuantumBlueColor, headQuantumHighlightColor, headQuantumPurpleColor, headQuantumMagentaColor, headQuantumStrokeWidth, headQuantumSplitOffset, headQuantumGlowEnabled, headQuantumGlow, headQuantumScanlineOpacity, headQuantumStreakOpacity, headVerticalStretchEnabled, headVerticalStretchScaleY, headVerticalStretchScaleX, headVerticalStretchShadowOpacity, headGlitchEnabled, headGlitchIntensity, headGlitchRgbSplit, headGlitchNoise, headGlitchGlow, headGlitchRedColor, headGlitchMagentaColor, headGlitchBlueColor, headGlitchYellowColor, headExtrudeDepth, headExtrudeAngle, headExtrudeDistance, headExtrudeColor, head2Rotate, head2Skew, detailsRotate, details2Rotate, venueRotate, subtagRotate, logoRotate, headAlign,
     palette, format, portraitUrl, bgUrl, bgUploadUrl, logoUrl, hue, haze, grade, leak, vignette, bgPosX, bgPosY,
     portraitScale, subtagUppercase, opticalMargin, leadTrackDelta, lastTrackDelta, kerningFix, headBehindPortrait,
     headlineLayerZ, head2LayerZ, detailsLayerZ, details2LayerZ, venueLayerZ, subtagLayerZ,
@@ -2798,6 +3802,12 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
     details, bodyFamily, bodyColor, bodySize, bodyUppercase, bodyBold, bodyItalic, bodyUnderline, bodyTracking, detailsX, detailsY,
     venue, venueFamily, venueColor, venueSize, venueX, venueY, venueLineHeight, detailsFamily, 
     subtagEnabled, subtag, subtagFamily, subtagBgColor, subtagTextColor, subtagAlpha, subtagX, subtagY,
+    presenterEnabled = false, presenter = '', presenterX = 31.5, presenterY = 7.5, presenterWidth = 40, presenterSize = 10, presenterLineHeight = 0.7, presenterFamily = 'Inter', presenterColor = '#ffffff', presenterAlign = 'center', presenterRotation = 0,
+    leftRailEnabled = false, leftRail = '', leftRailX = 3.5, leftRailY = 53, leftRailSize = 10, leftRailLineHeight = 0.7, leftRailFamily = 'Inter', leftRailColor = '#ffffff', leftRailRotation = -90,
+    rightRailEnabled = false, rightRail = '', rightRailX = 86.8, rightRailY = 36, rightRailSize = 10, rightRailLineHeight = 0.7, rightRailFamily = 'Inter', rightRailColor = '#ffffff', rightRailRotation = 90,
+    dateEnabled = false, date = '', dateX = 8, dateY = 6, dateSize = 24, dateLineHeight = 0.7, dateFamily = 'Bebas Neue', dateColor = '#ffffff', dateAlign = 'left', dateRotation = 0,
+    priceEnabled = false, price = '', priceX = 78, priceY = 66, priceSize = 30, priceLineHeight = 0.7, priceScale = 1, priceFamily = 'Bebas Neue', priceColor = '#ffffff', priceAlign = 'center',
+    qrEnabled = false, qrX = 90, qrY = 8, qrScale = 0.55, qrImageUrl = null,
     showGuides, showFaceGuide, faceRight, faceTop, faceW, faceH, allowPeople,
     moveMode, snap, detailsAlign, venueAlign, clarity, portraitX, portraitY, venueUppercase, 
     venueItalic, venueBold, textureOpacity,
@@ -2830,15 +3840,18 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
       subtagShadowStrength,
 
     // movers
-    onPortraitMove, onPortraitScale, onDeletePortrait, onLogoMove, onHeadMove, onDetailsMove, onVenueMove, onSubtagMove, 
+    onPortraitMove, onPortraitScale, onDeletePortrait, onLogoMove, onHeadMove, onDetailsMove, onVenueMove, onSubtagMove,
+    onPresenterMove, onLeftRailMove, onRightRailMove, onDateMove, onPriceMove, onQrMove,
     onBgMove, onHead2Move, onDetails2Move, onBgScale, onIconMove, onIconResize, onRecordMove, onDeleteIcon,
     portraitBoxW, portraitBoxH,
     emojis,
     onEmojiMove,
+    onAlignmentPositionPreview,
     isMobileView,
     mobileDragEnabled = false,
     onMobileDragEnd,
     onOpenTextFloat,
+    onOpenAssetFloat,
     portraitCanvas,
     emojiCanvas,
     flareCanvas,
@@ -2854,6 +3867,7 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
     onToggleLock,
     onSelectIcon,
   } = p;
+  const goldBlockSvgIdBase = React.useId().replace(/[^a-zA-Z0-9_-]/g, "");
 
 const mobileLiveCompositeMode = !!isMobileView && !hideUiForExport;
 
@@ -3049,6 +4063,7 @@ const selBox = (on: boolean) =>
   const updatePortrait = useFlyerState((s) => s.updatePortrait);
   const removePortrait = useFlyerState((s) => s.removePortrait);
   const selectedPortraitId = useFlyerState((s) => s.selectedPortraitId);
+  const selectedPanel = useFlyerState((s) => s.selectedPanel);
 
   
   
@@ -3096,7 +4111,7 @@ React.useEffect(() => {
       dragReturnTimer.current = null;
     }
   };
-}, []);
+}, [bgUploadUrl, bgUrl]);
 
   // Stores the drag state purely in memory (immune to re-renders)
 const bgDragState = useRef({
@@ -3260,6 +4275,135 @@ const isActive = React.useCallback(
 );
 const posSnap = (v: number) => (snap ? Math.round(v) : v);
 
+const getTemplateLabelDragHandlers = React.useCallback(
+  (
+    key: Exclude<MoveTarget, null>,
+    startX: number,
+    startY: number,
+    onMove?: (x: number, y: number) => void,
+    openFloat?: () => void
+  ) => ({
+    onPointerDown: (e: React.PointerEvent<HTMLElement>) => {
+      if (isMobileView && !mobileDragEnabled) {
+        const store = useFlyerState.getState();
+        store.setSelectedPanel(key);
+        store.setMoveTarget(key);
+        openFloat?.();
+        return;
+      }
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const el = e.currentTarget as HTMLElement;
+      try {
+        el.setPointerCapture(e.pointerId);
+      } catch {}
+
+      el.dataset.hdrag = "1";
+      el.dataset.px = String(e.clientX);
+      el.dataset.py = String(e.clientY);
+      el.dataset.sx = String(startX ?? 0);
+      el.dataset.sy = String(startY ?? 0);
+
+      const parent = el.offsetParent || document.body;
+      const b = parent.getBoundingClientRect();
+      el.dataset.cw = String(b.width || 1);
+      el.dataset.ch = String(b.height || 1);
+
+      const store = useFlyerState.getState();
+      store.setSelectedPanel(key);
+      store.setMoveTarget(key);
+      store.setDragging(key);
+      store.setIsLiveDragging(true);
+      openFloat?.();
+      el.style.transition = "none";
+    },
+    onPointerMove: (e: React.PointerEvent<HTMLElement>) => {
+      const el = e.currentTarget as HTMLElement;
+      if (el.dataset.hdrag !== "1") return;
+
+      const clientX = e.clientX;
+      const clientY = e.clientY;
+      if ((el as any)._rafId) return;
+
+      (el as any)._rafId = requestAnimationFrame(() => {
+        (el as any)._rafId = null;
+
+        const startClientX = Number(el.dataset.px || 0);
+        const startClientY = Number(el.dataset.py || 0);
+        const startLeft = Number(el.dataset.sx || 0);
+        const startTop = Number(el.dataset.sy || 0);
+        const cw = Number(el.dataset.cw || 1);
+        const ch = Number(el.dataset.ch || 1);
+        const nextX = startLeft + ((clientX - startClientX) / cw) * 100;
+        const nextY = startTop + ((clientY - startClientY) / ch) * 100;
+
+        el.style.left = `${nextX}%`;
+        el.style.top = `${nextY}%`;
+      });
+    },
+    onPointerUp: (e: React.PointerEvent<HTMLElement>) => {
+      const el = e.currentTarget as HTMLElement;
+      if (el.dataset.hdrag !== "1") return;
+      el.dataset.hdrag = "0";
+
+      if ((el as any)._rafId) cancelAnimationFrame((el as any)._rafId);
+      (el as any)._rafId = null;
+
+      const startClientX = Number(el.dataset.px || 0);
+      const startClientY = Number(el.dataset.py || 0);
+      const cw = Number(el.dataset.cw || 1);
+      const ch = Number(el.dataset.ch || 1);
+      const startLeft = Number(el.dataset.sx || 0);
+      const startTop = Number(el.dataset.sy || 0);
+      const dx = e.clientX - startClientX;
+      const dy = e.clientY - startClientY;
+      const finalX = startLeft + (dx / cw) * 100;
+      const finalY = startTop + (dy / ch) * 100;
+
+      el.style.left = `${finalX}%`;
+      el.style.top = `${finalY}%`;
+      onAlignmentPositionPreview?.(key, finalX, finalY, key);
+
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+        onRecordMove?.(key, startLeft, startTop, key);
+      }
+      onMove?.(finalX, finalY);
+
+      try {
+        el.releasePointerCapture(e.pointerId);
+      } catch {}
+
+      const store = useFlyerState.getState();
+      store.setDragging(null);
+      store.setIsLiveDragging(false);
+      if (isMobileView) onMobileDragEnd?.();
+    },
+    onPointerCancel: (e: React.PointerEvent<HTMLElement>) => {
+      const el = e.currentTarget as HTMLElement;
+      el.dataset.hdrag = "0";
+      if ((el as any)._rafId) cancelAnimationFrame((el as any)._rafId);
+      (el as any)._rafId = null;
+      try {
+        el.releasePointerCapture(e.pointerId);
+      } catch {}
+
+      const store = useFlyerState.getState();
+      store.setDragging(null);
+      store.setIsLiveDragging(false);
+      if (isMobileView) onMobileDragEnd?.();
+    },
+  }),
+  [
+    isMobileView,
+    mobileDragEnabled,
+    onAlignmentPositionPreview,
+    onMobileDragEnd,
+    onRecordMove,
+  ]
+);
+
 const bgDragRaf = useRef<number | null>(null);
 const bgDragQueued = useRef<{ x: number; y: number } | null>(null);
 const bgPreviewRaf = useRef<number | null>(null);
@@ -3415,6 +4559,18 @@ function beginDrag(
         startX = venueX; startY = venueY; break;
       case "subtag":
         startX = subtagX; startY = subtagY; break;
+      case "presenter":
+        startX = presenterX; startY = presenterY; break;
+      case "leftRail":
+        startX = leftRailX; startY = leftRailY; break;
+      case "rightRail":
+        startX = rightRailX; startY = rightRailY; break;
+      case "date":
+        startX = dateX; startY = dateY; break;
+      case "price":
+        startX = priceX; startY = priceY; break;
+      case "qr":
+        startX = qrX; startY = qrY; break;
       case "logo":
         startX = logoX; startY = logoY; break;
       case "background":
@@ -3650,6 +4806,36 @@ function endDrag() {
           st.setSessionValue(fmt, "subtagX", safeX);
           st.setSessionValue(fmt, "subtagY", safeY);
           break;
+        case "presenter":
+          p.onPresenterMove?.(safeX, safeY);
+          st.setSessionValue(fmt, "presenterX", safeX);
+          st.setSessionValue(fmt, "presenterY", safeY);
+          break;
+        case "leftRail":
+          p.onLeftRailMove?.(safeX, safeY);
+          st.setSessionValue(fmt, "leftRailX", safeX);
+          st.setSessionValue(fmt, "leftRailY", safeY);
+          break;
+        case "rightRail":
+          p.onRightRailMove?.(safeX, safeY);
+          st.setSessionValue(fmt, "rightRailX", safeX);
+          st.setSessionValue(fmt, "rightRailY", safeY);
+          break;
+        case "date":
+          p.onDateMove?.(safeX, safeY);
+          st.setSessionValue(fmt, "dateX", safeX);
+          st.setSessionValue(fmt, "dateY", safeY);
+          break;
+        case "price":
+          p.onPriceMove?.(safeX, safeY);
+          st.setSessionValue(fmt, "priceX", safeX);
+          st.setSessionValue(fmt, "priceY", safeY);
+          break;
+        case "qr":
+          p.onQrMove?.(safeX, safeY);
+          st.setSessionValue(fmt, "qrX", safeX);
+          st.setSessionValue(fmt, "qrY", safeY);
+          break;
         case "logo":
           st.setSessionValue(fmt, "logoX", safeX);
           st.setSessionValue(fmt, "logoY", safeY);
@@ -3688,6 +4874,41 @@ function endDrag() {
     // bgPosX/Y are 0..100 (0 = left/top edge, 50 = centered, 100 = right/bottom)
     const tx = ((50 - bgPosX) / 100) * extraW; // +right / -left
     const ty = ((50 - bgPosY) / 100) * extraH; // +down  / -up
+    const themePrimary = palette.primary || palette.bgTo || "#18F0C8";
+    const themeSecondary = palette.secondary || palette.bgFrom || "#07080C";
+    const themeShadow = palette.bgTo || darken(themeSecondary, 0.35);
+    const themeAccent = palette.accent || themePrimary;
+    const themeNeutral = palette.neutral || themePrimary;
+    const hasDirectedPalette = Boolean(palette.primary || palette.secondary || palette.accent);
+    const backgroundSource = bgUploadUrl || bgUrl || "";
+    const backgroundHue = resolveBackgroundTreatmentHue(backgroundSource, palette);
+    const backgroundTreatment = getBackgroundTreatment(
+      backgroundSource,
+      backgroundHue
+    );
+    const backgroundCore = paletteHexFromHsl(backgroundHue, 0.92, 0.56);
+    const backgroundCoreDeep = paletteHexFromHsl(backgroundHue, 0.84, 0.42);
+    const backgroundAccent = paletteHexFromHsl(backgroundHue + 176, 0.9, 0.56);
+    const backgroundShadowHue = (backgroundHue + 245) % 360;
+    const backgroundShadow = paletteHexFromHsl(backgroundShadowHue, 0.48, 0.07);
+    const backgroundImageFilter = [
+      `hue-rotate(${hue}deg)`,
+      `contrast(${(backgroundTreatment.imageFilter.contrast * (1 + clarity * 0.04)).toFixed(3)})`,
+      `saturate(${(backgroundTreatment.imageFilter.saturation * (1 + clarity * 0.06)).toFixed(3)})`,
+      `brightness(${backgroundTreatment.imageFilter.brightness.toFixed(3)})`,
+      `blur(${bgBlur}px)`,
+    ].join(" ");
+    const backgroundCast = backgroundTreatment.preserveWarmCore
+      ? `
+        radial-gradient(circle at 52% 46%, ${hexToRgba(backgroundCore, 0.18)} 0%, ${hexToRgba(backgroundCoreDeep, 0.09)} 24%, transparent 52%),
+        radial-gradient(circle at 24% 20%, ${hexToRgba(backgroundAccent, 0.09)} 0%, transparent 28%),
+        linear-gradient(180deg, ${hexToRgba(backgroundShadow, 0.09)} 0%, ${hexToRgba(backgroundShadow, 0.21)} 100%)
+      `
+      : `
+        radial-gradient(circle at 52% 46%, ${hexToRgba(backgroundCore, 0.11)} 0%, ${hexToRgba(backgroundCoreDeep, 0.05)} 24%, transparent 52%),
+        radial-gradient(circle at 24% 20%, ${hexToRgba(backgroundAccent, 0.08)} 0%, transparent 30%),
+        linear-gradient(180deg, ${hexToRgba(themeSecondary, 0.06)} 0%, ${hexToRgba(themeShadow, 0.18)} 100%)
+      `;
  
 
 return (
@@ -3796,7 +5017,7 @@ return (
         pointerEvents: "auto",
         cursor: bgLocked ? "not-allowed" : moveTarget === "background" ? "grabbing" : "grab",
         touchAction: "none",
-        filter: `hue-rotate(${hue}deg) contrast(${1 + clarity * 0.2}) saturate(${1 + clarity * 0.4}) blur(${bgBlur}px)`,
+        filter: backgroundImageFilter,
       }}
 
       // ✅ PATCH: click background => clear selection halo + open background panels
@@ -3826,7 +5047,8 @@ return (
         const store = useFlyerState.getState();
         onRecordMove?.("background", bgX, bgY, "background");
         store.setSelectedPortraitId(null);
-        store.setDragging(null);
+        store.setDragging("background");
+        store.setIsLiveDragging(true);
         store.setMoveTarget("background");
         store.setSelectedPanel("background");
 
@@ -3949,8 +5171,11 @@ return (
         setBgRotate(finalRotate);
         onBgMove?.(finalX, finalY);
         onBgScale?.(finalScale);
+        onAlignmentPositionPreview?.("background", finalX, finalY, "background");
 
         bgGesture.current = null;
+        useFlyerState.getState().setDragging(null);
+        useFlyerState.getState().setIsLiveDragging(false);
         if (isMobileView) onMobileDragEnd?.();
       }}
       onPointerCancel={() => {
@@ -3960,6 +5185,8 @@ return (
         bgDragRaf.current = null;
         if (bgPreviewRaf.current != null) cancelAnimationFrame(bgPreviewRaf.current);
         bgPreviewRaf.current = null;
+        useFlyerState.getState().setDragging(null);
+        useFlyerState.getState().setIsLiveDragging(false);
       }}
     >
       <img
@@ -3996,19 +5223,62 @@ return (
   </div>
 )}
 
+{(bgUploadUrl || bgUrl) && (
+  <>
+    <div
+      className="pointer-events-none absolute inset-0"
+      style={{
+        zIndex: 7,
+        mixBlendMode: backgroundTreatment.overlayBlendMode,
+        opacity: hasDirectedPalette ? backgroundTreatment.overlayOpacity : 0,
+        background: backgroundCast,
+      }}
+    />
+    <div
+      className="pointer-events-none absolute inset-0"
+      style={{
+        zIndex: 8,
+        mixBlendMode: "screen",
+        opacity: hasDirectedPalette ? (backgroundTreatment.preserveWarmCore ? 0.06 : 0.08) : 0,
+        background: `
+          radial-gradient(circle at 42% 36%, ${hexToRgba(backgroundAccent, 0.22)} 0%, rgba(0,0,0,0) 34%),
+          radial-gradient(circle at 68% 72%, ${hexToRgba(backgroundCore, 0.26)} 0%, rgba(0,0,0,0) 30%),
+          radial-gradient(circle at 50% 44%, ${hexToRgba(themeNeutral, 0.09)} 0%, rgba(0,0,0,0) 28%)
+        `,
+        filter: "blur(12px) saturate(1.25)",
+      }}
+    />
+    <div
+      className="pointer-events-none absolute inset-0"
+      style={{
+        zIndex: 9,
+        mixBlendMode: "screen",
+        opacity: hasDirectedPalette ? 0.06 : 0,
+        backgroundImage: `
+          radial-gradient(1.5px 1.5px at 18% 22%, ${themeAccent}, transparent 65%),
+          radial-gradient(1.5px 1.5px at 78% 30%, ${themeAccent}, transparent 65%),
+          radial-gradient(1px 1px at 64% 66%, ${themePrimary}, transparent 65%),
+          radial-gradient(1px 1px at 35% 74%, ${themeAccent}, transparent 65%)
+        `,
+        backgroundSize: "160px 160px",
+      }}
+    />
+  </>
+)}
+
 
 {/* Vignette + haze overlays */}
 <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 12 }}>
-  {/* Vignette: center clear → edges dark; TRIPLED intensity */}
+  {/* Vignette: soft edge darkening without creating a hard bottom band */}
   <div
     className="absolute inset-0"
     style={{
-    background: `radial-gradient(ellipse at 50% 50%,
-      rgba(0,0,0,0) 45%,
-      rgba(0,0,0,${Math.min(1, vignette * 5.5)}) 85%,
-      rgba(0,0,0,${Math.min(1, vignette * 8)}) 100%
-    )`,
-  }}
+      background: `radial-gradient(ellipse at 50% 50%,
+        rgba(0,0,0,0) 50%,
+        rgba(0,0,0,${Math.min(0.46, vignette * 1.65)}) 84%,
+        rgba(0,0,0,${Math.min(0.72, vignette * 2.35)}) 100%
+      )`,
+    }}
   />
 
   {/* Haze (unchanged) */}
@@ -4470,6 +5740,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	    // Force final sync
 	    el.style.left = `${finalX}%`;
 	    el.style.top = `${finalY}%`;
+	    onAlignmentPositionPreview?.("headline", finalX, finalY, "headline");
 
 	    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
 	      onRecordMove?.("headline", startLeft, startTop, "headline");
@@ -4498,6 +5769,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	  style={{
     left: `${headX}%`,
     top: `${headY}%`,
+    width: `${textColWidth}%`,
     overflow: 'visible',
     zIndex: dragging === "headline" ? 999 : headlineLayerZ,
     textAlign: headAlign,
@@ -4511,6 +5783,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     transition: 'none',
     willChange: "left, top",
     touchAction: "none",
+    pointerEvents: "none",
   }}
 >
   {(() => {
@@ -4535,22 +5808,230 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     const extrudeLayerScale = extrudeRenderDepth > 0 ? extrudeDepth / extrudeRenderDepth : 1;
     const snapExtrudeOffset = (value: number) =>
       liveTextPerfMode ? Math.round(value) : Math.round(value * 2) / 2;
-    const sliceBandCount = Math.max(3, Math.round(headSliceBandCount || 0));
-    const sliceEchoDistance = Math.max(0, Number(headSliceEchoDistance) || 0);
-    const sliceAreaHeight = estimatedTextHeight + sliceEchoDistance * 2;
-    const sliceBandSlotHeight = sliceAreaHeight / sliceBandCount;
-    const sliceClipHeight = Math.max(2, sliceBandSlotHeight - Math.max(0, Number(headSliceBandGap) || 0));
-	    const mainSliceShadow =
-	      headSliceEnabled && headSliceShadowStrength > 0
-	        ? `0 ${Math.round(12 * headSliceShadowStrength)}px 0 rgba(0,0,0,${Math.min(0.45, 0.18 + headSliceShadowStrength * 0.4)})`
-	        : "none";
 	    const glitchActive = !!headGlitchEnabled;
-	    const rushActive = !!headRushEnabled && !glitchActive;
-	    const lineActive = !!headLineEnabled && !glitchActive && !rushActive && !headSliceEnabled;
+	    const kineticActive = !!headKineticEnabled && !glitchActive;
+	    const dashStrokeActive = !!headDashStrokeEnabled && !glitchActive && !kineticActive;
+	    const doodleStackActive = !!headColorStrokeEnabled && !glitchActive && !kineticActive && !dashStrokeActive;
+	    const goldBlockActive = !!headGoldBlockEnabled && !glitchActive && !kineticActive && !dashStrokeActive && !doodleStackActive;
+	    const cyberEmbossActive = !!headCyberEmbossEnabled && !glitchActive && !kineticActive && !dashStrokeActive && !doodleStackActive && !goldBlockActive;
+	    const quantumActive = !!headQuantumEnabled && !glitchActive && !kineticActive && !dashStrokeActive && !doodleStackActive && !goldBlockActive && !cyberEmbossActive;
+	    const verticalStretchActive = !!headVerticalStretchEnabled && !glitchActive && !kineticActive && !dashStrokeActive && !doodleStackActive && !goldBlockActive && !cyberEmbossActive && !quantumActive;
+	    const pure3dActive = !!headPure3dEnabled && !glitchActive && !kineticActive && !dashStrokeActive && !doodleStackActive && !goldBlockActive && !cyberEmbossActive && !quantumActive && !verticalStretchActive;
+	    const pure3dFrame = Math.max(0, Math.min(1, Number.isFinite(Number(headPure3dFrame)) ? Number(headPure3dFrame) : HEADLINE_PURE_3D_DEFAULTS.frame));
+	    const doodleAngleX = Math.max(-28, Math.min(28, Number.isFinite(Number(headDoodleAngleX)) ? Number(headDoodleAngleX) : HEADLINE_DOODLE_STACK_DEFAULTS.angleX));
+	    const doodleAngleY = Math.max(-28, Math.min(28, Number.isFinite(Number(headDoodleAngleY)) ? Number(headDoodleAngleY) : HEADLINE_DOODLE_STACK_DEFAULTS.angleY));
+	    const doodleRotate = Math.max(-8, Math.min(8, Number.isFinite(Number(headDoodleRotate)) ? Number(headDoodleRotate) : HEADLINE_DOODLE_STACK_DEFAULTS.rotate));
+	    const doodleSpread = Math.max(0, Math.min(3, Number.isFinite(Number(headDoodleSpread)) ? Number(headDoodleSpread) : HEADLINE_DOODLE_STACK_DEFAULTS.spread));
+	    const pure3dEase = 0.5 - Math.cos(pure3dFrame * Math.PI) / 2;
+	    const pure3dRotateY = 40 - 80 * pure3dEase;
+	    const pure3dRotateX = 33 - 76 * pure3dEase;
+	    const pure3dFaceColor = normalizePaletteHexString(String(headPure3dFaceColor || ""), HEADLINE_PURE_3D_DEFAULTS.faceColor);
+	    const pure3dEdgeColor = normalizePaletteHexString(String(headPure3dEdgeColor || ""), HEADLINE_PURE_3D_DEFAULTS.edgeColor);
+	    const pure3dShadowColor = normalizePaletteHexString(String(headPure3dShadowColor || ""), HEADLINE_PURE_3D_DEFAULTS.shadowColor);
+	    const goldBlockLightColor = normalizePaletteHexString(String(headGoldBlockLightColor || ""), HEADLINE_GOLD_BLOCK_DEFAULTS.lightColor);
+	    const goldBlockMidColor = normalizePaletteHexString(String(headGoldBlockMidColor || ""), HEADLINE_GOLD_BLOCK_DEFAULTS.midColor);
+	    const goldBlockDarkColor = normalizePaletteHexString(String(headGoldBlockDarkColor || ""), HEADLINE_GOLD_BLOCK_DEFAULTS.darkColor);
+	    const goldBlockStrokeColor = normalizePaletteHexString(String(headGoldBlockStrokeColor || ""), HEADLINE_GOLD_BLOCK_DEFAULTS.strokeColor);
+	    const goldBlockStrokeWidthPx = Math.max(0, Math.min(46, Number.isFinite(Number(headGoldBlockStrokeWidth)) ? Number(headGoldBlockStrokeWidth) : HEADLINE_GOLD_BLOCK_DEFAULTS.strokeWidth));
+	    const goldBlockTextureStrength = Math.max(0, Math.min(1, Number.isFinite(Number(headGoldBlockTexture)) ? Number(headGoldBlockTexture) : HEADLINE_GOLD_BLOCK_DEFAULTS.texture));
+	    const goldBlockRoughness = Math.max(0, Math.min(1, Number.isFinite(Number(headGoldBlockRoughness)) ? Number(headGoldBlockRoughness) : HEADLINE_GOLD_BLOCK_DEFAULTS.roughness));
+	    const goldBlockHotLightColor = rgbToHex(mixRgb(hexToRgb(goldBlockLightColor), { r: 255, g: 255, b: 255 }, 0.38)).toUpperCase();
+	    const goldBlockPaleHighlightColor = rgbToHex(mixRgb(hexToRgb(goldBlockLightColor), { r: 255, g: 255, b: 255 }, 0.68)).toUpperCase();
+	    const goldBlockBrightMidColor = rgbToHex(mixRgb(hexToRgb(goldBlockMidColor), { r: 255, g: 210, b: 64 }, 0.36)).toUpperCase();
+	    const goldBlockTextureAlpha = Math.min(1, 0.18 + goldBlockTextureStrength * 0.95);
+	    const goldBlockTextureContrast = 1.16 + goldBlockTextureStrength * 0.72;
+	    const goldBlockLines = headlineText.split("\n");
+	    const goldBlockLineAdvance = headDisplayPx * Math.max(0.96, lineHeight);
+	    const goldBlockSvgPad = goldBlockStrokeWidthPx + Math.max(14, headDisplayPx * 0.16);
+	    const goldBlockFirstLineY = goldBlockSvgPad + headDisplayPx * 0.52;
+	    const goldBlockSvgHeight = goldBlockSvgPad * 2 + headDisplayPx + goldBlockLineAdvance * (explicitLineCount - 1);
+	    const goldBlockTextureBoxHeight = headDisplayPx * 1.36 + goldBlockStrokeWidthPx * 2;
+	    const sliceActive = false;
+	    const mainSliceShadow = "none";
+	    const rushActive = !!headRushEnabled && !glitchActive && !kineticActive && !dashStrokeActive && !doodleStackActive && !goldBlockActive && !quantumActive && !verticalStretchActive && !pure3dActive;
+	    const glassActive = !!headGlassEnabled && !glitchActive && !kineticActive && !dashStrokeActive && !doodleStackActive && !goldBlockActive && !cyberEmbossActive && !quantumActive && !verticalStretchActive && !pure3dActive && !rushActive && !sliceActive;
+	    const rawGlassLineHeight = Number(lineHeight);
+	    const glassSafeLineHeight = glassActive
+	      ? Math.max(
+	          HEADLINE_GLASS_MIN_LINE_HEIGHT,
+	          Math.min(
+	            HEADLINE_GLASS_MAX_LINE_HEIGHT,
+	            Number.isFinite(rawGlassLineHeight)
+	              ? rawGlassLineHeight
+	              : HEADLINE_GLASS_DEFAULT_LINE_HEIGHT
+	          )
+	        )
+	      : lineHeight;
+	    const lineActive = !!headLineEnabled && !glitchActive && !kineticActive && !dashStrokeActive && !doodleStackActive && !goldBlockActive && !cyberEmbossActive && !quantumActive && !verticalStretchActive && !pure3dActive && !rushActive && !glassActive && !sliceActive;
 	    const rushFillColor =
 	      textFx.color && textFx.color !== "transparent" && textFx.color !== "none"
 	        ? textFx.color
 	        : "#ef2a2a";
+	    const kineticTextColor = headKineticTextColor || HEADLINE_KINETIC_DEFAULTS.textColor;
+	    const kineticTopColor = headKineticTopColor || HEADLINE_KINETIC_DEFAULTS.topColor;
+	    const kineticBottomColor = headKineticBottomColor || HEADLINE_KINETIC_DEFAULTS.bottomColor;
+	    const dashStrokeColors = HEADLINE_DASH_STROKE_DEFAULTS.colors.map((fallback, index) =>
+	      normalizePaletteHexString(String(headDashStrokeColors[index] || ""), fallback)
+	    );
+	    const dashStrokeStep = HEADLINE_DASH_STROKE_DEFAULTS.dash + HEADLINE_DASH_STROKE_DEFAULTS.gap;
+	    const dashStrokeSpace =
+	      HEADLINE_DASH_STROKE_DEFAULTS.dash * (dashStrokeColors.length - 1) +
+	      HEADLINE_DASH_STROKE_DEFAULTS.gap * dashStrokeColors.length;
+	    const dashStrokeFrame = Math.max(0, Math.min(1, Number.isFinite(Number(headDashStrokeFrame)) ? Number(headDashStrokeFrame) : 0));
+	    const dashStrokeBaseOffset = -(dashStrokeStep * dashStrokeColors.length * dashStrokeFrame);
+	    const paletteRetroEngravedColors = resolveRetroEngravedPaletteColors(palette);
+	    const manualRetroFaceColor = normalizePaletteHexString(String(textFx.color || ""), "");
+	    const manualRetroBorderColor =
+	      textFx.strokeWidth > 0
+	        ? normalizePaletteHexString(String(textFx.strokeColor || ""), "")
+	        : "";
+	    const retroEngravedFaceColor = manualRetroFaceColor || paletteRetroEngravedColors.faceColor;
+	    const retroEngravedBorderColor = manualRetroBorderColor || paletteRetroEngravedColors.borderColor;
+	    const retroEngravedColors = {
+	      ...paletteRetroEngravedColors,
+	      faceColor: retroEngravedFaceColor,
+	      borderColor: retroEngravedBorderColor,
+	      shadowColor: manualRetroBorderColor
+	        ? darkenHex(retroEngravedBorderColor, 18)
+	        : paletteRetroEngravedColors.shadowColor,
+	    };
+	    const retroShadowAlpha = headRetroShadowEnabled
+	      ? Math.max(0, Math.min(1, Number.isFinite(Number(headRetroShadowAlpha)) ? Number(headRetroShadowAlpha) : 1))
+	      : 0;
+	    const rawKineticSliceOffsetX = Number(headKineticSliceOffsetX);
+	    const rawKineticSliceOffsetY = Number(headKineticSliceOffsetY);
+	    const rawKineticShadowOpacity = Number(headKineticShadowOpacity);
+	    const kineticSliceOffsetX = Math.max(
+	      0,
+	      Math.min(
+	        48,
+	        Number.isFinite(rawKineticSliceOffsetX)
+	          ? rawKineticSliceOffsetX
+	          : HEADLINE_KINETIC_DEFAULTS.sliceOffsetX
+	      )
+	    );
+	    const kineticSliceOffsetY = Math.max(
+	      -24,
+	      Math.min(
+	        24,
+	        Number.isFinite(rawKineticSliceOffsetY)
+	          ? rawKineticSliceOffsetY
+	          : HEADLINE_KINETIC_DEFAULTS.sliceOffsetY
+	      )
+	    );
+	    const kineticShadowOpacity = Math.max(
+	      0,
+	      Math.min(
+	        1,
+	        Number.isFinite(rawKineticShadowOpacity)
+	          ? rawKineticShadowOpacity
+	          : HEADLINE_KINETIC_DEFAULTS.shadowOpacity
+	      )
+	    );
+	    const quantumCyanColor = headQuantumCyanColor || HEADLINE_QUANTUM_DEFAULTS.cyanColor;
+	    const quantumBlueColor = headQuantumBlueColor || HEADLINE_QUANTUM_DEFAULTS.blueColor;
+	    const quantumHighlightColor = headQuantumHighlightColor || HEADLINE_QUANTUM_DEFAULTS.highlightColor;
+	    const quantumPurpleColor = headQuantumPurpleColor || HEADLINE_QUANTUM_DEFAULTS.purpleColor;
+	    const quantumMagentaColor = headQuantumMagentaColor || HEADLINE_QUANTUM_DEFAULTS.magentaColor;
+	    const rawQuantumStrokeWidth = Number(headQuantumStrokeWidth);
+	    const rawQuantumSplitOffset = Number(headQuantumSplitOffset);
+	    const rawQuantumGlow = Number(headQuantumGlow);
+	    const rawQuantumScanlineOpacity = Number(headQuantumScanlineOpacity);
+	    const rawQuantumStreakOpacity = Number(headQuantumStreakOpacity);
+	    const quantumSplitOffset = Math.max(
+	      0,
+	      Math.min(
+	        32,
+	        Number.isFinite(rawQuantumSplitOffset)
+	          ? rawQuantumSplitOffset
+	          : HEADLINE_QUANTUM_DEFAULTS.splitOffset
+	      )
+	    );
+	    const quantumStrokeWidth = Math.max(
+	      0,
+	      Math.min(
+	        10,
+	        Number.isFinite(rawQuantumStrokeWidth)
+	          ? rawQuantumStrokeWidth
+	          : HEADLINE_QUANTUM_DEFAULTS.strokeWidth
+	      )
+	    );
+	    const quantumSplitStrokeWidth = Math.max(0, Math.min(14, quantumStrokeWidth + 1));
+	    const quantumInnerStrokeWidth = Math.max(0, Math.min(5, quantumStrokeWidth * 0.43));
+	    const quantumHighlightStrokeWidth = Math.max(0, Math.min(4, quantumStrokeWidth * 0.34));
+	    const quantumGlow = Math.max(
+	      0,
+	      Math.min(1, Number.isFinite(rawQuantumGlow) ? rawQuantumGlow : HEADLINE_QUANTUM_DEFAULTS.glow)
+	    );
+	    const quantumGlowEnabled = !!headQuantumGlowEnabled;
+	    const quantumGlowActive = quantumGlowEnabled && quantumGlow > 0;
+	    const quantumScanlineOpacity = Math.max(
+	      0,
+	      Math.min(
+	        0.5,
+	        Number.isFinite(rawQuantumScanlineOpacity)
+	          ? rawQuantumScanlineOpacity
+	          : HEADLINE_QUANTUM_DEFAULTS.scanlineOpacity
+	      )
+	    );
+	    const quantumStreakOpacity = Math.max(
+	      0,
+	      Math.min(
+	        1,
+	        Number.isFinite(rawQuantumStreakOpacity)
+	          ? rawQuantumStreakOpacity
+	          : HEADLINE_QUANTUM_DEFAULTS.streakOpacity
+	      )
+	    );
+	    const quantumGradient =
+	      `linear-gradient(135deg, ${quantumCyanColor} 0%, ${quantumBlueColor} 28%, ${quantumHighlightColor} 48%, ${quantumPurpleColor} 68%, ${quantumMagentaColor} 100%)`;
+	    const quantumMagentaGlowFilter = quantumGlowActive
+	      ? `drop-shadow(0 0 ${(8 + quantumGlow * 10).toFixed(1)}px ${quantumMagentaColor})`
+	      : "none";
+	    const quantumCyanGlowFilter = quantumGlowActive
+	      ? `drop-shadow(0 0 ${(8 + quantumGlow * 10).toFixed(1)}px ${quantumCyanColor})`
+	      : "none";
+	    const quantumMainGlowFilter = quantumGlowActive
+	      ? `drop-shadow(0 0 ${(4 + quantumGlow * 8).toFixed(1)}px ${hexToRgba(quantumCyanColor, 0.76)})`
+	      : "none";
+	    const quantumHighlightGlowFilter = quantumGlowActive
+	      ? `drop-shadow(0 0 ${(5 + quantumGlow * 8).toFixed(1)}px ${quantumCyanColor})`
+	      : "none";
+	    const quantumGlowShadow = quantumGlowActive
+	      ? `0 0 ${(10 + quantumGlow * 18).toFixed(1)}px ${hexToRgba(quantumCyanColor, 0.72)}, ` +
+	        `0 0 ${(18 + quantumGlow * 34).toFixed(1)}px ${hexToRgba(quantumMagentaColor, 0.5)}, ` +
+	        `0 12px 30px rgba(0,0,0,${(0.28 + quantumGlow * 0.22).toFixed(2)})`
+	      : "none";
+	    const rawVerticalStretchScaleY = Number(headVerticalStretchScaleY);
+	    const rawVerticalStretchScaleX = Number(headVerticalStretchScaleX);
+	    const rawVerticalStretchShadowOpacity = Number(headVerticalStretchShadowOpacity);
+	    const verticalStretchScaleY = Math.max(
+	      0.8,
+	      Math.min(
+	        2.8,
+	        Number.isFinite(rawVerticalStretchScaleY)
+	          ? rawVerticalStretchScaleY
+	          : HEADLINE_VERTICAL_STRETCH_DEFAULTS.scaleY
+	      )
+	    );
+	    const verticalStretchScaleX = Math.max(
+	      0.5,
+	      Math.min(
+	        1.2,
+	        Number.isFinite(rawVerticalStretchScaleX)
+	          ? rawVerticalStretchScaleX
+	          : HEADLINE_VERTICAL_STRETCH_DEFAULTS.scaleX
+	      )
+	    );
+	    const verticalStretchShadowOpacity = Math.max(
+	      0,
+	      Math.min(
+	        1,
+	        Number.isFinite(rawVerticalStretchShadowOpacity)
+	          ? rawVerticalStretchShadowOpacity
+	          : HEADLINE_VERTICAL_STRETCH_DEFAULTS.shadowOpacity
+	      )
+	    );
 	    const lineBackFillColor =
 	      textFx.color && textFx.color !== "transparent" && textFx.color !== "none"
 	        ? textFx.color
@@ -4572,6 +6053,185 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	          color: "transparent",
 	        }
 	      : {};
+	    const glassPrimaryColor = headGlassPrimaryColor || HEADLINE_GLASS_DEFAULTS.primaryColor;
+	    const glassSecondaryColor = headGlassSecondaryColor || HEADLINE_GLASS_DEFAULTS.secondaryColor;
+	    const glassHighlightColor = headGlassHighlightColor || HEADLINE_GLASS_DEFAULTS.highlightColor;
+	    const rawGlassBlur = Number(headGlassBlur);
+	    const rawGlassGlow = Number(headGlassGlow);
+	    const rawGlassStroke = Number(headGlassStroke);
+	    const rawGlassFillAlpha = Number(headGlassFillAlpha);
+	    const glassBlurPx = Math.max(0, Math.min(28, Number.isFinite(rawGlassBlur) ? rawGlassBlur : HEADLINE_GLASS_DEFAULTS.blur));
+	    const glassGlowPx = Math.max(0, Math.min(60, Number.isFinite(rawGlassGlow) ? rawGlassGlow : HEADLINE_GLASS_DEFAULTS.glow));
+	    const glassStrokeWidth = Math.max(0.5, Math.min(8, Number.isFinite(rawGlassStroke) ? rawGlassStroke : HEADLINE_GLASS_DEFAULTS.stroke));
+	    const glassFillAlpha = Math.max(0.01, Math.min(0.34, Number.isFinite(rawGlassFillAlpha) ? rawGlassFillAlpha : HEADLINE_GLASS_DEFAULTS.fillAlpha));
+	    const glassBevelPx = Math.max(1.1, Math.min(7, headDisplayPx * 0.024));
+	    const glassCoreAlpha = Math.min(0.12, glassFillAlpha);
+	    const glassCoreFill = `rgba(255,255,255,${glassCoreAlpha.toFixed(2)})`;
+	    const glassRefractionFill = `rgba(255,255,255,${Math.min(0.08, glassCoreAlpha * 0.9).toFixed(2)})`;
+	    const glassGlowStrokeWidth = Math.max(6, glassStrokeWidth + 6);
+	    const glassOuterRimWidth = Math.max(3.5, glassStrokeWidth + 3);
+	    const glassInnerRimWidth = Math.max(1.5, glassStrokeWidth);
+	    const glassFinalEdgeWidth = Math.max(0.8, glassStrokeWidth * 0.55);
+	    const glassRefractionBlurPx = Math.max(0.7, Math.min(1.6, glassBlurPx * 0.075));
+	    const glassOuterRimBlurPx = Math.max(0.8, Math.min(1.8, glassBlurPx * 0.075));
+	    const glassPrimarySoft = hexToRgba(glassPrimaryColor, Math.min(0.16, glassCoreAlpha * 1.15));
+	    const glassSecondarySoft = hexToRgba(glassSecondaryColor, Math.min(0.16, glassCoreAlpha * 1.2));
+	    const glassPrimaryRim = hexToRgba(glassPrimaryColor, 0.82);
+	    const glassSecondaryRim = hexToRgba(glassSecondaryColor, 0.76);
+	    const glassBrightRim = hexToRgba(glassHighlightColor, 0.92);
+	    const glassDarkRim = "rgba(5,2,18,0.62)";
+	    const glassBloomBlurPx = Math.max(6, Math.min(30, glassBlurPx + glassGlowPx * 1.35));
+	    const glassBloomStrokeWidth = Math.max(3.2, glassStrokeWidth + 4);
+	    const glassFillGradient =
+	      `linear-gradient(145deg, rgba(255,255,255,${Math.min(0.08, glassCoreAlpha).toFixed(2)}) 0%, ${glassPrimarySoft} 26%, rgba(255,255,255,0.015) 48%, rgba(4,2,18,0.10) 64%, ${glassSecondarySoft} 100%)`;
+	    const glassInnerDarkGradient =
+	      "linear-gradient(155deg, transparent 0%, rgba(0,0,0,0.06) 36%, rgba(0,0,0,0.30) 72%, rgba(0,0,0,0.46) 100%)";
+	    const glassReflectionSweep =
+	      "linear-gradient(165deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.28) 18%, rgba(255,255,255,0.06) 38%, transparent 55%)";
+	    const glassSpecularTexture = [
+	      glassReflectionSweep,
+	      "linear-gradient(112deg, transparent 0%, transparent 15%, rgba(255,255,255,0.58) 17%, rgba(255,255,255,0.13) 20%, transparent 24%, transparent 44%, rgba(255,255,255,0.34) 46%, transparent 50%, transparent 100%)",
+	      "repeating-linear-gradient(102deg, transparent 0 18px, rgba(255,255,255,0.10) 19px, transparent 22px)",
+	    ].join(", ");
+	    const glassEdgeShadow =
+	      `0 0 8px rgba(255,255,255,0.9), 0 0 ${(18 + glassGlowPx).toFixed(1)}px ${glassSecondaryRim}, 0 0 ${(36 + glassGlowPx * 1.4).toFixed(1)}px ${glassPrimaryRim}`;
+	    const glassPresetFillShadow =
+	      `0 -2px 8px rgba(255,255,255,0.28), 0 2px 12px rgba(0,0,0,0.35), 0 0 ${(18 + glassGlowPx * 0.6).toFixed(1)}px ${hexToRgba(glassSecondaryColor, 0.55)}`;
+	    const glassPresetInnerRimShadow =
+	      `0 0 4px rgba(255,255,255,0.85), 0 0 ${(10 + glassGlowPx * 0.45).toFixed(1)}px ${glassPrimaryColor}, 0 0 ${(24 + glassGlowPx * 0.8).toFixed(1)}px ${glassSecondaryColor}`;
+	    const glassPresetFinalEdgeShadow =
+	      `1px 1px 0 rgba(255,255,255,0.32), -1px -1px 0 rgba(255,255,255,0.2), 0 0 ${(6 + glassGlowPx * 0.3).toFixed(1)}px ${glassHighlightColor}`;
+	    const glassHighlightGradient =
+	      "linear-gradient(165deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.5) 14%, rgba(255,255,255,0.16) 32%, transparent 56%)";
+	    const glassSweepGradient =
+	      "linear-gradient(110deg, transparent 0%, transparent 35%, rgba(255,255,255,0.92) 48%, rgba(255,255,255,0.25) 54%, transparent 66%, transparent 100%)";
+	    const glassCssFillAlpha = Math.max(0.01, Math.min(0.045, glassFillAlpha));
+	    const glassRandomSeed = stableStringSeed(
+	      [
+	        headlineText,
+	        headlineFamily,
+	        Math.round(headDisplayPx),
+	        glassPrimaryColor,
+	        glassSecondaryColor,
+	        glassHighlightColor,
+	        format,
+	      ].join("|")
+	    );
+	    const glassRng = mulberry32(glassRandomSeed ^ 0x676c6173);
+	    const glassRand = (min: number, max: number) => min + (max - min) * glassRng();
+	    const glassRandInt = (min: number, max: number) => Math.round(glassRand(min, max));
+	    const glassBodyAngle = glassRandInt(136, 164);
+	    const glassMistX1 = glassRandInt(16, 34);
+	    const glassMistY1 = glassRandInt(12, 30);
+	    const glassMistX2 = glassRandInt(60, 84);
+	    const glassMistY2 = glassRandInt(52, 78);
+	    const glassScratchAngleA = glassRandInt(96, 118);
+	    const glassScratchAngleB = glassRandInt(54, 78);
+	    const glassSatinAngleA = glassRandInt(108, 132);
+	    const glassSatinAngleB = glassRandInt(34, 58);
+	    const glassReflectionAngleA = glassRandInt(148, 166);
+	    const glassReflectionAngleB = glassRandInt(18, 34);
+	    const glassReflectionPosition = `${glassRandInt(-8, 18)}% 0`;
+	    const glassTopClipRight = glassRandInt(32, 44);
+	    const glassTopClipLeft = glassRandInt(52, 66);
+	    const glassCssFill = `rgba(220,235,255,${glassCssFillAlpha.toFixed(3)})`;
+	    const glassCssStrokeWidth = Math.max(1.1, Math.min(2.35, glassStrokeWidth));
+	    const glassCssStrokeAlpha = Math.max(0.88, Math.min(0.96, 0.86 + glassStrokeWidth * 0.035));
+	    const glassCssStroke = `rgba(255,255,255,${glassCssStrokeAlpha.toFixed(2)})`;
+	    const glassCssGlowOuterStrokeWidth = Math.max(3.4, Math.min(6.4, glassCssStrokeWidth + 2.7 + glassGlowPx * 0.08));
+	    const glassCssGlowMiddleStrokeWidth = Math.max(2.4, Math.min(4.8, glassCssStrokeWidth + 1.65 + glassGlowPx * 0.045));
+	    const glassCssGlowTightStrokeWidth = Math.max(1.35, Math.min(3.1, glassCssStrokeWidth + 0.65));
+	    const glassCssGlowOuterBlur = liveTextPerfMode
+	      ? 0
+	      : Math.max(4.2, Math.min(9.5, glassBlurPx * 0.72 + glassGlowPx * 0.08));
+	    const glassCssGlowMiddleBlur = liveTextPerfMode
+	      ? 0
+	      : Math.max(2.2, Math.min(5.8, glassBlurPx * 0.42 + glassGlowPx * 0.06));
+	    const glassCssGlowTightBlur = liveTextPerfMode
+	      ? 0
+	      : Math.max(0.7, Math.min(1.8, glassBlurPx * 0.16 + glassGlowPx * 0.025));
+	    const glassCssShadowX = 0;
+	    const glassCssShadowY = Math.max(2, Math.min(4, headDisplayPx * 0.018));
+	    const glassCssPinLightShadow = "0 0 1.4px rgba(255,255,255,0.68)";
+	    const glassCssFrostedFill = [
+	      `linear-gradient(${glassBodyAngle}deg, rgba(245,251,255,${Math.min(0.058, glassCssFillAlpha + 0.018).toFixed(3)}) 0%, rgba(220,235,255,${glassCssFillAlpha.toFixed(3)}) 24%, rgba(8,18,54,0.10) 60%, rgba(245,251,255,0.014) 100%)`,
+	      `radial-gradient(ellipse at ${glassMistX1}% ${glassMistY1}%, rgba(255,255,255,0.048) 0%, transparent 34%)`,
+	      `radial-gradient(ellipse at ${glassMistX2}% ${glassMistY2}%, ${hexToRgba(glassSecondaryColor, 0.052)} 0%, transparent 42%)`,
+	    ].join(", ");
+	    const glassCssFrostCloudA =
+	      `radial-gradient(ellipse at ${glassRandInt(14, 34)}% ${glassRandInt(14, 38)}%, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.045) 24%, transparent 62%)`;
+	    const glassCssFrostCloudB =
+	      `radial-gradient(ellipse at ${glassRandInt(54, 84)}% ${glassRandInt(24, 58)}%, ${hexToRgba(glassSecondaryColor, 0.09)} 0%, ${hexToRgba(glassSecondaryColor, 0.035)} 26%, transparent 66%)`;
+	    const glassCssFrostCloudC =
+	      `radial-gradient(ellipse at ${glassRandInt(28, 64)}% ${glassRandInt(58, 86)}%, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.028) 30%, transparent 70%)`;
+	    const glassCssScratchA =
+	      `repeating-linear-gradient(${glassScratchAngleA}deg, transparent 0 ${glassRandInt(14, 22)}px, rgba(255,255,255,0.075) ${glassRandInt(23, 27)}px, transparent ${glassRandInt(28, 34)}px)`;
+	    const glassCssScratchB =
+	      `repeating-linear-gradient(${glassScratchAngleB}deg, transparent 0 ${glassRandInt(26, 38)}px, rgba(255,255,255,0.052) ${glassRandInt(40, 48)}px, transparent ${glassRandInt(50, 60)}px)`;
+	    const glassCssReflectionTop =
+	      `linear-gradient(${glassReflectionAngleA}deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.28) 12%, rgba(255,255,255,0.08) 28%, transparent 48%)`;
+	    const glassCssReflectionSlash =
+	      `linear-gradient(${glassReflectionAngleB}deg, transparent 0%, transparent 44%, rgba(255,255,255,0.56) 50%, rgba(255,255,255,0.10) 55%, transparent 64%)`;
+	    const glassCssSatinWhite =
+	      `linear-gradient(${glassSatinAngleA}deg, transparent 0%, rgba(255,255,255,0.07) 18%, transparent 34%, transparent 52%, rgba(255,255,255,0.06) 66%, transparent 82%)`;
+	    const glassCssSatinWhiteFine =
+	      `linear-gradient(${glassSatinAngleB}deg, transparent 0%, transparent 36%, rgba(255,255,255,0.055) 48%, transparent 62%, transparent 100%)`;
+	    const glassCssSatinColor =
+	      `radial-gradient(ellipse at ${glassRandInt(30, 46)}% ${glassRandInt(62, 82)}%, ${hexToRgba(glassPrimaryColor, 0.08)} 0%, transparent 48%)`;
+	    const glassCssInnerShadowSoft =
+	      "linear-gradient(160deg, transparent 0%, rgba(5,10,38,0.08) 38%, rgba(0,0,0,0.22) 70%, rgba(0,0,0,0.44) 100%)";
+	    const glassCssInnerShadowBand =
+	      "linear-gradient(180deg, transparent 0%, transparent 44%, rgba(0,0,0,0.18) 58%, rgba(0,0,0,0.30) 100%)";
+	    const glassLinePaintBleedMaxY = glassActive
+	      ? Math.max(
+	          96,
+	          Math.min(
+	            300,
+	            headDisplayPx * 0.62 + glassGlowPx * 1.15 + glassStrokeWidth * 3 + glassBlurPx * 1.15
+	          )
+	        )
+	      : 0;
+	    const glassLinePaintBleedMaxX = glassActive
+	      ? Math.max(
+	          128,
+	          Math.min(
+	            360,
+	            headDisplayPx * 0.72 + glassGlowPx * 1.25 + glassStrokeWidth * 3.4 + Math.abs(Number(headSkew) || 0) * 1.2
+	          )
+	        )
+	      : 0;
+	    const glassLinePaintBleedPx = glassActive
+	      ? Math.max(
+	          18,
+	          Math.min(
+	            glassLinePaintBleedMaxY,
+	            headDisplayPx * 0.3 + glassGlowPx * 0.6 + glassStrokeWidth * 3 + glassBlurPx * 0.9
+	          )
+	        )
+	      : 0;
+	    const glassLinePaintBleedXpx = glassActive
+	      ? Math.max(
+	          24,
+	          Math.min(
+	            glassLinePaintBleedMaxX,
+	            headDisplayPx * 0.26 + glassGlowPx * 0.7 + glassStrokeWidth * 3.4 + Math.abs(Number(headSkew) || 0) * 0.8
+	          )
+	        )
+	      : 0;
+	    const glassLinePaintBleedStyle: React.CSSProperties = glassActive
+	      ? {
+	          paddingTop: `${glassLinePaintBleedPx.toFixed(1)}px`,
+	          paddingBottom: `${glassLinePaintBleedPx.toFixed(1)}px`,
+	          paddingLeft: `${glassLinePaintBleedXpx.toFixed(1)}px`,
+	          paddingRight: `${glassLinePaintBleedXpx.toFixed(1)}px`,
+	          marginTop: `${(-glassLinePaintBleedPx).toFixed(1)}px`,
+	          marginBottom: `${(-glassLinePaintBleedPx).toFixed(1)}px`,
+	          marginLeft: `${(-glassLinePaintBleedXpx).toFixed(1)}px`,
+	          marginRight: `${(-glassLinePaintBleedXpx).toFixed(1)}px`,
+	          overflow: "visible",
+	        }
+	      : {};
+	    const useLegacyGlassStack = false;
 	    const glitchIntensity = Math.max(0, Math.min(1, Number(headGlitchIntensity) || 0));
 	    const glitchRgbSplit = Math.max(0, Math.min(32, Number(headGlitchRgbSplit) || 0));
 	    const glitchNoise = Math.max(0, Math.min(1, Number(headGlitchNoise) || 0));
@@ -4601,6 +6261,35 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	    const glitchChannelStrokeWidth = Math.max(0, textFx.strokeWidth || 0);
 	    const glitchVisibleStrokeWidth = Math.max(1.4, textFx.strokeWidth || 1.6);
 	    const glitchWhiteStrokeWidth = Math.max(2.2, glitchVisibleStrokeWidth + 1.2);
+	    const normalizeNeonPulseDefault = (value: string, oldDefault: string, fallback: string) => {
+	      const normalized = String(value || "").trim().toLowerCase();
+	      return !normalized || normalized === oldDefault ? fallback : value;
+	    };
+	    const neonPulsePrimaryColor = normalizeNeonPulseDefault(headGlitchRedColor, "#ff2bd6", "#d8fbff");
+	    const neonPulseMidColor = normalizeNeonPulseDefault(headGlitchMagentaColor, "#8b4dff", "#4ddfff");
+	    const neonPulseEndColor = normalizeNeonPulseDefault(headGlitchBlueColor, "#00eaff", "#0aa8ff");
+	    const neonPulseCoreColor = normalizeNeonPulseDefault(headGlitchYellowColor, "#fff5ff", "#f7ffff");
+	    const neonPulseGradientId = `headline-neon-pulse-gradient-${format}`;
+	    const neonPulseGlowFilterId = `headline-neon-pulse-glow-${format}`;
+	    const rawNeonPulseLineHeight = Number(lineHeight);
+	    const neonPulseLineHeight = Math.max(
+	      0,
+	      Number.isFinite(rawNeonPulseLineHeight) ? rawNeonPulseLineHeight : 0.9
+	    );
+	    const neonPulseLines = headlineText.split("\n");
+	    const neonPulsePad = Math.max(18, headDisplayPx * (0.16 + glitchGlow * 0.24));
+	    const neonPulseLineAdvance = headDisplayPx * neonPulseLineHeight;
+	    const neonPulseSvgHeight =
+	      headDisplayPx + Math.max(0, neonPulseLines.length - 1) * neonPulseLineAdvance + neonPulsePad * 2;
+	    const neonPulseFirstLineY = neonPulsePad + headDisplayPx * 0.78;
+	    const neonPulseGlowActive = glitchGlow > 0.015;
+	    const neonPulseWideStroke = Math.max(1.8, 2.2 + glitchIntensity * 3 + glitchGlow * 5);
+	    const neonPulseRimStroke = Math.max(2.2, 2.4 + glitchIntensity * 1.9 + glitchGlow * 1.2);
+	    const neonPulseTubeStroke = Math.max(1.45, 1.65 + glitchIntensity * 1.85);
+	    const neonPulseCoreStroke = Math.max(0.35, 0.48 + glitchNoise * 0.8);
+	    const neonPulseEdgeStroke = Math.max(0.25, 0.38 + glitchRgbSplit * 0.025);
+	    const neonPulseSvgX = headAlign === "left" ? "0%" : headAlign === "right" ? "100%" : "50%";
+	    const neonPulseTextAnchor = (headAlign === "left" ? "start" : headAlign === "right" ? "end" : "middle") as "start" | "middle" | "end";
 	    const mobileLiveTextPerfMode = !!isMobileView && !exportTextMode;
 	    const glitchGlowDropShadow =
 	      glitchGlow > 0 && !mobileLiveTextPerfMode
@@ -4611,7 +6300,9 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	    const glitchExportFilter = `url(#${glitchExportFilterId})${glitchGlowDropShadow ? ` ${glitchGlowDropShadow}` : ""}`;
 	    const glitchExportStrokeRadius = Math.max(1, Math.min(5, glitchWhiteStrokeWidth * 0.52));
 	    const glitchWhiteStrokeOpacity = Math.min(1, 0.72 + glitchIntensity * 0.18 + glitchGlow * 0.12);
-	    const useGlitchExportFilter = glitchActive && exportTextMode;
+	    // Neon Pulse exports through the clean SVG text renderer. The old clipped
+	    // glitch export fragments create pale rectangular artifacts over script text.
+	    const useGlitchExportFilter = false;
 	    const glitchNoiseSeed = stableStringSeed(
 	      [
 	        headlineText,
@@ -4664,11 +6355,12 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
       inset: 0,
       fontFamily: headlineFamily,
       fontSize: headDisplayPx,
-      lineHeight,
-      whiteSpace: "pre-wrap",
-      display: "block",
-      width: "100%",
-      letterSpacing: `${textFx.tracking}em`,
+      lineHeight: glassSafeLineHeight,
+	      whiteSpace: "pre-wrap",
+	      display: "block",
+	      width: "100%",
+	      minWidth: glassActive ? "fit-content" : undefined,
+	      letterSpacing: `${textFx.tracking}em`,
       textTransform: textFx.uppercase ? "uppercase" : "none",
       fontWeight: textFx.bold ? 900 : 700,
       fontStyle: textFx.italic ? "italic" : "normal",
@@ -4677,6 +6369,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
       pointerEvents: "none",
       userSelect: "none",
       textShadow: "none",
+      overflow: glassActive ? "visible" : undefined,
+      ...(glassActive ? glassLinePaintBleedStyle : {}),
     };
     const renderRushTextContent = (lineStyle: React.CSSProperties = {}) =>
       renderHeadlineRich(headlineText, {
@@ -4685,7 +6379,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
             lastDeltaEm: lastTrackDelta,
             opticalMargin,
             kerningFix,
-            lineHeight,
+            lineHeight: glassSafeLineHeight,
             lineStyle: {
               display: "block",
               width: "100%",
@@ -4695,12 +6389,13 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	    const renderRushTextLayer = (
 	      key: string,
 	      style: React.CSSProperties,
-	      lineStyle: React.CSSProperties
+	      lineStyle: React.CSSProperties,
+	      className?: string
 	    ) => (
       <h1
         key={key}
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 font-black select-none"
+        className={clsx("pointer-events-none absolute inset-0 font-black select-none", className)}
         style={{ ...rushLayerBase, ...style }}
       >
 	        {renderRushTextContent(lineStyle)}
@@ -4754,7 +6449,1271 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	          }
 	        );
 	      });
+	    type GlassCssLayerSpec = {
+	      key: string;
+	      style: React.CSSProperties;
+	      lineStyle: React.CSSProperties;
+	      live?: boolean;
+	    };
+	    const glassLineStyleFrom = (style: React.CSSProperties): React.CSSProperties => ({
+	      backgroundImage: style.backgroundImage,
+	      backgroundSize: style.backgroundSize,
+	      backgroundPosition: style.backgroundPosition,
+	      backgroundRepeat: style.backgroundRepeat,
+	      WebkitBackgroundClip: style.WebkitBackgroundClip,
+	      backgroundClip: style.backgroundClip,
+	      color: style.color,
+	      WebkitTextFillColor: style.WebkitTextFillColor,
+	      WebkitTextStrokeWidth: style.WebkitTextStrokeWidth,
+	      WebkitTextStrokeColor: style.WebkitTextStrokeColor,
+	      paintOrder: style.paintOrder,
+	      textShadow: style.textShadow,
+	    });
+	    const glassLayer = (
+	      key: string,
+	      style: React.CSSProperties,
+	      lineStyle?: React.CSSProperties,
+	      live = false
+	    ): GlassCssLayerSpec => ({
+	      key,
+	      style,
+	      lineStyle: lineStyle ?? glassLineStyleFrom(style),
+	      live,
+	    });
+	    const allGlassCssLayerSpecs: GlassCssLayerSpec[] = glassActive
+	      ? [
+	          glassLayer(
+	            "headline-glass-css-cast-depth",
+	            {
+	              color: "transparent",
+	              WebkitTextFillColor: "transparent",
+	              WebkitTextStrokeWidth: `${Math.max(2.4, glassCssStrokeWidth + 1.4).toFixed(1)}px`,
+	              WebkitTextStrokeColor: "rgba(3,8,30,0.55)",
+	              paintOrder: "stroke fill",
+	              transform: `translate(${glassCssShadowX.toFixed(1)}px, ${glassCssShadowY.toFixed(1)}px)`,
+	              opacity: Math.min(0.46, textFx.alpha * 0.4),
+	              zIndex: 0,
+	            },
+	            undefined,
+	            true
+	          ),
+	          glassLayer("headline-glass-css-atmosphere-primary", {
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: `${Math.max(7.5, glassCssGlowOuterStrokeWidth + 4).toFixed(1)}px`,
+	            WebkitTextStrokeColor: glassPrimaryColor,
+	            paintOrder: "stroke fill",
+	            filter: liveTextPerfMode ? "none" : `blur(${Math.max(10, glassCssGlowOuterBlur + 5).toFixed(1)}px)`,
+	            opacity: Math.min(0.1, textFx.alpha * 0.08),
+	            mixBlendMode: "screen",
+	            zIndex: 1,
+	          }),
+	          glassLayer("headline-glass-css-atmosphere-secondary", {
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: `${Math.max(8.5, glassCssGlowOuterStrokeWidth + 5.5).toFixed(1)}px`,
+	            WebkitTextStrokeColor: glassSecondaryColor,
+	            paintOrder: "stroke fill",
+	            transform: "translate(2px, 2px)",
+	            filter: liveTextPerfMode ? "none" : `blur(${Math.max(13, glassCssGlowOuterBlur + 8).toFixed(1)}px)`,
+	            opacity: Math.min(0.08, textFx.alpha * 0.06),
+	            mixBlendMode: "screen",
+	            zIndex: 2,
+	          }),
+	          glassLayer("headline-glass-css-glow-outer", {
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: `${glassCssGlowOuterStrokeWidth.toFixed(1)}px`,
+	            WebkitTextStrokeColor: glassPrimaryColor,
+	            paintOrder: "stroke fill",
+	            filter: glassCssGlowOuterBlur > 0 ? `blur(${glassCssGlowOuterBlur.toFixed(1)}px)` : "none",
+	            opacity: Math.min(0.2, textFx.alpha * 0.18),
+	            mixBlendMode: "screen",
+	            zIndex: 3,
+	          }),
+	          glassLayer("headline-glass-css-glow-middle", {
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: `${glassCssGlowMiddleStrokeWidth.toFixed(1)}px`,
+	            WebkitTextStrokeColor: glassPrimaryColor,
+	            paintOrder: "stroke fill",
+	            filter: glassCssGlowMiddleBlur > 0 ? `blur(${glassCssGlowMiddleBlur.toFixed(1)}px)` : "none",
+	            opacity: Math.min(0.24, textFx.alpha * 0.22),
+	            mixBlendMode: "screen",
+	            zIndex: 4,
+	          }),
+	          glassLayer("headline-glass-css-glow-secondary", {
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: `${glassCssGlowMiddleStrokeWidth.toFixed(1)}px`,
+	            WebkitTextStrokeColor: glassSecondaryColor,
+	            paintOrder: "stroke fill",
+	            transform: "translate(1px, 1px)",
+	            filter: glassCssGlowMiddleBlur > 0 ? `blur(${glassCssGlowMiddleBlur.toFixed(1)}px)` : "none",
+	            opacity: Math.min(0.18, textFx.alpha * 0.16),
+	            mixBlendMode: "screen",
+	            zIndex: 5,
+	          }),
+	          glassLayer(
+	            "headline-glass-css-glow-tight",
+	            {
+	              color: "transparent",
+	              WebkitTextFillColor: "transparent",
+	              WebkitTextStrokeWidth: `${glassCssGlowTightStrokeWidth.toFixed(1)}px`,
+	              WebkitTextStrokeColor: hexToRgba(glassHighlightColor, 0.74),
+	              paintOrder: "stroke fill",
+	              filter: glassCssGlowTightBlur > 0 ? `blur(${glassCssGlowTightBlur.toFixed(1)}px)` : "none",
+	              opacity: Math.min(0.38, textFx.alpha * 0.34),
+	              mixBlendMode: "screen",
+	              zIndex: 6,
+	            },
+	            undefined,
+	            true
+	          ),
+	          glassLayer(
+	            "headline-glass-css-body",
+	            {
+	              backgroundImage: glassCssFrostedFill,
+	              backgroundSize: "100% 100%, 72% 80%, 86% 90%",
+	              backgroundPosition: "0 0, 0 0, 100% 100%",
+	              backgroundRepeat: "no-repeat, no-repeat, no-repeat",
+	              WebkitBackgroundClip: "text",
+	              backgroundClip: "text",
+	              color: glassCssFill,
+	              WebkitTextFillColor: "transparent",
+	              WebkitTextStrokeWidth: "0px",
+	              WebkitTextStrokeColor: "transparent",
+	              paintOrder: "stroke fill",
+	              textShadow: "none",
+	              opacity: Math.min(0.72, textFx.alpha * 0.72),
+	              mixBlendMode: "normal",
+	              zIndex: 7,
+	            },
+	            undefined,
+	            true
+	          ),
+	          glassLayer("headline-glass-css-frost-cloud-a", {
+	            backgroundImage: glassCssFrostCloudA,
+	            backgroundSize: `${glassRandInt(92, 128)}% ${glassRandInt(88, 118)}%`,
+	            backgroundPosition: `${glassRandInt(-10, 8)}% ${glassRandInt(-8, 8)}%`,
+	            backgroundRepeat: "no-repeat",
+	            WebkitBackgroundClip: "text",
+	            backgroundClip: "text",
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: "0px",
+	            mixBlendMode: "screen",
+	            opacity: Math.min(0.18, textFx.alpha * 0.14),
+	            zIndex: 8,
+	          }),
+	          glassLayer("headline-glass-css-frost-cloud-b", {
+	            backgroundImage: glassCssFrostCloudB,
+	            backgroundSize: `${glassRandInt(104, 150)}% ${glassRandInt(92, 130)}%`,
+	            backgroundPosition: `${glassRandInt(-16, 12)}% ${glassRandInt(-6, 16)}%`,
+	            backgroundRepeat: "no-repeat",
+	            WebkitBackgroundClip: "text",
+	            backgroundClip: "text",
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: "0px",
+	            mixBlendMode: "screen",
+	            opacity: Math.min(0.16, textFx.alpha * 0.12),
+	            zIndex: 9,
+	          }),
+	          glassLayer("headline-glass-css-frost-cloud-c", {
+	            backgroundImage: glassCssFrostCloudC,
+	            backgroundSize: `${glassRandInt(88, 132)}% ${glassRandInt(96, 142)}%`,
+	            backgroundPosition: `${glassRandInt(-8, 18)}% ${glassRandInt(-12, 12)}%`,
+	            backgroundRepeat: "no-repeat",
+	            WebkitBackgroundClip: "text",
+	            backgroundClip: "text",
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: "0px",
+	            mixBlendMode: "screen",
+	            opacity: Math.min(0.12, textFx.alpha * 0.09),
+	            zIndex: 10,
+	          }),
+	          glassLayer("headline-glass-css-scratch-a", {
+	            backgroundImage: glassCssScratchA,
+	            backgroundSize: "100% 100%",
+	            backgroundPosition: "0 0",
+	            backgroundRepeat: "repeat",
+	            WebkitBackgroundClip: "text",
+	            backgroundClip: "text",
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: "0px",
+	            mixBlendMode: "screen",
+	            opacity: Math.min(0.16, textFx.alpha * 0.12),
+	            zIndex: 11,
+	          }),
+	          glassLayer("headline-glass-css-scratch-b", {
+	            backgroundImage: glassCssScratchB,
+	            backgroundSize: "100% 100%",
+	            backgroundPosition: "0 0",
+	            backgroundRepeat: "repeat",
+	            WebkitBackgroundClip: "text",
+	            backgroundClip: "text",
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: "0px",
+	            mixBlendMode: "screen",
+	            opacity: Math.min(0.11, textFx.alpha * 0.08),
+	            zIndex: 12,
+	          }),
+	          glassLayer(
+	            "headline-glass-css-inner-glow-soft",
+	            {
+	              color: "transparent",
+	              WebkitTextFillColor: "transparent",
+	              WebkitTextStrokeWidth: `${Math.max(1.1, glassCssStrokeWidth * 0.82).toFixed(1)}px`,
+	              WebkitTextStrokeColor: hexToRgba(glassSecondaryColor, 0.38),
+	              paintOrder: "stroke fill",
+	              filter: glassCssGlowTightBlur > 0 ? `blur(${glassCssGlowTightBlur.toFixed(1)}px)` : "none",
+	              opacity: Math.min(0.3, textFx.alpha * 0.26),
+	              mixBlendMode: "screen",
+	              zIndex: 13,
+	            },
+	            undefined,
+	            true
+	          ),
+	          glassLayer(
+	            "headline-glass-css-inner-glow-sharp",
+	            {
+	              color: "transparent",
+	              WebkitTextFillColor: "transparent",
+	              WebkitTextStrokeWidth: `${Math.max(0.55, glassCssStrokeWidth * 0.38).toFixed(1)}px`,
+	              WebkitTextStrokeColor: hexToRgba(glassHighlightColor, 0.58),
+	              paintOrder: "stroke fill",
+	              opacity: Math.min(0.42, textFx.alpha * 0.36),
+	              mixBlendMode: "screen",
+	              zIndex: 14,
+	            },
+	            undefined,
+	            true
+	          ),
+	          glassLayer(
+	            "headline-glass-css-inner-shadow-soft",
+	            {
+	              backgroundImage: glassCssInnerShadowSoft,
+	              backgroundSize: "100% 100%",
+	              backgroundRepeat: "no-repeat",
+	              WebkitBackgroundClip: "text",
+	              backgroundClip: "text",
+	              color: "transparent",
+	              WebkitTextFillColor: "transparent",
+	              WebkitTextStrokeWidth: "0px",
+	              mixBlendMode: "multiply",
+	              opacity: Math.min(0.36, textFx.alpha * 0.32),
+	              zIndex: 15,
+	            },
+	            undefined,
+	            true
+	          ),
+	          glassLayer("headline-glass-css-inner-shadow-band", {
+	            backgroundImage: glassCssInnerShadowBand,
+	            backgroundSize: "100% 100%",
+	            backgroundPosition: "0 0",
+	            backgroundRepeat: "no-repeat",
+	            WebkitBackgroundClip: "text",
+	            backgroundClip: "text",
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: "0px",
+	            mixBlendMode: "multiply",
+	            opacity: Math.min(0.26, textFx.alpha * 0.22),
+	            zIndex: 16,
+	          }),
+	          glassLayer("headline-glass-css-satin-white-a", {
+	            backgroundImage: glassCssSatinWhite,
+	            backgroundSize: "125% 100%",
+	            backgroundPosition: "0 0",
+	            backgroundRepeat: "no-repeat",
+	            WebkitBackgroundClip: "text",
+	            backgroundClip: "text",
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: "0px",
+	            mixBlendMode: "screen",
+	            opacity: Math.min(0.22, textFx.alpha * 0.18),
+	            zIndex: 17,
+	          }),
+	          glassLayer("headline-glass-css-satin-white-b", {
+	            backgroundImage: glassCssSatinWhiteFine,
+	            backgroundSize: "135% 100%",
+	            backgroundPosition: `${glassRandInt(-12, 14)}% 0`,
+	            backgroundRepeat: "no-repeat",
+	            WebkitBackgroundClip: "text",
+	            backgroundClip: "text",
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: "0px",
+	            mixBlendMode: "screen",
+	            opacity: Math.min(0.16, textFx.alpha * 0.13),
+	            zIndex: 18,
+	          }),
+	          glassLayer("headline-glass-css-satin-color", {
+	            backgroundImage: glassCssSatinColor,
+	            backgroundSize: "92% 120%",
+	            backgroundPosition: "50% 50%",
+	            backgroundRepeat: "no-repeat",
+	            WebkitBackgroundClip: "text",
+	            backgroundClip: "text",
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: "0px",
+	            mixBlendMode: "screen",
+	            opacity: Math.min(0.1, textFx.alpha * 0.08),
+	            zIndex: 19,
+	          }),
+	          glassLayer(
+	            "headline-glass-css-bevel-shadow",
+	            {
+	              color: "transparent",
+	              WebkitTextFillColor: "transparent",
+	              WebkitTextStrokeWidth: `${Math.max(0.9, glassCssStrokeWidth * 0.78).toFixed(1)}px`,
+	              WebkitTextStrokeColor: "rgba(0,8,28,0.52)",
+	              paintOrder: "stroke fill",
+	              clipPath: "polygon(0 46%, 100% 36%, 100% 100%, 0 100%)",
+	              transform: "translate(1.4px, 1.6px)",
+	              mixBlendMode: "multiply",
+	              opacity: Math.min(0.58, textFx.alpha * 0.52),
+	              zIndex: 20,
+	            },
+	            undefined,
+	            true
+	          ),
+	          glassLayer(
+	            "headline-glass-css-bevel-highlight",
+	            {
+	              color: "transparent",
+	              WebkitTextFillColor: "transparent",
+	              WebkitTextStrokeWidth: `${Math.max(0.75, glassCssStrokeWidth * 0.62).toFixed(1)}px`,
+	              WebkitTextStrokeColor: hexToRgba(glassHighlightColor, 0.92),
+	              paintOrder: "stroke fill",
+	              clipPath: `polygon(0 0, 100% 0, 100% ${glassTopClipRight}%, 0 ${glassTopClipLeft}%)`,
+	              transform: "translate(-1.1px, -1.2px)",
+	              textShadow: "0 0 2px rgba(255,255,255,0.72)",
+	              mixBlendMode: "screen",
+	              opacity: Math.min(0.82, textFx.alpha * 0.76),
+	              zIndex: 21,
+	            },
+	            undefined,
+	            true
+	          ),
+	          glassLayer("headline-glass-css-reflection-top", {
+	            backgroundImage: glassCssReflectionTop,
+	            backgroundSize: "100% 100%",
+	            backgroundPosition: "0 0",
+	            backgroundRepeat: "no-repeat",
+	            WebkitBackgroundClip: "text",
+	            backgroundClip: "text",
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: "1px",
+	            WebkitTextStrokeColor: "rgba(255,255,255,0.4)",
+	            mixBlendMode: "screen",
+	            opacity: Math.min(0.28, textFx.alpha * 0.25),
+	            zIndex: 22,
+	          }),
+	          glassLayer("headline-glass-css-reflection-slash", {
+	            backgroundImage: glassCssReflectionSlash,
+	            backgroundSize: "220% 100%",
+	            backgroundPosition: glassReflectionPosition,
+	            backgroundRepeat: "no-repeat",
+	            WebkitBackgroundClip: "text",
+	            backgroundClip: "text",
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: "0px",
+	            WebkitTextStrokeColor: "transparent",
+	            mixBlendMode: "screen",
+	            opacity: Math.min(0.24, textFx.alpha * 0.22),
+	            zIndex: 23,
+	          }),
+	          glassLayer("headline-glass-css-chromatic-magenta", {
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: `${Math.max(0.45, glassCssStrokeWidth * 0.34).toFixed(1)}px`,
+	            WebkitTextStrokeColor: hexToRgba(glassPrimaryColor, 0.55),
+	            paintOrder: "stroke fill",
+	            transform: "translate(-1px, 0)",
+	            mixBlendMode: "screen",
+	            opacity: Math.min(0.24, textFx.alpha * 0.2),
+	            zIndex: 25,
+	          }),
+	          glassLayer("headline-glass-css-chromatic-cyan", {
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: `${Math.max(0.45, glassCssStrokeWidth * 0.34).toFixed(1)}px`,
+	            WebkitTextStrokeColor: hexToRgba(glassSecondaryColor, 0.55),
+	            paintOrder: "stroke fill",
+	            transform: "translate(1px, 0)",
+	            mixBlendMode: "screen",
+	            opacity: Math.min(0.22, textFx.alpha * 0.18),
+	            zIndex: 26,
+	          }),
+	          glassLayer(
+	            "headline-glass-css-main-edge",
+	            {
+	              color: "transparent",
+	              WebkitTextFillColor: "transparent",
+	              WebkitTextStrokeWidth: `${glassCssStrokeWidth.toFixed(1)}px`,
+	              WebkitTextStrokeColor: glassCssStroke,
+	              paintOrder: "stroke fill",
+	              opacity: Math.min(0.9, textFx.alpha * 0.86),
+	              zIndex: 27,
+	            },
+	            undefined,
+	            true
+	          ),
+	          glassLayer(
+	            "headline-glass-css-final-edge",
+	            {
+	              color: "transparent",
+	              WebkitTextFillColor: "transparent",
+	              WebkitTextStrokeWidth: `${Math.max(0.8, glassCssStrokeWidth * 0.56).toFixed(1)}px`,
+	              WebkitTextStrokeColor: hexToRgba(glassHighlightColor, 0.95),
+	              paintOrder: "stroke fill",
+	              textShadow: glassCssPinLightShadow,
+	              opacity: Math.min(0.92, textFx.alpha * 0.88),
+	              zIndex: 28,
+	            },
+	            undefined,
+	            true
+	          ),
+	        ]
+	      : [];
+	    const psgEdgeColor = glassPrimaryColor || "#FF2BBF";
+	    const psgBottomColor = glassPrimaryColor || "#FF2BBF";
+	    const psgPurpleColor = "#A30C6C";
+	    const psgBlueColor = glassSecondaryColor || "#FF8ADF";
+	    const psgFrostColor = "#FFD0F4";
+	    const psgFrostLightColor = "#FFF4FF";
+	    const psgHighlightColor = glassHighlightColor || "#FFFFFF";
+	    const psgBodyFill = "#FFFFFF";
+	    const psgDepthColor = "#170012";
+	    const psgGlassFillScale = Math.max(
+	      0.38,
+	      Math.min(1.35, glassFillAlpha / HEADLINE_GLASS_DEFAULTS.fillAlpha)
+	    );
+	    const psgGlassSvgOpacity = (base: number) => (base * psgGlassFillScale).toFixed(3);
+	    const psgLipStroke = Math.max(1.2, Math.min(2.4, glassStrokeWidth * 0.44));
+	    const psgHighlightStroke = Math.max(0.95, Math.min(1.8, glassStrokeWidth * 0.32));
+	    const psgGlowHotPx = liveTextPerfMode ? 0 : Math.max(4, glassGlowPx * 0.22);
+	    const psgGlowMidPx = liveTextPerfMode ? 0 : Math.max(12, glassGlowPx * 0.55);
+	    const psgGlowWidePx = liveTextPerfMode ? 0 : Math.max(30, glassGlowPx * 1.25);
+	    const psgGlowLowPx = liveTextPerfMode ? 0 : Math.max(7, glassGlowPx * 0.72);
+	    const psgInnerGlowTightPx = liveTextPerfMode ? 0 : Math.max(3, glassBlurPx * 0.58);
+	    const psgInnerGlowDiffusePx = liveTextPerfMode ? 0 : Math.max(15, glassBlurPx * 2.6);
+	    const psgFrostBlur = liveTextPerfMode ? 0 : Math.max(10, glassBlurPx * 2.15);
+	    const psgGlassBodyFill = [
+	      `linear-gradient(${glassBodyAngle}deg, ${hexToRgba(psgHighlightColor, 0.12)} 0%, ${hexToRgba(psgBodyFill, 0.18)} 22%, ${hexToRgba(psgBlueColor, 0.14)} 54%, ${hexToRgba(psgPurpleColor, 0.10)} 100%)`,
+	      `radial-gradient(ellipse at ${glassMistX1}% ${glassMistY1}%, ${hexToRgba(psgHighlightColor, 0.18)} 0%, transparent 34%)`,
+	      `radial-gradient(ellipse at ${glassMistX2}% ${glassMistY2}%, ${hexToRgba(psgFrostColor, 0.15)} 0%, transparent 42%)`,
+	    ].join(", ");
+	    const psgGlassFrostA =
+	      `radial-gradient(ellipse at ${glassRandInt(14, 34)}% ${glassRandInt(14, 38)}%, ${hexToRgba(psgFrostLightColor, 0.34)} 0%, ${hexToRgba(psgHighlightColor, 0.10)} 22%, transparent 58%)`;
+	    const psgGlassFrostB =
+	      `radial-gradient(ellipse at ${glassRandInt(54, 84)}% ${glassRandInt(42, 78)}%, ${hexToRgba(psgFrostColor, 0.28)} 0%, ${hexToRgba(psgBlueColor, 0.10)} 24%, transparent 62%)`;
+	    const psgGlassFrostC =
+	      `radial-gradient(ellipse at ${glassRandInt(30, 68)}% ${glassRandInt(48, 82)}%, ${hexToRgba(psgBodyFill, 0.32)} 0%, ${hexToRgba(psgFrostLightColor, 0.12)} 22%, transparent 62%)`;
+	    const psgReflectionSweep = [
+	      `linear-gradient(${glassReflectionAngleA}deg, transparent 0%, transparent 22%, ${hexToRgba(psgHighlightColor, 0.22)} 27%, ${hexToRgba(psgFrostLightColor, 0.08)} 31%, transparent 39%, transparent 100%)`,
+	      `linear-gradient(${glassReflectionAngleB}deg, transparent 0%, transparent 56%, ${hexToRgba(psgHighlightColor, 0.16)} 60%, transparent 66%, transparent 100%)`,
+	      `repeating-linear-gradient(${glassReflectionAngleA}deg, transparent 0 22px, ${hexToRgba(psgHighlightColor, 0.055)} 26px, transparent 34px)`,
+	    ].join(", ");
+	    const psgSvgEdgeColor = escapeSvgAttr(psgEdgeColor);
+	    const psgSvgBlueColor = escapeSvgAttr(psgBlueColor);
+	    const psgSvgPurpleColor = escapeSvgAttr(psgPurpleColor);
+	    const psgSvgFrostColor = escapeSvgAttr(psgFrostColor);
+	    const psgSvgFrostLightColor = escapeSvgAttr(psgFrostLightColor);
+	    const psgSvgHighlightColor = escapeSvgAttr(psgHighlightColor);
+	    const psgSvgBodyFill = escapeSvgAttr(psgBodyFill);
+	    const psgSvgDepthColor = escapeSvgAttr(psgDepthColor);
+	    const psgDepthOffsetX = Math.max(0.8, Math.min(2.1, headDisplayPx * 0.009));
+	    const psgDepthOffsetY = Math.max(1.1, Math.min(2.8, headDisplayPx * 0.012));
+	    const psgDepthBlur = liveTextPerfMode ? 0 : Math.max(0.4, Math.min(1.1, glassBlurPx * 0.16));
+	    const psgDepthEdgeClipPath = "polygon(3% 16%, 100% 8%, 100% 100%, 0 100%)";
+	    const psgLowerDepthClipPath = "polygon(0 34%, 100% 24%, 100% 100%, 0 100%)";
+	    const psgExtrusionClipPath = "polygon(5% 22%, 100% 14%, 100% 100%, 0 100%)";
+	    const psgExtrusionStroke = Math.max(2.2, Math.min(5.2, glassStrokeWidth * 0.9));
+	    const psgGlassExtrusionSpecs: GlassCssLayerSpec[] = ([4, 3, 2, 1] as const).map((level) => {
+	      const depth = 5 - level;
+	      const offsetX = psgDepthOffsetX * depth * 0.88;
+	      const offsetY = psgDepthOffsetY * depth * 1.05;
+	      const opacity = [0.11, 0.15, 0.2, 0.26][depth - 1] ?? 0.14;
+	      return glassLayer(`headline-glass-00c-depth-extrusion-${level}`, {
+	        color: "transparent",
+	        WebkitTextFillColor: "transparent",
+	        WebkitTextStrokeWidth: `${psgExtrusionStroke.toFixed(1)}px`,
+	        WebkitTextStrokeColor: "rgba(56,5,42,0.72)",
+	        paintOrder: "stroke fill",
+	        transform: `translate(${offsetX.toFixed(1)}px, ${offsetY.toFixed(1)}px)`,
+	        clipPath: psgExtrusionClipPath,
+	        filter: !liveTextPerfMode && level === 1 ? "blur(0.8px)" : "none",
+	        opacity: Math.min(opacity, textFx.alpha * opacity),
+	        mixBlendMode: "multiply",
+	        zIndex: 1,
+	      }, undefined, level === 4);
+	    });
+	    const psgSvgBodyGradient = svgBackgroundImage(
+	      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" preserveAspectRatio="none">` +
+	        `<defs>` +
+	          `<linearGradient id="body" x1="4%" y1="0%" x2="94%" y2="100%">` +
+	            `<stop offset="0%" stop-color="${psgSvgHighlightColor}" stop-opacity="${psgGlassSvgOpacity(0.42)}"/>` +
+	            `<stop offset="28%" stop-color="${psgSvgBlueColor}" stop-opacity="${psgGlassSvgOpacity(0.22)}"/>` +
+	            `<stop offset="48%" stop-color="${psgSvgBodyFill}" stop-opacity="${psgGlassSvgOpacity(0.14)}"/>` +
+	            `<stop offset="72%" stop-color="${psgSvgDepthColor}" stop-opacity="${psgGlassSvgOpacity(0.20)}"/>` +
+	            `<stop offset="100%" stop-color="${psgSvgEdgeColor}" stop-opacity="${psgGlassSvgOpacity(0.32)}"/>` +
+	          `</linearGradient>` +
+	          `<linearGradient id="topSheen" x1="0%" y1="0%" x2="100%" y2="42%">` +
+	            `<stop offset="0%" stop-color="${psgSvgHighlightColor}" stop-opacity="0.92"/>` +
+	            `<stop offset="21%" stop-color="${psgSvgHighlightColor}" stop-opacity="0.30"/>` +
+	            `<stop offset="48%" stop-color="${psgSvgFrostLightColor}" stop-opacity="0.12"/>` +
+	            `<stop offset="100%" stop-color="${psgSvgHighlightColor}" stop-opacity="0"/>` +
+	          `</linearGradient>` +
+	          `<linearGradient id="lowerDepth" x1="12%" y1="18%" x2="92%" y2="100%">` +
+	            `<stop offset="0%" stop-color="${psgSvgHighlightColor}" stop-opacity="0"/>` +
+	            `<stop offset="48%" stop-color="${psgSvgEdgeColor}" stop-opacity="${psgGlassSvgOpacity(0.10)}"/>` +
+	            `<stop offset="100%" stop-color="${psgSvgDepthColor}" stop-opacity="${psgGlassSvgOpacity(0.46)}"/>` +
+	          `</linearGradient>` +
+	          `<linearGradient id="diagonalGlare" x1="15%" y1="100%" x2="78%" y2="0%">` +
+	            `<stop offset="0%" stop-color="${psgSvgHighlightColor}" stop-opacity="0"/>` +
+	            `<stop offset="45%" stop-color="${psgSvgHighlightColor}" stop-opacity="0.08"/>` +
+	            `<stop offset="50%" stop-color="${psgSvgHighlightColor}" stop-opacity="0.52"/>` +
+	            `<stop offset="55%" stop-color="${psgSvgFrostLightColor}" stop-opacity="0.12"/>` +
+	            `<stop offset="100%" stop-color="${psgSvgHighlightColor}" stop-opacity="0"/>` +
+	          `</linearGradient>` +
+	          `<filter id="grain" x="-8%" y="-8%" width="116%" height="116%">` +
+	            `<feTurbulence type="fractalNoise" baseFrequency="0.82" numOctaves="3" stitchTiles="stitch"/>` +
+	            `<feColorMatrix type="saturate" values="0"/>` +
+	            `<feComponentTransfer><feFuncA type="linear" slope="0.18"/></feComponentTransfer>` +
+	          `</filter>` +
+	        `</defs>` +
+	        `<rect width="1200" height="420" fill="url(#body)"/>` +
+	        `<rect width="1200" height="420" fill="url(#lowerDepth)" opacity="0.48"/>` +
+	        `<path d="M0 0H1200V116C1014 82 845 111 652 92C422 68 206 104 0 76Z" fill="url(#topSheen)" opacity="0.62"/>` +
+	        `<rect width="1200" height="420" fill="url(#diagonalGlare)" opacity="0.54"/>` +
+	        `<rect width="1200" height="420" filter="url(#grain)" opacity="0.22"/>` +
+	      `</svg>`
+	    );
+	    const psgSvgSpecularGradient = svgBackgroundImage(
+	      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" preserveAspectRatio="none">` +
+	        `<defs>` +
+	          `<linearGradient id="shineSweep" x1="0%" y1="0%" x2="100%" y2="0%">` +
+	            `<stop offset="0%" stop-color="${psgSvgHighlightColor}" stop-opacity="0"/>` +
+	            `<stop offset="45%" stop-color="${psgSvgHighlightColor}" stop-opacity="0.95"/>` +
+	            `<stop offset="55%" stop-color="${psgSvgEdgeColor}" stop-opacity="0.85"/>` +
+	            `<stop offset="100%" stop-color="${psgSvgHighlightColor}" stop-opacity="0"/>` +
+	          `</linearGradient>` +
+	          `<linearGradient id="slashA" x1="9%" y1="100%" x2="70%" y2="0%">` +
+	            `<stop offset="0%" stop-color="${psgSvgHighlightColor}" stop-opacity="0"/>` +
+	            `<stop offset="48%" stop-color="${psgSvgHighlightColor}" stop-opacity="0"/>` +
+	            `<stop offset="51%" stop-color="${psgSvgHighlightColor}" stop-opacity="0.84"/>` +
+	            `<stop offset="54%" stop-color="${psgSvgFrostLightColor}" stop-opacity="0.18"/>` +
+	            `<stop offset="100%" stop-color="${psgSvgHighlightColor}" stop-opacity="0"/>` +
+	          `</linearGradient>` +
+	          `<linearGradient id="slashB" x1="38%" y1="100%" x2="94%" y2="0%">` +
+	            `<stop offset="0%" stop-color="${psgSvgFrostLightColor}" stop-opacity="0"/>` +
+	            `<stop offset="58%" stop-color="${psgSvgFrostLightColor}" stop-opacity="0"/>` +
+	            `<stop offset="61%" stop-color="${psgSvgHighlightColor}" stop-opacity="0.56"/>` +
+	            `<stop offset="64%" stop-color="${psgSvgFrostLightColor}" stop-opacity="0.10"/>` +
+	            `<stop offset="100%" stop-color="${psgSvgFrostLightColor}" stop-opacity="0"/>` +
+	          `</linearGradient>` +
+	          `<linearGradient id="topLine" x1="0%" y1="0%" x2="100%" y2="0%">` +
+	            `<stop offset="0%" stop-color="${psgSvgHighlightColor}" stop-opacity="0"/>` +
+	            `<stop offset="18%" stop-color="${psgSvgHighlightColor}" stop-opacity="0.58"/>` +
+	            `<stop offset="82%" stop-color="${psgSvgFrostColor}" stop-opacity="0.20"/>` +
+	            `<stop offset="100%" stop-color="${psgSvgHighlightColor}" stop-opacity="0"/>` +
+	          `</linearGradient>` +
+	          `<filter id="glossSoft"><feGaussianBlur stdDeviation="2"/></filter>` +
+	          `<filter id="sparkGlow" x="-260%" y="-260%" width="620%" height="620%">` +
+	            `<feGaussianBlur stdDeviation="4" result="spark"/>` +
+	            `<feMerge><feMergeNode in="spark"/><feMergeNode in="SourceGraphic"/></feMerge>` +
+	          `</filter>` +
+	        `</defs>` +
+	        `<rect width="1200" height="420" fill="url(#slashA)"/>` +
+	        `<rect width="1200" height="420" fill="url(#slashB)"/>` +
+	        `<rect x="0" y="8" width="1200" height="10" fill="url(#topLine)" opacity="0.74"/>` +
+	        `<g transform="rotate(-8 600 210)" filter="url(#glossSoft)">` +
+	          `<rect x="-180" y="88" width="620" height="28" fill="url(#shineSweep)" opacity="0.46"/>` +
+	          `<rect x="246" y="146" width="548" height="22" fill="url(#shineSweep)" opacity="0.36"/>` +
+	          `<rect x="704" y="112" width="470" height="18" fill="url(#shineSweep)" opacity="0.30"/>` +
+	        `</g>` +
+	        `<g fill="${psgSvgHighlightColor}" filter="url(#sparkGlow)">` +
+	          `<circle cx="350" cy="210" r="5" opacity="0.58"/>` +
+	          `<circle cx="665" cy="162" r="4" opacity="0.48"/>` +
+	          `<circle cx="960" cy="118" r="6" opacity="0.54"/>` +
+	        `</g>` +
+	        `<path d="M94 88C278 36 460 62 642 42C826 22 1010 54 1164 20" fill="none" stroke="${psgSvgHighlightColor}" stroke-opacity="0.28" stroke-width="6"/>` +
+	        `<path d="M40 346C276 310 492 342 704 304C890 270 1018 284 1184 250" fill="none" stroke="${psgSvgBlueColor}" stroke-opacity="0.12" stroke-width="10"/>` +
+	      `</svg>`
+	    );
+	    const psgSvgRefractionTexture = svgBackgroundImage(
+	      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" preserveAspectRatio="none">` +
+	        `<defs>` +
+	          `<filter id="frostNoise" x="-10%" y="-10%" width="120%" height="120%">` +
+	            `<feTurbulence type="fractalNoise" baseFrequency="0.018 0.12" numOctaves="3" seed="9" result="noise"/>` +
+	            `<feColorMatrix in="noise" type="matrix" values="0 0 0 0 1 0 0 0 0 0.88 0 0 0 0 0.98 0 0 0 0.10 0"/>` +
+	          `</filter>` +
+	          `<linearGradient id="iceVeil" x1="0%" y1="0%" x2="100%" y2="100%">` +
+	            `<stop offset="0%" stop-color="${psgSvgHighlightColor}" stop-opacity="0.10"/>` +
+	            `<stop offset="38%" stop-color="${psgSvgFrostLightColor}" stop-opacity="0.08"/>` +
+	            `<stop offset="100%" stop-color="${psgSvgBlueColor}" stop-opacity="0.05"/>` +
+	          `</linearGradient>` +
+	        `</defs>` +
+	        `<rect width="1200" height="420" fill="url(#iceVeil)"/>` +
+	        `<rect width="1200" height="420" filter="url(#frostNoise)" opacity="0.32"/>` +
+	        `<g fill="none" stroke-linecap="round">` +
+	          `<path d="M96 86h168m48 0h68m116 0h230m90 0h96" stroke="${psgSvgHighlightColor}" stroke-opacity="0.16" stroke-width="3"/>` +
+	          `<path d="M120 138h86m46 0h152m74 0h112m160 0h164" stroke="${psgSvgFrostLightColor}" stroke-opacity="0.13" stroke-width="2"/>` +
+	          `<path d="M88 212h122m72 0h74m138 0h220m68 0h126" stroke="${psgSvgBlueColor}" stroke-opacity="0.10" stroke-width="2"/>` +
+	        `</g>` +
+	      `</svg>`
+	    );
+	    const psgSvgStaticDashHighlight = svgBackgroundImage(
+	      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" preserveAspectRatio="none">` +
+	        `<defs>` +
+	          `<linearGradient id="dashFade" x1="0%" y1="0%" x2="100%" y2="0%">` +
+	            `<stop offset="0%" stop-color="${psgSvgHighlightColor}" stop-opacity="0"/>` +
+	            `<stop offset="16%" stop-color="${psgSvgHighlightColor}" stop-opacity="0.50"/>` +
+	            `<stop offset="44%" stop-color="${psgSvgFrostLightColor}" stop-opacity="0.24"/>` +
+	            `<stop offset="78%" stop-color="${psgSvgHighlightColor}" stop-opacity="0.42"/>` +
+	            `<stop offset="100%" stop-color="${psgSvgHighlightColor}" stop-opacity="0"/>` +
+	          `</linearGradient>` +
+	        `</defs>` +
+	        `<g fill="none" stroke="url(#dashFade)" stroke-linecap="round">` +
+	          `<path d="M26 82C208 38 392 60 558 42C740 22 928 48 1174 18" stroke-width="8" stroke-dasharray="180 58"/>` +
+	          `<path d="M68 124C228 96 416 110 596 88C792 64 956 84 1138 54" stroke-width="3" stroke-dasharray="92 52" opacity="0.62"/>` +
+	          `<path d="M110 174C310 150 510 168 704 136C886 106 996 122 1160 92" stroke-width="2" stroke-dasharray="64 44" opacity="0.42"/>` +
+	        `</g>` +
+	      `</svg>`
+	    );
+	    const psgSvgEdgeGradient = svgBackgroundImage(
+	      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" preserveAspectRatio="none">` +
+	        `<defs>` +
+	          `<linearGradient id="edge" x1="0%" y1="0%" x2="100%" y2="100%">` +
+	            `<stop offset="0%" stop-color="${psgSvgHighlightColor}" stop-opacity="0.86"/>` +
+	            `<stop offset="26%" stop-color="${psgSvgFrostLightColor}" stop-opacity="0.28"/>` +
+	            `<stop offset="58%" stop-color="${psgSvgBlueColor}" stop-opacity="0.18"/>` +
+	            `<stop offset="100%" stop-color="${psgSvgEdgeColor}" stop-opacity="0.24"/>` +
+	          `</linearGradient>` +
+	        `</defs>` +
+	        `<rect width="1200" height="420" fill="url(#edge)"/>` +
+	      `</svg>`
+	    );
+	    const glassSvgLongestLineWidthEstimate = Math.max(
+	      ...headlineText.split("\n").map((line) => {
+	        const charCount = Math.max(1, line.length);
+	        const trackingPx = Math.max(-headDisplayPx * 0.28, textFx.tracking * headDisplayPx);
+	        return charCount * headDisplayPx * 0.68 + Math.max(0, charCount - 1) * trackingPx;
+	      })
+	    );
+	    const glassSvgColumnWidthEstimate = 1080 * Math.max(0.3, Math.min(1, textColWidth / 100));
+	    const glassSvgPaintWidthEstimate = Math.max(glassSvgColumnWidthEstimate, glassSvgLongestLineWidthEstimate);
+	    const glassSvgTileColumns = glassActive
+	      ? Math.max(1, Math.min(5, Math.ceil(Math.max(headDisplayPx / 150, glassSvgPaintWidthEstimate / 1120))))
+	      : 1;
+	    const glassSvgTileRows = glassActive ? Math.max(1, Math.min(4, Math.ceil(headDisplayPx / 220))) : 1;
+	    const glassSvgTilingActive = glassSvgTileColumns > 1 || glassSvgTileRows > 1;
+	    const glassSvgTileBackgroundSize = glassSvgTilingActive
+	      ? `${(100 / glassSvgTileColumns).toFixed(3)}% ${(100 / glassSvgTileRows).toFixed(3)}%`
+	      : "100% 100%";
+	    const glassSvgTileBackgroundRepeat = glassSvgTilingActive ? "repeat" : "no-repeat";
+	    const psgSatinShine = [
+	      `linear-gradient(${glassSatinAngleA}deg, transparent 0%, ${hexToRgba(psgHighlightColor, 0.09)} 18%, transparent 30%, transparent 58%, ${hexToRgba(psgFrostLightColor, 0.07)} 68%, transparent 82%)`,
+	      `linear-gradient(${glassSatinAngleB}deg, transparent 0%, transparent 40%, ${hexToRgba(psgHighlightColor, 0.075)} 49%, transparent 58%, transparent 100%)`,
+	    ].join(", ");
+	    const psgLipInnerGlow = [
+	      `linear-gradient(${glassReflectionAngleA}deg, transparent 0%, ${hexToRgba(psgHighlightColor, 0.22)} 11%, ${hexToRgba(psgFrostLightColor, 0.10)} 18%, transparent 34%, transparent 100%)`,
+	      `radial-gradient(ellipse at ${glassRandInt(12, 30)}% ${glassRandInt(18, 42)}%, ${hexToRgba(psgFrostLightColor, 0.24)} 0%, ${hexToRgba(psgBlueColor, 0.08)} 28%, transparent 58%)`,
+	      `radial-gradient(ellipse at ${glassRandInt(58, 86)}% ${glassRandInt(50, 78)}%, ${hexToRgba(psgBlueColor, 0.20)} 0%, transparent 56%)`,
+	    ].join(", ");
+	    const psgGlassCssLayerSpecs: GlassCssLayerSpec[] = glassActive
+	      ? [
+	          glassLayer("headline-glass-00-color-dodge-bloom", {
+	            color: hexToRgba(psgEdgeColor, 0.18),
+	            WebkitTextFillColor: hexToRgba(psgEdgeColor, 0.18),
+	            WebkitTextStrokeWidth: "0px",
+	            WebkitTextStrokeColor: "transparent",
+	            filter: liveTextPerfMode
+	              ? "none"
+	              : `blur(${Math.max(8, psgGlowMidPx * 0.72).toFixed(1)}px) drop-shadow(0 0 ${psgGlowWidePx.toFixed(1)}px ${hexToRgba(psgEdgeColor, 0.34)})`,
+	            opacity: Math.min(0.34, textFx.alpha * 0.34),
+	            mixBlendMode: "color-dodge",
+	            zIndex: 0,
+	          }),
+	          glassLayer("headline-glass-00b-pink-back-stroke", {
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: `${Math.max(10, glassStrokeWidth + 10).toFixed(1)}px`,
+	            WebkitTextStrokeColor: hexToRgba(psgEdgeColor, 0.62),
+	            paintOrder: "stroke fill",
+	            filter: liveTextPerfMode
+	              ? "none"
+	              : `blur(${Math.max(8, psgGlowHotPx * 0.72).toFixed(1)}px) drop-shadow(0 0 ${psgGlowMidPx.toFixed(1)}px ${hexToRgba(psgEdgeColor, 0.34)})`,
+	            opacity: Math.min(0.58, textFx.alpha * 0.54),
+	            mixBlendMode: "screen",
+	            zIndex: 0,
+	          }, undefined, true),
+	          ...psgGlassExtrusionSpecs,
+	          glassLayer("headline-glass-01-main-edge-glow", {
+	            color: hexToRgba(psgEdgeColor, 0.12),
+	            WebkitTextFillColor: hexToRgba(psgEdgeColor, 0.12),
+	            WebkitTextStrokeWidth: "0px",
+	            WebkitTextStrokeColor: "transparent",
+	            filter: liveTextPerfMode
+	              ? "none"
+	              : `drop-shadow(0 0 ${psgGlowHotPx.toFixed(1)}px ${hexToRgba(psgHighlightColor, 0.78)}) drop-shadow(0 0 ${psgGlowMidPx.toFixed(1)}px ${hexToRgba(psgEdgeColor, 0.5)}) drop-shadow(0 0 ${psgGlowWidePx.toFixed(1)}px ${hexToRgba(psgEdgeColor, 0.25)})`,
+	            opacity: Math.min(0.52, textFx.alpha * 0.5),
+	            mixBlendMode: "color-dodge",
+	            zIndex: 1,
+	          }, undefined, true),
+	          glassLayer("headline-glass-02-bottom-edge-boost", {
+	            color: hexToRgba(psgBottomColor, 0.16),
+	            WebkitTextFillColor: hexToRgba(psgBottomColor, 0.16),
+	            WebkitTextStrokeWidth: "0px",
+	            WebkitTextStrokeColor: "transparent",
+	            clipPath: "polygon(0 60%, 100% 50%, 100% 100%, 0 100%)",
+	            transform: "translate(0, 1px)",
+	            filter: liveTextPerfMode
+	              ? "none"
+	              : `blur(${Math.max(0.8, psgGlowHotPx * 0.22).toFixed(1)}px) drop-shadow(0 0 ${(psgGlowLowPx * 0.72).toFixed(1)}px ${hexToRgba(psgBottomColor, 0.28)})`,
+	            opacity: Math.min(0.38, textFx.alpha * 0.38),
+	            mixBlendMode: "color-dodge",
+	            zIndex: 2,
+	          }, undefined, true),
+	          glassLayer("headline-glass-03-curve-edge-accent", {
+	            color: hexToRgba(psgPurpleColor, 0.12),
+	            WebkitTextFillColor: hexToRgba(psgPurpleColor, 0.12),
+	            WebkitTextStrokeWidth: "0px",
+	            WebkitTextStrokeColor: "transparent",
+	            clipPath: "polygon(0 28%, 100% 18%, 100% 100%, 0 86%)",
+	            transform: "translate(1px, 1px)",
+	            filter: liveTextPerfMode
+	              ? "none"
+	              : `blur(${Math.max(0.6, psgGlowHotPx * 0.18).toFixed(1)}px) drop-shadow(0 0 ${(psgGlowLowPx * 0.62).toFixed(1)}px ${hexToRgba(psgPurpleColor, 0.18)})`,
+	            opacity: Math.min(0.26, textFx.alpha * 0.26),
+	            mixBlendMode: "overlay",
+	            zIndex: 3,
+	          }),
+	          glassLayer("headline-glass-04-soft-frost-glow", {
+	            backgroundImage: psgGlassFrostA,
+	            backgroundSize: "132% 124%",
+	            backgroundPosition: "0 0",
+	            backgroundRepeat: "no-repeat",
+	            WebkitBackgroundClip: "text",
+	            backgroundClip: "text",
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            filter: psgInnerGlowTightPx > 0 ? `blur(${Math.min(3.2, psgInnerGlowTightPx).toFixed(1)}px)` : "none",
+	            opacity: Math.min(0.28, textFx.alpha * 0.28),
+	            mixBlendMode: "soft-light",
+	            zIndex: 4,
+	          }),
+	          glassLayer("headline-glass-05-lower-frost-glow", {
+	            backgroundImage: psgGlassFrostB,
+	            backgroundSize: "150% 132%",
+	            backgroundPosition: "50% 100%",
+	            backgroundRepeat: "no-repeat",
+	            WebkitBackgroundClip: "text",
+	            backgroundClip: "text",
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            clipPath: "polygon(0 36%, 100% 30%, 100% 100%, 0 100%)",
+	            filter: psgFrostBlur > 0 ? `blur(${Math.min(3.4, psgFrostBlur * 0.16).toFixed(1)}px)` : "none",
+	            opacity: Math.min(0.13, textFx.alpha * 0.13),
+	            mixBlendMode: "screen",
+	            zIndex: 5,
+	          }),
+	          glassLayer("headline-glass-06-inner-frost-spot", {
+	            backgroundImage: psgGlassFrostC,
+	            backgroundSize: "122% 132%",
+	            backgroundPosition: `${glassRandInt(-8, 12)}% ${glassRandInt(-4, 12)}%`,
+	            backgroundRepeat: "no-repeat",
+	            WebkitBackgroundClip: "text",
+	            backgroundClip: "text",
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            filter: psgInnerGlowDiffusePx > 0 ? `blur(${Math.min(15, psgInnerGlowDiffusePx).toFixed(1)}px)` : "none",
+	            opacity: Math.min(0.2, textFx.alpha * 0.2),
+	            mixBlendMode: "overlay",
+	            zIndex: 6,
+	          }),
+	          glassLayer("headline-glass-07-right-edge-boost", {
+	            color: hexToRgba(psgBlueColor, 0.12),
+	            WebkitTextFillColor: hexToRgba(psgBlueColor, 0.12),
+	            WebkitTextStrokeWidth: "0px",
+	            WebkitTextStrokeColor: "transparent",
+	            clipPath: "polygon(55% 0, 100% 0, 100% 100%, 64% 100%)",
+	            transform: "translate(1.2px, 0)",
+	            filter: liveTextPerfMode
+	              ? "none"
+	              : `blur(${Math.max(0.7, psgGlowHotPx * 0.2).toFixed(1)}px) drop-shadow(0 0 ${(psgGlowLowPx * 0.72).toFixed(1)}px ${hexToRgba(psgBlueColor, 0.24)})`,
+	            opacity: Math.min(0.3, textFx.alpha * 0.3),
+	            mixBlendMode: "color-dodge",
+	            zIndex: 7,
+	          }, undefined, true),
+	          glassLayer("headline-glass-08-glass-body", {
+	            backgroundImage: psgSvgBodyGradient,
+	            backgroundSize: glassSvgTileBackgroundSize,
+	            backgroundPosition: "0 0",
+	            backgroundRepeat: glassSvgTileBackgroundRepeat,
+	            WebkitBackgroundClip: "text",
+	            backgroundClip: "text",
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: "0px",
+	            opacity: Math.min(0.76, textFx.alpha * (0.54 + psgGlassFillScale * 0.12)),
+	            mixBlendMode: "screen",
+	            filter: liveTextPerfMode
+	              ? "contrast(1.06) brightness(1.05) saturate(1.08)"
+	              : `contrast(1.06) brightness(1.05) saturate(1.08) drop-shadow(0 ${psgDepthOffsetY.toFixed(1)}px ${(psgGlowLowPx * 0.54).toFixed(1)}px rgba(0,0,0,0.32))`,
+	            zIndex: 8,
+	          }, undefined, true),
+	          glassLayer("headline-glass-08b-svg-frost-body", {
+	            backgroundImage: psgGlassBodyFill,
+	            backgroundSize: "100% 100%, 78% 82%, 88% 90%",
+	            backgroundPosition: "0 0, 0 0, 100% 100%",
+	            backgroundRepeat: "no-repeat, no-repeat, no-repeat",
+	            WebkitBackgroundClip: "text",
+	            backgroundClip: "text",
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: "0px",
+	            opacity: Math.min(0.3, textFx.alpha * 0.24 * psgGlassFillScale),
+	            mixBlendMode: "soft-light",
+	            zIndex: 8,
+	          }),
+	          glassLayer("headline-glass-08c-static-refraction-texture", {
+	            backgroundImage: psgSvgRefractionTexture,
+	            backgroundSize: glassSvgTileBackgroundSize,
+	            backgroundPosition: "0 0",
+	            backgroundRepeat: glassSvgTileBackgroundRepeat,
+	            WebkitBackgroundClip: "text",
+	            backgroundClip: "text",
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: `${Math.max(0.45, psgLipStroke * 0.42).toFixed(1)}px`,
+	            WebkitTextStrokeColor: hexToRgba(psgHighlightColor, 0.18),
+	            paintOrder: "stroke fill",
+	            transform: "translate(0.8px, -0.4px)",
+	            opacity: Math.min(0.14, textFx.alpha * 0.12),
+	            mixBlendMode: "screen",
+	            filter: liveTextPerfMode ? "none" : "blur(0.55px)",
+	            zIndex: 9,
+	          }, undefined, true),
+	          glassLayer("headline-glass-08d-dark-offset-edge", {
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: `${Math.max(0.9, glassStrokeWidth * 0.32).toFixed(1)}px`,
+	            WebkitTextStrokeColor: "rgba(20,0,20,0.48)",
+	            paintOrder: "stroke fill",
+	            transform: `translate(${psgDepthOffsetX.toFixed(1)}px, ${psgDepthOffsetY.toFixed(1)}px)`,
+	            clipPath: psgDepthEdgeClipPath,
+	            filter: psgDepthBlur > 0 ? `blur(${psgDepthBlur.toFixed(1)}px)` : "none",
+	            opacity: Math.min(0.34, textFx.alpha * 0.32),
+	            mixBlendMode: "multiply",
+	            zIndex: 7,
+	          }, undefined, true),
+	          glassLayer("headline-glass-09-depth-inner", {
+	            backgroundImage: `linear-gradient(165deg, transparent 20%, ${hexToRgba(psgDepthColor, 0.82)} 100%)`,
+	            backgroundSize: "100% 100%",
+	            backgroundRepeat: "no-repeat",
+	            WebkitBackgroundClip: "text",
+	            backgroundClip: "text",
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: "0px",
+	            WebkitTextStrokeColor: "transparent",
+	            transform: `translate(${(psgDepthOffsetX * 0.8).toFixed(1)}px, ${(psgDepthOffsetY * 0.9).toFixed(1)}px)`,
+	            clipPath: psgLowerDepthClipPath,
+	            filter: liveTextPerfMode ? "none" : `drop-shadow(${psgDepthOffsetX.toFixed(1)}px ${psgDepthOffsetY.toFixed(1)}px 1.8px rgba(20,0,18,0.38))`,
+	            opacity: Math.min(0.24, textFx.alpha * 0.2 * psgGlassFillScale),
+	            mixBlendMode: "multiply",
+	            zIndex: 7,
+	          }, undefined, true),
+	          glassLayer("headline-glass-10-reflection-sweep", {
+	            backgroundImage: psgReflectionSweep,
+	            backgroundSize: "150% 86%, 132% 72%, 42px 100%",
+	            backgroundPosition: `${glassReflectionPosition}, 18% 0, 0 0`,
+	            backgroundRepeat: "no-repeat, no-repeat, repeat",
+	            WebkitBackgroundClip: "text",
+	            backgroundClip: "text",
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            clipPath: "polygon(0 0, 100% 0, 100% 13%, 72% 17%, 44% 11%, 18% 20%, 0 14%)",
+	            opacity: Math.min(0.18, textFx.alpha * 0.16),
+	            mixBlendMode: "screen",
+	            zIndex: 10,
+	          }),
+	          glassLayer("headline-glass-10b-svg-specular-gradient", {
+	            backgroundImage: psgSvgSpecularGradient,
+	            backgroundSize: glassSvgTileBackgroundSize,
+	            backgroundPosition: "0 0",
+	            backgroundRepeat: glassSvgTileBackgroundRepeat,
+	            WebkitBackgroundClip: "text",
+	            backgroundClip: "text",
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: "0px",
+	            opacity: Math.min(0.58, textFx.alpha * 0.56),
+	            mixBlendMode: "color-dodge",
+	            filter: liveTextPerfMode ? "none" : "drop-shadow(0 0 1.2px rgba(255,255,255,0.38))",
+	            zIndex: 11,
+	          }, undefined, true),
+	          glassLayer("headline-glass-10c-static-dashed-highlight", {
+	            backgroundImage: psgSvgStaticDashHighlight,
+	            backgroundSize: glassSvgTileBackgroundSize,
+	            backgroundPosition: "0 0",
+	            backgroundRepeat: glassSvgTileBackgroundRepeat,
+	            WebkitBackgroundClip: "text",
+	            backgroundClip: "text",
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: `${Math.max(0.5, psgHighlightStroke * 0.62).toFixed(1)}px`,
+	            WebkitTextStrokeColor: hexToRgba(psgHighlightColor, 0.28),
+	            paintOrder: "stroke fill",
+	            clipPath: `polygon(0 0, 100% 0, 100% ${Math.max(18, glassTopClipRight + 4)}%, 0 ${Math.max(24, glassTopClipLeft + 4)}%)`,
+	            opacity: Math.min(0.52, textFx.alpha * 0.48),
+	            mixBlendMode: "screen",
+	            filter: liveTextPerfMode ? "none" : `drop-shadow(0 0 6px ${hexToRgba(psgEdgeColor, 0.62)})`,
+	            zIndex: 12,
+	          }, undefined, true),
+	          glassLayer("headline-glass-11-satin-shine", {
+	            backgroundImage: psgSatinShine,
+	            backgroundSize: "135% 100%, 120% 100%",
+	            backgroundPosition: "0 0, 0 0",
+	            backgroundRepeat: "no-repeat, no-repeat",
+	            WebkitBackgroundClip: "text",
+	            backgroundClip: "text",
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            opacity: Math.min(0.14, textFx.alpha * 0.14),
+	            mixBlendMode: "soft-light",
+	            zIndex: 11,
+	          }),
+	          glassLayer("headline-glass-11b-svg-edge-gradient", {
+	            backgroundImage: psgSvgEdgeGradient,
+	            backgroundSize: glassSvgTileBackgroundSize,
+	            backgroundPosition: "0 0",
+	            backgroundRepeat: glassSvgTileBackgroundRepeat,
+	            WebkitBackgroundClip: "text",
+	            backgroundClip: "text",
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: `${Math.max(0.55, psgLipStroke * 0.78).toFixed(1)}px`,
+	            WebkitTextStrokeColor: hexToRgba(psgHighlightColor, 0.38),
+	            paintOrder: "stroke fill",
+	            opacity: Math.min(0.48, textFx.alpha * 0.46),
+	            mixBlendMode: "overlay",
+	            zIndex: 12,
+	          }, undefined, true),
+	          glassLayer("headline-glass-12-lip-refraction", {
+	            backgroundImage: psgLipInnerGlow,
+	            backgroundSize: "124% 100%, 112% 118%, 118% 124%",
+	            backgroundPosition: "0 0, 0 0, 100% 100%",
+	            backgroundRepeat: "no-repeat, no-repeat, no-repeat",
+	            WebkitBackgroundClip: "text",
+	            backgroundClip: "text",
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: `${psgLipStroke.toFixed(1)}px`,
+	            WebkitTextStrokeColor: hexToRgba(psgHighlightColor, 0.74),
+	            paintOrder: "stroke fill",
+	            transform: "translate(-0.4px, -0.7px)",
+	            filter: liveTextPerfMode
+	              ? "none"
+	              : `drop-shadow(0 0 3px ${hexToRgba(psgHighlightColor, 0.46)}) drop-shadow(0 0 12px ${hexToRgba(psgFrostLightColor, 0.28)})`,
+	            opacity: Math.min(0.46, textFx.alpha * 0.44),
+	            mixBlendMode: "screen",
+	            zIndex: 12,
+	          }, undefined, true),
+	          glassLayer("headline-glass-12-sharp-highlight", {
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: `${psgHighlightStroke.toFixed(1)}px`,
+	            WebkitTextStrokeColor: psgHighlightColor,
+	            paintOrder: "stroke fill",
+	            clipPath: `polygon(0 0, 100% 0, 100% ${glassTopClipRight}%, 0 ${glassTopClipLeft}%)`,
+	            transform: "translate(-1px, -1.5px)",
+	            filter: liveTextPerfMode
+	              ? "none"
+	              : `drop-shadow(0 0 0.8px ${hexToRgba(psgHighlightColor, 0.72)})`,
+	            opacity: Math.min(0.84, textFx.alpha * 0.82),
+	            mixBlendMode: "screen",
+	            zIndex: 13,
+	          }, undefined, true),
+	          glassLayer("headline-glass-13-atmospheric-glow", {
+	            color: hexToRgba(psgBlueColor, 0.14),
+	            WebkitTextFillColor: hexToRgba(psgBlueColor, 0.14),
+	            WebkitTextStrokeWidth: "0px",
+	            WebkitTextStrokeColor: "transparent",
+	            filter: liveTextPerfMode ? "none" : `blur(${psgGlowMidPx.toFixed(1)}px)`,
+	            opacity: Math.min(0.16, textFx.alpha * 0.16),
+	            mixBlendMode: "color-dodge",
+	            zIndex: 0,
+	          }),
+	          glassLayer("headline-glass-14-chromatic-edge", {
+	            color: hexToRgba(psgHighlightColor, 0.025),
+	            WebkitTextFillColor: hexToRgba(psgHighlightColor, 0.025),
+	            WebkitTextStrokeWidth: "0px",
+	            WebkitTextStrokeColor: "transparent",
+	            filter: liveTextPerfMode
+	              ? "none"
+	              : `drop-shadow(1.5px 0 0 ${hexToRgba(psgEdgeColor, 0.32)}) drop-shadow(-1.1px 0 0 ${hexToRgba(psgBlueColor, 0.32)})`,
+	            opacity: Math.min(0.18, textFx.alpha * 0.18),
+	            mixBlendMode: "screen",
+	            zIndex: 14,
+	          }, undefined, true),
+	          glassLayer("headline-glass-15-final-white-edge", {
+	            color: "transparent",
+	            WebkitTextFillColor: "transparent",
+	            WebkitTextStrokeWidth: `${Math.max(1, psgHighlightStroke * 0.95).toFixed(1)}px`,
+	            WebkitTextStrokeColor: "rgba(255,235,255,0.92)",
+	            paintOrder: "stroke fill",
+	            filter: liveTextPerfMode
+	              ? "none"
+	              : `drop-shadow(0 0 5px ${hexToRgba(psgHighlightColor, 0.72)}) drop-shadow(0 0 9px ${hexToRgba(psgEdgeColor, 0.4)})`,
+	            opacity: Math.min(0.9, textFx.alpha * 0.88),
+	            mixBlendMode: "screen",
+	            zIndex: 15,
+	          }, undefined, true),
+	        ]
+	      : [];
+	    const glassCssLayerSpecs = liveTextPerfMode
+	      ? psgGlassCssLayerSpecs.filter((layer) => layer.live)
+	      : psgGlassCssLayerSpecs;
+	    const glassLayerSpecs: Array<{
+	      key: string;
+	      style: React.CSSProperties;
+	      lineStyle: React.CSSProperties;
+	    }> = glassActive
+	      ? [
+	          {
+	            key: "headline-glass-glow",
+	            style: {
+	              color: "transparent",
+	              WebkitTextFillColor: "transparent",
+	              WebkitTextStrokeWidth: `${glassGlowStrokeWidth.toFixed(1)}px`,
+	              WebkitTextStrokeColor: glassPrimaryColor,
+	              filter: glassBlurPx > 0 ? `blur(${glassBlurPx.toFixed(1)}px)` : "none",
+	              opacity: Math.min(0.62, textFx.alpha * 0.55),
+	              mixBlendMode: "screen",
+	              zIndex: 1,
+	            },
+	            lineStyle: {
+	              color: "transparent",
+	              WebkitTextFillColor: "transparent",
+	              WebkitTextStrokeWidth: `${glassGlowStrokeWidth.toFixed(1)}px`,
+	              WebkitTextStrokeColor: glassPrimaryColor,
+	            },
+	          },
+	          {
+	            key: "headline-glass-refraction",
+	            style: {
+	              color: glassRefractionFill,
+	              WebkitTextFillColor: glassRefractionFill,
+	              WebkitTextStrokeWidth: "2px",
+	              WebkitTextStrokeColor: "rgba(255,255,255,0.16)",
+	              filter: `blur(${glassRefractionBlurPx.toFixed(1)}px) contrast(1.15)`,
+	              mixBlendMode: "screen",
+	              zIndex: 2,
+	            },
+	            lineStyle: {
+	              color: glassRefractionFill,
+	              WebkitTextFillColor: glassRefractionFill,
+	              WebkitTextStrokeWidth: "2px",
+	              WebkitTextStrokeColor: "rgba(255,255,255,0.16)",
+	            },
+	          },
+	          {
+	            key: "headline-glass-inner-dark",
+	            style: {
+	              color: "rgba(0,0,0,0.28)",
+	              WebkitTextFillColor: "rgba(0,0,0,0.28)",
+	              WebkitTextStrokeWidth: "1px",
+	              WebkitTextStrokeColor: "rgba(0,0,0,0.25)",
+	              textShadow: "0 8px 20px rgba(0,0,0,0.45)",
+	              mixBlendMode: "multiply",
+	              zIndex: 3,
+	            },
+	            lineStyle: {
+	              color: "rgba(0,0,0,0.28)",
+	              WebkitTextFillColor: "rgba(0,0,0,0.28)",
+	              WebkitTextStrokeWidth: "1px",
+	              WebkitTextStrokeColor: "rgba(0,0,0,0.25)",
+	              textShadow: "0 8px 20px rgba(0,0,0,0.45)",
+	            },
+	          },
+	          {
+	            key: "headline-glass-fill",
+	            style: {
+	              color: glassCoreFill,
+	              WebkitTextFillColor: glassCoreFill,
+	              WebkitTextStrokeWidth: "1px",
+	              WebkitTextStrokeColor: "rgba(255,255,255,0.25)",
+	              textShadow: glassPresetFillShadow,
+	              mixBlendMode: "screen",
+	              zIndex: 4,
+	            },
+	            lineStyle: {
+	              color: glassCoreFill,
+	              WebkitTextFillColor: glassCoreFill,
+	              WebkitTextStrokeWidth: "1px",
+	              WebkitTextStrokeColor: "rgba(255,255,255,0.25)",
+	              textShadow: glassPresetFillShadow,
+	            },
+	          },
+	          {
+	            key: "headline-glass-stroke-outer",
+	            style: {
+	              color: "transparent",
+	              WebkitTextFillColor: "transparent",
+	              WebkitTextStrokeWidth: `${glassOuterRimWidth.toFixed(1)}px`,
+	              WebkitTextStrokeColor: glassPrimaryColor,
+	              filter: `blur(${glassOuterRimBlurPx.toFixed(1)}px)`,
+	              opacity: Math.min(0.76, textFx.alpha * 0.7),
+	              mixBlendMode: "screen",
+	              zIndex: 5,
+	            },
+	            lineStyle: {
+	              color: "transparent",
+	              WebkitTextFillColor: "transparent",
+	              WebkitTextStrokeWidth: `${glassOuterRimWidth.toFixed(1)}px`,
+	              WebkitTextStrokeColor: glassPrimaryColor,
+	            },
+	          },
+	          {
+	            key: "headline-glass-stroke-inner",
+	            style: {
+	              color: "transparent",
+	              WebkitTextFillColor: "transparent",
+	              WebkitTextStrokeWidth: `${glassInnerRimWidth.toFixed(1)}px`,
+	              WebkitTextStrokeColor: "rgba(255,255,255,0.88)",
+	              textShadow: glassPresetInnerRimShadow,
+	              zIndex: 6,
+	            },
+	            lineStyle: {
+	              color: "transparent",
+	              WebkitTextFillColor: "transparent",
+	              WebkitTextStrokeWidth: `${glassInnerRimWidth.toFixed(1)}px`,
+	              WebkitTextStrokeColor: "rgba(255,255,255,0.88)",
+	              textShadow: glassPresetInnerRimShadow,
+	            },
+	          },
+	          {
+	            key: "headline-glass-highlight",
+	            style: {
+	              backgroundImage: glassHighlightGradient,
+	              backgroundSize: "100% 100%",
+	              backgroundRepeat: "no-repeat",
+	              WebkitBackgroundClip: "text",
+	              backgroundClip: "text",
+	              color: "transparent",
+	              WebkitTextFillColor: "transparent",
+	              WebkitTextStrokeWidth: "1px",
+	              WebkitTextStrokeColor: "rgba(255,255,255,0.4)",
+	              clipPath: "polygon(0 0, 100% 0, 100% 38%, 0 58%)",
+	              opacity: Math.min(0.95, textFx.alpha * 0.9),
+	              mixBlendMode: "screen",
+	              zIndex: 7,
+	            },
+	            lineStyle: {
+	              backgroundImage: glassHighlightGradient,
+	              backgroundSize: "100% 100%",
+	              backgroundRepeat: "no-repeat",
+	              WebkitBackgroundClip: "text",
+	              backgroundClip: "text",
+	              color: "transparent",
+	              WebkitTextFillColor: "transparent",
+	              WebkitTextStrokeWidth: "1px",
+	              WebkitTextStrokeColor: "rgba(255,255,255,0.4)",
+	            },
+	          },
+	          {
+	            key: "headline-glass-sweep",
+	            style: {
+	              backgroundImage: glassSweepGradient,
+	              backgroundSize: "220% 100%",
+	              backgroundPosition: "130% 0",
+	              WebkitBackgroundClip: "text",
+	              backgroundClip: "text",
+	              color: "transparent",
+	              WebkitTextFillColor: "transparent",
+	              mixBlendMode: "screen",
+	              opacity: Math.min(0.8, textFx.alpha * 0.75),
+	              zIndex: 8,
+	            },
+	            lineStyle: {
+	              backgroundImage: glassSweepGradient,
+	              backgroundSize: "220% 100%",
+	              backgroundPosition: "130% 0",
+	              WebkitBackgroundClip: "text",
+	              backgroundClip: "text",
+	              color: "transparent",
+	              WebkitTextFillColor: "transparent",
+	            },
+	          },
+	          {
+	            key: "headline-glass-final-edge",
+	            style: {
+	              color: "transparent",
+	              WebkitTextFillColor: "transparent",
+	              WebkitTextStrokeWidth: `${glassFinalEdgeWidth.toFixed(1)}px`,
+	              WebkitTextStrokeColor: "rgba(255,255,255,0.95)",
+	              textShadow: glassPresetFinalEdgeShadow,
+	              opacity: Math.min(0.98, textFx.alpha * 0.95),
+	              zIndex: 9,
+	            },
+	            lineStyle: {
+	              color: "transparent",
+	              WebkitTextFillColor: "transparent",
+	              WebkitTextStrokeWidth: `${glassFinalEdgeWidth.toFixed(1)}px`,
+	              WebkitTextStrokeColor: "rgba(255,255,255,0.95)",
+	              textShadow: glassPresetFinalEdgeShadow,
+	            },
+	          },
+	        ]
+	      : [];
+	    const headlineHitX = headAlign === "left" ? "0%" : headAlign === "right" ? "100%" : "50%";
+	    const headlineHitAnchor = headAlign === "left" ? "start" : headAlign === "right" ? "end" : "middle";
+	    const headlineHitStrokeWidth = Math.max(
+	      1,
+	      glitchActive
+	        ? glitchWhiteStrokeWidth + glitchRgbSplit * 0.25
+	        : glassActive
+	        ? glassStrokeWidth + glassGlowPx * 0.35
+	        : kineticActive
+	        ? Math.max(12, Number(textFx.strokeWidth || 0) + 12)
+	        : quantumActive
+	        ? Math.max(16, Number(textFx.strokeWidth || 0) + quantumSplitOffset * 1.5 + quantumSplitStrokeWidth)
+	        : doodleStackActive
+	        ? Math.max(10, headDisplayPx * 0.04)
+	        : Number(textFx.strokeWidth || 0)
+	    );
+	    const headlineHitLines = headlineText.split("\n");
 	
+    const layeredHeadlineShadowActive =
+      !!headShadow &&
+      !dragging &&
+      (goldBlockActive ||
+        pure3dActive ||
+        rushActive ||
+        lineActive ||
+        glassActive ||
+        kineticActive ||
+        dashStrokeActive ||
+        doodleStackActive ||
+        cyberEmbossActive ||
+        quantumActive ||
+        verticalStretchActive);
+    const layeredHeadlineShadowFilter = layeredHeadlineShadowActive
+      ? buildPremiumDropShadowFilter(headShadowStrength ?? 1, textFx.glow ?? 0)
+      : undefined;
+
 	    return (
       <div
         className="relative"
@@ -4763,12 +7722,14 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
           minWidth: "fit-content",
           maxWidth: "100%",
           overflow: "visible",
-          transform: glitchActive ? "scaleX(0.88)" : undefined,
+          transform: undefined,
           transformOrigin: "50% 50%",
-          isolation: glitchActive ? "isolate" : undefined,
+          isolation: glitchActive || glassActive || kineticActive || quantumActive || doodleStackActive ? "isolate" : undefined,
+          filter: layeredHeadlineShadowFilter,
+          pointerEvents: "none",
         }}
       >
-        {glitchActive && exportTextMode && (
+        {false && glitchActive && exportTextMode && (
           <svg
             aria-hidden="true"
             focusable="false"
@@ -4828,86 +7789,16 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
           </svg>
         )}
 
-        {headSliceEnabled && (
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute left-0 right-0"
-            style={{
-              top: -sliceEchoDistance,
-              height: sliceAreaHeight,
-              overflow: "visible",
-              zIndex: 0,
-            }}
-          >
-            {Array.from({ length: sliceBandCount }, (_, idx) => {
-              const t = sliceBandCount <= 1 ? 0.5 : idx / (sliceBandCount - 1);
-              const bandTop = idx * sliceBandSlotHeight;
-              const yOffset = (t - 0.5) * 2 * sliceEchoDistance;
-              const color = interpolateThreeColorRamp(
-                t,
-                headSliceTopColor,
-                headSliceMidColor,
-                headSliceBottomColor
-              );
-              const normalizedDistance = Math.abs(t - 0.5) / 0.5;
-              const opacity = Math.max(0.12, 1 - normalizedDistance * headSliceFade);
-              const blurPx = Math.max(0, headSliceBlur * (0.2 + t * 0.9));
-              return (
-                <div
-                  key={`headline-slice-${idx}`}
-                  className="absolute left-0 right-0 overflow-hidden"
-                  style={{
-                    top: bandTop,
-                    height: sliceClipHeight,
-                  }}
-                >
-                  <h1
-                    className="absolute left-0 top-0 font-black select-none"
-                    style={{
-                      top: sliceEchoDistance + yOffset - bandTop,
-                      fontFamily: headlineFamily,
-                      fontSize: headDisplayPx,
-                      lineHeight,
-                      whiteSpace: "pre-wrap",
-                      display: "block",
-                      width: "100%",
-                      letterSpacing: `${textFx.tracking}em`,
-                      textTransform: textFx.uppercase ? "uppercase" : "none",
-                      fontWeight: textFx.bold ? 900 : 700,
-                      fontStyle: textFx.italic ? "italic" : "normal",
-                      textDecorationLine: textFx.underline ? "underline" : "none",
-                      color,
-                      WebkitTextFillColor: color,
-                      opacity,
-                      filter: blurPx > 0 ? `blur(${blurPx.toFixed(2)}px)` : "none",
-                      textShadow: "none",
-                    }}
-                  >
-                    {renderHeadlineRich(headlineText, {
-                      baseTrackEm: textFx.tracking,
-                      leadDeltaEm: leadTrackDelta,
-                      lastDeltaEm: lastTrackDelta,
-                      opticalMargin,
-                      kerningFix,
-                      lineHeight,
-                      lineStyle: {
-                        display: "block",
-                        width: "100%",
-                        color,
-                        WebkitTextFillColor: color,
-                      },
-                    })}
-                  </h1>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
         {extrudeRenderDepth > 0 &&
-          !headSliceEnabled &&
+          !sliceActive &&
           !rushActive &&
           !lineActive &&
+          !glassActive &&
+          !goldBlockActive &&
+          !doodleStackActive &&
+          !quantumActive &&
+          !verticalStretchActive &&
+          !pure3dActive &&
           !glitchActive &&
           Array.from({ length: extrudeRenderDepth }, (_, idx) => {
             const layer = extrudeRenderDepth - idx;
@@ -4959,7 +7850,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
             );
           })}
 
-	        {glitchActive &&
+	        {false && glitchActive &&
 	          (glitchDepthDistance > 0 || extrudeDepth > 0) &&
 	          renderRushTextLayer(
 	            "headline-glitch-depth",
@@ -4981,31 +7872,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	            }
 	          )}
 
-        {rushActive ? (
-          <div className="relative" style={{ zIndex: 3 }}>
-            <HalftoneHeadlineSvg
-              text={headlineText}
-              align={headAlign}
-              fontFamily={headlineFamily}
-              fontSize={headDisplayPx}
-              lineHeight={lineHeight}
-              letterSpacingEm={Number.isFinite(textFx.tracking) ? textFx.tracking : -0.075}
-              fontStyle={textFx.italic ? "italic" : "normal"}
-              color={headRushDotColor || rushFillColor}
-              accentColor={headRushDotColor || rushFillColor}
-              shadowColor="transparent"
-              shadowOffsetX={0}
-              shadowOffsetY={0}
-              depthLayers={0}
-              depthStepX={0}
-              depthStepY={0}
-              alpha={textFx.alpha}
-              maxDot={rushMaxDotPx}
-              minDot={1.2}
-              strokeWidth={Math.max(0, textFx.strokeWidth || 0)}
-            />
-          </div>
-        ) : lineActive ? (
+        {goldBlockActive ? (
           <div className="relative" style={{ zIndex: 3, isolation: "isolate" }}>
             <h1
               aria-hidden="true"
@@ -5033,6 +7900,374 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
                 opticalMargin,
                 kerningFix,
                 lineHeight,
+                lineStyle: { display: "block", width: "100%" },
+              })}
+            </h1>
+            <svg
+              aria-hidden="true"
+              className="pointer-events-none absolute left-0 block overflow-visible"
+              width="100%"
+              height={goldBlockSvgHeight}
+              style={{ top: -goldBlockSvgPad, opacity: textFx.alpha, zIndex: 2 }}
+            >
+              <defs>
+                <linearGradient id={`${goldBlockSvgIdBase}-gold-fill`} x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor={goldBlockHotLightColor} />
+                  <stop offset="14%" stopColor={goldBlockPaleHighlightColor} />
+                  <stop offset="30%" stopColor={goldBlockLightColor} />
+                  <stop offset="52%" stopColor={goldBlockBrightMidColor} />
+                  <stop offset="68%" stopColor={goldBlockMidColor} />
+                  <stop offset="84%" stopColor={darkenHex(goldBlockMidColor, 12)} />
+                  <stop offset="100%" stopColor={goldBlockDarkColor} />
+                </linearGradient>
+                <linearGradient id={`${goldBlockSvgIdBase}-gold-specular`} x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#ffffff" stopOpacity="0" />
+                  <stop offset="16%" stopColor="#ffffff" stopOpacity="0.62" />
+                  <stop offset="26%" stopColor={goldBlockPaleHighlightColor} stopOpacity="0.34" />
+                  <stop offset="42%" stopColor="#ffffff" stopOpacity="0" />
+                  <stop offset="68%" stopColor={goldBlockPaleHighlightColor} stopOpacity="0.28" />
+                  <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+                </linearGradient>
+                <pattern
+                  id={`${goldBlockSvgIdBase}-gold-veins`}
+                  width="46"
+                  height="18"
+                  patternUnits="userSpaceOnUse"
+                  patternTransform="rotate(-14)"
+                >
+                  <path d="M-8 5H54M-4 14H50" stroke={goldBlockPaleHighlightColor} strokeOpacity={0.18 + goldBlockTextureStrength * 0.26} strokeWidth="2" />
+                  <path d="M0 9H46" stroke={darkenHex(goldBlockMidColor, 18)} strokeOpacity={0.16 + goldBlockTextureStrength * 0.18} strokeWidth="1" />
+                </pattern>
+                <filter
+                  id={`${goldBlockSvgIdBase}-gold-texture`}
+                  x="-20%"
+                  y="-20%"
+                  width="140%"
+                  height="140%"
+                  colorInterpolationFilters="sRGB"
+                >
+                  <feTurbulence
+                    type="fractalNoise"
+                    baseFrequency={`${(0.48 + goldBlockRoughness * 1.08).toFixed(3)} ${(0.9 + goldBlockRoughness * 1.58).toFixed(3)}`}
+                    numOctaves="6"
+                    seed="23"
+                    result="noise"
+                  />
+                  <feComponentTransfer in="noise" result="grain-contrast">
+                    <feFuncR type="linear" slope={goldBlockTextureContrast.toFixed(2)} intercept={(-0.14 * goldBlockTextureStrength).toFixed(2)} />
+                    <feFuncG type="linear" slope={(1.08 + goldBlockTextureStrength * 0.36).toFixed(2)} intercept={(-0.08 * goldBlockTextureStrength).toFixed(2)} />
+                    <feFuncB type="linear" slope={(0.72 + goldBlockTextureStrength * 0.2).toFixed(2)} intercept="0" />
+                    <feFuncA type="linear" slope={goldBlockTextureAlpha.toFixed(2)} intercept="0" />
+                  </feComponentTransfer>
+                  <feColorMatrix
+                    in="grain-contrast"
+                    type="matrix"
+                    values={`
+                      1.62 0 0 0 0.08
+                      0 1.28 0 0 0.035
+                      0 0 0.54 0 0
+                      0 0 0 ${goldBlockTextureAlpha.toFixed(2)} 0
+                    `}
+                    result="gold-noise"
+                  />
+                  <feBlend in="SourceGraphic" in2="gold-noise" mode="screen" result="grain-screen" />
+                  <feBlend in="grain-screen" in2="gold-noise" mode="multiply" />
+                </filter>
+                {goldBlockLines.map((line, lineIndex) => {
+                  const safeLine = line || "\u00A0";
+                  const y = goldBlockFirstLineY + lineIndex * goldBlockLineAdvance;
+                  const x = headAlign === "right" ? "100%" : headAlign === "left" ? "0%" : "50%";
+                  const textAnchor = (headAlign === "right" ? "end" : headAlign === "left" ? "start" : "middle") as "start" | "middle" | "end";
+                  return (
+                    <clipPath key={`headline-gold-block-clip-${lineIndex}`} id={`${goldBlockSvgIdBase}-gold-clip-${lineIndex}`}>
+                      <text
+                        x={x}
+                        y={y}
+                        textAnchor={textAnchor}
+                        dominantBaseline="middle"
+                        style={{
+                          fontFamily: headlineFamily,
+                          fontSize: headDisplayPx,
+                          fontWeight: textFx.bold ? 900 : 700,
+                          fontStyle: textFx.italic ? "italic" : "normal",
+                          letterSpacing: `${textFx.tracking}em`,
+                          textTransform: textFx.uppercase ? "uppercase" : "none",
+                        }}
+                      >
+                        {safeLine}
+                      </text>
+                    </clipPath>
+                  );
+                })}
+              </defs>
+              {goldBlockLines.map((line, lineIndex) => {
+                const safeLine = line || "\u00A0";
+                const y = goldBlockFirstLineY + lineIndex * goldBlockLineAdvance;
+                const x = headAlign === "right" ? "100%" : headAlign === "left" ? "0%" : "50%";
+                const textAnchor = (headAlign === "right" ? "end" : headAlign === "left" ? "start" : "middle") as "start" | "middle" | "end";
+                const clipId = `${goldBlockSvgIdBase}-gold-clip-${lineIndex}`;
+                const lineTop = y - goldBlockTextureBoxHeight / 2;
+                const textStyle = {
+                  fontFamily: headlineFamily,
+                  fontSize: headDisplayPx,
+                  fontWeight: textFx.bold ? 900 : 700,
+                  fontStyle: textFx.italic ? "italic" : "normal",
+                  letterSpacing: `${textFx.tracking}em`,
+                  textTransform: textFx.uppercase ? "uppercase" : "none",
+                } as const;
+                return (
+                  <React.Fragment key={`headline-gold-block-line-${lineIndex}`}>
+                    <text
+                      x={x}
+                      y={y}
+                      textAnchor={textAnchor}
+                      dominantBaseline="middle"
+                      fill={goldBlockStrokeColor}
+                      stroke={goldBlockStrokeColor}
+                      strokeWidth={goldBlockStrokeWidthPx}
+                      strokeLinejoin="miter"
+                      paintOrder="stroke fill"
+                      style={textStyle}
+                    >
+                      {safeLine}
+                    </text>
+                    <g clipPath={`url(#${clipId})`}>
+                      <rect
+                        x="-12%"
+                        y={lineTop}
+                        width="124%"
+                        height={goldBlockTextureBoxHeight}
+                        fill={`url(#${goldBlockSvgIdBase}-gold-fill)`}
+                        filter={`url(#${goldBlockSvgIdBase}-gold-texture)`}
+                      />
+                      <rect
+                        x="-12%"
+                        y={lineTop}
+                        width="124%"
+                        height={goldBlockTextureBoxHeight}
+                        fill="rgba(255,255,255,0.28)"
+                        opacity={goldBlockTextureStrength * 0.52}
+                        style={{ mixBlendMode: "overlay" }}
+                      />
+                      <rect
+                        x="-12%"
+                        y={lineTop}
+                        width="124%"
+                        height={goldBlockTextureBoxHeight}
+                        fill={`url(#${goldBlockSvgIdBase}-gold-specular)`}
+                        opacity={0.34 + goldBlockTextureStrength * 0.26}
+                        style={{ mixBlendMode: "screen" }}
+                      />
+                      <rect
+                        x="-12%"
+                        y={lineTop}
+                        width="124%"
+                        height={goldBlockTextureBoxHeight}
+                        fill={`url(#${goldBlockSvgIdBase}-gold-veins)`}
+                        opacity={goldBlockTextureStrength * 0.62}
+                        style={{ mixBlendMode: "overlay" }}
+                      />
+                    </g>
+                    <text
+                      x={x}
+                      y={y}
+                      textAnchor={textAnchor}
+                      dominantBaseline="middle"
+                      fill="none"
+                      stroke={goldBlockStrokeColor}
+                      strokeWidth={Math.max(1, goldBlockStrokeWidthPx * 0.16)}
+                      strokeLinejoin="miter"
+                      paintOrder="stroke"
+                      style={textStyle}
+                    >
+                      {safeLine}
+                    </text>
+                  </React.Fragment>
+                );
+              })}
+            </svg>
+          </div>
+        ) : pure3dActive ? (
+          <div
+            className="relative"
+            style={{
+              zIndex: 3,
+              minWidth: "fit-content",
+              maxWidth: "100%",
+              perspective: "9999px",
+              transformStyle: "preserve-3d",
+            }}
+          >
+            <style>
+              {`
+                .nf-headline-pure3d-rotor {
+                  transform-style: preserve-3d;
+                }
+              `}
+            </style>
+            <h1
+              aria-hidden="true"
+              className="relative font-black select-none"
+              style={{
+                fontFamily: headlineFamily,
+                fontSize: headDisplayPx,
+                lineHeight: 0.68,
+                whiteSpace: "pre-wrap",
+                display: "block",
+                minWidth: "fit-content",
+                maxWidth: "100%",
+                letterSpacing: `${textFx.tracking}em`,
+                textTransform: textFx.uppercase ? "uppercase" : "none",
+                fontWeight: textFx.bold ? 900 : 700,
+                fontStyle: textFx.italic ? "italic" : "normal",
+                textDecorationLine: textFx.underline ? "underline" : "none",
+                visibility: "hidden",
+              }}
+            >
+              {renderHeadlineRich(headlineText, {
+                baseTrackEm: textFx.tracking,
+                leadDeltaEm: leadTrackDelta,
+                lastDeltaEm: lastTrackDelta,
+                opticalMargin,
+                kerningFix,
+                lineHeight: 0.68,
+                lineStyle: { display: "block", width: "100%" },
+              })}
+            </h1>
+            <div
+              className="nf-headline-pure3d-rotor pointer-events-none absolute inset-0"
+              style={{
+                transformStyle: "preserve-3d",
+                transformOrigin: "50% 50%",
+                transform: `rotateY(${pure3dRotateY.toFixed(2)}deg) rotateX(${pure3dRotateX.toFixed(2)}deg) translateZ(0)`,
+              }}
+            >
+              {Array.from({ length: HEADLINE_PURE_3D_DEFAULTS.layers }, (_, index) => {
+                const layer = index + 1;
+                const isFront = layer === 1;
+                const isSoftBack = layer >= 10;
+                const isBlueBack = layer >= 11;
+                const isCoreBlue = layer >= 12;
+                const isLast = layer === HEADLINE_PURE_3D_DEFAULTS.layers;
+                const layerColor = isFront
+                  ? pure3dFaceColor
+                  : HEADLINE_PURE_3D_DEFAULTS.faceColor;
+                const strokeColor = isLast
+                  ? "rgba(0, 0, 0, 0.1)"
+                  : isCoreBlue
+                  ? pure3dEdgeColor
+                  : isBlueBack
+                  ? pure3dEdgeColor
+                  : isSoftBack
+                  ? "rgba(0, 0, 0, 0.25)"
+                  : "transparent";
+                const strokeWidth = isLast ? 17 : isBlueBack || isCoreBlue ? 15 : isSoftBack ? 3 : 0;
+                return (
+                  <h1
+                    key={`headline-pure3d-${layer}`}
+                    aria-hidden="true"
+                    className="absolute inset-0 font-black select-none"
+                    style={{
+                      fontFamily: headlineFamily,
+                      fontSize: headDisplayPx,
+                      lineHeight: 0.68,
+                      whiteSpace: "pre-wrap",
+                      display: "block",
+                      width: "100%",
+                      letterSpacing: `${textFx.tracking}em`,
+                      textTransform: textFx.uppercase ? "uppercase" : "none",
+                      fontWeight: textFx.bold ? 900 : 700,
+                      fontStyle: textFx.italic ? "italic" : "normal",
+                      textDecorationLine: textFx.underline ? "underline" : "none",
+                      opacity: textFx.alpha,
+                      color: layerColor,
+                      WebkitTextFillColor: layerColor,
+                      WebkitTextStrokeWidth: strokeWidth ? `${strokeWidth}px` : undefined,
+                      WebkitTextStrokeColor: strokeColor,
+                      textShadow: isFront
+                        ? "none"
+                        : isBlueBack
+                        ? `6px 0 6px ${pure3dShadowColor}, 5px 5px 5px ${darkenHex(pure3dShadowColor, 14)}, 0 6px 6px ${pure3dShadowColor}`
+                        : "4px 0 10px rgba(0, 0, 0, 0.13)",
+                      transform: `translateZ(-${index * HEADLINE_PURE_3D_DEFAULTS.zStep}px)`,
+                      transformStyle: "preserve-3d",
+                      zIndex: HEADLINE_PURE_3D_DEFAULTS.layers - layer,
+                    }}
+                  >
+                    {renderHeadlineRich(headlineText, {
+                      baseTrackEm: textFx.tracking,
+                      leadDeltaEm: leadTrackDelta,
+                      lastDeltaEm: lastTrackDelta,
+                      opticalMargin,
+                      kerningFix,
+                      lineHeight: 0.68,
+                      lineStyle: {
+                        display: "block",
+                        width: "100%",
+                        color: layerColor,
+                        WebkitTextFillColor: layerColor,
+                        WebkitTextStrokeWidth: strokeWidth ? `${strokeWidth}px` : undefined,
+                        WebkitTextStrokeColor: strokeColor,
+                      },
+                    })}
+                  </h1>
+                );
+              })}
+            </div>
+          </div>
+        ) : rushActive ? (
+          <div className="relative" style={{ zIndex: 3 }}>
+            <HalftoneHeadlineSvg
+              text={headlineText}
+              align={headAlign}
+              fontFamily={headlineFamily}
+              fontSize={headDisplayPx}
+              lineHeight={lineHeight}
+              letterSpacingEm={Number.isFinite(textFx.tracking) ? textFx.tracking : -0.075}
+              fontStyle={textFx.italic ? "italic" : "normal"}
+              color={headRushDotColor || rushFillColor}
+              accentColor={headRushDotColor || rushFillColor}
+              shadowColor="transparent"
+              shadowOffsetX={0}
+              shadowOffsetY={0}
+              depthLayers={0}
+              depthStepX={0}
+              depthStepY={0}
+              alpha={textFx.alpha}
+              maxDot={rushMaxDotPx}
+              minDot={1.2}
+              strokeWidth={Math.max(0, textFx.strokeWidth || 0)}
+              hitTest={!hideUiForExport}
+            />
+          </div>
+        ) : lineActive ? (
+          <div className="relative" style={{ zIndex: 3, isolation: "isolate" }}>
+            <h1
+              aria-hidden="true"
+              className="relative font-black select-none"
+              style={{
+                fontFamily: headlineFamily,
+                fontSize: headDisplayPx,
+                lineHeight: glassSafeLineHeight,
+                whiteSpace: "pre-wrap",
+                display: "block",
+                minWidth: "fit-content",
+                maxWidth: "100%",
+                letterSpacing: `${textFx.tracking}em`,
+                textTransform: textFx.uppercase ? "uppercase" : "none",
+                fontWeight: textFx.bold ? 900 : 700,
+                fontStyle: textFx.italic ? "italic" : "normal",
+                textDecorationLine: textFx.underline ? "underline" : "none",
+                visibility: "hidden",
+              }}
+            >
+              {renderHeadlineRich(headlineText, {
+                baseTrackEm: textFx.tracking,
+                leadDeltaEm: leadTrackDelta,
+                lastDeltaEm: lastTrackDelta,
+                opticalMargin,
+                kerningFix,
+                lineHeight: glassSafeLineHeight,
                 lineStyle: { display: "block", width: "100%" },
               })}
             </h1>
@@ -5105,6 +8340,1179 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
               }
             )}
           </div>
+        ) : glassActive ? (
+          <div className="relative" style={{ zIndex: 3, isolation: "isolate", overflow: "visible" }}>
+            <h1
+              aria-hidden="true"
+              className="relative font-black select-none"
+              style={{
+                fontFamily: headlineFamily,
+                fontSize: headDisplayPx,
+                lineHeight: glassSafeLineHeight,
+                whiteSpace: "pre-wrap",
+                display: "block",
+                minWidth: "fit-content",
+                maxWidth: "100%",
+                letterSpacing: `${textFx.tracking}em`,
+                textTransform: textFx.uppercase ? "uppercase" : "none",
+                fontWeight: textFx.bold ? 900 : 700,
+                fontStyle: textFx.italic ? "italic" : "normal",
+                textDecorationLine: textFx.underline ? "underline" : "none",
+                visibility: "hidden",
+                overflow: "visible",
+                ...glassLinePaintBleedStyle,
+              }}
+            >
+              {renderHeadlineRich(headlineText, {
+                baseTrackEm: textFx.tracking,
+                leadDeltaEm: leadTrackDelta,
+                lastDeltaEm: lastTrackDelta,
+                opticalMargin,
+                kerningFix,
+                lineHeight: glassSafeLineHeight,
+                lineStyle: { display: "block", width: "100%" },
+              })}
+            </h1>
+            {glassCssLayerSpecs.map(({ key, style, lineStyle }) => renderRushTextLayer(key, style, lineStyle))}
+            {useLegacyGlassStack && (
+              <>
+            {renderRushTextLayer(
+              "headline-glass-depth",
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${Math.max(1.4, glassStrokeWidth + 1.8).toFixed(1)}px`,
+                WebkitTextStrokeColor: "rgba(2,1,10,0.72)",
+                paintOrder: "stroke fill",
+                transform: "translate(3px, 4px)",
+                opacity: Math.min(0.30, textFx.alpha * 0.24),
+                zIndex: 0,
+              },
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${Math.max(1.4, glassStrokeWidth + 1.8).toFixed(1)}px`,
+                WebkitTextStrokeColor: "rgba(2,1,10,0.72)",
+              }
+            )}
+            {renderRushTextLayer(
+              "headline-glass-cast-shadow",
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${(glassStrokeWidth + 2.2).toFixed(1)}px`,
+                WebkitTextStrokeColor: "rgba(0,0,0,0.52)",
+                paintOrder: "stroke fill",
+                transform: `translate(${(glassBevelPx * 1.25).toFixed(1)}px, ${(glassBevelPx * 1.45).toFixed(1)}px)`,
+                filter: "blur(1.2px)",
+                opacity: Math.min(0.34, textFx.alpha * 0.28),
+                zIndex: 0,
+              },
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${(glassStrokeWidth + 2.2).toFixed(1)}px`,
+                WebkitTextStrokeColor: "rgba(0,0,0,0.52)",
+                paintOrder: "stroke fill",
+              }
+            )}
+            {renderRushTextLayer(
+              "headline-glass-outer-bloom",
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${glassBloomStrokeWidth.toFixed(1)}px`,
+                WebkitTextStrokeColor: glassSecondaryRim,
+                paintOrder: "stroke fill",
+                filter: glassBloomBlurPx > 0 ? `blur(${glassBloomBlurPx.toFixed(1)}px)` : "none",
+                mixBlendMode: "screen",
+                opacity: Math.min(0.62, textFx.alpha * 0.54),
+                zIndex: 1,
+              },
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${glassBloomStrokeWidth.toFixed(1)}px`,
+                WebkitTextStrokeColor: glassSecondaryRim,
+                paintOrder: "stroke fill",
+              }
+            )}
+            {renderRushTextLayer(
+              "headline-glass-faint-core",
+              {
+                color: glassCoreFill,
+                WebkitTextFillColor: glassCoreFill,
+                WebkitTextStrokeWidth: "0px",
+                WebkitTextStrokeColor: "transparent",
+                filter: "none",
+                textShadow: "none",
+                mixBlendMode: "screen",
+                opacity: textFx.alpha,
+                zIndex: 2,
+              },
+              {
+                color: glassCoreFill,
+                WebkitTextFillColor: glassCoreFill,
+                WebkitTextStrokeWidth: "0px",
+                WebkitTextStrokeColor: "transparent",
+              }
+            )}
+            {renderRushTextLayer(
+              "headline-glass-transparent-fill",
+              {
+                backgroundImage: glassFillGradient,
+                backgroundSize: "100% 100%",
+                backgroundRepeat: "no-repeat",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: "1px",
+                WebkitTextStrokeColor: "rgba(255,255,255,0.10)",
+                textShadow: "none",
+                mixBlendMode: "screen",
+                opacity: Math.min(0.92, textFx.alpha * 0.86),
+                zIndex: 3,
+              },
+              {
+                backgroundImage: glassFillGradient,
+                backgroundSize: "100% 100%",
+                backgroundRepeat: "no-repeat",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: "1px",
+                WebkitTextStrokeColor: "rgba(255,255,255,0.10)",
+              }
+            )}
+            {renderRushTextLayer(
+              "headline-glass-specular-texture",
+              {
+                backgroundImage: glassSpecularTexture,
+                backgroundSize: "140% 100%, 120% 100%, 38px 100%",
+                backgroundPosition: "0 0, 6% 0, 0 0",
+                backgroundRepeat: "no-repeat, no-repeat, repeat",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: "0px",
+                WebkitTextStrokeColor: "transparent",
+                filter: "none",
+                mixBlendMode: "screen",
+                opacity: Math.min(0.78, textFx.alpha * 0.72),
+                zIndex: 4,
+              },
+              {
+                backgroundImage: glassSpecularTexture,
+                backgroundSize: "140% 100%, 120% 100%, 38px 100%",
+                backgroundPosition: "0 0, 6% 0, 0 0",
+                backgroundRepeat: "no-repeat, no-repeat, repeat",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+              }
+            )}
+            {renderRushTextLayer(
+              "headline-glass-inner-darkness",
+              {
+                backgroundImage: glassInnerDarkGradient,
+                backgroundSize: "100% 100%",
+                backgroundRepeat: "no-repeat",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: "0px",
+                WebkitTextStrokeColor: "transparent",
+                filter: "none",
+                mixBlendMode: "multiply",
+                opacity: Math.min(0.62, textFx.alpha * 0.56),
+                zIndex: 4,
+              },
+              {
+                backgroundImage: glassInnerDarkGradient,
+                backgroundSize: "100% 100%",
+                backgroundRepeat: "no-repeat",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+              }
+            )}
+            {renderRushTextLayer(
+              "headline-glass-inner-shadow",
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${(glassStrokeWidth + 1.8).toFixed(1)}px`,
+                WebkitTextStrokeColor: "rgba(5,2,18,0.42)",
+                paintOrder: "stroke fill",
+                transform: "translate(1.8px, 2.4px)",
+                filter: "none",
+                opacity: Math.min(0.62, textFx.alpha * 0.56),
+                zIndex: 4,
+              },
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${(glassStrokeWidth + 1.8).toFixed(1)}px`,
+                WebkitTextStrokeColor: "rgba(5,2,18,0.42)",
+                paintOrder: "stroke fill",
+              }
+            )}
+            {renderRushTextLayer(
+              "headline-glass-lower-occlusion",
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${(glassStrokeWidth + 1).toFixed(1)}px`,
+                WebkitTextStrokeColor: glassDarkRim,
+                paintOrder: "stroke fill",
+                clipPath: "polygon(0 45%, 100% 35%, 100% 100%, 0 100%)",
+                transform: `translate(${(glassBevelPx * 0.34).toFixed(1)}px, ${(glassBevelPx * 0.58).toFixed(1)}px)`,
+                filter: "none",
+                opacity: Math.min(0.66, textFx.alpha * 0.58),
+                zIndex: 5,
+              },
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${(glassStrokeWidth + 1).toFixed(1)}px`,
+                WebkitTextStrokeColor: glassDarkRim,
+                paintOrder: "stroke fill",
+              }
+            )}
+            {renderRushTextLayer(
+              "headline-glass-cool-refraction",
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${Math.max(0.9, glassStrokeWidth * 0.75).toFixed(1)}px`,
+                WebkitTextStrokeColor: glassPrimaryRim,
+                paintOrder: "stroke fill",
+                transform: `translate(${(-glassBevelPx * 0.42).toFixed(1)}px, ${(-glassBevelPx * 0.32).toFixed(1)}px)`,
+                filter: "none",
+                mixBlendMode: "screen",
+                opacity: Math.min(0.82, textFx.alpha * 0.74),
+                zIndex: 5,
+              },
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${Math.max(0.9, glassStrokeWidth * 0.75).toFixed(1)}px`,
+                WebkitTextStrokeColor: glassPrimaryRim,
+                paintOrder: "stroke fill",
+              }
+            )}
+            {renderRushTextLayer(
+              "headline-glass-top-left-bevel",
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${Math.max(0.8, glassStrokeWidth * 0.52).toFixed(1)}px`,
+                WebkitTextStrokeColor: glassBrightRim,
+                paintOrder: "stroke fill",
+                clipPath: "polygon(0 0, 100% 0, 100% 38%, 0 56%)",
+                transform: `translate(${(-glassBevelPx * 0.46).toFixed(1)}px, ${(-glassBevelPx * 0.36).toFixed(1)}px)`,
+                filter: "none",
+                mixBlendMode: "screen",
+                opacity: Math.min(0.96, textFx.alpha * 0.9),
+                zIndex: 6,
+              },
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${Math.max(0.8, glassStrokeWidth * 0.52).toFixed(1)}px`,
+                WebkitTextStrokeColor: glassBrightRim,
+                paintOrder: "stroke fill",
+              }
+            )}
+            {renderRushTextLayer(
+              "headline-glass-warm-refraction",
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${Math.max(0.9, glassStrokeWidth * 0.85).toFixed(1)}px`,
+                WebkitTextStrokeColor: glassSecondaryRim,
+                paintOrder: "stroke fill",
+                transform: `translate(${(glassBevelPx * 0.56).toFixed(1)}px, ${(glassBevelPx * 0.38).toFixed(1)}px)`,
+                filter: "none",
+                mixBlendMode: "screen",
+                opacity: Math.min(0.74, textFx.alpha * 0.64),
+                zIndex: 5,
+              },
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${Math.max(0.9, glassStrokeWidth * 0.85).toFixed(1)}px`,
+                WebkitTextStrokeColor: glassSecondaryRim,
+                paintOrder: "stroke fill",
+              }
+            )}
+            {renderRushTextLayer(
+              "headline-glass-bottom-right-bevel",
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${Math.max(1, glassStrokeWidth * 0.74).toFixed(1)}px`,
+                WebkitTextStrokeColor: "rgba(8,4,24,0.56)",
+                paintOrder: "stroke fill",
+                clipPath: "polygon(0 54%, 100% 38%, 100% 100%, 0 100%)",
+                transform: `translate(${(glassBevelPx * 0.55).toFixed(1)}px, ${(glassBevelPx * 0.58).toFixed(1)}px)`,
+                filter: "none",
+                opacity: Math.min(0.66, textFx.alpha * 0.58),
+                zIndex: 6,
+              },
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${Math.max(1, glassStrokeWidth * 0.74).toFixed(1)}px`,
+                WebkitTextStrokeColor: "rgba(8,4,24,0.56)",
+                paintOrder: "stroke fill",
+              }
+            )}
+            {renderRushTextLayer(
+              "headline-glass-sharp-edge",
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${glassStrokeWidth.toFixed(1)}px`,
+                WebkitTextStrokeColor: "rgba(255,255,255,0.86)",
+                paintOrder: "stroke fill",
+                textShadow: glassEdgeShadow,
+                opacity: Math.min(0.98, textFx.alpha * 0.94),
+                zIndex: 7,
+              },
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${glassStrokeWidth.toFixed(1)}px`,
+                WebkitTextStrokeColor: "rgba(255,255,255,0.86)",
+                paintOrder: "stroke fill",
+              }
+            )}
+            {renderRushTextLayer(
+              "headline-glass-top-reflection",
+              {
+                backgroundImage: glassReflectionSweep,
+                backgroundSize: "135% 100%",
+                backgroundPosition: "0 0",
+                backgroundRepeat: "no-repeat",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: "0px",
+                WebkitTextStrokeColor: "transparent",
+                clipPath: "polygon(0 0, 100% 0, 100% 48%, 0 68%)",
+                filter: "none",
+                mixBlendMode: "screen",
+                opacity: Math.min(0.86, textFx.alpha * 0.8),
+                zIndex: 8,
+              },
+              {
+                backgroundImage: glassReflectionSweep,
+                backgroundSize: "135% 100%",
+                backgroundPosition: "0 0",
+                backgroundRepeat: "no-repeat",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: "0px",
+                WebkitTextStrokeColor: "transparent",
+              }
+            )}
+            {renderRushTextLayer(
+              "headline-glass-bottom-reflection",
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${Math.max(0.8, glassStrokeWidth * 0.65).toFixed(1)}px`,
+                WebkitTextStrokeColor: glassSecondaryRim,
+                clipPath: "polygon(0 62%, 100% 48%, 100% 100%, 0 100%)",
+                filter: "none",
+                mixBlendMode: "screen",
+                opacity: Math.min(0.62, textFx.alpha * 0.54),
+                zIndex: 8,
+              },
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${Math.max(0.8, glassStrokeWidth * 0.65).toFixed(1)}px`,
+                WebkitTextStrokeColor: glassSecondaryRim,
+              }
+            )}
+              </>
+            )}
+          </div>
+        ) : kineticActive ? (
+          <div className="nf-headline-kinetic-motion relative" style={{ zIndex: 3, isolation: "isolate" }}>
+            <h1
+              aria-hidden="true"
+              className="relative font-black select-none"
+              style={{
+                fontFamily: headlineFamily,
+                fontSize: headDisplayPx,
+                lineHeight,
+                whiteSpace: "pre-wrap",
+                display: "block",
+                minWidth: "fit-content",
+                maxWidth: "100%",
+                letterSpacing: `${textFx.tracking}em`,
+                textTransform: textFx.uppercase ? "uppercase" : "none",
+                fontWeight: textFx.bold ? 900 : 700,
+                fontStyle: textFx.italic ? "italic" : "normal",
+                textDecorationLine: textFx.underline ? "underline" : "none",
+                visibility: "hidden",
+              }}
+            >
+              {renderHeadlineRich(headlineText, {
+                baseTrackEm: textFx.tracking,
+                leadDeltaEm: leadTrackDelta,
+                lastDeltaEm: lastTrackDelta,
+                opticalMargin,
+                kerningFix,
+                lineHeight,
+                lineStyle: { display: "block", width: "100%" },
+              })}
+            </h1>
+            {renderRushTextLayer(
+              "headline-kinetic-main",
+              {
+                color: kineticTextColor,
+                WebkitTextFillColor: kineticTextColor,
+                WebkitTextStrokeWidth: "0px",
+                WebkitTextStrokeColor: "transparent",
+                textShadow:
+                  `4px 0 0 ${kineticTopColor}, -4px 0 0 ${kineticBottomColor}, 0 8px 18px rgba(0,0,0,${kineticShadowOpacity.toFixed(2)})`,
+                transform: "skewX(-10deg) rotate(-2deg)",
+                opacity: textFx.alpha,
+                zIndex: 3,
+              },
+              {
+                color: kineticTextColor,
+                WebkitTextFillColor: kineticTextColor,
+                WebkitTextStrokeWidth: "0px",
+                WebkitTextStrokeColor: "transparent",
+              },
+              liveTextPerfMode ? undefined : "nf-headline-kinetic-main"
+            )}
+            {renderRushTextLayer(
+              "headline-kinetic-top",
+              {
+                color: kineticTopColor,
+                WebkitTextFillColor: kineticTopColor,
+                WebkitTextStrokeWidth: "0px",
+                WebkitTextStrokeColor: "transparent",
+                clipPath: "inset(0 0 55% 0)",
+                transform: `translate(${-kineticSliceOffsetX}px, ${kineticSliceOffsetY}px) skewX(-14deg)`,
+                opacity: textFx.alpha * 0.85,
+                zIndex: 4,
+              },
+              {
+                color: kineticTopColor,
+                WebkitTextFillColor: kineticTopColor,
+                WebkitTextStrokeWidth: "0px",
+                WebkitTextStrokeColor: "transparent",
+              },
+              liveTextPerfMode ? undefined : "nf-headline-kinetic-top"
+            )}
+            {renderRushTextLayer(
+              "headline-kinetic-bottom",
+              {
+                color: kineticBottomColor,
+                WebkitTextFillColor: kineticBottomColor,
+                WebkitTextStrokeWidth: "0px",
+                WebkitTextStrokeColor: "transparent",
+                clipPath: "inset(52% 0 0 0)",
+                transform: `translate(${kineticSliceOffsetX}px, ${-kineticSliceOffsetY}px) skewX(-6deg)`,
+                opacity: textFx.alpha * 0.8,
+                zIndex: 5,
+              },
+              {
+                color: kineticBottomColor,
+                WebkitTextFillColor: kineticBottomColor,
+                WebkitTextStrokeWidth: "0px",
+                WebkitTextStrokeColor: "transparent",
+              },
+              liveTextPerfMode ? undefined : "nf-headline-kinetic-bottom"
+            )}
+          </div>
+        ) : doodleStackActive ? (
+          <div className="relative" style={{ zIndex: 3, isolation: "isolate" }}>
+            <h1
+              aria-hidden="true"
+              className="relative font-black select-none"
+              style={{
+                fontFamily: headlineFamily,
+                fontSize: headDisplayPx,
+                lineHeight,
+                whiteSpace: "pre-wrap",
+                display: "block",
+                minWidth: "fit-content",
+                maxWidth: "100%",
+                letterSpacing: `${textFx.tracking}em`,
+                textTransform: textFx.uppercase ? "uppercase" : "none",
+                fontWeight: textFx.bold ? 900 : 700,
+                fontStyle: textFx.italic ? "italic" : "normal",
+                textDecorationLine: textFx.underline ? "underline" : "none",
+                visibility: "hidden",
+              }}
+            >
+              {renderHeadlineRich(headlineText, {
+                baseTrackEm: textFx.tracking,
+                leadDeltaEm: leadTrackDelta,
+                lastDeltaEm: lastTrackDelta,
+                opticalMargin,
+                kerningFix,
+                lineHeight,
+                lineStyle: { display: "block", width: "100%" },
+              })}
+            </h1>
+            {HEADLINE_DOODLE_STACK_DEFAULTS.colors.map((fallback, index) => {
+              const color = normalizePaletteHexString(String(headDashStrokeColors[index] || ""), fallback);
+              const layer = index;
+              const scale = 1 - 0.045 * layer;
+              const translateX = doodleAngleX * doodleSpread * layer;
+              const translateY = doodleAngleY * doodleSpread * layer;
+              const rotate = doodleRotate * layer;
+              const strokeWidth = Math.max(1, headDisplayPx * 0.0125);
+
+              return renderRushTextLayer(
+                `headline-doodle-stack-${index}`,
+                {
+                  color,
+                  WebkitTextFillColor: color,
+                  WebkitTextStrokeWidth: `${strokeWidth.toFixed(1)}px`,
+                  WebkitTextStrokeColor: HEADLINE_DOODLE_STACK_DEFAULTS.strokeColor,
+                  paintOrder: "stroke fill",
+                  transform: `translate(${translateX.toFixed(1)}px, ${translateY.toFixed(1)}px) rotate(${rotate.toFixed(2)}deg) scale(${scale.toFixed(3)})`,
+                  transformOrigin: "50% 50%",
+                  textShadow: "4px 0 10px rgba(0,0,0,0.13)",
+                  opacity: textFx.alpha,
+                  zIndex: HEADLINE_DOODLE_STACK_DEFAULTS.layerCount - index,
+                },
+                {
+                  color,
+                  WebkitTextFillColor: color,
+                  WebkitTextStrokeWidth: `${strokeWidth.toFixed(1)}px`,
+                  WebkitTextStrokeColor: HEADLINE_DOODLE_STACK_DEFAULTS.strokeColor,
+                  paintOrder: "stroke fill",
+                }
+              );
+            })}
+          </div>
+        ) : dashStrokeActive ? (
+          <div className="relative" style={{ zIndex: 3, isolation: "isolate" }}>
+            <h1
+              aria-hidden="true"
+              className="relative font-black select-none"
+              style={{
+                fontFamily: headlineFamily,
+                fontSize: headDisplayPx,
+                lineHeight,
+                whiteSpace: "pre-wrap",
+                display: "block",
+                minWidth: "fit-content",
+                maxWidth: "100%",
+                letterSpacing: `${textFx.tracking}em`,
+                textTransform: textFx.uppercase ? "uppercase" : "none",
+                fontWeight: textFx.bold ? 900 : 700,
+                fontStyle: textFx.italic ? "italic" : "normal",
+                textDecorationLine: textFx.underline ? "underline" : "none",
+                visibility: "hidden",
+              }}
+            >
+              {renderHeadlineRich(headlineText, {
+                baseTrackEm: textFx.tracking,
+                leadDeltaEm: leadTrackDelta,
+                lastDeltaEm: lastTrackDelta,
+                opticalMargin,
+                kerningFix,
+                lineHeight,
+                lineStyle: { display: "block", width: "100%" },
+              })}
+            </h1>
+            <svg
+              aria-hidden="true"
+              className="pointer-events-none absolute left-0 top-0 block overflow-visible"
+              width="100%"
+              height={estimatedTextHeight + 24}
+              style={{ opacity: textFx.alpha, zIndex: 2 }}
+            >
+              {dashStrokeColors.map((color, colorIndex) =>
+                headlineText.split("\n").map((line, lineIndex) => (
+                  <text
+                    key={`headline-dash-stroke-${colorIndex}-${lineIndex}`}
+                    x={headAlign === "right" ? "100%" : headAlign === "left" ? "0%" : "50%"}
+                    y={headDisplayPx * 0.78 + lineIndex * headDisplayPx * lineHeight}
+                    textAnchor={headAlign === "right" ? "end" : headAlign === "left" ? "start" : "middle"}
+                    dominantBaseline="middle"
+                    fill="none"
+                    stroke={color}
+                    strokeWidth={HEADLINE_DASH_STROKE_DEFAULTS.strokeWidth}
+                    strokeLinejoin="round"
+                    strokeDasharray={`${HEADLINE_DASH_STROKE_DEFAULTS.dash} ${dashStrokeSpace}`}
+                    strokeDashoffset={dashStrokeBaseOffset - dashStrokeStep * (colorIndex + 1)}
+                    style={{
+                      fontFamily: headlineFamily,
+                      fontSize: headDisplayPx,
+                      fontWeight: 900,
+                      letterSpacing: `${textFx.tracking}em`,
+                      textTransform: textFx.uppercase ? "uppercase" : "none",
+                    }}
+                  >
+                    {line || "\u00A0"}
+                  </text>
+                ))
+              )}
+            </svg>
+          </div>
+        ) : cyberEmbossActive ? (
+          <div className="relative" style={{ zIndex: 3, isolation: "isolate" }}>
+            <h1
+              aria-hidden="true"
+              className="relative font-black select-none"
+              style={{
+                fontFamily: headlineFamily,
+                fontSize: headDisplayPx,
+                lineHeight,
+                whiteSpace: "pre-wrap",
+                display: "block",
+                minWidth: "fit-content",
+                maxWidth: "100%",
+                letterSpacing: `${textFx.tracking}em`,
+                textTransform: textFx.uppercase ? "uppercase" : "none",
+                fontWeight: textFx.bold ? 900 : 700,
+                fontStyle: textFx.italic ? "italic" : "normal",
+                textDecorationLine: textFx.underline ? "underline" : "none",
+                visibility: "hidden",
+              }}
+            >
+              {renderHeadlineRich(headlineText, {
+                baseTrackEm: textFx.tracking,
+                leadDeltaEm: leadTrackDelta,
+                lastDeltaEm: lastTrackDelta,
+                opticalMargin,
+                kerningFix,
+                lineHeight,
+                lineStyle: { display: "block", width: "100%" },
+              })}
+            </h1>
+            <svg
+              aria-hidden="true"
+              className="pointer-events-none absolute left-0 top-0 block overflow-visible"
+              width="100%"
+              height={estimatedTextHeight + 36}
+              style={{
+                opacity: textFx.alpha,
+                zIndex: 2,
+              }}
+            >
+              <defs>
+                <filter id="headline-retro-money" x="-20%" y="-30%" width="140%" height="170%">
+                  <feMorphology in="SourceGraphic" operator="dilate" radius="2" result="expand" />
+
+                  <feOffset in="expand" dx="1" dy="1" result="shadow_1" />
+                  <feOffset in="expand" dx="2" dy="2" result="shadow_2" />
+                  <feOffset in="expand" dx="3" dy="3" result="shadow_3" />
+                  <feOffset in="expand" dx="4" dy="4" result="shadow_4" />
+                  <feOffset in="expand" dx="5" dy="5" result="shadow_5" />
+                  <feOffset in="expand" dx="6" dy="6" result="shadow_6" />
+                  <feOffset in="expand" dx="7" dy="7" result="shadow_7" />
+
+                  <feMerge result="shadow">
+                    <feMergeNode in="expand" />
+                    <feMergeNode in="shadow_1" />
+                    <feMergeNode in="shadow_2" />
+                    <feMergeNode in="shadow_3" />
+                    <feMergeNode in="shadow_4" />
+                    <feMergeNode in="shadow_5" />
+                    <feMergeNode in="shadow_6" />
+                    <feMergeNode in="shadow_7" />
+                  </feMerge>
+
+                  <feFlood floodColor={retroEngravedColors.raisedColor} />
+                  <feComposite in2="shadow" operator="in" result="shadow" />
+
+                  <feMorphology in="shadow" operator="dilate" radius="1" result="border" />
+                  <feFlood floodColor={retroEngravedColors.borderColor} result="border_color" />
+                  <feComposite in="border_color" in2="border" operator="in" result="border" />
+
+                  <feOffset in="border" dx="1" dy="1" result="secondShadow_1" />
+                  <feOffset in="border" dx="2" dy="2" result="secondShadow_2" />
+                  <feOffset in="border" dx="3" dy="3" result="secondShadow_3" />
+                  <feOffset in="border" dx="4" dy="4" result="secondShadow_4" />
+                  <feOffset in="border" dx="5" dy="5" result="secondShadow_5" />
+                  <feOffset in="border" dx="6" dy="6" result="secondShadow_6" />
+                  <feOffset in="border" dx="7" dy="7" result="secondShadow_7" />
+                  <feOffset in="border" dx="8" dy="8" result="secondShadow_8" />
+                  <feOffset in="border" dx="9" dy="9" result="secondShadow_9" />
+                  <feOffset in="border" dx="10" dy="10" result="secondShadow_10" />
+                  <feOffset in="border" dx="11" dy="11" result="secondShadow_11" />
+
+                  <feMerge result="secondShadow">
+                    <feMergeNode in="border" />
+                    <feMergeNode in="secondShadow_1" />
+                    <feMergeNode in="secondShadow_2" />
+                    <feMergeNode in="secondShadow_3" />
+                    <feMergeNode in="secondShadow_4" />
+                    <feMergeNode in="secondShadow_5" />
+                    <feMergeNode in="secondShadow_6" />
+                    <feMergeNode in="secondShadow_7" />
+                    <feMergeNode in="secondShadow_8" />
+                    <feMergeNode in="secondShadow_9" />
+                    <feMergeNode in="secondShadow_10" />
+                    <feMergeNode in="secondShadow_11" />
+                  </feMerge>
+
+                  <feFlood
+                    floodColor={retroEngravedColors.shadowColor}
+                    floodOpacity={retroShadowAlpha}
+                    result="second_shadow_color"
+                  />
+                  <feComposite in="second_shadow_color" in2="secondShadow" operator="in" result="secondShadow" />
+
+                  <feMerge>
+                    <feMergeNode in="secondShadow" />
+                    <feMergeNode in="border" />
+                    <feMergeNode in="shadow" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+              <g filter="url(#headline-retro-money)">
+                {headlineText.split("\n").map((line, lineIndex) => (
+                  <text
+                    key={`headline-retro-money-${lineIndex}`}
+                    x={headAlign === "right" ? "100%" : headAlign === "left" ? "0%" : "50%"}
+                    y={headDisplayPx * 0.78 + lineIndex * headDisplayPx * lineHeight}
+                    textAnchor={headAlign === "right" ? "end" : headAlign === "left" ? "start" : "middle"}
+                    dominantBaseline="middle"
+                    fill={retroEngravedColors.faceColor}
+                    style={{
+                      fontFamily: headlineFamily,
+                      fontSize: headDisplayPx,
+                      fontWeight: 900,
+                      letterSpacing: `${textFx.tracking}em`,
+                      textTransform: textFx.uppercase ? "uppercase" : "none",
+                    }}
+                  >
+                    {line || "\u00A0"}
+                  </text>
+                ))}
+              </g>
+            </svg>
+          </div>
+        ) : quantumActive ? (
+          <div className="nf-headline-quantum-pulse relative" style={{ zIndex: 3, isolation: "isolate" }}>
+            <h1
+              aria-hidden="true"
+              className="relative font-black select-none"
+              style={{
+                fontFamily: headlineFamily,
+                fontSize: headDisplayPx,
+                lineHeight,
+                whiteSpace: "pre-wrap",
+                display: "block",
+                minWidth: "fit-content",
+                maxWidth: "100%",
+                letterSpacing: `${textFx.tracking}em`,
+                textTransform: textFx.uppercase ? "uppercase" : "none",
+                fontWeight: textFx.bold ? 900 : 700,
+                fontStyle: textFx.italic ? "italic" : "normal",
+                textDecorationLine: textFx.underline ? "underline" : "none",
+                visibility: "hidden",
+              }}
+            >
+              {renderHeadlineRich(headlineText, {
+                baseTrackEm: textFx.tracking,
+                leadDeltaEm: leadTrackDelta,
+                lastDeltaEm: lastTrackDelta,
+                opticalMargin,
+                kerningFix,
+                lineHeight,
+                lineStyle: { display: "block", width: "100%" },
+              })}
+            </h1>
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 overflow-hidden"
+              style={{
+                backgroundImage:
+                  "repeating-linear-gradient(0deg, rgba(255,255,255,0.08) 0px, rgba(255,255,255,0.08) 1px, transparent 1px, transparent 7px)",
+                opacity: quantumScanlineOpacity,
+                mixBlendMode: "screen",
+                zIndex: 1,
+              }}
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute"
+              style={{
+                left: "-10%",
+                right: "-10%",
+                top: "31%",
+                height: 2,
+                background: `linear-gradient(90deg, transparent, ${hexToRgba(quantumCyanColor, 0.58)}, transparent)`,
+                filter: "blur(1px)",
+                opacity: quantumStreakOpacity,
+                zIndex: 2,
+              }}
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute"
+              style={{
+                left: "-8%",
+                right: "-8%",
+                top: "62%",
+                height: 2,
+                background: `linear-gradient(90deg, transparent, ${hexToRgba(quantumMagentaColor, 0.52)}, transparent)`,
+                filter: "blur(1px)",
+                opacity: Math.min(1, quantumStreakOpacity * 0.82),
+                zIndex: 2,
+              }}
+            />
+            {renderRushTextLayer(
+              "headline-quantum-magenta-split",
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${quantumSplitStrokeWidth.toFixed(1)}px`,
+                WebkitTextStrokeColor: quantumMagentaColor,
+                paintOrder: "stroke fill",
+                transform: `translate(${quantumSplitOffset.toFixed(1)}px, ${(quantumSplitOffset * 0.58).toFixed(1)}px)`,
+                filter: quantumMagentaGlowFilter,
+                opacity: Math.min(0.82, textFx.alpha * 0.75),
+                zIndex: 3,
+              },
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${quantumSplitStrokeWidth.toFixed(1)}px`,
+                WebkitTextStrokeColor: quantumMagentaColor,
+                paintOrder: "stroke fill",
+              }
+            )}
+            {renderRushTextLayer(
+              "headline-quantum-cyan-split",
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${quantumSplitStrokeWidth.toFixed(1)}px`,
+                WebkitTextStrokeColor: quantumCyanColor,
+                paintOrder: "stroke fill",
+                transform: `translate(${-quantumSplitOffset.toFixed(1)}px, ${(-quantumSplitOffset * 0.58).toFixed(1)}px)`,
+                filter: quantumCyanGlowFilter,
+                opacity: Math.min(0.82, textFx.alpha * 0.75),
+                zIndex: 4,
+              },
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${quantumSplitStrokeWidth.toFixed(1)}px`,
+                WebkitTextStrokeColor: quantumCyanColor,
+                paintOrder: "stroke fill",
+              }
+            )}
+            {renderRushTextLayer(
+              "headline-quantum-main",
+              {
+                backgroundImage: quantumGradient,
+                backgroundSize: "100% 100%",
+                backgroundRepeat: "no-repeat",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${quantumStrokeWidth.toFixed(1)}px`,
+                WebkitTextStrokeColor: quantumHighlightColor,
+                paintOrder: "stroke fill",
+                filter: quantumMainGlowFilter,
+                textShadow: dragging ? "none" : quantumGlowShadow,
+                opacity: textFx.alpha,
+                zIndex: 5,
+              },
+              {
+                backgroundImage: quantumGradient,
+                backgroundSize: "100% 100%",
+                backgroundRepeat: "no-repeat",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${quantumStrokeWidth.toFixed(1)}px`,
+                WebkitTextStrokeColor: quantumHighlightColor,
+                paintOrder: "stroke fill",
+              }
+            )}
+            {renderRushTextLayer(
+              "headline-quantum-inner-bevel",
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${quantumInnerStrokeWidth.toFixed(1)}px`,
+                WebkitTextStrokeColor: hexToRgba(quantumHighlightColor, 0.95),
+                paintOrder: "stroke fill",
+                transform: "translateY(-8px)",
+                opacity: Math.min(0.92, textFx.alpha * 0.9),
+                zIndex: 6,
+              },
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${quantumInnerStrokeWidth.toFixed(1)}px`,
+                WebkitTextStrokeColor: hexToRgba(quantumHighlightColor, 0.95),
+                paintOrder: "stroke fill",
+              }
+            )}
+            {renderRushTextLayer(
+              "headline-quantum-highlight",
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${quantumHighlightStrokeWidth.toFixed(1)}px`,
+                WebkitTextStrokeColor: quantumCyanColor,
+                paintOrder: "stroke fill",
+                clipPath: "polygon(0 0, 100% 0, 100% 44%, 0 58%)",
+                filter: quantumHighlightGlowFilter,
+                opacity: Math.min(0.95, textFx.alpha * 0.88),
+                zIndex: 7,
+              },
+              {
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                WebkitTextStrokeWidth: `${quantumHighlightStrokeWidth.toFixed(1)}px`,
+                WebkitTextStrokeColor: quantumCyanColor,
+                paintOrder: "stroke fill",
+              }
+            )}
+          </div>
+        ) : verticalStretchActive ? (
+          <div className="nf-headline-vertical-stretch relative" style={{ zIndex: 3, isolation: "isolate" }}>
+            <h1
+              aria-hidden="true"
+              className="relative font-black select-none"
+              style={{
+                fontFamily: headlineFamily,
+                fontSize: headDisplayPx,
+                lineHeight,
+                whiteSpace: "pre-wrap",
+                display: "block",
+                minWidth: "fit-content",
+                maxWidth: "100%",
+                letterSpacing: `${textFx.tracking}em`,
+                textTransform: textFx.uppercase ? "uppercase" : "none",
+                fontWeight: textFx.bold ? 900 : 700,
+                fontStyle: textFx.italic ? "italic" : "normal",
+                textDecorationLine: textFx.underline ? "underline" : "none",
+                visibility: "hidden",
+              }}
+            >
+              {renderHeadlineRich(headlineText, {
+                baseTrackEm: textFx.tracking,
+                leadDeltaEm: leadTrackDelta,
+                lastDeltaEm: lastTrackDelta,
+                opticalMargin,
+                kerningFix,
+                lineHeight,
+                lineStyle: { display: "block", width: "100%" },
+              })}
+            </h1>
+            {renderRushTextLayer(
+              "headline-vertical-stretch-main",
+              {
+                color: textFx.gradient ? "transparent" : textFx.color,
+                WebkitTextFillColor: textFx.gradient ? "transparent" : textFx.color,
+                WebkitTextStrokeWidth: textFx.strokeWidth ? `${textFx.strokeWidth}px` : undefined,
+                WebkitTextStrokeColor: textFx.strokeColor,
+                paintOrder: textFx.strokeWidth ? "stroke fill" : undefined,
+                textShadow: dragging
+                  ? "none"
+                  : `0 2px 0 rgba(255,255,255,0.04), 0 12px 30px rgba(0,0,0,${verticalStretchShadowOpacity.toFixed(2)})`,
+                transform: `scaleY(${verticalStretchScaleY.toFixed(2)}) scaleX(${verticalStretchScaleX.toFixed(2)})`,
+                transformOrigin: "50% 50%",
+                WebkitFontSmoothing: "antialiased",
+                textRendering: "geometricPrecision",
+                opacity: textFx.alpha,
+                zIndex: 3,
+                ...(textFx.gradient
+                  ? {
+                      backgroundImage: `linear-gradient(180deg, ${textFx.gradFrom}, ${textFx.gradTo})`,
+                      backgroundSize: "100% 100%",
+                      backgroundRepeat: "no-repeat",
+                      WebkitBackgroundClip: "text",
+                      backgroundClip: "text",
+                    }
+                  : {}),
+              },
+              {
+                color: textFx.gradient ? "transparent" : textFx.color,
+                WebkitTextFillColor: textFx.gradient ? "transparent" : textFx.color,
+                WebkitTextStrokeWidth: textFx.strokeWidth ? `${textFx.strokeWidth}px` : undefined,
+                WebkitTextStrokeColor: textFx.strokeColor,
+                paintOrder: textFx.strokeWidth ? "stroke fill" : undefined,
+                ...(textFx.gradient
+                  ? {
+                      backgroundImage: `linear-gradient(180deg, ${textFx.gradFrom}, ${textFx.gradTo})`,
+                      backgroundSize: "100% 100%",
+                      backgroundRepeat: "no-repeat",
+                      WebkitBackgroundClip: "text",
+                      backgroundClip: "text",
+                    }
+                  : {}),
+              }
+            )}
+          </div>
+        ) : glitchActive ? (
+          <div className="relative" style={{ zIndex: 3, isolation: "isolate" }}>
+            <h1
+              aria-hidden="true"
+              className="relative font-black select-none"
+              style={{
+                fontFamily: headlineFamily,
+                fontSize: headDisplayPx,
+                lineHeight: neonPulseLineHeight,
+                whiteSpace: "pre-wrap",
+                display: "block",
+                minWidth: "fit-content",
+                maxWidth: "100%",
+                letterSpacing: `${textFx.tracking}em`,
+                textTransform: textFx.uppercase ? "uppercase" : "none",
+                fontWeight: textFx.bold ? 900 : 700,
+                fontStyle: textFx.italic ? "italic" : "normal",
+                textDecorationLine: textFx.underline ? "underline" : "none",
+                visibility: "hidden",
+              }}
+            >
+              {renderHeadlineRich(headlineText, {
+                baseTrackEm: textFx.tracking,
+                leadDeltaEm: leadTrackDelta,
+                lastDeltaEm: lastTrackDelta,
+                opticalMargin,
+                kerningFix,
+                lineHeight: neonPulseLineHeight,
+                lineStyle: { display: "block", width: "100%" },
+              })}
+            </h1>
+            <svg
+              aria-hidden="true"
+              className="pointer-events-none absolute left-0 block overflow-visible"
+              width="100%"
+              height={neonPulseSvgHeight}
+              style={{
+                top: -neonPulsePad,
+                opacity: textFx.alpha,
+                zIndex: 3,
+                overflow: "visible",
+              }}
+            >
+              <defs>
+                <linearGradient id={neonPulseGradientId} x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor={neonPulsePrimaryColor} />
+                  <stop offset="48%" stopColor={neonPulsePrimaryColor} />
+                  <stop offset="58%" stopColor={neonPulseMidColor} />
+                  <stop offset="72%" stopColor={neonPulseEndColor} />
+                  <stop offset="100%" stopColor={neonPulseEndColor} />
+                </linearGradient>
+                <filter
+                  id={neonPulseGlowFilterId}
+                  x="-40%"
+                  y="-60%"
+                  width="180%"
+                  height="220%"
+                  colorInterpolationFilters="sRGB"
+                >
+                  <feGaussianBlur stdDeviation={(0.18 + glitchGlow * 0.8).toFixed(2)} result="glow1" />
+                  <feGaussianBlur stdDeviation={(0.9 + glitchGlow * 2.8).toFixed(2)} result="glow2" />
+                  <feGaussianBlur stdDeviation={(2.2 + glitchGlow * 6.8).toFixed(2)} result="glow3" />
+                  <feMerge>
+                    <feMergeNode in="glow3" />
+                    <feMergeNode in="glow2" />
+                    <feMergeNode in="glow1" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+              {[
+                {
+                  key: "wide",
+                  stroke: `url(#${neonPulseGradientId})`,
+                  strokeWidth: neonPulseWideStroke,
+                  opacity: glitchGlow * 0.24,
+                  filter: `blur(${(2 + glitchGlow * 7).toFixed(1)}px)`,
+                },
+                {
+                  key: "rim",
+                  stroke: "rgba(1,10,24,0.72)",
+                  strokeWidth: neonPulseRimStroke,
+                  opacity: 0.5,
+                  filter: "none",
+                },
+                {
+                  key: "tube",
+                  stroke: `url(#${neonPulseGradientId})`,
+                  strokeWidth: neonPulseTubeStroke,
+                  opacity: 0.9,
+                  filter: neonPulseGlowActive ? `url(#${neonPulseGlowFilterId})` : "none",
+                },
+                {
+                  key: "core",
+                  stroke: neonPulseCoreColor,
+                  strokeWidth: neonPulseCoreStroke,
+                  opacity: 0.74,
+                  filter: neonPulseGlowActive
+                    ? `drop-shadow(0 0 ${(0.8 + glitchGlow * 2.2).toFixed(1)}px rgba(255,255,255,0.5)) drop-shadow(0 0 ${(1.6 + glitchGlow * 4.8).toFixed(1)}px ${hexToRgba(neonPulseMidColor, 0.34)})`
+                    : "none",
+                },
+                {
+                  key: "edge",
+                  stroke: "rgba(255,255,255,0.78)",
+                  strokeWidth: neonPulseEdgeStroke,
+                  opacity: 0.34 + glitchIntensity * 0.1,
+                  filter: "none",
+                },
+              ].map((layer) => (
+                <text
+                  key={`headline-neon-pulse-${layer.key}`}
+                  x={neonPulseSvgX}
+                  y={neonPulseFirstLineY}
+                  textAnchor={neonPulseTextAnchor}
+                  fill="transparent"
+                  stroke={layer.stroke}
+                  strokeWidth={layer.strokeWidth}
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                  opacity={layer.opacity}
+                  filter={layer.filter}
+                  style={{
+                    fontFamily: headlineFamily,
+                    fontSize: headDisplayPx,
+                    fontWeight: textFx.bold ? 900 : 400,
+                    fontStyle: textFx.italic ? "italic" : "normal",
+                    letterSpacing: `${textFx.tracking}em`,
+                    textTransform: textFx.uppercase ? "uppercase" : "none",
+                    paintOrder: "stroke fill",
+                  }}
+                >
+                  {neonPulseLines.map((line, lineIndex) => (
+                    <tspan
+                      key={`headline-neon-pulse-${layer.key}-${lineIndex}`}
+                      x={neonPulseSvgX}
+                      dy={lineIndex === 0 ? 0 : neonPulseLineAdvance}
+                    >
+                      {line || "\u00A0"}
+                    </tspan>
+                  ))}
+                </text>
+              ))}
+            </svg>
+          </div>
         ) : (
           <h1
             key={`headline-${headlineFamily}-${headlineFontTick}`}
@@ -5123,14 +9531,16 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
             fontStyle: textFx.italic ? 'italic' : 'normal',
             fontStretch: glitchActive ? "normal" : undefined,
             textDecorationLine: textFx.underline ? 'underline' : 'none',
-	            opacity: textFx.alpha,
+            pointerEvents: "none",
+            userSelect: "none",
+	            opacity: sliceActive ? 0 : textFx.alpha,
 	            color: glitchActive
 	              ? useGlitchExportFilter
 	                ? "#ffffff"
 	                : glitchGreenColor
 	              : rushActive
 	              ? rushFillColor
-	              : textFx.gradient
+	              : textFx.texture || textFx.gradient
 	              ? 'transparent'
 	              : textFx.color,
 	            WebkitTextFillColor: glitchActive
@@ -5139,7 +9549,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	                : glitchGreenColor
 	              : rushActive
 	              ? rushFillColor
-	              : textFx.gradient
+	              : textFx.texture || textFx.gradient
 	              ? 'transparent'
 	              : textFx.color,
 	            WebkitTextStrokeWidth: glitchActive ? `${glitchVisibleStrokeWidth}px` : undefined,
@@ -5149,7 +9559,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	              ? 'none'
 	              : glitchActive
 	              ? 'none'
-              : headSliceEnabled
+              : sliceActive
               ? mainSliceShadow
               : headShadow
               ? buildPremiumTextShadow(headShadowStrength ?? 1, textFx.glow ?? 0)
@@ -5157,10 +9567,28 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
             ...(dragging
               ? {}
               : useGlitchExportFilter
-              ? { filter: glitchExportFilter }
-              : !glitchActive && isActive('headline')
+	              ? { filter: glitchExportFilter }
+	              : !glitchActive && isActive('headline')
 	              ? { filter: 'drop-shadow(0 0 8px rgba(147,197,253,0.9))' }
 	              : {}),
+            ...(!rushActive && !glitchActive && textFx.texture
+              ? {
+                  backgroundImage: `url(${textFx.texture})`,
+                  backgroundSize: 'cover',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'center',
+                  WebkitBackgroundClip: 'text',
+                  backgroundClip: 'text',
+                }
+              : !rushActive && !glitchActive && textFx.gradient
+              ? {
+                  backgroundImage: `linear-gradient(180deg, ${textFx.gradFrom}, ${textFx.gradTo})`,
+                  backgroundSize: '100% 100%',
+                  backgroundRepeat: 'no-repeat',
+                  WebkitBackgroundClip: 'text',
+                  backgroundClip: 'text',
+                }
+              : {}),
             zIndex: glitchActive ? 9 : rushActive ? 3 : 1,
             }}
           >
@@ -5189,7 +9617,18 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
                       }
                     : {}),
                   paintOrder: glitchActive ? "stroke fill" : undefined,
-                  ...(textFx.gradient && !rushActive && !glitchActive
+                  ...(textFx.texture && !rushActive && !glitchActive
+                    ? {
+                        backgroundImage: `url(${textFx.texture})`,
+                        backgroundSize: 'cover',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'center',
+                        WebkitBackgroundClip: 'text',
+                        backgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        color: 'transparent',
+                      }
+                    : textFx.gradient && !rushActive && !glitchActive
                     ? {
                         backgroundImage: `linear-gradient(180deg, ${textFx.gradFrom}, ${textFx.gradTo})`,
                         backgroundSize: '100% 100%',
@@ -5206,7 +9645,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
           </h1>
         )}
 
-	        {glitchActive && (
+	        {false && glitchActive && (
 	          <>
 	            {renderRushTextLayer(
 	              "headline-glitch-red-screen",
@@ -5326,6 +9765,52 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	            )}
 	          </>
 	        )}
+        {!hideUiForExport && (
+          <svg
+            aria-hidden="true"
+            focusable="false"
+            className="absolute inset-0 overflow-visible"
+            style={{
+              width: "100%",
+              height: `${estimatedTextHeight}px`,
+              zIndex: 90,
+              pointerEvents: "none",
+            }}
+          >
+            <text
+              x={headlineHitX}
+              y={headDisplayPx * 0.82}
+              textAnchor={headlineHitAnchor}
+              dominantBaseline="alphabetic"
+              fontFamily={headlineFamily}
+              fontSize={headDisplayPx}
+              fontWeight={textFx.bold ? 900 : 700}
+              fontStyle={textFx.italic ? "italic" : "normal"}
+              letterSpacing={`${textFx.tracking}em`}
+              fill="#000"
+              fillOpacity={0.001}
+              stroke="#000"
+              strokeOpacity={0.001}
+              strokeWidth={headlineHitStrokeWidth}
+              paintOrder="stroke fill"
+              style={{
+                cursor: isMobileView && !mobileDragEnabled ? "default" : "grab",
+                pointerEvents: "visiblePainted",
+                userSelect: "none",
+              }}
+            >
+              {headlineHitLines.map((line, idx) => (
+                <tspan
+                  key={`headline-hit-${idx}`}
+                  x={headlineHitX}
+                  dy={idx === 0 ? 0 : headDisplayPx * lineHeight}
+                >
+                  {line || " "}
+                </tspan>
+              ))}
+            </text>
+          </svg>
+        )}
 
       </div>
     );
@@ -5432,6 +9917,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
 	      onRecordMove?.("headline2", startLeft, startTop, "headline2");
 	    }
+	    onAlignmentPositionPreview?.("headline2", finalX, finalY, "headline2");
 	    onHead2Move?.(finalX, finalY);
 
     try { el.releasePointerCapture(e.pointerId); } catch {}
@@ -5454,6 +9940,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	  style={{
     left: `${head2X}%`,
     top: `${head2Y}%`,
+    width: `${head2ColWidth}%`,
     overflow: 'visible',
     zIndex: dragging === "headline2" ? 999 : head2LayerZ,
     fontFamily: head2Family,
@@ -5469,6 +9956,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     transition: 'none',
     willChange: "left, top",
     touchAction: "none",
+    pointerEvents: "none",
   }}
 >
   <div
@@ -5482,7 +9970,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
       textDecorationLine: head2Fx.underline ? 'underline' : 'none',
       color: head2Color,
       lineHeight: Number(head2LineHeight) || 1,
-      whiteSpace: 'pre-wrap',
+      whiteSpace: Math.abs(Number(detailsRotate) || 0) > 0 ? 'pre' : 'pre-wrap',
       display: 'block',
       minWidth: 'fit-content',
       maxWidth: '100%',
@@ -5493,11 +9981,11 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
         : undefined,
       WebkitTextStrokeColor: head2Fx.strokeColor,
 
-      textShadow: head2Shadow
-        ? buildPremiumTextShadow(
-            head2ShadowStrength ?? 1,
-            head2Fx.glow ?? textFx.glow ?? 0
-          )
+	      textShadow: head2Shadow
+	        ? buildSupportingTextShadow(
+	            head2ShadowStrength ?? 1,
+	            head2Fx.glow ?? textFx.glow ?? 0
+	          )
         : 'none',
 
       filter:
@@ -5508,6 +9996,22 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
   >
     {hideUiForExport ? head2Text : renderWithDoubleBreaks(head2Text)}
   </div>
+  {!hideUiForExport && (
+    <TextPixelHitLayer
+      text={head2Text}
+      align={head2Align}
+      fontFamily={head2Family}
+      fontSize={head2SizePx}
+      fontWeight={head2Fx.bold ? 900 : 700}
+      fontStyle={head2Fx.italic ? "italic" : "normal"}
+      lineHeight={Number(head2LineHeight) || 1}
+      letterSpacing={`${head2Fx.tracking}em`}
+      uppercase={head2Fx.uppercase}
+      doubleBreaks
+      strokeWidth={Math.max(2, Number(head2Fx.strokeWidth || 0) + 2)}
+      cursor={isMobileView && !mobileDragEnabled ? "default" : "grab"}
+    />
+  )}
 </div>
 )}
 {/* HEADLINE 2 (END) */}
@@ -5610,6 +10114,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
 	      onRecordMove?.("details", startLeft, startTop, "details");
 	    }
+	    onAlignmentPositionPreview?.("details", finalX, finalY, "details");
 	    onDetailsMove?.(finalX, finalY);
 
     try { el.releasePointerCapture(e.pointerId); } catch {}
@@ -5647,6 +10152,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     transition: 'none',
     willChange: "left, top",
     touchAction: "none",
+    pointerEvents: "none",
   }}
 >
   <div
@@ -5659,7 +10165,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
       textDecorationLine: bodyUnderline ? 'underline' : 'none',
       color: bodyColor,
       lineHeight: detailsLineHeight,
-      whiteSpace: 'pre-wrap',
+      whiteSpace: Math.abs(Number(dateRotation) || 0) > 0 ? 'pre' : 'pre-wrap',
       display: 'block',
       minWidth: 'fit-content',
       maxWidth: '100%',
@@ -5667,11 +10173,11 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
       // Removed rotation from inner div to avoid double rotation
       // transform: `rotate(${detailsRotate}deg)`, 
       
-      WebkitTextStrokeWidth: 0,
-      WebkitTextStrokeColor: 'rgba(0,0,0,0.9)',
-      textShadow: detailsShadow
-        ? buildPremiumTextShadow(detailsShadowStrength ?? 1, 0)
-        : 'none',
+	      WebkitTextStrokeWidth: 0,
+	      WebkitTextStrokeColor: 'rgba(0,0,0,0.9)',
+	      textShadow: detailsShadow
+	        ? buildSupportingTextShadow(detailsShadowStrength ?? 1, 0)
+	        : 'none',
       filter:
         moveTarget === 'details'
           ? 'drop-shadow(0 0 8px rgba(147,197,253,0.9))'
@@ -5680,6 +10186,22 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
   >
     {renderWithDoubleBreaks(details)}
   </div>
+  {!hideUiForExport && (
+    <TextPixelHitLayer
+      text={details}
+      align={detailsAlign}
+      fontFamily={detailsFamily}
+      fontSize={bodySize}
+      fontWeight={bodyBold ? 800 : 600}
+      fontStyle={bodyItalic ? "italic" : "normal"}
+      lineHeight={detailsLineHeight}
+      letterSpacing={`${bodyTracking}em`}
+      uppercase={bodyUppercase}
+      doubleBreaks
+      strokeWidth={2}
+      cursor={isMobileView && !mobileDragEnabled ? "default" : "grab"}
+    />
+  )}
 </div>
 {/* DETAILS (END) */}
 
@@ -5781,6 +10303,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
 	      onRecordMove?.("details2", startLeft, startTop, "details2");
 	    }
+	    onAlignmentPositionPreview?.("details2", finalX, finalY, "details2");
 	    onDetails2Move?.(finalX, finalY);
 
     try { el.releasePointerCapture(e.pointerId); } catch {}
@@ -5817,6 +10340,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     transition: 'none',
     willChange: "left, top",
     touchAction: "none",
+    pointerEvents: "none",
   }}
 >
     <div
@@ -5830,16 +10354,16 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
         fontStyle: p.details2Italic ? 'italic' : 'normal',
         textDecorationLine: p.details2Underline ? 'underline' : 'none',
         color: p.details2Color ?? '#fff',
-        whiteSpace: 'pre-wrap',
+        whiteSpace: Math.abs(Number(p.details2Rotate) || 0) > 0 ? 'pre' : 'pre-wrap',
         display: 'block',
         minWidth: 'fit-content',
         maxWidth: '100%',
         
         // Removed internal transform
         
-      textShadow: details2Shadow
-          ? buildPremiumTextShadow(details2ShadowStrength ?? 1, 0)
-          : 'none',
+	      textShadow: details2Shadow
+	          ? buildSupportingTextShadow(details2ShadowStrength ?? 1, 0)
+	          : 'none',
 
         filter:
           moveTarget === 'details2'
@@ -5849,6 +10373,22 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     >
       {renderWithDoubleBreaks(p.details2)}
     </div>
+    {!hideUiForExport && (
+      <TextPixelHitLayer
+        text={p.details2}
+        align={details2Align ?? "center"}
+        fontFamily={p.details2Family}
+        fontSize={p.details2Size ?? 22}
+        fontWeight={p.details2Bold ? 800 : 600}
+        fontStyle={p.details2Italic ? "italic" : "normal"}
+        lineHeight={p.details2LineHeight ?? 1.2}
+        letterSpacing={`${p.details2LetterSpacing ?? 0}em`}
+        uppercase={!!p.details2Uppercase}
+        doubleBreaks
+        strokeWidth={2}
+        cursor={isMobileView && !mobileDragEnabled ? "default" : "grab"}
+      />
+    )}
   </div>
 )}
 {/* DETAILS 2 (END) */}
@@ -5949,6 +10489,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
 	      onRecordMove?.("venue", startLeft, startTop, "venue");
 	    }
+	    onAlignmentPositionPreview?.("venue", finalX, finalY, "venue");
 	    onVenueMove?.(finalX, finalY);
 
     try { el.releasePointerCapture(e.pointerId); } catch {}
@@ -5986,6 +10527,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     transition: 'none',
     willChange: "left, top",
     touchAction: "none",
+    pointerEvents: "none",
   }}
 >
   <div
@@ -5994,7 +10536,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
       color: venueColor,
       fontSize: venueSize,
       lineHeight: venueLineHeight,
-      whiteSpace: 'pre-wrap',
+      whiteSpace: Math.abs(Number(venueRotate) || 0) > 0 ? 'pre' : 'pre-wrap',
       display: 'block',
       minWidth: 'fit-content',
       maxWidth: '100%',
@@ -6007,9 +10549,9 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
       WebkitTextStrokeWidth: 0,
       WebkitTextStrokeColor: 'rgba(0,0,0,0.9)',
 
-      textShadow: venueShadow
-        ? buildPremiumTextShadow(venueShadowStrength ?? 1, 0)
-        : 'none',
+	      textShadow: venueShadow
+	        ? buildSupportingTextShadow(venueShadowStrength ?? 1, 0)
+	        : 'none',
 
       filter:
         moveTarget === 'venue'
@@ -6019,6 +10561,21 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
   >
     {renderWithDoubleBreaks(venue)}
   </div>
+  {!hideUiForExport && (
+    <TextPixelHitLayer
+      text={venue}
+      align={venueAlign}
+      fontFamily={venueFamily}
+      fontSize={venueSize}
+      fontWeight={venueBold ? 800 : 600}
+      fontStyle={venueItalic ? "italic" : "normal"}
+      lineHeight={venueLineHeight}
+      uppercase={venueUppercase}
+      doubleBreaks
+      strokeWidth={2}
+      cursor={isMobileView && !mobileDragEnabled ? "default" : "grab"}
+    />
+  )}
 </div>
 {/* VENUE (END) */}
 
@@ -6119,6 +10676,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
 	      onRecordMove?.("subtag", startLeft, startTop, "subtag");
 	    }
+	    onAlignmentPositionPreview?.("subtag", finalX, finalY, "subtag");
 	    onSubtagMove?.(finalX, finalY);
 
     try { el.releasePointerCapture(e.pointerId); } catch {}
@@ -6155,6 +10713,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     transition: 'none',
     willChange: "left, top",
     touchAction: "none",
+    pointerEvents: "none",
   }}
 >
     <div
@@ -6177,12 +10736,13 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
           fontStyle: subtagItalic ? 'italic' : 'normal',
           textDecorationLine: subtagUnderline ? 'underline' : 'none',
           textTransform: subtagUppercase ? 'uppercase' : 'none',
-          whiteSpace: 'pre-wrap',
+          whiteSpace: Math.abs(Number(subtagRotate) || 0) > 0 ? 'pre' : 'pre-wrap',
           display: 'inline-block',
+          lineHeight: 0.7,
 
-          textShadow: subtagShadow
-            ? buildPremiumTextShadow(subtagShadowStrength ?? 1, 0)
-            : 'none',
+	          textShadow: subtagShadow
+	            ? buildSupportingTextShadow(subtagShadowStrength ?? 1, 0)
+	            : 'none',
 
           filter:
             moveTarget === 'subtag'
@@ -6193,9 +10753,395 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
         {subtag}
       </span>
     </div>
+    {!hideUiForExport && (
+      <TextPixelHitLayer
+        text={subtag}
+        align={subtagAlign}
+        fontFamily={subtagFamily}
+        fontSize={subtagSize}
+        fontWeight={subtagBold ? 800 : 500}
+        fontStyle={subtagItalic ? "italic" : "normal"}
+        lineHeight={0.7}
+        uppercase={subtagUppercase}
+        strokeWidth={2}
+        cursor={isMobileView && !mobileDragEnabled ? "default" : "grab"}
+      />
+    )}
   </div>
 )}
 {/* SUBTAG (END) */}
+
+{/* TEMPLATE AUXILIARY FIELDS (BEGIN) */}
+{presenterEnabled && presenter && (
+  <div
+    ref={(el) => {
+      canvasRefs.presenter = el;
+    }}
+    className="absolute cursor-grab select-none"
+    data-node="presenter"
+    data-active={selectedPanel === "presenter" ? "true" : "false"}
+    {...getTemplateLabelDragHandlers("presenter", presenterX, presenterY, onPresenterMove, onOpenTextFloat)}
+    onClick={(e) => {
+      e.stopPropagation();
+      const store = useFlyerState.getState();
+      store.setSelectedPanel("presenter");
+      store.setMoveTarget("presenter");
+      onOpenTextFloat?.();
+    }}
+    style={{
+      left: `${presenterX}%`,
+      top: `${presenterY}%`,
+      width: `${presenterWidth}%`,
+      zIndex: 132,
+      fontFamily: presenterFamily,
+      fontSize: presenterSize,
+      fontWeight: 800,
+      lineHeight: presenterLineHeight,
+      letterSpacing: '0.34em',
+      color: presenterColor,
+      textAlign: presenterAlign,
+      whiteSpace: 'pre-wrap',
+      textTransform: 'uppercase',
+      transform: `rotate(${presenterRotation}deg)`,
+      transformOrigin: '50% 50%',
+	      textShadow: buildSupportingTextShadow(0.8, 0),
+      touchAction: 'none',
+      pointerEvents: "none",
+    }}
+  >
+    {presenter}
+    {!hideUiForExport && (
+      <TextPixelHitLayer
+        text={presenter}
+        align={presenterAlign}
+        fontFamily={presenterFamily}
+        fontSize={presenterSize}
+        fontWeight={800}
+        lineHeight={presenterLineHeight}
+        letterSpacing="0.34em"
+        uppercase
+        strokeWidth={2}
+        cursor={isMobileView && !mobileDragEnabled ? "default" : "grab"}
+      />
+    )}
+  </div>
+)}
+
+{leftRailEnabled && leftRail && (
+  <div
+    ref={(el) => {
+      canvasRefs.leftRail = el;
+    }}
+    className="absolute cursor-grab select-none"
+    data-node="leftRail"
+    data-active={selectedPanel === "leftRail" ? "true" : "false"}
+    {...getTemplateLabelDragHandlers("leftRail", leftRailX, leftRailY, onLeftRailMove, onOpenTextFloat)}
+    onClick={(e) => {
+      e.stopPropagation();
+      const store = useFlyerState.getState();
+      store.setSelectedPanel("leftRail");
+      store.setMoveTarget("leftRail");
+      onOpenTextFloat?.();
+    }}
+    style={{
+      left: `${leftRailX}%`,
+      top: `${leftRailY}%`,
+      zIndex: 132,
+      display: 'inline-block',
+      width: 'max-content',
+      maxWidth: 'none',
+      overflow: 'visible',
+      fontFamily: leftRailFamily,
+      fontSize: leftRailSize,
+      fontWeight: 900,
+      lineHeight: leftRailLineHeight,
+      letterSpacing: '0.1em',
+      color: leftRailColor,
+      textAlign: 'center',
+      whiteSpace: 'pre',
+      wordBreak: 'keep-all',
+      overflowWrap: 'normal',
+      textTransform: 'uppercase',
+      transform: `rotate(${leftRailRotation}deg)`,
+      transformOrigin: '50% 50%',
+	      textShadow: buildSupportingTextShadow(0.8, 0),
+      touchAction: 'none',
+      pointerEvents: "none",
+    }}
+  >
+    {leftRail}
+    {!hideUiForExport && (
+      <TextPixelHitLayer
+        text={leftRail}
+        align="center"
+        fontFamily={leftRailFamily}
+        fontSize={leftRailSize}
+        fontWeight={900}
+        lineHeight={leftRailLineHeight}
+        letterSpacing="0.1em"
+        uppercase
+        strokeWidth={2}
+        cursor={isMobileView && !mobileDragEnabled ? "default" : "grab"}
+      />
+    )}
+  </div>
+)}
+
+{rightRailEnabled && rightRail && (
+  <div
+    ref={(el) => {
+      canvasRefs.rightRail = el;
+    }}
+    className="absolute cursor-grab select-none"
+    data-node="rightRail"
+    data-active={selectedPanel === "rightRail" ? "true" : "false"}
+    {...getTemplateLabelDragHandlers("rightRail", rightRailX, rightRailY, onRightRailMove, onOpenTextFloat)}
+    onClick={(e) => {
+      e.stopPropagation();
+      const store = useFlyerState.getState();
+      store.setSelectedPanel("rightRail");
+      store.setMoveTarget("rightRail");
+      onOpenTextFloat?.();
+    }}
+    style={{
+      left: `${rightRailX}%`,
+      top: `${rightRailY}%`,
+      zIndex: 132,
+      display: 'inline-block',
+      width: 'max-content',
+      maxWidth: 'none',
+      overflow: 'visible',
+      fontFamily: rightRailFamily,
+      fontSize: rightRailSize,
+      fontWeight: 900,
+      lineHeight: rightRailLineHeight,
+      letterSpacing: '0.1em',
+      color: rightRailColor,
+      textAlign: 'center',
+      whiteSpace: 'pre',
+      wordBreak: 'keep-all',
+      overflowWrap: 'normal',
+      textTransform: 'uppercase',
+      transform: `rotate(${rightRailRotation}deg)`,
+      transformOrigin: '50% 50%',
+	      textShadow: buildSupportingTextShadow(0.8, 0),
+      touchAction: 'none',
+      pointerEvents: "none",
+    }}
+  >
+    {rightRail}
+    {!hideUiForExport && (
+      <TextPixelHitLayer
+        text={rightRail}
+        align="center"
+        fontFamily={rightRailFamily}
+        fontSize={rightRailSize}
+        fontWeight={900}
+        lineHeight={rightRailLineHeight}
+        letterSpacing="0.1em"
+        uppercase
+        strokeWidth={2}
+        cursor={isMobileView && !mobileDragEnabled ? "default" : "grab"}
+      />
+    )}
+  </div>
+)}
+
+{dateEnabled && date && (
+  <div
+    ref={(el) => {
+      canvasRefs.date = el;
+    }}
+    className="absolute cursor-grab select-none"
+    data-node="date"
+    data-active={selectedPanel === "date" ? "true" : "false"}
+    {...getTemplateLabelDragHandlers("date", dateX, dateY, onDateMove, onOpenTextFloat)}
+    onClick={(e) => {
+      e.stopPropagation();
+      const store = useFlyerState.getState();
+      store.setSelectedPanel("date");
+      store.setMoveTarget("date");
+      onOpenTextFloat?.();
+    }}
+    style={{
+      left: `${dateX}%`,
+      top: `${dateY}%`,
+      zIndex: 132,
+      fontFamily: dateFamily,
+      fontSize: dateSize,
+      fontWeight: 900,
+      lineHeight: dateLineHeight,
+      letterSpacing: '0.02em',
+      color: dateColor,
+      textAlign: dateAlign,
+      whiteSpace: 'pre-wrap',
+      textTransform: 'uppercase',
+      transform: `rotate(${dateRotation}deg)`,
+      transformOrigin: '50% 50%',
+	      textShadow: buildSupportingTextShadow(0.9, 0),
+      touchAction: 'none',
+      pointerEvents: "none",
+    }}
+  >
+    {date}
+    {!hideUiForExport && (
+      <TextPixelHitLayer
+        text={date}
+        align={dateAlign}
+        fontFamily={dateFamily}
+        fontSize={dateSize}
+        fontWeight={900}
+        lineHeight={dateLineHeight}
+        letterSpacing="0.02em"
+        uppercase
+        strokeWidth={2}
+        cursor={isMobileView && !mobileDragEnabled ? "default" : "grab"}
+      />
+    )}
+  </div>
+)}
+
+{priceEnabled && price && (
+  <div
+    ref={(el) => {
+      canvasRefs.price = el;
+    }}
+    className="absolute cursor-grab select-none"
+    data-node="price"
+    data-active={selectedPanel === "price" ? "true" : "false"}
+    {...getTemplateLabelDragHandlers("price", priceX, priceY, onPriceMove, onOpenTextFloat)}
+    onClick={(e) => {
+      e.stopPropagation();
+      const store = useFlyerState.getState();
+      store.setSelectedPanel("price");
+      store.setMoveTarget("price");
+      onOpenTextFloat?.();
+    }}
+    style={{
+      left: `${priceX}%`,
+      top: `${priceY}%`,
+      zIndex: 132,
+      width: `${Math.max(6, Math.min(30, 12 * (Number(priceScale) || 1)))}%`,
+      aspectRatio: '1 / 1',
+      borderRadius: '9999px',
+      border: '2px solid rgba(255,255,255,0.72)',
+      display: 'grid',
+      placeItems: 'center',
+      color: priceColor,
+      fontFamily: priceFamily,
+      fontSize: priceSize,
+      fontWeight: 900,
+      lineHeight: priceLineHeight,
+      textAlign: priceAlign,
+      textTransform: 'uppercase',
+      boxShadow: '0 0 0 1px rgba(0,0,0,0.35), 0 10px 24px rgba(0,0,0,0.28)',
+	      textShadow: buildSupportingTextShadow(1, 0),
+      touchAction: 'none',
+      pointerEvents: "none",
+    }}
+  >
+    {price}
+    {!hideUiForExport && (
+      <svg
+        aria-hidden="true"
+        focusable="false"
+        className="absolute inset-0 overflow-visible"
+        width="100%"
+        height="100%"
+        style={{ pointerEvents: "none", zIndex: 1000 }}
+      >
+        <circle
+          cx="50%"
+          cy="50%"
+          r="49%"
+          fill="none"
+          stroke="#000"
+          strokeOpacity={0.001}
+          strokeWidth="4"
+          style={{
+            cursor: isMobileView && !mobileDragEnabled ? "default" : "grab",
+            pointerEvents: "visiblePainted",
+          }}
+        />
+        <text
+          x="50%"
+          y="50%"
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fontFamily={priceFamily}
+          fontSize={priceSize}
+          fontWeight={900}
+          fill="#000"
+          fillOpacity={0.001}
+          stroke="#000"
+          strokeOpacity={0.001}
+          strokeWidth="2"
+          paintOrder="stroke fill"
+          style={{
+            cursor: isMobileView && !mobileDragEnabled ? "default" : "grab",
+            pointerEvents: "visiblePainted",
+            userSelect: "none",
+          }}
+        >
+          {String(price || "").toUpperCase()}
+        </text>
+      </svg>
+    )}
+  </div>
+)}
+
+{qrEnabled && (
+  <div
+    ref={(el) => {
+      canvasRefs.qr = el;
+    }}
+    className="absolute cursor-grab select-none"
+    data-node="qr"
+    data-active={selectedPanel === "qr" ? "true" : "false"}
+    {...getTemplateLabelDragHandlers("qr", qrX, qrY, onQrMove, onOpenAssetFloat)}
+    onClick={(e) => {
+      e.stopPropagation();
+      const store = useFlyerState.getState();
+      store.setSelectedPanel("qr");
+      store.setMoveTarget("qr");
+      onOpenAssetFloat?.();
+    }}
+    style={{
+      left: `${qrX}%`,
+      top: `${qrY}%`,
+      zIndex: 132,
+      width: `${Math.max(4.5, Math.min(10, qrScale * 11))}%`,
+      aspectRatio: '1 / 1',
+      background: '#fff',
+      padding: qrImageUrl ? '0.25%' : '0.4%',
+      boxShadow: '0 2px 12px rgba(0,0,0,0.35)',
+      touchAction: 'none',
+      overflow: 'hidden',
+    }}
+  >
+    {qrImageUrl ? (
+      <img
+        src={qrImageUrl}
+        alt=""
+        draggable={false}
+        style={{
+          display: 'block',
+          width: '100%',
+          height: '100%',
+          objectFit: 'contain',
+        }}
+      />
+    ) : (
+    <svg viewBox="0 0 29 29" width="100%" height="100%" aria-hidden="true">
+      <rect width="29" height="29" fill="#fff" />
+      <path fill="#111" d="M2 2h7v7H2zM20 2h7v7h-7zM2 20h7v7H2z" />
+      <path fill="#fff" d="M3 3h5v5H3zM21 3h5v5h-5zM3 21h5v5H3z" />
+      <path fill="#111" d="M4 4h3v3H4zM22 4h3v3h-3zM4 22h3v3H4zM12 3h2v2h-2zM15 3h2v2h-2zM12 6h5v2h-5zM11 10h2v2h-2zM15 10h2v2h-2zM19 11h2v2h-2zM23 11h2v2h-2zM10 14h2v2h-2zM13 14h6v2h-6zM22 15h4v2h-4zM11 18h2v2h-2zM16 18h2v2h-2zM20 19h2v2h-2zM24 19h3v2h-3zM12 22h4v2h-4zM18 23h2v4h-2zM22 23h5v2h-5zM12 26h2v2h-2zM22 27h2v2h-2z" />
+    </svg>
+    )}
+  </div>
+)}
+{/* TEMPLATE AUXILIARY FIELDS (END) */}
 
  </>
 )}
@@ -9192,7 +14138,6 @@ const selectedPortraitIsAsset = React.useMemo(() => {
   return (
     !!(selectedPortrait as any).isFlare ||
     !!(selectedPortrait as any).isSticker ||
-    !!(selectedPortrait as any).isExtracted ||
     !!(selectedPortrait as any).isBrandFace ||
     id.startsWith("logo_")
   );
@@ -9202,7 +14147,7 @@ const selectedPortraitSupportsLighting = React.useMemo(() => {
   const id = String((selectedPortrait as any).id || "");
   return (
     !(selectedPortrait as any).isFlare &&
-    !(selectedPortrait as any).isSticker &&
+    (!(selectedPortrait as any).isSticker || !!(selectedPortrait as any).isExtracted) &&
     !(selectedPortrait as any).isBrandFace &&
     !id.startsWith("logo_")
   );
@@ -9214,8 +14159,7 @@ const activeBlendPortraitLayer = React.useMemo(() => {
     return (
       !!p?.url &&
       !p?.isFlare &&
-      !p?.isSticker &&
-      !p?.isExtracted &&
+      (!p?.isSticker || !!p?.isExtracted) &&
       !p?.isBrandFace &&
       !p?.isLogo &&
       !id.startsWith("logo_")
@@ -9511,21 +14455,8 @@ useEffect(() => {
 
   if (!moveTarget) return;
 
-  if (moveTarget === "portrait" && selectedPortraitIsExtracted) {
-    const isMobileSelectionView =
-      typeof window !== "undefined" && window.innerWidth < 1024;
-    if (isMobileSelectionView) {
-      setUiMode("design");
-      setMobileControlsOpen(true);
-      setMobileControlsTab("assets");
-      return;
-    }
-    focusCanvasSelectionHome("extract_subject");
-    return;
-  }
-
   focusCanvasSelectionHome(String(moveTarget));
-}, [moveTarget, selectedPortraitIsExtracted]);
+}, [moveTarget]);
 
 
 
@@ -9625,6 +14556,7 @@ React.useEffect(() => { setPBaseW(null); setPBaseH(null); }, [portraitUrl]);
 
 // === PORTRAIT SLOTS (up to 4, persisted) ===
 const MAX_PORTRAIT_SLOTS = 4;
+const PORTRAIT_SLOT_STORAGE_EVENT = "nf:portrait-slots-changed";
 
 const normalizePortraitSlots = (values?: unknown[]) => {
   const arr = Array.isArray(values) ? values : [];
@@ -9656,6 +14588,42 @@ const [portraitSlotSources, setPortraitSlotSources] = useState<string[]>(() => {
 });
 
 React.useEffect(() => {
+  const syncPortraitSlotsFromStorage = () => {
+    try {
+      const rawSlots = localStorage.getItem("nf:portraitSlots");
+      setPortraitSlots(normalizePortraitSlots(rawSlots ? JSON.parse(rawSlots) : []));
+    } catch {
+      setPortraitSlots(normalizePortraitSlots([]));
+    }
+
+    try {
+      const rawSources = localStorage.getItem("nf:portraitSlotSources");
+      setPortraitSlotSources(normalizePortraitSlots(rawSources ? JSON.parse(rawSources) : []));
+    } catch {
+      setPortraitSlotSources(normalizePortraitSlots([]));
+    }
+  };
+
+  const onStorage = (event: StorageEvent) => {
+    if (
+      event.key &&
+      event.key !== "nf:portraitSlots" &&
+      event.key !== "nf:portraitSlotSources"
+    ) {
+      return;
+    }
+    syncPortraitSlotsFromStorage();
+  };
+
+  window.addEventListener(PORTRAIT_SLOT_STORAGE_EVENT, syncPortraitSlotsFromStorage);
+  window.addEventListener("storage", onStorage);
+  return () => {
+    window.removeEventListener(PORTRAIT_SLOT_STORAGE_EVENT, syncPortraitSlotsFromStorage);
+    window.removeEventListener("storage", onStorage);
+  };
+}, []);
+
+React.useEffect(() => {
   const next = portraitSlotSources.map((src, idx) =>
     portraitSlots[idx] ? src : ""
   );
@@ -9667,13 +14635,53 @@ React.useEffect(() => {
 function persistPortraitSlots(next: string[]) {
   const normalized = normalizePortraitSlots(next);
   setPortraitSlots(normalized);
-  try { safeSetJsonSmall('nf:portraitSlots', normalized, ['nf:portraitLibrary']); } catch {}
+  try { safeLocalSet('nf:portraitSlots', JSON.stringify(normalized), ['nf:portraitLibrary']); } catch {}
 }
 
 function persistPortraitSlotSources(next: string[]) {
   const normalized = normalizePortraitSlots(next);
   setPortraitSlotSources(normalized);
-  try { safeSetJsonSmall('nf:portraitSlotSources', normalized, ['nf:portraitLibrary']); } catch {}
+  try { safeLocalSet('nf:portraitSlotSources', JSON.stringify(normalized), ['nf:portraitLibrary']); } catch {}
+}
+
+function ensureCutoutInPortraitSlot(cutoutUrl: string, sourceUrl?: string) {
+  if (!isValidPortraitSource(cutoutUrl)) return;
+
+  let slots = normalizePortraitSlots(portraitSlots);
+  let sources = normalizePortraitSlots(portraitSlotSources);
+
+  try {
+    const storedSlots = localStorage.getItem("nf:portraitSlots");
+    if (storedSlots) slots = normalizePortraitSlots(JSON.parse(storedSlots));
+  } catch {}
+
+  try {
+    const storedSources = localStorage.getItem("nf:portraitSlotSources");
+    if (storedSources) sources = normalizePortraitSlots(JSON.parse(storedSources));
+  } catch {}
+
+  let slotIndex = slots.findIndex((slot) => slot === cutoutUrl);
+
+  if (slotIndex === -1) {
+    slotIndex = slots.findIndex((slot) => !slot);
+  }
+
+  if (slotIndex === -1) {
+    slotIndex = 0;
+  }
+
+  if (slots[slotIndex] !== cutoutUrl) {
+    const nextSlots = [...slots];
+    nextSlots[slotIndex] = cutoutUrl;
+    persistPortraitSlots(nextSlots);
+  }
+
+  const nextSource = sourceUrl || sources[slotIndex] || cutoutUrl;
+  if (sources[slotIndex] !== nextSource) {
+    const nextSources = [...sources];
+    nextSources[slotIndex] = nextSource;
+    persistPortraitSlotSources(nextSources);
+  }
 }
 
 const portraitSlotPickerRef = useRef<HTMLInputElement>(null);
@@ -9836,9 +14844,7 @@ const [mobileControlsOpen, setMobileControlsOpen] = React.useState(true);
 const [mobileControlsTab, setMobileControlsTab] = React.useState<"design" | "assets">("design");
 const smartWorkflowAdvanceRef = React.useRef<null | (() => void)>(null);
 const transitionCueRef = React.useRef<null | ((source: "template" | "background" | "portrait" | "ai_scene" | "portrait_blend") => void)>(null);
-const [isMobileView, setIsMobileView] = React.useState(
-  typeof window !== "undefined" && window.innerWidth < 1024
-);
+const [isMobileView, setIsMobileView] = React.useState(false);
 
 React.useEffect(() => {
   const update = () => {
@@ -10674,6 +15680,96 @@ const applyStartupBackground = React.useCallback((src: string, opts?: { advanceW
     }, 120);
   }
 }, []);
+const applyScenePack = React.useCallback((pack: ScenePack) => {
+  setBgUploadUrl(null);
+  setBgUrl(pack.background);
+  setBgFitMode(false);
+  setBgScale(pack.backgroundScale ?? 1);
+  setBgPosX(pack.backgroundPosX ?? 50);
+  setBgPosY(pack.backgroundPosY ?? 50);
+  setBgBlur(0);
+  setBgRotate(0);
+  setHue(pack.hue ?? 0);
+  setVignette(true);
+  setVignetteStrength(pack.vignetteStrength ?? 0.55);
+
+  const store = useFlyerState.getState();
+  const existing = Array.isArray((store as any).portraits?.[format])
+    ? ((store as any).portraits[format] as any[])
+    : [];
+  const retained = existing.filter((item: any) => !item?.scenePackId);
+  const stamp =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const sceneLayers = pack.layers.map((layer, index) => {
+    const rawLayerOffset = Number(layer.layerOffset ?? 0);
+    const textSafeLayerOffset =
+      layer.renderAs === "flare"
+        ? Math.min(rawLayerOffset, -12)
+        : Math.min(rawLayerOffset, 6);
+
+    return {
+      id: `scene_${pack.id}_${layer.id}_${stamp}_${index}`,
+      url: layer.file,
+      x: layer.x,
+      y: layer.y,
+      scale: layer.scale,
+      rotation: layer.rotation ?? 0,
+      opacity: layer.opacity ?? 1,
+      blendMode: layer.blendMode ?? "normal",
+      locked: layer.locked ?? false,
+      isSticker: layer.renderAs === "sticker",
+      isFlare: layer.renderAs === "flare",
+      isExtracted: false,
+      label: layer.name,
+      showLabel: false,
+      hitTestMode: "alpha-bounds",
+      scenePackId: pack.id,
+      sceneLayerId: layer.id,
+      sceneRole: layer.type,
+      sceneLayerName: layer.name,
+      layerOffset: textSafeLayerOffset,
+      tint: layer.tint ?? 0,
+      tintMode: layer.tintMode ?? "hue",
+      isTexture: layer.isTexture ?? false,
+    };
+  });
+
+  store.setPortraits(format, [...retained, ...sceneLayers] as any);
+  const currentEmojis = Array.isArray((store as any).emojis?.[format])
+    ? ((store as any).emojis[format] as any[])
+    : [];
+  const retainedEmojis = currentEmojis.filter((item: any) => !item?.scenePackId);
+  const sceneEmojis = (pack.emojis || []).map((emoji, index) => ({
+    id: `scene_${pack.id}_${emoji.id}_${stamp}_${index}`,
+    kind: "emoji",
+    char: emoji.char,
+    x: emoji.x,
+    y: emoji.y,
+    scale: emoji.scale,
+    rotation: emoji.rotation ?? 0,
+    opacity: emoji.opacity ?? 1,
+    locked: emoji.locked ?? false,
+    tint: emoji.tint ?? 0,
+    label: emoji.name,
+    showLabel: false,
+    scenePackId: pack.id,
+    sceneEmojiId: emoji.id,
+    layerOffset: Math.min(Number(emoji.layerOffset ?? 0), -8),
+  }));
+
+  store.setEmojis(format, [...retainedEmojis, ...sceneEmojis] as any);
+  const firstEditableLayer =
+    sceneLayers.find((layer: any) => !layer.locked && layer.isSticker && layer.sceneRole !== "color-grade") ||
+    sceneLayers.find((layer: any) => !layer.locked);
+  store.setSelectedPortraitId(firstEditableLayer?.id ?? null);
+  store.setSelectedEmojiId(null);
+  setSelectedEmojiId(null);
+  store.setMoveTarget(firstEditableLayer ? "icon" : "background");
+  store.setSelectedPanel(firstEditableLayer ? "icons" : "background");
+  transitionCueRef.current?.("background");
+}, [format, setSelectedEmojiId]);
 /* ===== RIGHT-PANEL BG UPLOAD HELPERS (END) ===== */
 
 // ===== LOGO PICKER (BEGIN) =====
@@ -10924,11 +16020,13 @@ function resizeArtboardForFormat(nextFormat: Format) {
 type GenOpts = {
   prompt?: string;             // when provided, use exactly this (no remix)
   style?: GenStyle;            // optional override for STYLE_DB
+  providerOverride?: 'auto' | 'nano' | 'openai' | 'venice';
   formatOverride?: Format;     // square/story override for composition
   allowPeopleOverride?: boolean;
   referenceOverride?: string;
   referenceHint?: string;
   varietyOverride?: number;    // 0..6 (0 = tightest to prompt)
+  exactPrompt?: boolean;
 };
 
     // Track last successful run options for "Regenerate"
@@ -10937,11 +16035,61 @@ type GenOpts = {
 
   /* palette / format */
   const [palette, setPalette] = useState<Palette>({ bgFrom: '#0b0b0d', bgTo: '#121216' });
+  const [replaceSubjectBusy, setReplaceSubjectBusy] = useState(false);
+  const [subjectPaletteDecision, setSubjectPaletteDecision] = useState<{
+    portraitId: string;
+    cutoutUrl: string;
+    sourceUrl: string;
+    direction: CreativeDirection;
+  } | null>(null);
+  const templatePaletteAnalysisRef = React.useRef(0);
+  const paletteColorChoices = React.useMemo(
+    () =>
+      [
+        { label: "Base", color: palette.secondary || palette.bgFrom },
+        { label: "Shadow", color: palette.bgTo },
+        { label: "Main", color: palette.primary },
+        { label: "Meta", color: palette.neutral },
+        { label: "Accent", color: palette.accent },
+      ]
+        .map((item) => ({
+          label: item.label,
+          color: normalizePaletteHexString(String(item.color || ""), ""),
+        }))
+        .filter((item) => item.color),
+    [palette]
+  );
 
 
 
   //TEMPLATES
   const [templateId, setTemplateId] = useState<string | null>(null);
+  const [centerHeroLayoutId, setCenterHeroLayoutId] = useState<CenterHeroLayoutId>('layout1');
+  const isCenterHeroTemplateActive =
+    isCenterHeroTemplateId(templateId) || isCenterHeroTemplateId(activeTemplate?.id);
+  const isNocturneTemplateActive =
+    isNocturneTemplateId(templateId) || isNocturneTemplateId(activeTemplate?.id);
+  const isEdmTunnelTemplateActive =
+    isEdmTunnelTemplateId(templateId) || isEdmTunnelTemplateId(activeTemplate?.id);
+  const isEdmStageCo2TemplateActive =
+    isEdmStageCo2TemplateId(templateId) || isEdmStageCo2TemplateId(activeTemplate?.id);
+  const isSugarRushTemplateActive =
+    isSugarRushTemplateId(templateId) || isSugarRushTemplateId(activeTemplate?.id);
+  const isLuxeTemplateActive =
+    isLuxeTemplateId(templateId) || isLuxeTemplateId(activeTemplate?.id);
+  const isMojitoTemplateActive =
+    isMojitoTemplateId(templateId) || isMojitoTemplateId(activeTemplate?.id);
+  const isBlackTieTemplateActive =
+    isBlackTieTemplateId(templateId) || isBlackTieTemplateId(activeTemplate?.id);
+  const hasSquareLayoutOptions =
+    isCenterHeroTemplateActive ||
+    isNocturneTemplateActive ||
+    isEdmTunnelTemplateActive ||
+    isEdmStageCo2TemplateActive ||
+    isSugarRushTemplateActive ||
+    isLuxeTemplateActive ||
+    isMojitoTemplateActive ||
+    isBlackTieTemplateActive;
 
 
 
@@ -10987,44 +16135,44 @@ function safeSet(setter: (val: number) => void, val: number) {
   setter(rounded);
 }
 
-// 3️⃣ Wrap each existing RAF move handler with safety and rounding
-const onHeadMoveRafSafe = useRafThrottle((x: number, y: number) => {
+// 3️⃣ Commit final drag coordinates synchronously so readouts update on release.
+const onHeadMoveRafSafe = React.useCallback((x: number, y: number) => {
   if (dragLockedRef.current) return;
   safeSet(setHeadX, x);
   safeSet(setHeadY, y);
-});
+}, []);
 
-const onHead2MoveRafSafe = useRafThrottle((x: number, y: number) => {
+const onHead2MoveRafSafe = React.useCallback((x: number, y: number) => {
   if (dragLockedRef.current) return;
   safeSet(setHead2X, x);
   safeSet(setHead2Y, y);
-});
+}, []);
 
-const onDetailsMoveRafSafe = useRafThrottle((x: number, y: number) => {
+const onDetailsMoveRafSafe = React.useCallback((x: number, y: number) => {
   if (dragLockedRef.current) return;
   safeSet(setDetailsX, x);
   safeSet(setDetailsY, y);
-});
+}, []);
 
-const onDetails2MoveRafSafe = useRafThrottle((x: number, y: number) => {
+const onDetails2MoveRafSafe = React.useCallback((x: number, y: number) => {
   if (dragLockedRef.current) return;
   safeSet(setDetails2X, x);
   safeSet(setDetails2Y, y);
-});
+}, []);
 
 
 
-const onVenueMoveRafSafe = useRafThrottle((x: number, y: number) => {
+const onVenueMoveRafSafe = React.useCallback((x: number, y: number) => {
   if (dragLockedRef.current) return;
   safeSet(setVenueX, x);
   safeSet(setVenueY, y);
-});
+}, []);
 
-const onSubtagMoveRafSafe = useRafThrottle((x: number, y: number) => {
+const onSubtagMoveRafSafe = React.useCallback((x: number, y: number) => {
   if (dragLockedRef.current) return;
   safeSet(setSubtagX, x);
   safeSet(setSubtagY, y);
-});
+}, []);
 
 
 
@@ -11056,6 +16204,7 @@ const addEmojiToCanvas = (emoji: string) => {
 
   // 🔥 CRITICAL (this is what emojis were missing)
   // Mark emoji as actively selected in STORE
+  store.setSelectedPortraitId(null);
   store.setSelectedEmojiId(id);
 
   // ✅ match flare behavior:
@@ -11228,8 +16377,27 @@ async function placePortraitFromSlot(i: number) {
   setDragging('portrait');
 }
 
-function placeExtractedLayer(src: string) {
+function placeExtractedLayer(input: { src?: string; x?: number; y?: number; scale?: number; placement?: any }) {
+  const src = String(input?.src || "");
   if (!src) return;
+  const placement = input?.placement ?? null;
+  const payloadX = Number(input?.x);
+  const payloadY = Number(input?.y);
+  const payloadScale = Number(input?.scale);
+  const hasExplicitPlacement =
+    Number.isFinite(payloadX) &&
+    Number.isFinite(payloadY) &&
+    Number.isFinite(payloadScale);
+  if (!hasExplicitPlacement) {
+    alert("Cutout placement was not created. Preview the cutout again before placing it.");
+    return;
+  }
+  const initialX = clamp100(payloadX);
+  const initialY = clamp100(payloadY);
+  const initialScale = Math.max(
+    0.05,
+    Math.min(4, payloadScale)
+  );
 
   const id = `extract_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
   const defaults = { ...EXTRACT_SUBJECT_CLEANUP };
@@ -11237,13 +16405,14 @@ function placeExtractedLayer(src: string) {
   const newPortrait = {
     id,
     url: src,
-    x: 50,
-    y: 50,
-    scale: 0.85,
+    x: initialX,
+    y: initialY,
+    scale: initialScale,
     locked: false,
     isSticker: false,
     isFlare: false,
     isExtracted: true,
+    extraction: placement || undefined,
     tintMode: "colorize" as const,
     shadowBlur: 22,
     shadowAlpha: 0.48,
@@ -11251,10 +16420,12 @@ function placeExtractedLayer(src: string) {
     cleanupBaseUrl: src,
   };
 
+  ensureCutoutInPortraitSlot(src, src);
+
   deferCanvasPlacement(() => {
     useFlyerState.getState().addPortrait?.(format, newPortrait);
     useFlyerState.getState().setSelectedPortraitId(id);
-    useFlyerState.getState().setSelectedPanel("extract_subject");
+    useFlyerState.getState().setSelectedPanel("portrait");
     useFlyerState.getState().setMoveTarget("portrait");
     transitionCueRef.current?.("portrait");
     if (isMobileView) setMobileControlsOpen(false);
@@ -11310,8 +16481,99 @@ function removeFromLogoLibrary(url: string) {
   /* text */
   const [details, setDetails] = useState('EVENT DETAILS');
   const [venue, setVenue] = useState('VENUE');
- 
+  const [presenterEnabled, setPresenterEnabled] = useState(false);
+  const [presenterText, setPresenterText] = useState('');
+  const [presenterX, setPresenterX] = useState(31.5);
+  const [presenterY, setPresenterY] = useState(7.5);
+  const [presenterWidth, setPresenterWidth] = useState(40);
+  const [presenterSize, setPresenterSize] = useState(10);
+  const [presenterLineHeight, setPresenterLineHeight] = useState(0.7);
+  const [presenterFamily, setPresenterFamily] = useState('Inter');
+  const [presenterColor, setPresenterColor] = useState('#ffffff');
+  const [presenterAlign, setPresenterAlign] = useState<Align>('center');
+  const [presenterRotation, setPresenterRotation] = useState(0);
+  const [leftRailEnabled, setLeftRailEnabled] = useState(false);
+  const [leftRailText, setLeftRailText] = useState('');
+  const [leftRailX, setLeftRailX] = useState(3.5);
+  const [leftRailY, setLeftRailY] = useState(53);
+  const [leftRailSize, setLeftRailSize] = useState(10);
+  const [leftRailLineHeight, setLeftRailLineHeight] = useState(0.7);
+  const [leftRailFamily, setLeftRailFamily] = useState('Inter');
+  const [leftRailColor, setLeftRailColor] = useState('#ffffff');
+  const [leftRailRotation, setLeftRailRotation] = useState(-90);
+  const [rightRailEnabled, setRightRailEnabled] = useState(false);
+  const [rightRailText, setRightRailText] = useState('');
+  const [rightRailX, setRightRailX] = useState(86.8);
+  const [rightRailY, setRightRailY] = useState(36);
+  const [rightRailSize, setRightRailSize] = useState(10);
+  const [rightRailLineHeight, setRightRailLineHeight] = useState(0.7);
+  const [rightRailFamily, setRightRailFamily] = useState('Inter');
+  const [rightRailColor, setRightRailColor] = useState('#ffffff');
+  const [rightRailRotation, setRightRailRotation] = useState(90);
+  const [dateEnabled, setDateEnabled] = useState(false);
+  const [dateText, setDateText] = useState('');
+  const [dateX, setDateX] = useState(8);
+  const [dateY, setDateY] = useState(6);
+  const [dateSize, setDateSize] = useState(24);
+  const [dateLineHeight, setDateLineHeight] = useState(0.7);
+  const [dateFamily, setDateFamily] = useState('Bebas Neue');
+  const [dateColor, setDateColor] = useState('#ffffff');
+  const [dateAlign, setDateAlign] = useState<Align>('left');
+  const [dateRotation, setDateRotation] = useState(0);
+  const [priceEnabled, setPriceEnabled] = useState(false);
+  const [priceText, setPriceText] = useState('');
+  const [priceX, setPriceX] = useState(78);
+  const [priceY, setPriceY] = useState(66);
+  const [priceSize, setPriceSize] = useState(30);
+  const [priceLineHeight, setPriceLineHeight] = useState(0.7);
+  const [priceScale, setPriceScale] = useState(1);
+  const [priceFamily, setPriceFamily] = useState('Bebas Neue');
+  const [priceColor, setPriceColor] = useState('#ffffff');
+  const [priceAlign, setPriceAlign] = useState<Align>('center');
+  const [qrEnabled, setQrEnabled] = useState(false);
+  const [qrX, setQrX] = useState(90);
+  const [qrY, setQrY] = useState(8);
+  const [qrScale, setQrScale] = useState(0.55);
+  const [qrImageUrl, setQrImageUrl] = useState<string | null>(null);
+  const qrUploadInputRef = React.useRef<HTMLInputElement | null>(null);
+  const centerHeroLayoutRafRef = React.useRef<number | null>(null);
 
+  const handleQrUploadFile = React.useCallback(
+    (file: File) => {
+      if (!file.type.startsWith("image/")) {
+        alert("Upload an image file for the QR code.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const nextUrl = String(reader.result || "");
+        if (!nextUrl) return;
+        setQrImageUrl(nextUrl);
+        setQrEnabled(true);
+        setSelectedPanel("qr");
+        setMoveTarget("qr");
+        setSessionValue(format, "qrImageUrl", nextUrl);
+        setSessionValue(format, "qrEnabled", true);
+      };
+      reader.onerror = () => alert("Could not read that QR image.");
+      reader.readAsDataURL(file);
+    },
+    [format, setMoveTarget, setSelectedPanel, setSessionValue]
+  );
+
+  const clearQrImage = React.useCallback(() => {
+    setQrImageUrl(null);
+    setSessionValue(format, "qrImageUrl", null);
+  }, [format, setSessionValue]);
+
+  React.useEffect(() => {
+    return () => {
+      if (centerHeroLayoutRafRef.current != null) {
+        window.cancelAnimationFrame(centerHeroLayoutRafRef.current);
+      }
+    };
+  }, []);
 
   /* headline 2 (secondary) */
   const [head2, setHead2] = useState<string>(''); // empty by default
@@ -11325,35 +16587,97 @@ function removeFromLogoLibrary(url: string) {
   const [headlineRotate, setHeadlineRotate] = useState(0);
   const [headSkew, setHeadSkew]           = useState<number>(0);
   const [headSliceEnabled, setHeadSliceEnabled] = useState<boolean>(false);
-  const [headSliceBandCount, setHeadSliceBandCount] = useState<number>(7);
-  const [headSliceBandGap, setHeadSliceBandGap] = useState<number>(10);
-  const [headSliceEchoDistance, setHeadSliceEchoDistance] = useState<number>(135);
-  const [headSliceTopColor, setHeadSliceTopColor] = useState<string>("#e85b2e");
-  const [headSliceMidColor, setHeadSliceMidColor] = useState<string>("#ffe9b3");
-  const [headSliceBottomColor, setHeadSliceBottomColor] = useState<string>("#55b6c7");
-  const [headSliceBlur, setHeadSliceBlur] = useState<number>(6);
-  const [headSliceFade, setHeadSliceFade] = useState<number>(0.5);
-  const [headSliceShadowStrength, setHeadSliceShadowStrength] = useState<number>(0.35);
+  const [headSliceBandCount, setHeadSliceBandCount] = useState<number>(HEADLINE_LEGACY_SLICE_DEFAULTS.bandCount);
+  const [headSliceBandGap, setHeadSliceBandGap] = useState<number>(HEADLINE_LEGACY_SLICE_DEFAULTS.bandGap);
+  const [headSliceEchoDistance, setHeadSliceEchoDistance] = useState<number>(HEADLINE_LEGACY_SLICE_DEFAULTS.echoDistance);
+  const [headSliceTopColor, setHeadSliceTopColor] = useState<string>(HEADLINE_LEGACY_SLICE_DEFAULTS.topColor);
+  const [headSliceMidColor, setHeadSliceMidColor] = useState<string>(HEADLINE_LEGACY_SLICE_DEFAULTS.midColor);
+  const [headSliceBottomColor, setHeadSliceBottomColor] = useState<string>(HEADLINE_LEGACY_SLICE_DEFAULTS.bottomColor);
+  const [headSliceBlur, setHeadSliceBlur] = useState<number>(HEADLINE_LEGACY_SLICE_DEFAULTS.blur);
+  const [headSliceFade, setHeadSliceFade] = useState<number>(HEADLINE_LEGACY_SLICE_DEFAULTS.fade);
+  const [headSliceShadowStrength, setHeadSliceShadowStrength] = useState<number>(HEADLINE_LEGACY_SLICE_DEFAULTS.shadowStrength);
   const [headRushEnabled, setHeadRushEnabled] = useState<boolean>(false);
   const [headRushDotColor, setHeadRushDotColor] = useState<string>("#ff2a45");
   const [headRushContrastColor, setHeadRushContrastColor] = useState<string>("#ffffff");
-  const [headRushDotSize, setHeadRushDotSize] = useState<number>(7.8);
-  const [headRushDotSpacing, setHeadRushDotSpacing] = useState<number>(8.5);
+  const [headRushDotSize, setHeadRushDotSize] = useState<number>(HEADLINE_HALFTONE_DEFAULTS.dotSize);
+  const [headRushDotSpacing, setHeadRushDotSpacing] = useState<number>(HEADLINE_HALFTONE_DEFAULTS.dotSpacing);
   const [headRushShadowOffset, setHeadRushShadowOffset] = useState<number>(0);
   const [headLineEnabled, setHeadLineEnabled] = useState<boolean>(false);
   const [headLineFrontOffsetX, setHeadLineFrontOffsetX] = useState<number>(0);
   const [headLineFrontOffsetY, setHeadLineFrontOffsetY] = useState<number>(0);
   const [headLineBackOffsetX, setHeadLineBackOffsetX] = useState<number>(10);
   const [headLineBackOffsetY, setHeadLineBackOffsetY] = useState<number>(8);
+  const [headGlassEnabled, setHeadGlassEnabled] = useState<boolean>(false);
+  const [headGlassPaletteLinked, setHeadGlassPaletteLinked] = useState<boolean>(true);
+  const [headGlassPrimaryColor, setHeadGlassPrimaryColor] = useState<string>(HEADLINE_GLASS_DEFAULTS.primaryColor);
+  const [headGlassSecondaryColor, setHeadGlassSecondaryColor] = useState<string>(HEADLINE_GLASS_DEFAULTS.secondaryColor);
+  const [headGlassHighlightColor, setHeadGlassHighlightColor] = useState<string>(HEADLINE_GLASS_DEFAULTS.highlightColor);
+  const [headGlassBlur, setHeadGlassBlur] = useState<number>(HEADLINE_GLASS_DEFAULTS.blur);
+  const [headGlassGlow, setHeadGlassGlow] = useState<number>(HEADLINE_GLASS_DEFAULTS.glow);
+  const [headGlassStroke, setHeadGlassStroke] = useState<number>(HEADLINE_GLASS_DEFAULTS.stroke);
+  const [headGlassFillAlpha, setHeadGlassFillAlpha] = useState<number>(HEADLINE_GLASS_DEFAULTS.fillAlpha);
+  const [headKineticEnabled, setHeadKineticEnabled] = useState<boolean>(false);
+  const [headKineticPaletteLinked, setHeadKineticPaletteLinked] = useState<boolean>(true);
+  const [headKineticTextColor, setHeadKineticTextColor] = useState<string>(HEADLINE_KINETIC_DEFAULTS.textColor);
+  const [headKineticTopColor, setHeadKineticTopColor] = useState<string>(HEADLINE_KINETIC_DEFAULTS.topColor);
+  const [headKineticBottomColor, setHeadKineticBottomColor] = useState<string>(HEADLINE_KINETIC_DEFAULTS.bottomColor);
+  const [headKineticSliceOffsetX, setHeadKineticSliceOffsetX] = useState<number>(HEADLINE_KINETIC_DEFAULTS.sliceOffsetX);
+  const [headKineticSliceOffsetY, setHeadKineticSliceOffsetY] = useState<number>(HEADLINE_KINETIC_DEFAULTS.sliceOffsetY);
+  const [headKineticShadowOpacity, setHeadKineticShadowOpacity] = useState<number>(HEADLINE_KINETIC_DEFAULTS.shadowOpacity);
+  const [headDashStrokeEnabled, setHeadDashStrokeEnabled] = useState<boolean>(false);
+  const [headColorStrokeEnabled, setHeadColorStrokeEnabled] = useState<boolean>(false);
+  const [headDashStrokePaletteLinked, setHeadDashStrokePaletteLinked] = useState<boolean>(true);
+  const [headDashStrokeColors, setHeadDashStrokeColors] = useState<string[]>([...HEADLINE_DASH_STROKE_DEFAULTS.colors]);
+  const [headDashStrokeFrame, setHeadDashStrokeFrame] = useState<number>(HEADLINE_DASH_STROKE_DEFAULTS.frame);
+  const [headColorStrokeFrame, setHeadColorStrokeFrame] = useState<number>(HEADLINE_DASH_STROKE_DEFAULTS.frame);
+  const [headDoodleAngleX, setHeadDoodleAngleX] = useState<number>(HEADLINE_DOODLE_STACK_DEFAULTS.angleX);
+  const [headDoodleAngleY, setHeadDoodleAngleY] = useState<number>(HEADLINE_DOODLE_STACK_DEFAULTS.angleY);
+  const [headDoodleRotate, setHeadDoodleRotate] = useState<number>(HEADLINE_DOODLE_STACK_DEFAULTS.rotate);
+  const [headDoodleSpread, setHeadDoodleSpread] = useState<number>(HEADLINE_DOODLE_STACK_DEFAULTS.spread);
+  const [headPure3dEnabled, setHeadPure3dEnabled] = useState<boolean>(false);
+  const [headPure3dPaletteLinked, setHeadPure3dPaletteLinked] = useState<boolean>(true);
+  const [headPure3dFaceColor, setHeadPure3dFaceColor] = useState<string>(HEADLINE_PURE_3D_DEFAULTS.faceColor);
+  const [headPure3dEdgeColor, setHeadPure3dEdgeColor] = useState<string>(HEADLINE_PURE_3D_DEFAULTS.edgeColor);
+  const [headPure3dShadowColor, setHeadPure3dShadowColor] = useState<string>(HEADLINE_PURE_3D_DEFAULTS.shadowColor);
+  const [headPure3dFrame, setHeadPure3dFrame] = useState<number>(HEADLINE_PURE_3D_DEFAULTS.frame);
+  const [headGoldBlockEnabled, setHeadGoldBlockEnabled] = useState<boolean>(false);
+  const [headGoldBlockPaletteLinked, setHeadGoldBlockPaletteLinked] = useState<boolean>(true);
+  const [headGoldBlockLightColor, setHeadGoldBlockLightColor] = useState<string>(HEADLINE_GOLD_BLOCK_DEFAULTS.lightColor);
+  const [headGoldBlockMidColor, setHeadGoldBlockMidColor] = useState<string>(HEADLINE_GOLD_BLOCK_DEFAULTS.midColor);
+  const [headGoldBlockDarkColor, setHeadGoldBlockDarkColor] = useState<string>(HEADLINE_GOLD_BLOCK_DEFAULTS.darkColor);
+  const [headGoldBlockStrokeColor, setHeadGoldBlockStrokeColor] = useState<string>(HEADLINE_GOLD_BLOCK_DEFAULTS.strokeColor);
+  const [headGoldBlockStrokeWidth, setHeadGoldBlockStrokeWidth] = useState<number>(HEADLINE_GOLD_BLOCK_DEFAULTS.strokeWidth);
+  const [headGoldBlockTexture, setHeadGoldBlockTexture] = useState<number>(HEADLINE_GOLD_BLOCK_DEFAULTS.texture);
+  const [headGoldBlockRoughness, setHeadGoldBlockRoughness] = useState<number>(HEADLINE_GOLD_BLOCK_DEFAULTS.roughness);
+  const [headCyberEmbossEnabled, setHeadCyberEmbossEnabled] = useState<boolean>(false);
+  const [headRetroShadowEnabled, setHeadRetroShadowEnabled] = useState<boolean>(HEADLINE_RETRO_ENGRAVED_DEFAULTS.shadowEnabled);
+  const [headRetroShadowAlpha, setHeadRetroShadowAlpha] = useState<number>(HEADLINE_RETRO_ENGRAVED_DEFAULTS.shadowAlpha);
+  const [headQuantumEnabled, setHeadQuantumEnabled] = useState<boolean>(false);
+  const [headQuantumPaletteLinked, setHeadQuantumPaletteLinked] = useState<boolean>(true);
+  const [headQuantumCyanColor, setHeadQuantumCyanColor] = useState<string>(HEADLINE_QUANTUM_DEFAULTS.cyanColor);
+  const [headQuantumBlueColor, setHeadQuantumBlueColor] = useState<string>(HEADLINE_QUANTUM_DEFAULTS.blueColor);
+  const [headQuantumHighlightColor, setHeadQuantumHighlightColor] = useState<string>(HEADLINE_QUANTUM_DEFAULTS.highlightColor);
+  const [headQuantumPurpleColor, setHeadQuantumPurpleColor] = useState<string>(HEADLINE_QUANTUM_DEFAULTS.purpleColor);
+  const [headQuantumMagentaColor, setHeadQuantumMagentaColor] = useState<string>(HEADLINE_QUANTUM_DEFAULTS.magentaColor);
+  const [headQuantumStrokeWidth, setHeadQuantumStrokeWidth] = useState<number>(HEADLINE_QUANTUM_DEFAULTS.strokeWidth);
+  const [headQuantumSplitOffset, setHeadQuantumSplitOffset] = useState<number>(HEADLINE_QUANTUM_DEFAULTS.splitOffset);
+  const [headQuantumGlowEnabled, setHeadQuantumGlowEnabled] = useState<boolean>(HEADLINE_QUANTUM_DEFAULTS.glowEnabled);
+  const [headQuantumGlow, setHeadQuantumGlow] = useState<number>(HEADLINE_QUANTUM_DEFAULTS.glow);
+  const [headQuantumScanlineOpacity, setHeadQuantumScanlineOpacity] = useState<number>(HEADLINE_QUANTUM_DEFAULTS.scanlineOpacity);
+  const [headQuantumStreakOpacity, setHeadQuantumStreakOpacity] = useState<number>(HEADLINE_QUANTUM_DEFAULTS.streakOpacity);
+  const [headVerticalStretchEnabled, setHeadVerticalStretchEnabled] = useState<boolean>(false);
+  const [headVerticalStretchScaleY, setHeadVerticalStretchScaleY] = useState<number>(HEADLINE_VERTICAL_STRETCH_DEFAULTS.scaleY);
+  const [headVerticalStretchScaleX, setHeadVerticalStretchScaleX] = useState<number>(HEADLINE_VERTICAL_STRETCH_DEFAULTS.scaleX);
+  const [headVerticalStretchShadowOpacity, setHeadVerticalStretchShadowOpacity] = useState<number>(HEADLINE_VERTICAL_STRETCH_DEFAULTS.shadowOpacity);
   const [headGlitchEnabled, setHeadGlitchEnabled] = useState<boolean>(false);
-  const [headGlitchIntensity, setHeadGlitchIntensity] = useState<number>(0.55);
-  const [headGlitchRgbSplit, setHeadGlitchRgbSplit] = useState<number>(18);
-	  const [headGlitchNoise, setHeadGlitchNoise] = useState<number>(0.04);
-	  const [headGlitchGlow, setHeadGlitchGlow] = useState<number>(0.42);
-	  const [headGlitchRedColor, setHeadGlitchRedColor] = useState<string>("#ff1d25");
-	  const [headGlitchMagentaColor, setHeadGlitchMagentaColor] = useState<string>("#00ff66");
-	  const [headGlitchBlueColor, setHeadGlitchBlueColor] = useState<string>("#004bff");
-	  const [headGlitchYellowColor, setHeadGlitchYellowColor] = useState<string>("#d8ff25");
+  const [headGlitchIntensity, setHeadGlitchIntensity] = useState<number>(HEADLINE_GLITCH_DEFAULTS.intensity);
+  const [headGlitchRgbSplit, setHeadGlitchRgbSplit] = useState<number>(HEADLINE_GLITCH_DEFAULTS.rgbSplit);
+	  const [headGlitchNoise, setHeadGlitchNoise] = useState<number>(HEADLINE_GLITCH_DEFAULTS.noise);
+	  const [headGlitchGlow, setHeadGlitchGlow] = useState<number>(HEADLINE_GLITCH_DEFAULTS.glow);
+	  const [headGlitchRedColor, setHeadGlitchRedColor] = useState<string>("#ff2bd6");
+	  const [headGlitchMagentaColor, setHeadGlitchMagentaColor] = useState<string>("#8b4dff");
+	  const [headGlitchBlueColor, setHeadGlitchBlueColor] = useState<string>("#00eaff");
+	  const [headGlitchYellowColor, setHeadGlitchYellowColor] = useState<string>("#fff5ff");
   const [headExtrudeDepth, setHeadExtrudeDepth] = useState<number>(0);
   const [headExtrudeAngle, setHeadExtrudeAngle] = useState<number>(135);
   const [headExtrudeDistance, setHeadExtrudeDistance] = useState<number>(0);
@@ -11643,6 +16967,11 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
   const [headAlign, setHeadAlign] = useState<Align>('center');
 
   const [lineHeight, setLineHeight] = useState(0.9);
+  React.useEffect(() => {
+    if (headGlassEnabled && lineHeight < HEADLINE_GLASS_MIN_LINE_HEIGHT) {
+      setLineHeight(HEADLINE_GLASS_MIN_LINE_HEIGHT);
+    }
+  }, [headGlassEnabled, lineHeight]);
   // ——— Poster-type refinements
   const [leadTrackDelta, setLeadTrackDelta] = useState(0);   // em delta for first line
   const [lastTrackDelta, setLastTrackDelta] = useState(0);   // em delta for last line
@@ -11685,6 +17014,624 @@ const [subtagFamily, setSubtagFamily] = useState<string>('Nexa-Heavy');
   const [tallHeadline] = useState(true);
   const [textSide, setTextSide] = useState<TextSide>('left');
   const [textFx, setTextFx] = useState<TextFx>({ ...DEFAULT_TEXT_FX });
+  type CenterHeroBackgroundLayoutKey = "bgPosX" | "bgPosY" | "bgScale" | "bgRotate" | "hue" | "vibrance";
+  const applyCenterHeroBackgroundLayoutRef = React.useRef<{
+    values: Record<CenterHeroBackgroundLayoutKey, number>;
+    setValue: (key: CenterHeroBackgroundLayoutKey, value: number) => void;
+  } | null>(null);
+
+  const applyCenterHeroLayout = React.useCallback(
+    (layoutId: CenterHeroLayoutId) => {
+      if (format !== "square" || !hasSquareLayoutOptions) return;
+      const centerHeroTemplateId = isNocturneTemplateActive
+        ? "ladies_night_center_hero"
+        : "square_center_hero_nightlife";
+      const layout = isEdmTunnelTemplateActive
+        ? getEdmTunnelLayoutVariant(layoutId, "square")
+        : isEdmStageCo2TemplateActive
+        ? getEdmStageCo2LayoutVariant(layoutId, "square")
+        : isSugarRushTemplateActive
+        ? getSugarRushLayoutVariant(layoutId, "square")
+        : isLuxeTemplateActive
+        ? getLuxeLayoutVariant(layoutId, "square")
+        : isMojitoTemplateActive
+        ? getMojitoLayoutVariant(layoutId, "square")
+        : isBlackTieTemplateActive
+        ? getBlackTieLayoutVariant(layoutId, "square")
+        : getCenterHeroLayoutVariant(layoutId, "square", centerHeroTemplateId);
+      if (!layout) return;
+
+      if (centerHeroLayoutRafRef.current != null) {
+        window.cancelAnimationFrame(centerHeroLayoutRafRef.current);
+        centerHeroLayoutRafRef.current = null;
+      }
+
+      setCenterHeroLayoutId(layoutId);
+
+      if (typeof layout.headBehindPortrait === "boolean") {
+        setHeadBehindPortrait(layout.headBehindPortrait);
+      }
+      if (layout.textLayerOffset && typeof layout.textLayerOffset === "object") {
+        setTextLayerOffset((prev) => ({
+          ...prev,
+          ...(typeof layout.textLayerOffset?.headline === "number"
+            ? { headline: layout.textLayerOffset.headline }
+            : {}),
+          ...(typeof layout.textLayerOffset?.headline2 === "number"
+            ? { headline2: layout.textLayerOffset.headline2 }
+            : {}),
+          ...(typeof layout.textLayerOffset?.details === "number"
+            ? { details: layout.textLayerOffset.details }
+            : {}),
+          ...(typeof layout.textLayerOffset?.details2 === "number"
+            ? { details2: layout.textLayerOffset.details2 }
+            : {}),
+          ...(typeof layout.textLayerOffset?.venue === "number"
+            ? { venue: layout.textLayerOffset.venue }
+            : {}),
+          ...(typeof layout.textLayerOffset?.subtag === "number"
+            ? { subtag: layout.textLayerOffset.subtag }
+            : {}),
+        }));
+      }
+
+      const layoutHeadlineLineHeight =
+        layout.headlineLineHeight ?? layout.headlineHeight ?? layout.lineHeight;
+      const numericTargets = [
+        { key: "headX", from: headX, to: layout.headX, set: setHeadX },
+        { key: "headY", from: headY, to: layout.headY, set: setHeadY },
+        { key: "headlineLineHeight", from: lineHeight, to: layoutHeadlineLineHeight, set: setLineHeight },
+        { key: "head2X", from: head2X, to: layout.head2X, set: setHead2X },
+        { key: "head2Y", from: head2Y, to: layout.head2Y, set: setHead2Y },
+        { key: "head2Size", from: head2SizePx, to: layout.head2Size, set: setHead2SizePx },
+        { key: "head2LineHeight", from: head2LineHeight, to: layout.head2LineHeight, set: setHead2LineHeight },
+        { key: "subtagX", from: subtagX, to: layout.subtagX, set: setSubtagX },
+        { key: "subtagY", from: subtagY, to: layout.subtagY, set: setSubtagY },
+        { key: "detailsX", from: detailsX, to: layout.detailsX, set: setDetailsX },
+        { key: "detailsY", from: detailsY, to: layout.detailsY, set: setDetailsY },
+        { key: "detailsSize", from: bodySize, to: layout.detailsSize, set: setBodySize },
+        { key: "detailsLineHeight", from: detailsLineHeight, to: layout.detailsLineHeight, set: setDetailsLineHeight },
+        { key: "details2X", from: details2X, to: layout.details2X, set: setDetails2X },
+        { key: "details2Y", from: details2Y, to: layout.details2Y, set: setDetails2Y },
+        { key: "details2Size", from: details2Size, to: layout.details2Size, set: setDetails2Size },
+        { key: "details2LineHeight", from: details2LineHeight, to: layout.details2LineHeight, set: setDetails2LineHeight },
+        { key: "venueX", from: venueX, to: layout.venueX, set: setVenueX },
+        { key: "venueY", from: venueY, to: layout.venueY, set: setVenueY },
+        { key: "venueSize", from: venueSize, to: layout.venueSize, set: setVenueSize },
+        { key: "venueLineHeight", from: venueLineHeight, to: layout.venueLineHeight, set: setVenueLineHeight },
+        { key: "presenterX", from: presenterX, to: layout.presenterX, set: setPresenterX },
+        { key: "presenterY", from: presenterY, to: layout.presenterY, set: setPresenterY },
+        { key: "presenterSize", from: presenterSize, to: layout.presenterSize, set: setPresenterSize },
+        { key: "presenterLineHeight", from: presenterLineHeight, to: (layout as any).presenterLineHeight, set: setPresenterLineHeight },
+        { key: "presenterWidth", from: presenterWidth, to: layout.presenterWidth, set: setPresenterWidth },
+        { key: "leftRailX", from: leftRailX, to: layout.leftRailX, set: setLeftRailX },
+        { key: "leftRailY", from: leftRailY, to: layout.leftRailY, set: setLeftRailY },
+        { key: "leftRailSize", from: leftRailSize, to: layout.leftRailSize, set: setLeftRailSize },
+        { key: "leftRailLineHeight", from: leftRailLineHeight, to: (layout as any).leftRailLineHeight, set: setLeftRailLineHeight },
+        { key: "leftRailRotation", from: leftRailRotation, to: layout.leftRailRotation, set: setLeftRailRotation },
+        { key: "rightRailX", from: rightRailX, to: layout.rightRailX, set: setRightRailX },
+        { key: "rightRailY", from: rightRailY, to: layout.rightRailY, set: setRightRailY },
+        { key: "rightRailSize", from: rightRailSize, to: layout.rightRailSize, set: setRightRailSize },
+        { key: "rightRailLineHeight", from: rightRailLineHeight, to: (layout as any).rightRailLineHeight, set: setRightRailLineHeight },
+        { key: "rightRailRotation", from: rightRailRotation, to: layout.rightRailRotation, set: setRightRailRotation },
+        { key: "dateX", from: dateX, to: layout.dateX, set: setDateX },
+        { key: "dateY", from: dateY, to: layout.dateY, set: setDateY },
+        { key: "dateSize", from: dateSize, to: layout.dateSize, set: setDateSize },
+        { key: "dateLineHeight", from: dateLineHeight, to: (layout as any).dateLineHeight, set: setDateLineHeight },
+        { key: "priceX", from: priceX, to: layout.priceX, set: setPriceX },
+        { key: "priceY", from: priceY, to: layout.priceY, set: setPriceY },
+        { key: "priceSize", from: priceSize, to: layout.priceSize, set: setPriceSize },
+        { key: "priceLineHeight", from: priceLineHeight, to: (layout as any).priceLineHeight, set: setPriceLineHeight },
+        { key: "priceScale", from: priceScale, to: layout.priceScale, set: setPriceScale },
+        { key: "qrX", from: qrX, to: layout.qrX, set: setQrX },
+        { key: "qrY", from: qrY, to: layout.qrY, set: setQrY },
+        { key: "qrScale", from: qrScale, to: layout.qrScale, set: setQrScale },
+        { key: "portraitX", from: portraitX, to: layout.portraitX, set: setPortraitX },
+        { key: "portraitY", from: portraitY, to: layout.portraitY, set: setPortraitY },
+        { key: "portraitScale", from: portraitScale, to: layout.portraitScale, set: setPortraitScale },
+        { key: "headlineSize", from: headManualPx, to: layout.headlineSize, set: setHeadManualPx },
+        { key: "headMaxPx", from: headMaxPx, to: layout.headMaxPx, set: setHeadMaxPx },
+        { key: "textColWidth", from: textColWidth, to: layout.textColWidth, set: setTextColWidth },
+      ].filter((item): item is {
+        key: keyof TemplateBase;
+        from: number;
+        to: number;
+        set: React.Dispatch<React.SetStateAction<number>>;
+      } => typeof item.to === "number" && Number.isFinite(item.to));
+      const backgroundController = applyCenterHeroBackgroundLayoutRef.current;
+      const backgroundTargets = backgroundController
+        ? ([
+            { key: "bgPosX", from: backgroundController.values.bgPosX, to: layout.bgPosX },
+            { key: "bgPosY", from: backgroundController.values.bgPosY, to: layout.bgPosY },
+            { key: "bgScale", from: backgroundController.values.bgScale, to: layout.bgScale },
+            { key: "bgRotate", from: backgroundController.values.bgRotate, to: layout.bgRotate },
+            { key: "hue", from: backgroundController.values.hue, to: (layout as any).hue },
+            { key: "vibrance", from: backgroundController.values.vibrance, to: (layout as any).vibrance },
+          ] as Array<{
+            key: CenterHeroBackgroundLayoutKey;
+            from: number;
+            to: number | undefined;
+          }>).filter((item): item is {
+            key: CenterHeroBackgroundLayoutKey;
+            from: number;
+            to: number;
+          } => typeof item.to === "number" && Number.isFinite(item.to))
+        : [];
+
+      const store = useFlyerState.getState();
+      const startingPortraits = ((store.portraits?.[format] || []) as any[]).map((item) => ({ ...item }));
+      const layoutHasAssetList = Array.isArray(layout.emojiList);
+      const buildLayoutSvgDataUrl = (svgTemplate: string, color: string) => {
+        const svg = svgTemplate.replace(/\{\{COLOR\}\}/g, color);
+        return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
+      };
+      const normalizeLayoutAsset = (item: any) => {
+        if (!item || typeof item !== "object") return item;
+        if (typeof item.url === "string" && item.url) return { ...item };
+        if (typeof item.svgTemplate !== "string" || !item.svgTemplate) return { ...item };
+        const color = typeof item.iconColor === "string" && item.iconColor ? item.iconColor : "#ffffff";
+        return {
+          ...item,
+          url: buildLayoutSvgDataUrl(item.svgTemplate, color),
+          tint: typeof item.tint === "number" ? item.tint : 0,
+        };
+      };
+      const targetAssetList = ((layout.emojiList || []) as any[])
+        .filter((item: any) => item?.id)
+        .map((item: any) => normalizeLayoutAsset(item));
+      const targetAssets = new Map(targetAssetList.map((item: any) => [String(item.id), item]));
+      const startingAssetIds = new Set(startingPortraits.map((item) => String(item.id || "")));
+      const assetFrameItems = [
+        ...startingPortraits.map((item) => ({
+          id: String(item.id || ""),
+          start: item,
+          target: targetAssets.get(String(item.id || "")),
+        })),
+        ...targetAssetList
+          .filter((item: any) => !startingAssetIds.has(String(item.id || "")))
+          .map((item: any) => ({
+            id: String(item.id || ""),
+            start: null as any,
+            target: item,
+          })),
+      ];
+      const subjectTarget = {
+        x: typeof layout.portraitX === "number" ? layout.portraitX : portraitX,
+        y: typeof layout.portraitY === "number" ? layout.portraitY : portraitY,
+        scale: typeof layout.portraitScale === "number" ? layout.portraitScale : undefined,
+      };
+      const shouldMoveSubject = (item: any) =>
+        item?.id === "center_hero_sample_subject" ||
+        (!!item?.isExtracted && !item?.isFlare && !item?.isLogo && !item?.isBrandFace);
+      const interpolate = (from: number, to: number | undefined, eased: number) =>
+        typeof to === "number" && Number.isFinite(to) ? from + (to - from) * eased : from;
+      const interpolateAngle = (from: number, to: number | undefined, eased: number) => {
+        if (typeof to !== "number" || !Number.isFinite(to)) return from;
+        const delta = ((((to - from) % 360) + 540) % 360) - 180;
+        return from + delta * eased;
+      };
+      const durationMs = 560;
+      const easeInOutCubic = (t: number) =>
+        t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+      const applyBackgroundFrame = (eased: number) => {
+        if (!backgroundController || !backgroundTargets.length) return;
+        for (const item of backgroundTargets) {
+          backgroundController.setValue(
+            item.key,
+            item.key === "bgRotate"
+              ? interpolateAngle(item.from, item.to, eased)
+              : interpolate(item.from, item.to, eased)
+          );
+        }
+      };
+
+      const applyAssetFrame = (eased: number) => {
+        if (!assetFrameItems.length) return;
+        const nextPortraits = assetFrameItems.flatMap(({ start, target }) => {
+          const base = start ?? target;
+          if (!base) return [];
+          const subjectPatch = start && shouldMoveSubject(start) && !target ? subjectTarget : null;
+          if (!target && !subjectPatch) {
+            if (!layoutHasAssetList) return [base];
+            if (eased >= 1) return [];
+            return [
+              {
+                ...base,
+                opacity: interpolate(Number(base.opacity ?? 1), 0, eased),
+              },
+            ];
+          }
+          const targetOpacity =
+            target && typeof (target as any).opacity === "number" ? Number((target as any).opacity) : 1;
+          const fromOpacity = start ? Number(start.opacity ?? 1) : 0;
+          const nextItem = {
+            ...(target ?? base),
+            x: interpolate(Number(base.x ?? 50), (target as any)?.x ?? subjectPatch?.x, eased),
+            y: interpolate(Number(base.y ?? 50), (target as any)?.y ?? subjectPatch?.y, eased),
+            scale: interpolate(Number(base.scale ?? 1), (target as any)?.scale ?? subjectPatch?.scale, eased),
+            rotation: interpolate(Number(base.rotation ?? 0), (target as any)?.rotation, eased),
+            opacity: target ? interpolate(fromOpacity, targetOpacity, eased) : base.opacity,
+          };
+          return [eased >= 1 && target ? { ...(target as any) } : nextItem];
+        });
+        store.setPortraits(format, nextPortraits as any);
+      };
+
+      const commitSession = () => {
+        const positionPatch: Partial<TemplateBase> = {};
+        for (const item of numericTargets) {
+          (positionPatch as any)[item.key] = item.to;
+        }
+        if (typeof layout.headline === "string") {
+          setHeadline(layout.headline);
+          positionPatch.headline = layout.headline;
+        }
+        if (typeof layout.headlineFamily === "string") {
+          setHeadlineFamily(layout.headlineFamily);
+          positionPatch.headlineFamily = layout.headlineFamily;
+        }
+        if (typeof layout.headSizeAuto === "boolean") {
+          setHeadSizeAuto(layout.headSizeAuto);
+          positionPatch.headSizeAuto = layout.headSizeAuto;
+        }
+        const layoutHeadColor = layout.headColor;
+        if (layout.textFx) {
+          const nextTextFx = { ...layout.textFx };
+          if (typeof nextTextFx.color !== "string" && typeof layoutHeadColor === "string") {
+            nextTextFx.color = layoutHeadColor;
+          }
+          setTextFx((prev) => ({ ...prev, ...nextTextFx }));
+          positionPatch.textFx = nextTextFx;
+        } else if (typeof layoutHeadColor === "string") {
+          setTextFx((prev) => ({ ...prev, color: layoutHeadColor }));
+        }
+        if (typeof layoutHeadColor === "string") {
+          positionPatch.headColor = layoutHeadColor;
+        }
+        if (typeof layout.headShadow === "boolean") {
+          setHeadShadow(layout.headShadow);
+          positionPatch.headShadow = layout.headShadow;
+        }
+        if (typeof layout.headShadowStrength === "number") {
+          setHeadShadowStrength(layout.headShadowStrength);
+          positionPatch.headShadowStrength = layout.headShadowStrength;
+        }
+        if (typeof layout.head2line === "string") {
+          setHead2(layout.head2line);
+          positionPatch.head2line = layout.head2line;
+        }
+        if (typeof layout.head2Family === "string") {
+          setHead2Family(layout.head2Family);
+          positionPatch.head2Family = layout.head2Family;
+        }
+        if (typeof layout.details === "string") {
+          setDetails(layout.details);
+          positionPatch.details = layout.details;
+        }
+        if (typeof layout.detailsFamily === "string") {
+          setDetailsFamily(layout.detailsFamily);
+          positionPatch.detailsFamily = layout.detailsFamily;
+        }
+        if (typeof layout.detailsColor === "string") {
+          setBodyColor(layout.detailsColor);
+          positionPatch.detailsColor = layout.detailsColor;
+          if (typeof layout.bodyColor === "string") positionPatch.bodyColor = layout.bodyColor;
+        } else if (typeof layout.bodyColor === "string") {
+          setBodyColor(layout.bodyColor);
+          positionPatch.bodyColor = layout.bodyColor;
+        }
+        if (typeof layout.detailsTracking === "number") {
+          setBodyTracking(layout.detailsTracking);
+          positionPatch.detailsTracking = layout.detailsTracking;
+        }
+        if (layout.detailsAlign) {
+          setDetailsAlign(layout.detailsAlign as Align);
+          positionPatch.detailsAlign = layout.detailsAlign;
+        }
+        if (typeof layout.details2 === "string") {
+          setDetails2(layout.details2);
+          positionPatch.details2 = layout.details2;
+        }
+        if (typeof layout.details2Family === "string") {
+          setDetails2Family(layout.details2Family);
+          positionPatch.details2Family = layout.details2Family;
+        }
+        if (typeof layout.details2Color === "string") {
+          setDetails2Color(layout.details2Color);
+          positionPatch.details2Color = layout.details2Color;
+        }
+        if (typeof layout.details2LetterSpacing === "number") {
+          setDetails2LetterSpacing(layout.details2LetterSpacing);
+          positionPatch.details2LetterSpacing = layout.details2LetterSpacing;
+        }
+        if (layout.details2Align) {
+          setDetails2Align(layout.details2Align as Align);
+          positionPatch.details2Align = layout.details2Align;
+        }
+        if (typeof layout.venue === "string") {
+          setVenue(layout.venue);
+          positionPatch.venue = layout.venue;
+        }
+        if (typeof layout.venueFamily === "string") {
+          setVenueFamily(layout.venueFamily);
+          positionPatch.venueFamily = layout.venueFamily;
+        }
+        if (typeof layout.venueColor === "string") {
+          setVenueColor(layout.venueColor);
+          positionPatch.venueColor = layout.venueColor;
+        }
+        if (layout.venueAlign) {
+          setVenueAlign(layout.venueAlign as Align);
+          positionPatch.venueAlign = layout.venueAlign;
+        }
+        if (typeof layout.subtag === "string") {
+          setSubtag(layout.subtag);
+          positionPatch.subtag = layout.subtag;
+        }
+        if (typeof layout.subtagFamily === "string") {
+          setSubtagFamily(layout.subtagFamily);
+          positionPatch.subtagFamily = layout.subtagFamily;
+        }
+        if (typeof layout.subtagTextColor === "string") {
+          setSubtagTextColor(layout.subtagTextColor);
+          positionPatch.subtagTextColor = layout.subtagTextColor;
+        }
+        if (typeof layout.subtagBgColor === "string") {
+          setSubtagBgColor(layout.subtagBgColor);
+          positionPatch.subtagBgColor = layout.subtagBgColor;
+        }
+        if (layout.subtagAlign) {
+          setSubtagAlign(layout.subtagAlign as Align);
+          positionPatch.subtagAlign = layout.subtagAlign;
+        }
+        if (typeof layout.presenter === "string") {
+          setPresenterText(layout.presenter);
+          positionPatch.presenter = layout.presenter;
+        }
+        if (typeof layout.presenterFamily === "string") {
+          setPresenterFamily(layout.presenterFamily);
+          positionPatch.presenterFamily = layout.presenterFamily;
+        }
+        if (typeof layout.presenterColor === "string") {
+          setPresenterColor(layout.presenterColor);
+          positionPatch.presenterColor = layout.presenterColor;
+        }
+        if (layout.presenterAlign) {
+          setPresenterAlign(layout.presenterAlign as Align);
+          positionPatch.presenterAlign = layout.presenterAlign;
+        }
+        if (typeof layout.leftRail === "string") {
+          setLeftRailText(layout.leftRail);
+          positionPatch.leftRail = layout.leftRail;
+        }
+        if (typeof layout.leftRailFamily === "string") {
+          setLeftRailFamily(layout.leftRailFamily);
+          positionPatch.leftRailFamily = layout.leftRailFamily;
+        }
+        if (typeof layout.leftRailColor === "string") {
+          setLeftRailColor(layout.leftRailColor);
+          positionPatch.leftRailColor = layout.leftRailColor;
+        }
+        if (typeof layout.rightRail === "string") {
+          setRightRailText(layout.rightRail);
+          positionPatch.rightRail = layout.rightRail;
+        }
+        if (typeof layout.rightRailFamily === "string") {
+          setRightRailFamily(layout.rightRailFamily);
+          positionPatch.rightRailFamily = layout.rightRailFamily;
+        }
+        if (typeof layout.rightRailColor === "string") {
+          setRightRailColor(layout.rightRailColor);
+          positionPatch.rightRailColor = layout.rightRailColor;
+        }
+        if (typeof layout.date === "string") {
+          setDateText(layout.date);
+          positionPatch.date = layout.date;
+        }
+        if (typeof layout.dateFamily === "string") {
+          setDateFamily(layout.dateFamily);
+          positionPatch.dateFamily = layout.dateFamily;
+        }
+        if (typeof layout.dateColor === "string") {
+          setDateColor(layout.dateColor);
+          positionPatch.dateColor = layout.dateColor;
+        }
+        if (layout.dateAlign) {
+          setDateAlign(layout.dateAlign as Align);
+          positionPatch.dateAlign = layout.dateAlign;
+        }
+        if (typeof layout.price === "string") {
+          setPriceText(layout.price);
+          positionPatch.price = layout.price;
+        }
+        if (typeof layout.priceFamily === "string") {
+          setPriceFamily(layout.priceFamily);
+          positionPatch.priceFamily = layout.priceFamily;
+        }
+        if (typeof layout.priceColor === "string") {
+          setPriceColor(layout.priceColor);
+          positionPatch.priceColor = layout.priceColor;
+        }
+        if (layout.priceAlign) {
+          setPriceAlign(layout.priceAlign as Align);
+          positionPatch.priceAlign = layout.priceAlign;
+        }
+        if (layout.head2Fx) {
+          setHead2Fx((prev) => ({ ...prev, ...layout.head2Fx }));
+          positionPatch.head2Fx = layout.head2Fx;
+        }
+        if (typeof layout.head2ShadowStrength === "number") {
+          setHead2ShadowStrength(layout.head2ShadowStrength);
+          positionPatch.head2ShadowStrength = layout.head2ShadowStrength;
+        }
+        if (typeof layout.head2Color === "string") {
+          setHead2Color(layout.head2Color);
+          positionPatch.head2Color = layout.head2Color;
+        }
+        if (typeof layout.head2Enabled === "boolean") {
+          setHeadline2Enabled(format, layout.head2Enabled);
+          positionPatch.head2Enabled = layout.head2Enabled;
+        }
+        if (typeof layout.subtagEnabled === "boolean") {
+          setSubtagEnabled(format, layout.subtagEnabled);
+          positionPatch.subtagEnabled = layout.subtagEnabled;
+        }
+        if (typeof layout.details2Enabled === "boolean") {
+          setDetails2Enabled(format, layout.details2Enabled);
+          positionPatch.details2Enabled = layout.details2Enabled;
+        }
+        if (typeof layout.presenterEnabled === "boolean") {
+          setPresenterEnabled(layout.presenterEnabled);
+          positionPatch.presenterEnabled = layout.presenterEnabled;
+        }
+        if (typeof layout.leftRailEnabled === "boolean") {
+          setLeftRailEnabled(layout.leftRailEnabled);
+          positionPatch.leftRailEnabled = layout.leftRailEnabled;
+        }
+        if (typeof layout.rightRailEnabled === "boolean") {
+          setRightRailEnabled(layout.rightRailEnabled);
+          positionPatch.rightRailEnabled = layout.rightRailEnabled;
+        }
+        if (typeof layout.dateEnabled === "boolean") {
+          setDateEnabled(layout.dateEnabled);
+          positionPatch.dateEnabled = layout.dateEnabled;
+        }
+        if (typeof layout.priceEnabled === "boolean") {
+          setPriceEnabled(layout.priceEnabled);
+          positionPatch.priceEnabled = layout.priceEnabled;
+        }
+        if (typeof layout.qrEnabled === "boolean") {
+          setQrEnabled(layout.qrEnabled);
+          positionPatch.qrEnabled = layout.qrEnabled;
+        }
+        if (typeof (layout as any).qrImageUrl === "string") {
+          const nextQrImageUrl = String((layout as any).qrImageUrl || "");
+          setQrImageUrl(nextQrImageUrl || null);
+          positionPatch.qrImageUrl = nextQrImageUrl || null;
+        }
+        positionPatch.mainTitleRect = layout.mainTitleRect;
+        positionPatch.ghostTitleRect = layout.ghostTitleRect;
+        positionPatch.scriptRect = layout.scriptRect;
+        positionPatch.leftMetaRect = layout.leftMetaRect;
+        positionPatch.rightMetaRect = layout.rightMetaRect;
+        positionPatch.priceRect = layout.priceRect;
+        positionPatch.footerRect = layout.footerRect;
+        positionPatch.textZones = layout.textZones;
+        if (typeof layout.headBehindPortrait === "boolean") {
+          positionPatch.headBehindPortrait = layout.headBehindPortrait;
+        }
+        if (layout.textLayerOffset && typeof layout.textLayerOffset === "object") {
+          positionPatch.textLayerOffset = layout.textLayerOffset;
+        }
+        for (const key of ["bgPosX", "bgPosY", "bgScale", "bgRotate", "hue", "vibrance"] as const) {
+          if (typeof layout[key] === "number") {
+            (positionPatch as any)[key] = layout[key];
+          }
+        }
+        if (layoutHasAssetList) {
+          positionPatch.emojiList = targetAssetList.map((item: any) => ({ ...item }));
+        }
+        store.setSession((prev) => ({
+          ...prev,
+          [format]: {
+            ...(prev[format] ?? {}),
+            ...positionPatch,
+          },
+        }));
+        store.setSessionDirty((prev) => ({ ...prev, [format]: true }));
+      };
+
+      let startTime: number | null = null;
+      const step = (timestamp: number) => {
+        if (startTime == null) startTime = timestamp;
+        const rawProgress = Math.min(1, (timestamp - startTime) / durationMs);
+        const eased = easeInOutCubic(rawProgress);
+        for (const item of numericTargets) {
+          item.set(interpolate(item.from, item.to, eased));
+        }
+        applyAssetFrame(eased);
+        applyBackgroundFrame(eased);
+
+        if (rawProgress < 1) {
+          centerHeroLayoutRafRef.current = window.requestAnimationFrame(step);
+          return;
+        }
+        centerHeroLayoutRafRef.current = null;
+        for (const item of numericTargets) item.set(item.to);
+        applyAssetFrame(1);
+        applyBackgroundFrame(1);
+        commitSession();
+      };
+
+      centerHeroLayoutRafRef.current = window.requestAnimationFrame(step);
+    },
+    [
+      format,
+      hasSquareLayoutOptions,
+      isBlackTieTemplateActive,
+      isEdmStageCo2TemplateActive,
+      isEdmTunnelTemplateActive,
+      isLuxeTemplateActive,
+      isMojitoTemplateActive,
+      isNocturneTemplateActive,
+      isSugarRushTemplateActive,
+      headX,
+      headY,
+      lineHeight,
+      head2X,
+      head2Y,
+      head2SizePx,
+      head2LineHeight,
+      subtagX,
+      subtagY,
+      detailsX,
+      detailsY,
+      bodySize,
+      detailsLineHeight,
+      details2X,
+      details2Y,
+      details2Size,
+      details2LineHeight,
+      venueX,
+      venueY,
+      venueSize,
+      venueLineHeight,
+      presenterX,
+      presenterY,
+      presenterSize,
+      presenterLineHeight,
+      presenterWidth,
+      leftRailX,
+      leftRailY,
+      leftRailSize,
+      leftRailLineHeight,
+      leftRailRotation,
+      rightRailX,
+      rightRailY,
+      rightRailSize,
+      rightRailLineHeight,
+      rightRailRotation,
+      dateX,
+      dateY,
+      dateSize,
+      dateLineHeight,
+      priceX,
+      priceY,
+      priceSize,
+      priceLineHeight,
+      priceScale,
+      qrX,
+      qrY,
+      qrScale,
+      portraitX,
+      portraitY,
+      portraitScale,
+      headManualPx,
+      headMaxPx,
+      textColWidth,
+    ]
+  );
 
 
   /* subtag */
@@ -12323,6 +18270,11 @@ useEffect(() => { ensureFontLoaded(bodyFamily); }, [bodyFamily]);
 useEffect(() => { ensureFontLoaded(venueFamily); }, [venueFamily]);
 useEffect(() => { ensureFontLoaded(subtagFamily); }, [subtagFamily]);
 useEffect(() => { ensureFontLoaded(head2Family); }, [head2Family]);
+useEffect(() => { ensureFontLoaded(presenterFamily); }, [presenterFamily]);
+useEffect(() => { ensureFontLoaded(leftRailFamily); }, [leftRailFamily]);
+useEffect(() => { ensureFontLoaded(rightRailFamily); }, [rightRailFamily]);
+useEffect(() => { ensureFontLoaded(dateFamily); }, [dateFamily]);
+useEffect(() => { ensureFontLoaded(priceFamily); }, [priceFamily]);
  
 
 // Map current text selection to a size controller for pinch scaling
@@ -12505,20 +18457,132 @@ const [bgBlur, setBgBlur] = useState(0);
       if (!root) return null;
       const node = root.querySelector(`[data-portrait-id="${portraitId}"]`) as HTMLElement | null;
       if (!node) return null;
-      const rootRect = root.getBoundingClientRect();
-      const nodeRect = node.getBoundingClientRect();
-      if (!rootRect.width || !rootRect.height || !nodeRect.width || !nodeRect.height) {
-        return null;
-      }
-      return {
-        centerX: ((nodeRect.left + nodeRect.width / 2 - rootRect.left) / rootRect.width) * 100,
-        centerY: ((nodeRect.top + nodeRect.height / 2 - rootRect.top) / rootRect.height) * 100,
-        width: (nodeRect.width / rootRect.width) * 100,
-        height: (nodeRect.height / rootRect.height) * 100,
-      };
-    },
-    []
-  );
+      const measuredNode =
+        (node.querySelector('[data-hit-bounds="true"]') as HTMLElement | null) || node;
+	      const rootRect = root.getBoundingClientRect();
+	      const nodeRect = measuredNode.getBoundingClientRect();
+	      if (!rootRect.width || !rootRect.height || !nodeRect.width || !nodeRect.height) {
+	        return null;
+	      }
+	      const analyzeVisualMass = (): CanvasPortraitPlacement["visualMass"] => {
+	        const sourceImg = node.querySelector('[data-hit-source="true"]') as HTMLImageElement | null;
+	        if (!sourceImg?.complete || !sourceImg.naturalWidth || !sourceImg.naturalHeight) return null;
+
+	        try {
+	          const imgRect = sourceImg.getBoundingClientRect();
+	          if (!imgRect.width || !imgRect.height) return null;
+	          const maxMaskSide = 192;
+	          const maskScale = Math.min(1, maxMaskSide / Math.max(sourceImg.naturalWidth, sourceImg.naturalHeight));
+	          const maskWidth = Math.max(1, Math.round(sourceImg.naturalWidth * maskScale));
+	          const maskHeight = Math.max(1, Math.round(sourceImg.naturalHeight * maskScale));
+	          const canvas = document.createElement("canvas");
+	          canvas.width = maskWidth;
+	          canvas.height = maskHeight;
+	          const ctx = canvas.getContext("2d", { willReadFrequently: true });
+	          if (!ctx) return null;
+	          ctx.drawImage(sourceImg, 0, 0, maskWidth, maskHeight);
+	          const data = ctx.getImageData(0, 0, maskWidth, maskHeight).data;
+	          const mask = new Uint8Array(maskWidth * maskHeight);
+	          let minX = maskWidth;
+	          let minY = maskHeight;
+	          let maxX = -1;
+	          let maxY = -1;
+	          let alphaMass = 0;
+	          let weightedX = 0;
+	          let weightedY = 0;
+	          let opaqueCount = 0;
+
+	          for (let y = 0; y < maskHeight; y += 1) {
+	            for (let x = 0; x < maskWidth; x += 1) {
+	              const alpha = data[(y * maskWidth + x) * 4 + 3] ?? 255;
+	              if (alpha <= 18) continue;
+	              const index = y * maskWidth + x;
+	              const weight = alpha / 255;
+	              mask[index] = 1;
+	              alphaMass += weight;
+	              weightedX += (x + 0.5) * weight;
+	              weightedY += (y + 0.5) * weight;
+	              opaqueCount += 1;
+	              if (x < minX) minX = x;
+	              if (y < minY) minY = y;
+	              if (x > maxX) maxX = x;
+	              if (y > maxY) maxY = y;
+	            }
+	          }
+
+	          if (maxX < minX || maxY < minY || alphaMass <= 0) return null;
+
+	          let edgeCount = 0;
+	          for (let y = minY; y <= maxY; y += 1) {
+	            for (let x = minX; x <= maxX; x += 1) {
+	              const index = y * maskWidth + x;
+	              if (!mask[index]) continue;
+	              if (
+	                x === 0 ||
+	                y === 0 ||
+	                x === maskWidth - 1 ||
+	                y === maskHeight - 1 ||
+	                !mask[index - 1] ||
+	                !mask[index + 1] ||
+	                !mask[index - maskWidth] ||
+	                !mask[index + maskWidth]
+	              ) {
+	                edgeCount += 1;
+	              }
+	            }
+	          }
+
+	          const boxWidth = maxX - minX + 1;
+	          const boxHeight = maxY - minY + 1;
+	          const imgLeftPct = ((imgRect.left - rootRect.left) / rootRect.width) * 100;
+	          const imgTopPct = ((imgRect.top - rootRect.top) / rootRect.height) * 100;
+	          const imgWidthPct = (imgRect.width / rootRect.width) * 100;
+	          const imgHeightPct = (imgRect.height / rootRect.height) * 100;
+	          const alphaCenterX = (minX + boxWidth / 2) / maskWidth;
+	          const alphaCenterY = (minY + boxHeight / 2) / maskHeight;
+	          const massCenterX = weightedX / alphaMass / maskWidth;
+	          const massCenterY = weightedY / alphaMass / maskHeight;
+	          const silhouetteBounds = {
+	            centerX: imgLeftPct + alphaCenterX * imgWidthPct,
+	            centerY: imgTopPct + alphaCenterY * imgHeightPct,
+	            width: (boxWidth / maskWidth) * imgWidthPct,
+	            height: (boxHeight / maskHeight) * imgHeightPct,
+	          };
+	          const occupiedRatio = Math.max(0.02, Math.min(1, alphaMass / Math.max(1, boxWidth * boxHeight)));
+	          const boxArea = (Math.max(0, silhouetteBounds.width) * Math.max(0, silhouetteBounds.height)) / 10000;
+	          const visualPressure = Math.max(0.01, Math.min(1.6, boxArea * (0.72 + occupiedRatio * 0.28)));
+
+	          return {
+	            silhouetteBounds: {
+	              centerX: Number(silhouetteBounds.centerX.toFixed(2)),
+	              centerY: Number(silhouetteBounds.centerY.toFixed(2)),
+	              width: Number(silhouetteBounds.width.toFixed(2)),
+	              height: Number(silhouetteBounds.height.toFixed(2)),
+	            },
+	            massCenter: {
+	              x: Number((imgLeftPct + massCenterX * imgWidthPct).toFixed(2)),
+	              y: Number((imgTopPct + massCenterY * imgHeightPct).toFixed(2)),
+	            },
+	            occupiedRatio: Number(occupiedRatio.toFixed(3)),
+	            edgeComplexity: Number(Math.max(0, Math.min(100, edgeCount / Math.max(1, Math.sqrt(opaqueCount)))).toFixed(2)),
+	            verticalWeight: Number(Math.max(0, Math.min(1, massCenterY)).toFixed(3)),
+	            horizontalWeight: Number(Math.max(0, Math.min(1, massCenterX)).toFixed(3)),
+	            visualPressure: Number(visualPressure.toFixed(3)),
+	          };
+	        } catch {
+	          return null;
+	        }
+	      };
+	      return {
+	        centerX: ((nodeRect.left + nodeRect.width / 2 - rootRect.left) / rootRect.width) * 100,
+	        centerY: ((nodeRect.top + nodeRect.height / 2 - rootRect.top) / rootRect.height) * 100,
+	        width: (nodeRect.width / rootRect.width) * 100,
+	        height: (nodeRect.height / rootRect.height) * 100,
+	        visualMass: analyzeVisualMass(),
+	      };
+	    },
+	    []
+	  );
 
   const capturePortraitLayerVersion = React.useCallback((layer: any) => {
     if (!layer?.url) return null;
@@ -12708,6 +18772,25 @@ const [bgBlur, setBgBlur] = useState(0);
   const [vibrance,  setVibrance]  = useState<number>(0.15); // 0..1 vibrance lift
   const [filmGrade, setFilmGrade] = useState<number>(0.6);  // 0..1 curves blend strength
 
+  applyCenterHeroBackgroundLayoutRef.current = {
+    values: {
+      bgPosX,
+      bgPosY,
+      bgScale,
+      bgRotate,
+      hue,
+      vibrance,
+    },
+    setValue: (key, value) => {
+      if (key === "bgPosX") setBgPosX(value);
+      else if (key === "bgPosY") setBgPosY(value);
+      else if (key === "bgScale") setBgScale(value);
+      else if (key === "bgRotate") setBgRotate(value);
+      else if (key === "hue") setHue(value);
+      else if (key === "vibrance") setVibrance(value);
+    },
+  };
+
     // compose a CSS filter string for master pass
     const masterFilter = React.useMemo(() => {
     // gamma hack: approximate with contrast+brightness combo
@@ -12776,7 +18859,35 @@ const [bgBlur, setBgBlur] = useState(0);
     >
   >(new Map());
 
-  const isOpaqueAssetHit = React.useCallback((assetEl: HTMLElement | null, sourceImg: HTMLImageElement | null, clientX: number, clientY: number, hitMode: "pixel" | "alpha-bounds" = "pixel") => {
+  type AssetHitMode = "pixel" | "alpha-bounds";
+  type AssetHitPrecision = "normal" | "high";
+
+  const getAssetHitParts = React.useCallback((currentEl: HTMLElement) => {
+    const assetEl = (currentEl.querySelector('[data-hit-bounds="true"]') as HTMLElement | null) || currentEl;
+    const sourceImg = currentEl.querySelector('[data-hit-source="true"]') as HTMLImageElement | null;
+    const hitMode: AssetHitMode =
+      currentEl.dataset.hitMode === "alpha-bounds" ||
+      assetEl?.dataset.hitMode === "alpha-bounds" ||
+      sourceImg?.dataset.hitMode === "alpha-bounds"
+        ? "alpha-bounds"
+        : "pixel";
+    const hitPrecision: AssetHitPrecision =
+      currentEl.dataset.hitPrecision === "high" ||
+      assetEl?.dataset.hitPrecision === "high" ||
+      sourceImg?.dataset.hitPrecision === "high"
+        ? "high"
+        : "normal";
+    return { assetEl, sourceImg, hitMode, hitPrecision };
+  }, []);
+
+  const isOpaqueAssetHit = React.useCallback((
+    assetEl: HTMLElement | null,
+    sourceImg: HTMLImageElement | null,
+    clientX: number,
+    clientY: number,
+    hitMode: AssetHitMode = "pixel",
+    hitPrecision: AssetHitPrecision = "normal"
+  ) => {
     if (!assetEl || !sourceImg) return true;
 
     const width = assetEl.offsetWidth || sourceImg.offsetWidth || sourceImg.clientWidth;
@@ -12806,8 +18917,10 @@ const [bgBlur, setBgBlur] = useState(0);
 
     if (localX < 0 || localX > width || localY < 0 || localY > height) return false;
 
-    const cacheKey = sourceImg.currentSrc || sourceImg.src || "";
-    if (!cacheKey) return true;
+    const sourceKey = sourceImg.currentSrc || sourceImg.src || "";
+    if (!sourceKey) return true;
+    const maxMaskSide = hitPrecision === "high" ? 1024 : 192;
+    const cacheKey = `${sourceKey}::${maxMaskSide}`;
 
     let cacheEntry = transparentHitCacheRef.current.get(cacheKey) || null;
     if (!cacheEntry) {
@@ -12815,7 +18928,6 @@ const [bgBlur, setBgBlur] = useState(0);
         const naturalWidth = sourceImg.naturalWidth || width;
         const naturalHeight = sourceImg.naturalHeight || height;
         if (!naturalWidth || !naturalHeight) return true;
-        const maxMaskSide = 192;
         const maskScale = Math.min(1, maxMaskSide / Math.max(naturalWidth, naturalHeight));
         const maskWidth = Math.max(1, Math.round(naturalWidth * maskScale));
         const maskHeight = Math.max(1, Math.round(naturalHeight * maskScale));
@@ -12873,29 +18985,74 @@ const [bgBlur, setBgBlur] = useState(0);
   }, []);
 
   const redirectTransparentAssetPointer = React.useCallback((event: React.PointerEvent<HTMLElement>, currentEl: HTMLElement) => {
-    const assetEl = (currentEl.querySelector('[data-hit-bounds="true"]') as HTMLElement | null) || currentEl;
-    const sourceImg = currentEl.querySelector('[data-hit-source="true"]') as HTMLImageElement | null;
-    const hitMode =
-      currentEl.dataset.hitMode === "alpha-bounds" ||
-      assetEl?.dataset.hitMode === "alpha-bounds" ||
-      sourceImg?.dataset.hitMode === "alpha-bounds"
-        ? "alpha-bounds"
-        : "pixel";
-    if (isOpaqueAssetHit(assetEl, sourceImg, event.clientX, event.clientY, hitMode)) return false;
+    const { assetEl, sourceImg, hitMode, hitPrecision } = getAssetHitParts(currentEl);
+    if (isOpaqueAssetHit(assetEl, sourceImg, event.clientX, event.clientY, hitMode, hitPrecision)) return false;
 
-    const priorPointerEvents = currentEl.style.pointerEvents;
-    currentEl.style.pointerEvents = "none";
-    const underneath = document.elementFromPoint(event.clientX, event.clientY) as HTMLElement | null;
-    currentEl.style.pointerEvents = priorPointerEvents;
+    const skipped: Array<{ el: HTMLElement; pointerEvents: string }> = [];
+    const disableForHitTest = (el: HTMLElement) => {
+      if (skipped.some((item) => item.el === el)) return;
+      skipped.push({ el, pointerEvents: el.style.pointerEvents });
+      el.style.pointerEvents = "none";
+    };
+    const restoreSkipped = () => {
+      skipped.forEach(({ el, pointerEvents }) => {
+        el.style.pointerEvents = pointerEvents;
+      });
+    };
 
-    const nextTarget = underneath?.closest('[data-portrait-area="true"]') as HTMLElement | null;
-    if (!nextTarget || nextTarget === currentEl) {
+    disableForHitTest(currentEl);
+    let handoffTarget: HTMLElement | null = null;
+
+    for (let i = 0; i < 12; i += 1) {
+      const underneath = document.elementFromPoint(event.clientX, event.clientY) as HTMLElement | null;
+      const candidate = underneath?.closest('[data-portrait-area="true"]') as HTMLElement | null;
+      if (!underneath || skipped.some((item) => item.el === underneath)) break;
+      if (!candidate || candidate === currentEl) {
+        handoffTarget = underneath;
+        break;
+      }
+      if (skipped.some((item) => item.el === candidate)) break;
+
+      const parts = getAssetHitParts(candidate);
+      if (
+        isOpaqueAssetHit(
+          parts.assetEl,
+          parts.sourceImg,
+          event.clientX,
+          event.clientY,
+          parts.hitMode,
+          parts.hitPrecision
+        )
+      ) {
+        handoffTarget = candidate;
+        break;
+      }
+
+      disableForHitTest(candidate);
+    }
+
+    if (!handoffTarget || handoffTarget === currentEl) {
+      restoreSkipped();
       event.preventDefault();
       event.stopPropagation();
       return true;
     }
 
-    nextTarget.dispatchEvent(
+    let restored = false;
+    let restoreTimer = 0;
+    const restoreAfterPointerEnd = () => {
+      if (restored) return;
+      restored = true;
+      window.clearTimeout(restoreTimer);
+      window.removeEventListener("pointerup", restoreAfterPointerEnd, true);
+      window.removeEventListener("pointercancel", restoreAfterPointerEnd, true);
+      restoreSkipped();
+    };
+    window.addEventListener("pointerup", restoreAfterPointerEnd, true);
+    window.addEventListener("pointercancel", restoreAfterPointerEnd, true);
+    restoreTimer = window.setTimeout(restoreAfterPointerEnd, 1800);
+
+    handoffTarget.dispatchEvent(
       new PointerEvent("pointerdown", {
         bubbles: true,
         cancelable: true,
@@ -12920,22 +19077,15 @@ const [bgBlur, setBgBlur] = useState(0);
     event.preventDefault();
     event.stopPropagation();
     return true;
-  }, [isOpaqueAssetHit]);
+  }, [getAssetHitParts, isOpaqueAssetHit]);
 
   const ignoreTransparentAssetClick = React.useCallback((event: React.MouseEvent<HTMLElement>, currentEl: HTMLElement) => {
-    const assetEl = (currentEl.querySelector('[data-hit-bounds="true"]') as HTMLElement | null) || currentEl;
-    const sourceImg = currentEl.querySelector('[data-hit-source="true"]') as HTMLImageElement | null;
-    const hitMode =
-      currentEl.dataset.hitMode === "alpha-bounds" ||
-      assetEl?.dataset.hitMode === "alpha-bounds" ||
-      sourceImg?.dataset.hitMode === "alpha-bounds"
-        ? "alpha-bounds"
-        : "pixel";
-    if (isOpaqueAssetHit(assetEl, sourceImg, event.clientX, event.clientY, hitMode)) return false;
+    const { assetEl, sourceImg, hitMode, hitPrecision } = getAssetHitParts(currentEl);
+    if (isOpaqueAssetHit(assetEl, sourceImg, event.clientX, event.clientY, hitMode, hitPrecision)) return false;
     event.preventDefault();
     event.stopPropagation();
     return true;
-  }, [isOpaqueAssetHit]);
+  }, [getAssetHitParts, isOpaqueAssetHit]);
 
 
   // === SELECT HELPERS (do not move) ===
@@ -13372,10 +19522,10 @@ const mobileFloatPanelClass =
 
   const handleClearIconSelection = React.useCallback(() => setSelIconId(null), []);
   const handleMobileDragEnd = React.useCallback(() => {}, []);
-  const isIOS = React.useMemo(
-    () => /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream,
-    []
-  );
+  const [isIOS, setIsIOS] = React.useState(false);
+  React.useEffect(() => {
+    setIsIOS(/iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream);
+  }, []);
 
   function dataUrlBytes(dataUrl: string): number {
     const base64 = dataUrl.split(",")[1] || "";
@@ -13923,16 +20073,27 @@ const mobileFloatPanelClass =
       }),
     []
   );
-  const visibleTemplateGallery = isStarterPlan ? starterTemplateGallery : TEMPLATE_GALLERY;
+  const fullTemplateGallery = React.useMemo(
+    () => pinFeaturedTemplates(TEMPLATE_GALLERY),
+    []
+  );
+  const visibleTemplateGallery = isStarterPlan ? starterTemplateGallery : fullTemplateGallery;
   const startupTemplateOptions = React.useMemo(
     () =>
-      TEMPLATE_GALLERY.map((template) => ({
-        key: template.id,
-        label: template.label,
-        desc: template.tags?.slice(0, 3).join(" / ") || "Editable starter flyer",
-        preview: template.preview,
-      })),
-    []
+      fullTemplateGallery.map((template) => {
+        const recipe = template.recipeId ? getVisualRecipe(template.recipeId) : undefined;
+        return {
+          key: template.id,
+          label: template.label,
+          desc:
+            template.recipeSummary ||
+            recipe?.summary ||
+            template.tags?.slice(0, 3).join(" / ") ||
+            "Editable starter flyer",
+          preview: template.preview,
+        };
+      }),
+    [fullTemplateGallery]
   );
   const visibleStartupBackgrounds = isStarterPlan ? STARTER_BACKGROUND_CHOICES : DJ_STARTUP_BACKGROUNDS;
   const isDjStartupMode = startupStudioMode === "dj";
@@ -14586,12 +20747,26 @@ const mobileFloatPanelClass =
           headline_length: String(headline || "").length,
           headline_style: headGlitchEnabled
             ? "glitch"
+            : headKineticEnabled
+            ? "kinetic"
+            : headDashStrokeEnabled
+            ? "dash_stroke"
+            : headPure3dEnabled
+            ? "pure_3d"
+            : headGoldBlockEnabled
+            ? "gold_block"
+            : headCyberEmbossEnabled
+            ? "retro_engraved"
+            : headQuantumEnabled
+            ? "quantum"
+            : headVerticalStretchEnabled
+            ? "vertical_stretch"
+            : headGlassEnabled
+            ? "glass"
             : headRushEnabled
             ? "halftone"
             : headLineEnabled
             ? "line"
-            : headSliceEnabled
-            ? "echo"
             : "standard",
           canvas_width: canvasSize.w,
           canvas_height: canvasSize.h,
@@ -14615,7 +20790,16 @@ const mobileFloatPanelClass =
       hasAuthSession,
       hasPaidAccess,
       handleExportStart,
+      headGlassEnabled,
+      headCyberEmbossEnabled,
+      headDashStrokeEnabled,
+      headPure3dEnabled, headPure3dPaletteLinked,
+      headPure3dFaceColor, headPure3dEdgeColor, headPure3dShadowColor, headPure3dFrame,
+      headGoldBlockEnabled,
       headGlitchEnabled,
+      headKineticEnabled,
+      headQuantumEnabled,
+      headVerticalStretchEnabled,
       headRushEnabled,
       headLineEnabled,
       headSliceEnabled,
@@ -14767,6 +20951,7 @@ function clearAllSelections() {
 
   // ✅ Store-backed selection
   store.setSelectedPortraitId(null);
+  store.setSelectedEmojiId(null);
   store.setDragging(null);
 
   // ✅ Local React state selections (these are NOT in Zustand FlyerState)
@@ -14847,7 +21032,7 @@ const activeCanvasObjectCount =
 const mobileCompositeStressMode =
   isMobileView &&
   !hideUiForExport &&
-  (headGlitchEnabled || activeCanvasFlareCount > 0) &&
+  (headGlitchEnabled || headGlassEnabled || activeCanvasFlareCount > 0) &&
   (activeCanvasObjectCount >= 2 || !!bgUploadUrl || !!bgUrl);
 const canvasMasterFilterCss = masterFilterCss;
 
@@ -14861,6 +21046,8 @@ const canvasMasterFilterCss = masterFilterCss;
   const [genError, setGenError] = useState<string>('');
   const [autoLayoutLoading, setAutoLayoutLoading] = useState(false);
   const [autoLayoutError, setAutoLayoutError] = useState<string | null>(null);
+  const [geometryFitLoading, setGeometryFitLoading] = useState(false);
+  const [geometryFitError, setGeometryFitError] = useState<string | null>(null);
   const [autoLayoutReferenceUrl, setAutoLayoutReferenceUrl] = useState<string | null>(null);
   const [isPlaceholder, setIsPlaceholder] = useState<boolean>(false);
   const [variety, setVariety] = useState<number>(3);
@@ -15081,6 +21268,400 @@ const clearAutoLayoutReference = React.useCallback(() => {
   setAutoLayoutError(null);
 }, []);
 
+const loadLadiesNightSubjectPosterTest = React.useCallback(() => {
+  const targetFormat: Format = "square";
+  const testTemplate = TEMPLATE_GALLERY.find((item) => item.id === "square_center_hero_nightlife");
+  const templateLayout = (testTemplate?.formats?.[targetFormat] ??
+    testTemplate?.formats?.square ??
+    testTemplate?.base ??
+    {}) as Partial<TemplateBase>;
+  const layout = {
+    ...templateLayout,
+    headline: templateLayout.headline ?? "MARCUS",
+    headlineSize: 182,
+    headlineHeight: 0.7,
+    headlineLineHeight: 0.7,
+    headX: 7.7,
+    headY: 17,
+    headAlign: "center",
+    headBehindPortrait: true,
+    headStrokeWidth: 1.2,
+    headStrokeColor: "#10131A",
+    headShadow: false,
+    head2Enabled: true,
+    head2line: templateLayout.head2line ?? "MARCUS",
+    head2Size: 182,
+    head2LineHeight: 0.7,
+    head2X: 7.2,
+    head2Y: 41.7,
+    head2ColWidth: 86,
+    head2Color: "rgba(255,255,255,0.09)",
+    subtagEnabled: true,
+    subtag: templateLayout.subtag ?? "SANDERS",
+    subtagSize: 56,
+    subtagX: 20.1,
+    subtagY: 78.4,
+    subtagAlpha: 0,
+    pillAlpha: 0,
+    detailsX: 8,
+    detailsY: 66.7,
+    detailsSize: 15,
+    detailsLineHeight: 0.7,
+    detailsAlign: "left",
+    bodyFamily: "Bebas Neue",
+    detailsFamily: "Bebas Neue",
+    details2Enabled: false,
+    details2X: 86.4,
+    details2Y: 27.6,
+    details2Size: 15,
+    details2Family: "Bebas Neue",
+    details2Rotate: 90,
+    details2LineHeight: 0.7,
+    venueX: 35.5,
+    venueY: 88.6,
+    venueSize: 15,
+    venueFamily: "Bebas Neue",
+    venueLineHeight: 0.7,
+    presenterEnabled: true,
+    presenterX: 17,
+    presenterY: 5.8,
+    presenterWidth: 66.8,
+    presenterSize: 15,
+    presenterFamily: "Bebas Neue",
+    leftRailEnabled: true,
+    leftRailX: -7,
+    leftRailY: 32,
+    leftRailSize: 15,
+    leftRailFamily: "Bebas Neue",
+    leftRailRotation: -90,
+    rightRailEnabled: true,
+    rightRail: "FOOD X DRINKS X HOOKAH",
+    rightRailX: 78,
+    rightRailY: 32,
+    rightRailSize: 15,
+    rightRailFamily: "Bebas Neue",
+    rightRailColor: "#18F0C8",
+    rightRailRotation: 90,
+    dateEnabled: true,
+    dateX: 8,
+    dateY: 5.6,
+    dateSize: 25,
+    dateFamily: "Bebas Neue",
+    priceEnabled: true,
+    priceX: 81.8,
+    priceY: 67.5,
+    priceSize: 24,
+    priceFamily: "Bebas Neue",
+    qrEnabled: true,
+    qrX: 84.4,
+    qrY: 6,
+    qrScale: 0.58,
+    textColWidth: 86,
+    align: "center",
+    textAlign: "center",
+    portraitX: 50,
+    portraitY: 70,
+    portraitScale: 0.39,
+    subjectVisibleRect: { x: 21.8, y: 15.2, width: 56, height: 84.8 },
+    mainTitleRect: { x: 7.7, y: 17, width: 86, height: 24 },
+    ghostTitleRect: { x: 7.2, y: 41.7, width: 86, height: 26 },
+    scriptRect: { x: 20.1, y: 78.4, width: 54, height: 10 },
+    leftMetaRect: { x: 8, y: 66, width: 13.8, height: 15 },
+    rightMetaRect: { x: 85.2, y: 4.8, width: 7.5, height: 76.4 },
+    priceRect: { x: 85.2, y: 67.5, width: 7.5, height: 12 },
+    footerRect: { x: 24, y: 86.7, width: 52, height: 7 },
+    textLayerOffset: {
+      headline: 0,
+      headline2: -22,
+      details: 116,
+      details2: 116,
+      venue: 116,
+      subtag: 116,
+      ...templateLayout.textLayerOffset,
+    },
+  } satisfies Partial<TemplateBase>;
+  const bgPath =
+    (typeof (layout as any).backgroundUrl === "string" && (layout as any).backgroundUrl) ||
+    testTemplate?.preview ||
+    "/templates/hiphop_graffiti.jpg";
+  const subjectPath = "/scene-assets/ladies-night/subject1.png";
+  const bgUrl =
+    typeof window !== "undefined" ? new URL(bgPath, window.location.origin).toString() : bgPath;
+  const subjectId = "ladies_night_subject_test";
+  const store = useFlyerState.getState();
+  const subjectLayer = {
+    id: subjectId,
+    url: subjectPath,
+    x: layout.portraitX ?? 50,
+    y: layout.portraitY ?? 55,
+    scale: layout.portraitScale ?? 0.39,
+    locked: false,
+    isSticker: false,
+    isFlare: false,
+    isExtracted: true,
+    shadowBlur: 24,
+    shadowAlpha: 0.48,
+    layerOffset: 68,
+  };
+  const templateAssets = (layout.emojiList ?? []).filter(
+    (item) => !String(item.id || "").includes("subject")
+  );
+
+  if (testTemplate) {
+    setTemplateId(testTemplate.id);
+    setActiveTemplate(testTemplate);
+  }
+  store.setSession({ square: {}, story: {} });
+  store.setSessionDirty({ square: false, story: false });
+  store.setEmojis(targetFormat, []);
+  store.setPortraits(targetFormat, []);
+  store.setSelectedEmojiId(null);
+  store.setSelectedPortraitId(null);
+
+  setFormat(targetFormat);
+  setBgUploadUrl(null);
+  setBgUrl(bgPath);
+  setBgPosX(layout.bgPosX ?? 50);
+  setBgPosY(layout.bgPosY ?? 50);
+  setBgScale(layout.bgScale ?? 1);
+  setVignette(layout.vignette ?? true);
+  setVignetteStrength(layout.vignetteStrength ?? 0.54);
+  setHaze((layout as any).haze ?? 0.22);
+  setGrade((layout as any).grade ?? 0.38);
+  setLeak((layout as any).leak ?? 0.18);
+  setClarity((layout as any).clarity ?? 0.2);
+  setContrast((layout as any).contrast ?? 1.08);
+  setSaturation((layout as any).saturation ?? 1.1);
+  setWarmth((layout as any).warmth ?? 0.04);
+  setVibrance((layout as any).vibrance ?? 0.16);
+  setFilmGrade((layout as any).filmGrade ?? 0.52);
+  setAutoLayoutReferenceUrl(bgUrl);
+  setAutoLayoutError(null);
+
+  setHeadline(layout.headline ?? "MARCUS");
+  setHead2(layout.head2line ?? "MARCUS");
+  setDetails(layout.details ?? "Live\nFOOD\nDRINKS\nHOOKAH");
+  setDetails2(
+    layout.details2 ??
+      "FOOD X DRINKS X HOOKAH"
+  );
+  setVenue(layout.venue ?? "388 COMPTON BLVD, HOUSTON TX, +48 05 555 888 444");
+  setSubtag(layout.subtag ?? "Sanders");
+
+  setHeadX(layout.headX ?? 15);
+  setHeadY(layout.headY ?? 17);
+  setHead2X(layout.head2X ?? 19);
+  setHead2Y(layout.head2Y ?? 34);
+  setDetailsX(layout.detailsX ?? 8);
+  setDetailsY(layout.detailsY ?? 72);
+  setDetails2X(layout.details2X ?? 92);
+  setDetails2Y(layout.details2Y ?? 35);
+  setVenueX(layout.venueX ?? 43);
+  setVenueY(layout.venueY ?? 89.5);
+  setSubtagX(layout.subtagX ?? 31);
+  setSubtagY(layout.subtagY ?? 43);
+  setPresenterEnabled(layout.presenterEnabled ?? true);
+  setPresenterText(layout.presenter ?? "BLAZE FLYERS PRESENTS");
+  setPresenterX(layout.presenterX ?? 31.5);
+  setPresenterY(layout.presenterY ?? 7.5);
+  setPresenterWidth(layout.presenterWidth ?? 40);
+  setPresenterSize(layout.presenterSize ?? 10);
+  setPresenterLineHeight((layout as any).presenterLineHeight ?? 0.7);
+  setPresenterFamily(layout.presenterFamily ?? "Inter");
+  setPresenterColor(layout.presenterColor ?? "#ffffff");
+  setPresenterAlign((layout.presenterAlign as any) ?? "center");
+  setPresenterRotation(layout.presenterRotation ?? 0);
+  setLeftRailEnabled(layout.leftRailEnabled ?? true);
+  setLeftRailText(layout.leftRail ?? "FREE PARKING & FREE DRINKS");
+  setLeftRailX(layout.leftRailX ?? 3.5);
+  setLeftRailY(layout.leftRailY ?? 53);
+  setLeftRailSize(layout.leftRailSize ?? 10);
+  setLeftRailLineHeight((layout as any).leftRailLineHeight ?? 0.7);
+  setLeftRailFamily(layout.leftRailFamily ?? "Inter");
+  setLeftRailColor(layout.leftRailColor ?? "#ffffff");
+  setLeftRailRotation(layout.leftRailRotation ?? -90);
+  setRightRailEnabled((layout as any).rightRailEnabled ?? false);
+  setRightRailText((layout as any).rightRail ?? "");
+  setRightRailX((layout as any).rightRailX ?? 86.8);
+  setRightRailY((layout as any).rightRailY ?? 36);
+  setRightRailSize((layout as any).rightRailSize ?? 10);
+  setRightRailLineHeight((layout as any).rightRailLineHeight ?? 0.7);
+  setRightRailFamily((layout as any).rightRailFamily ?? "Inter");
+  setRightRailColor((layout as any).rightRailColor ?? "#ffffff");
+  setRightRailRotation((layout as any).rightRailRotation ?? 90);
+  setDateEnabled(layout.dateEnabled ?? true);
+  setDateText(layout.date ?? "MAY\n26TH");
+  setDateX(layout.dateX ?? 8);
+  setDateY(layout.dateY ?? 5.5);
+  setDateSize(layout.dateSize ?? 24);
+  setDateLineHeight((layout as any).dateLineHeight ?? 0.7);
+  setDateFamily(layout.dateFamily ?? "Bebas Neue");
+  setDateColor(layout.dateColor ?? "#ffffff");
+  setDateAlign((layout.dateAlign as any) ?? "left");
+  setDateRotation(layout.dateRotation ?? 0);
+  setPriceEnabled(layout.priceEnabled ?? true);
+  setPriceText(layout.price ?? "$15");
+  setPriceX(layout.priceX ?? 78);
+  setPriceY(layout.priceY ?? 66);
+  setPriceSize(layout.priceSize ?? 30);
+  setPriceLineHeight((layout as any).priceLineHeight ?? 0.7);
+  setPriceScale(layout.priceScale ?? 1);
+  setPriceFamily(layout.priceFamily ?? "Bebas Neue");
+  setPriceColor(layout.priceColor ?? "#ffffff");
+  setPriceAlign((layout.priceAlign as any) ?? "center");
+  setQrEnabled(layout.qrEnabled ?? true);
+  setQrX(layout.qrX ?? 90);
+  setQrY(layout.qrY ?? 8);
+  setQrScale(layout.qrScale ?? 0.55);
+  setQrImageUrl(
+    typeof (layout as any).qrImageUrl === "string" && (layout as any).qrImageUrl
+      ? String((layout as any).qrImageUrl)
+      : null
+  );
+
+  setHeadlineFamily(layout.headlineFamily ?? headlineFamily);
+  setHeadManualPx(layout.headlineSize ?? 136);
+  setLineHeight(layout.headlineLineHeight ?? layout.headlineHeight ?? 0.7);
+  setHeadAlign((layout.headAlign as any) ?? "center");
+  setAlign((layout.align as any) ?? "center");
+  setTextColWidth(layout.textColWidth ?? 90);
+  const layoutTextFx = (layout.textFx ?? {}) as any;
+  setTextFx({
+    ...DEFAULT_TEXT_FX,
+    ...layoutTextFx,
+    color: layoutTextFx.color ?? layout.headColor ?? "#F4F1EA",
+    texture: undefined,
+    strokeWidth: layoutTextFx.strokeWidth ?? layout.headStrokeWidth ?? 1.4,
+    strokeColor: layoutTextFx.strokeColor ?? layout.headStrokeColor ?? "#10131A",
+    glow: layoutTextFx.glow ?? layout.headGlow ?? 0,
+    tracking: layoutTextFx.tracking ?? layout.headTracking ?? 0,
+    shadowEnabled: layoutTextFx.shadowEnabled ?? layout.headShadow ?? false,
+    shadow: layoutTextFx.shadow ?? layout.headShadowStrength ?? 0,
+  });
+  setHeadShadow(layout.headShadow ?? false);
+  setHeadShadowStrength(layout.headShadowStrength ?? 0);
+  setHeadBehindPortrait(layout.headBehindPortrait ?? true);
+
+  setHead2SizePx(layout.head2Size ?? 118);
+  setHead2Family(layout.head2Family ?? "Bebas Neue");
+  setHead2Color(layout.head2Color ?? "rgba(255,255,255,0.10)");
+  setHead2Align((layout.head2Align as any) ?? "center");
+  setHead2ColWidth((layout as any).head2ColWidth ?? 84);
+  setHead2LineHeight(layout.head2LineHeight ?? 0.95);
+  setHead2Shadow(layout.head2Shadow ?? true);
+  setHead2ShadowStrength(layout.head2ShadowStrength ?? 1);
+
+  setDetailsFamily(layout.detailsFamily ?? "Inter");
+  setBodyFamily(layout.bodyFamily ?? layout.detailsFamily ?? "Inter");
+  setBodySize(layout.detailsSize ?? 20);
+  setBodyColor(layout.bodyColor ?? "#ffffff");
+  setDetailsAlign((layout.detailsAlign as any) ?? "left");
+  setDetailsLineHeight(layout.detailsLineHeight ?? 0.7);
+  setBodyTracking(layout.detailsTracking ?? 0.02);
+  setBodyUppercase(layout.detailsUppercase ?? false);
+  setBodyBold(layout.detailsBold ?? true);
+  setDetailsShadow(layout.detailsShadow ?? true);
+  setDetailsShadowStrength(layout.detailsShadowStrength ?? 1);
+
+  setDetails2Family(layout.details2Family ?? "Bebas Neue");
+  setDetails2Size(layout.details2Size ?? 18);
+  setDetails2Color(layout.details2Color ?? "#18F0C8");
+  setDetails2Align((layout.details2Align as any) ?? "center");
+  setDetails2LineHeight(layout.details2LineHeight ?? 0.7);
+  setDetails2LetterSpacing(layout.details2LetterSpacing ?? 0);
+  setDetails2Rotate(layout.details2Rotate ?? 90);
+  setDetails2Shadow(layout.details2Shadow ?? true);
+  setDetails2ShadowStrength(layout.details2ShadowStrength ?? 1);
+
+  setVenueFamily(layout.venueFamily ?? "Inter");
+  setVenueColor(layout.venueColor ?? "#ffffff");
+  setVenueSize(layout.venueSize ?? 14);
+  setVenueAlign((layout.venueAlign as any) ?? "center");
+  setVenueLineHeight(layout.venueLineHeight ?? 0.7);
+  setVenueShadow(layout.venueShadow ?? true);
+  setVenueShadowStrength(layout.venueShadowStrength ?? 1);
+
+  setSubtagFamily(layout.subtagFamily ?? "Lacheyard Script");
+  setSubtagSize(layout.subtagSize ?? 82);
+  setSubtagTextColor(layout.subtagTextColor ?? "#18F0C8");
+  setSubtagBgColor(layout.subtagBgColor ?? "#000000");
+  setSubtagAlign(((layout as any).subtagAlign as any) ?? "center");
+  setSubtagAlpha(layout.pillAlpha ?? layout.subtagAlpha ?? 0);
+  setSubtagUppercase(layout.subtagUppercase ?? false);
+  setSubtagBold((layout as any).subtagBold ?? false);
+  setSubtagShadow(layout.subtagShadow ?? true);
+  setSubtagShadowStrength(layout.subtagShadowStrength ?? 1);
+
+  setHeadline2Enabled(targetFormat, layout.head2Enabled ?? true);
+  setDetailsEnabled(targetFormat, true);
+  setDetails2Enabled(targetFormat, layout.details2Enabled ?? true);
+  setVenueEnabled(targetFormat, true);
+  setSubtagEnabled(targetFormat, layout.subtagEnabled ?? true);
+  setTextLayerOffset({
+    headline: layout.textLayerOffset?.headline ?? 0,
+    headline2: layout.textLayerOffset?.headline2 ?? 110,
+    details: layout.textLayerOffset?.details ?? 110,
+    details2: layout.textLayerOffset?.details2 ?? 118,
+    venue: layout.textLayerOffset?.venue ?? 118,
+    subtag: layout.textLayerOffset?.subtag ?? 0,
+  });
+
+  store.setSession((prev) => ({ ...prev, [targetFormat]: { ...layout, bgUrl: bgPath } }));
+  store.setSessionDirty((prev) => ({ ...prev, [targetFormat]: false }));
+  store.setEmojis(targetFormat, templateAssets);
+  store.setPortraits(targetFormat, [subjectLayer]);
+  store.setSelectedPortraitId(subjectId);
+  store.setMoveTarget("portrait");
+  store.setSelectedPanel("ai_background");
+  setMobileControlsOpen(true);
+  setMobileControlsTab("assets");
+  window.setTimeout(async () => {
+    try {
+      const measuredBounds = capturePortraitPlacementFromCanvas(subjectId);
+      const subjectVisibleRect = layout.subjectVisibleRect;
+      if (!measuredBounds || !subjectVisibleRect) return;
+      const imageUrl =
+        typeof window !== "undefined" ? new URL(subjectPath, window.location.origin).toString() : subjectPath;
+      const patch = await computeStrictSubjectAutoLayoutPatch({
+        subject: {
+          id: subjectId,
+          imageUrl,
+          placement: {
+            x: subjectLayer.x,
+            y: subjectLayer.y,
+            scale: subjectLayer.scale,
+          },
+          renderedBounds: measuredBounds,
+        },
+        coordinatePlan: { subjectVisibleRect },
+        canvasSize: { width: 1080, height: 1080 },
+        placementMode: "center",
+        fitPadding: 1,
+        alphaThreshold: 28,
+        minScale: 0.39,
+        maxScale: 0.39,
+      });
+      useFlyerState.getState().updatePortrait(targetFormat, subjectId, {
+        x: clamp100(patch.x),
+        y: clamp100(patch.y),
+        scale: Math.max(0.05, Math.min(5, patch.scale)),
+      });
+    } catch (error) {
+      console.warn("Center hero geometry fit failed", error);
+    }
+  }, 220);
+  window.setTimeout(scrollToArtboard, 120);
+}, [
+  capturePortraitPlacementFromCanvas,
+  format,
+  scrollToArtboard,
+  setDetailsEnabled,
+  setDetails2Enabled,
+  setHeadline2Enabled,
+  setSubtagEnabled,
+  setVenueEnabled,
+]);
+
 
   useEffect(() => { setSeed(Math.floor(Math.random() * 1e9)); }, []);
   // Allow forcing a different format for the prompt (we'll use 'story' for portrait-first capture)
@@ -15166,7 +21747,7 @@ const generateBackground = async (opts: GenOpts = {}) => {
     const baseSeed = lockVar ? seed : Math.floor(Math.random() * 1e9);
     if (!lockVar) setSeed(baseSeed);
 
-    const provider = (genProvider === 'auto' ? 'auto' : genProvider);
+    const provider = opts.providerOverride ?? (genProvider === 'auto' ? 'auto' : genProvider);
     const styleForThisRun = opts.style ?? genStyle;
     const usePeople = opts.allowPeopleOverride ?? allowPeople;
     const faceReferenceSample = usePeople
@@ -15411,29 +21992,39 @@ const generateBackground = async (opts: GenOpts = {}) => {
           })()
         : "";
 
-      const finalPromptList = [
-        moodReferenceMode ? '' : (PRESETS.find(p => p.key === presetKey)?.prompt ?? ''),
-        (opts.prompt || genPrompt || '').trim(),
-        subjectPrompt,
-        nightlifeSubjectPrompt,
-        styleSignalPrompt,
-        genreMood,
-        safeHumanPrompt,
-        'strict output rule: no text, no words, no letters, no numbers, no typography, no logos, no readable signage, no watermarks',
-        moodReferenceMode
-          ? 'hard rule: keep mood and lighting language similar to sample but generate a distinct scene with different structure'
-          : '',
-        details,
-        cameraSpec,
-        compositionRule,
-        nightlifeRealismDirective,
-        qualityBooster,
-        moodReferenceSample
-          ? 'use the provided mood sample as style guidance for palette, lighting, and atmosphere; keep the composition original and text-free'
-          : '',
-        referenceClause,
-        negativePrompt
-      ];
+      const exactPromptText = (opts.prompt || '').trim();
+      const finalPromptList = opts.exactPrompt
+        ? [
+            exactPromptText,
+            requestedFormat === 'story'
+              ? 'vertical flyer background plate, clean portrait-safe center, darker typography lanes on both sides'
+              : 'square flyer background plate, clean portrait-safe center, darker typography lanes on both sides',
+            'background only; no people, no faces, no bodies, no silhouettes',
+            'no text, no typography, no logos, no signage, no watermark, no foreground objects',
+          ]
+        : [
+            moodReferenceMode ? '' : (PRESETS.find(p => p.key === presetKey)?.prompt ?? ''),
+            (opts.prompt || genPrompt || '').trim(),
+            subjectPrompt,
+            nightlifeSubjectPrompt,
+            styleSignalPrompt,
+            genreMood,
+            safeHumanPrompt,
+            'strict output rule: no text, no words, no letters, no numbers, no typography, no logos, no readable signage, no watermarks',
+            moodReferenceMode
+              ? 'hard rule: keep mood and lighting language similar to sample but generate a distinct scene with different structure'
+              : '',
+            details,
+            cameraSpec,
+            compositionRule,
+            nightlifeRealismDirective,
+            qualityBooster,
+            moodReferenceSample
+              ? 'use the provided mood sample as style guidance for palette, lighting, and atmosphere; keep the composition original and text-free'
+              : '',
+            referenceClause,
+            negativePrompt
+          ];
 
       const finalPromptString = finalPromptList.filter(Boolean).join(', ');
 
@@ -15537,6 +22128,866 @@ const generateBackground = async (opts: GenOpts = {}) => {
     setGenLoading(false);
   }
 };
+
+const generateBackgroundRef = React.useRef(generateBackground);
+React.useEffect(() => {
+  generateBackgroundRef.current = generateBackground;
+});
+
+const creativeDirectionRef = React.useRef<CreativeDirection | null>(null);
+
+const rebuildSvgDataUrl = (svgTemplate: string, color: string) => {
+  const svg = svgTemplate.replace(/\{\{COLOR\}\}/g, color);
+  return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
+};
+
+const isPaletteRole = (value: unknown): value is PaletteRole =>
+  value === "base" ||
+  value === "primary" ||
+  value === "secondary" ||
+  value === "accent" ||
+  value === "neutral";
+
+const isPaletteProtectedFlare = (item: any) => {
+  const url = String(item?.url || "").toLowerCase();
+  return (!!item?.isFlare && !item?.isSticker) || url.includes("/flares/");
+};
+
+const withoutPaletteRole = (item: any) => {
+  const next = { ...item };
+  delete next.paletteRole;
+  return next;
+};
+
+const inferPaletteRole = (item: any): PaletteRole => {
+  const haystack = [
+    item?.id,
+    item?.label,
+    item?.name,
+    item?.sceneLayerId,
+    item?.sceneRole,
+    item?.separatorKind,
+    item?.shapeKind,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  if (isPaletteRole(item?.paletteRole)) return item.paletteRole;
+  if (item?.isFlare || haystack.match(/flare|streak/)) return "accent";
+  if (haystack.match(/particle|spark|star|cta|badge|separator|shape|line|brush/)) return "accent";
+  if (haystack.match(/texture|paint|bottom|torn|bar|wave|ribbon/)) return "accent";
+  if (haystack.match(/glow|laser|beam|light|halo|bloom/)) return "primary";
+  if (haystack.match(/smoke|fog|haze|dust|cloud/)) return "neutral";
+  if (haystack.match(/instagram|tiktok|whatsapp|social|qr|price|venue|location|address|time|phone/)) {
+    return "secondary";
+  }
+  if (haystack.match(/food|drink|bottle|hookah|parking|free|music|bucket/)) return "base";
+  if (item?.isTexture) return "accent";
+  if (item?.isNightlifeGraphic) return "base";
+  if (typeof item?.svgTemplate === "string") return "secondary";
+  return "primary";
+};
+
+const makePaletteRoleColors = (input: {
+  primary: string;
+  base: string;
+  accent: string;
+  neutral?: string;
+}) => {
+  const primaryLight = lighten(input.primary, 0.18);
+  const secondaryText = input.neutral || lighten(input.base, 0.76);
+  const baseText = lighten(input.base, 0.5);
+  return {
+    base: baseText,
+    primary: primaryLight,
+    secondary: secondaryText,
+    accent: input.accent,
+    neutral: lighten(input.primary, 0.42),
+  } satisfies Record<PaletteRole, string>;
+};
+
+type PaletteTextRoles = {
+  atmosphere: string;
+  luxury: string;
+  readability: string;
+  energy: string;
+  shadow: string;
+  headline: string;
+  headlineHighlight: string;
+  subHeadline: string;
+  smallText: string;
+  metadata: string;
+  venue: string;
+  date: string;
+  price: string;
+  rail: string;
+  presenter: string;
+};
+
+const readableAgainst = (candidate: string, background: string, minContrast: number, fallbacks: string[]) => {
+  const choices = [candidate, ...fallbacks].filter(Boolean);
+  for (const choice of choices) {
+    try {
+      if (contrastRatio(choice, background) >= minContrast) return choice;
+    } catch {}
+  }
+  return contrastRatio("#FFFFFF", background) >= contrastRatio("#050507", background) ? "#FFFFFF" : "#050507";
+};
+
+const resolvePaletteTextRoles = (input: {
+  primary: string;
+  base: string;
+  accent: string;
+  neutral?: string;
+}) : PaletteTextRoles => {
+  const atmosphere = input.base || "#101015";
+  const luxurySource = input.primary || "#F3DFC1";
+  const energySource = input.accent || "#6E56FF";
+  const readabilitySource = input.neutral || lighten(atmosphere, 0.78);
+  const shadow = darken(atmosphere, 0.7);
+
+  const readability = readableAgainst(readabilitySource, atmosphere, 6.2, [
+    lighten(readabilitySource, 0.2),
+    "#F8F3EA",
+    "#FFFFFF",
+  ]);
+  const luxury = readableAgainst(luxurySource, atmosphere, 4.5, [
+    lighten(luxurySource, 0.16),
+    readability,
+    "#F6D78A",
+  ]);
+  const energy = readableAgainst(energySource, atmosphere, 4.5, [
+    "#6E56FF",
+    "#00C2FF",
+    "#FF4D72",
+    readability,
+  ]);
+
+  return {
+    atmosphere,
+    luxury,
+    readability,
+    energy,
+    shadow,
+    headline: luxury,
+    headlineHighlight: readability,
+    subHeadline: energy,
+    smallText: readability,
+    metadata: readability,
+    venue: readability,
+    date: energy,
+    price: energy,
+    rail: energy,
+    presenter: readability,
+  };
+};
+
+const buildPaletteTextSessionPatch = (roles: PaletteTextRoles) => ({
+  headColor: roles.headline,
+  textFx: {
+    color: roles.headline,
+    gradFrom: roles.headline,
+    gradTo: roles.headlineHighlight,
+    strokeColor: roles.shadow,
+  },
+  head2Color: roles.subHeadline,
+  head2Fx: {
+    color: roles.subHeadline,
+    strokeColor: roles.headlineHighlight,
+  },
+  bodyColor: roles.smallText,
+  details2Color: roles.subHeadline,
+  venueColor: roles.venue,
+  subtagTextColor: roles.subHeadline,
+  presenterColor: roles.presenter,
+  leftRailColor: roles.rail,
+  rightRailColor: roles.rail,
+  dateColor: roles.date,
+  priceColor: roles.price,
+  headKineticPaletteLinked: true,
+  headKineticTextColor: roles.headlineHighlight,
+  headKineticTopColor: roles.energy,
+  headKineticBottomColor: roles.headline,
+  headQuantumPaletteLinked: true,
+  headQuantumCyanColor: roles.energy,
+  headQuantumBlueColor: roles.headline,
+  headQuantumHighlightColor: roles.headlineHighlight,
+  headQuantumPurpleColor: roles.shadow,
+  headQuantumMagentaColor: roles.energy,
+});
+
+const colorizePaletteAsset = (
+  item: any,
+  roleColors: Record<PaletteRole, string>,
+  options?: { particleOpacity?: number }
+) => {
+  if (item?.isExtracted) return item;
+  if (isPaletteProtectedFlare(item)) {
+    if (isPaletteRole(item?.paletteRole)) {
+      return withoutPaletteRole(item);
+    }
+    return item;
+  }
+  const role = inferPaletteRole(item);
+  const color = roleColors[role];
+  const id = String(item?.id || "").toLowerCase();
+
+  if (typeof item?.svgTemplate === "string") {
+    return {
+      ...item,
+      paletteRole: role,
+      iconColor: color,
+      url: rebuildSvgDataUrl(item.svgTemplate, color),
+      tint: 0,
+    };
+  }
+
+  if (item?.isTexture || id.match(/flare|streak|texture|paint|bottom|torn|bar|wave|ribbon|particle|glow|laser|smoke|fog|haze|dust|cloud/)) {
+    return {
+      ...item,
+      paletteRole: role,
+      tint: tintHueForColor(color),
+      tintMode: "colorize",
+      opacity: id.includes("particle")
+        ? options?.particleOpacity ?? item.opacity
+        : id.includes("smoke") || id.includes("fog") || id.includes("haze")
+        ? Math.min(Number(item.opacity ?? 0.28), 0.28)
+        : item.opacity,
+    };
+  }
+
+  return item;
+};
+
+const findArtDirectionSubjectSrc = React.useCallback((tpl: TemplateSpec, fmt: Format) => {
+  const store = useFlyerState.getState();
+  const canvasItems = Array.isArray(store.portraits?.[fmt]) ? store.portraits[fmt] : [];
+  const canvasSubject =
+    canvasItems.find((item: any) => !!item?.isExtracted && typeof item?.url === "string" && item.url) ||
+    canvasItems.find(
+      (item: any) =>
+        typeof item?.url === "string" &&
+        item.url &&
+        !item?.isSticker &&
+        !item?.isFlare &&
+        !item?.isLogo
+    );
+  if (canvasSubject?.url) return String(canvasSubject.url);
+
+  const variant: any = tpl.formats?.[fmt] ?? tpl.formats?.square ?? tpl.base ?? {};
+  const list = Array.isArray(variant.emojiList) ? variant.emojiList : [];
+  const templateSubject =
+    list.find((item: any) => !!item?.isExtracted && typeof item?.url === "string" && item.url) ||
+    list.find((item: any) => typeof item?.url === "string" && item.url && !item?.isSticker && !item?.isFlare);
+  return templateSubject?.url ? String(templateSubject.url) : "";
+}, []);
+
+const applyCreativeDirectionToCanvas = React.useCallback((direction: CreativeDirection, fmt: Format) => {
+  const { palette } = direction;
+  const primary = palette.primary;
+  const base = palette.secondary;
+  const accent = palette.accent;
+  const neutral = palette.neutral;
+  const textRoles = resolvePaletteTextRoles({ primary, base, accent, neutral });
+  const primaryLight = textRoles.headline;
+  const ghostStroke = direction.luxuryLevel === "luxury" ? textRoles.headlineHighlight : textRoles.headline;
+  const roleColors = makePaletteRoleColors({ primary, base, accent, neutral });
+  const secondaryText = textRoles.readability;
+  const baseText = textRoles.smallText;
+  const paletteHue = paletteHueToSliderValue(
+    { bgFrom: base, bgTo: darken(base, 0.28), primary, secondary: base, accent, neutral },
+    bgUploadUrl || bgUrl
+  );
+
+  setPalette({
+    bgFrom: base,
+    bgTo: darken(base, 0.28),
+    primary,
+    secondary: base,
+    accent,
+    neutral,
+  });
+  setHue(paletteHue);
+  setTextFx((prev) => ({
+    ...prev,
+    texture: undefined,
+    color: primaryLight,
+    gradient: false,
+    gradFrom: primaryLight,
+    gradTo: textRoles.headlineHighlight,
+    strokeColor: textRoles.shadow,
+    glow: direction.contrastLevel === "high" ? 0.18 : 0.12,
+    shadow: Math.max(prev.shadow || 0.34, 0.38),
+    shadowEnabled: true,
+  }));
+  setHeadShadow(true);
+  setHeadShadowStrength(direction.contrastLevel === "high" ? 0.46 : 0.34);
+
+  setHead2Color(textRoles.subHeadline);
+  setHead2Fx((prev) => ({
+    ...prev,
+    color: textRoles.subHeadline,
+    strokeColor: ghostStroke,
+    strokeWidth: direction.luxuryLevel === "luxury" ? 1.5 : 1.15,
+    glow: Math.max(prev.glow || 0, 0.16),
+    shadowEnabled: true,
+  }));
+
+  setSubtagTextColor(textRoles.subHeadline);
+  setSubtagBgColor(base);
+  setSubtagShadow(true);
+  setSubtagShadowStrength(direction.mood === "neon" ? 1 : 0.72);
+
+  setPresenterColor(textRoles.presenter);
+  setVenueColor(textRoles.venue);
+  setBodyColor(textRoles.smallText);
+  setDetails2Color(textRoles.subHeadline);
+  setDateColor(textRoles.date);
+  setPriceColor(textRoles.price);
+  setLeftRailColor(textRoles.rail);
+  setRightRailColor(textRoles.rail);
+  setHeadRushDotColor(textRoles.energy);
+  setHeadRushContrastColor(textRoles.headlineHighlight);
+  setHeadExtrudeColor(textRoles.shadow);
+  setHeadKineticTextColor(textRoles.headlineHighlight);
+  setHeadKineticTopColor(textRoles.energy);
+  setHeadKineticBottomColor(textRoles.headline);
+  setHeadKineticPaletteLinked(true);
+  setHeadQuantumCyanColor(textRoles.energy);
+  setHeadQuantumBlueColor(textRoles.headline);
+  setHeadQuantumHighlightColor(textRoles.headlineHighlight);
+  setHeadQuantumPurpleColor(textRoles.shadow);
+  setHeadQuantumMagentaColor(textRoles.energy);
+  setHeadQuantumPaletteLinked(true);
+
+  setVignette(true);
+  setVignetteStrength(direction.brightness === "bright" ? 0.58 : 0.72);
+  setHaze(direction.mood === "neon" ? 0.16 : 0.22);
+  setGrade(direction.luxuryLevel === "luxury" ? 0.72 : 0.62);
+  setLeak(direction.mood === "neon" ? 0.12 : 0.06);
+  setContrast(direction.contrastLevel === "high" ? 1.28 : 1.18);
+  setSaturation(direction.mood === "fashion" ? 1.16 : 1.24);
+  setWarmth(direction.visualTemperature === "warm" ? 0.16 : direction.visualTemperature === "cool" ? -0.06 : 0.04);
+  setTint(direction.visualTemperature === "cool" ? -0.12 : direction.visualTemperature === "warm" ? 0.08 : 0);
+  setVibrance(direction.mood === "neon" ? 0.42 : 0.34);
+  setFilmGrade(direction.luxuryLevel === "luxury" ? 0.88 : 0.78);
+
+  const store = useFlyerState.getState();
+  store.setSession((prev) => {
+    const current = prev[fmt] ?? {};
+    const patch = buildPaletteTextSessionPatch(textRoles);
+    return {
+      ...prev,
+      [fmt]: {
+        ...current,
+        ...patch,
+        textFx: {
+          ...(current as any).textFx,
+          ...patch.textFx,
+        },
+        head2Fx: {
+          ...(current as any).head2Fx,
+          ...patch.head2Fx,
+        },
+        hue: paletteHue,
+      },
+    };
+  });
+  const list = Array.isArray(store.portraits?.[fmt]) ? store.portraits[fmt] : [];
+  const updated = list.map((item: any) =>
+    colorizePaletteAsset(item, roleColors, {
+      particleOpacity: direction.mood === "neon" ? 0.36 : 0.22,
+    })
+  );
+  store.setPortraits(fmt, updated as any);
+}, []);
+
+const applySceneBuilderPaletteToCanvas = React.useCallback((nextPalette: Palette, targetFormat: Format = format) => {
+  const base = String(nextPalette.secondary || nextPalette.bgFrom || "#101015");
+  const primary = String(nextPalette.primary || nextPalette.bgTo || "#F3DFC1");
+  const accent = String(nextPalette.accent || "#D21F3C");
+  const neutral = String(nextPalette.neutral || lighten(primary, 0.42));
+  const textRoles = resolvePaletteTextRoles({ primary, base, accent, neutral });
+  const primaryLight = textRoles.headline;
+  const roleColors = makePaletteRoleColors({ primary, base, accent, neutral });
+  const secondaryText = textRoles.readability;
+  const baseText = textRoles.smallText;
+  const nextResolvedPalette = {
+    bgFrom: base,
+    bgTo: nextPalette.bgTo || darken(base, 0.35),
+    primary,
+    secondary: base,
+    accent,
+    neutral,
+  };
+  const paletteHue = paletteHueToSliderValue(nextResolvedPalette, bgUploadUrl || bgUrl);
+
+  setPalette(nextResolvedPalette);
+  setHue(paletteHue);
+  setGrade((prev) => Math.max(prev, 0.66));
+  setContrast((prev) => Math.max(prev, 1.18));
+  setSaturation((prev) => Math.max(prev, 1.24));
+  setVibrance((prev) => Math.max(prev, 0.34));
+  setFilmGrade((prev) => Math.max(prev, 0.8));
+  setClarity((prev) => Math.max(prev, 0.18));
+
+  setTextFx((prev) => ({
+    ...prev,
+    texture: undefined,
+    gradient: false,
+    color: primaryLight,
+    gradFrom: primaryLight,
+    gradTo: textRoles.headlineHighlight,
+    strokeColor: textRoles.shadow,
+    glow: Math.max(prev.glow || 0, 0.12),
+    shadow: Math.max(prev.shadow || 0.34, 0.38),
+    shadowEnabled: true,
+  }));
+  setHeadShadow(true);
+  setHeadShadowStrength(0.38);
+  setHead2Color(textRoles.subHeadline);
+  setHead2Fx((prev) => ({
+    ...prev,
+    color: textRoles.subHeadline,
+    strokeColor: textRoles.headlineHighlight,
+    strokeWidth: Math.max(prev.strokeWidth || 0, 1.15),
+    glow: Math.max(prev.glow || 0, 0.12),
+    shadowEnabled: true,
+  }));
+
+  setSubtagTextColor(textRoles.subHeadline);
+  setSubtagBgColor(base);
+  setPresenterColor(textRoles.presenter);
+  setDateColor(textRoles.date);
+  setVenueColor(textRoles.venue);
+  setPriceColor(textRoles.price);
+  setBodyColor(baseText);
+  setDetails2Color(textRoles.subHeadline);
+  setLeftRailColor(textRoles.rail);
+  setRightRailColor(textRoles.rail);
+  setHeadRushDotColor(textRoles.energy);
+  setHeadRushContrastColor(textRoles.headlineHighlight);
+  setHeadExtrudeColor(textRoles.shadow);
+  setHeadKineticTextColor(textRoles.headlineHighlight);
+  setHeadKineticTopColor(textRoles.energy);
+  setHeadKineticBottomColor(textRoles.headline);
+  setHeadKineticPaletteLinked(true);
+  setHeadQuantumCyanColor(textRoles.energy);
+  setHeadQuantumBlueColor(textRoles.headline);
+  setHeadQuantumHighlightColor(textRoles.headlineHighlight);
+  setHeadQuantumPurpleColor(textRoles.shadow);
+  setHeadQuantumMagentaColor(textRoles.energy);
+  setHeadQuantumPaletteLinked(true);
+
+  const store = useFlyerState.getState();
+  store.setSession((prev) => {
+    const current = prev[targetFormat] ?? {};
+    const patch = buildPaletteTextSessionPatch(textRoles);
+    return {
+      ...prev,
+      [targetFormat]: {
+        ...current,
+        ...patch,
+        textFx: {
+          ...(current as any).textFx,
+          ...patch.textFx,
+        },
+        head2Fx: {
+          ...(current as any).head2Fx,
+          ...patch.head2Fx,
+        },
+        hue: paletteHue,
+      },
+    };
+  });
+  const list = Array.isArray(store.portraits?.[targetFormat]) ? store.portraits[targetFormat] : [];
+  const updated = list.map((item: any) =>
+    colorizePaletteAsset(item, roleColors, { particleOpacity: 0.24 })
+  );
+  store.setPortraits(targetFormat, updated as any);
+}, [bgUploadUrl, bgUrl, format]);
+
+const applyTemplateBackgroundPalette = React.useCallback(async (tpl: TemplateSpec, fmt: Format, explicitSource?: string) => {
+  const source = String(explicitSource || resolveTemplateBackgroundPaletteSource(tpl, fmt) || "").trim();
+  if (!source) return;
+  const variant: any = tpl.formats?.[fmt] ?? tpl.formats?.square ?? tpl.base ?? {};
+
+  const analysisId = templatePaletteAnalysisRef.current + 1;
+  templatePaletteAnalysisRef.current = analysisId;
+  const analyzedPalette = await analyzeTemplateBackgroundPalette(source);
+  if (!analyzedPalette || templatePaletteAnalysisRef.current !== analysisId) return;
+
+  applySceneBuilderPaletteToCanvas(analyzedPalette, fmt);
+
+  const store = useFlyerState.getState();
+  const explicitColorPatch: Record<string, any> = {};
+  if (typeof variant.bodyColor === "string") {
+    setBodyColor(variant.bodyColor);
+    explicitColorPatch.bodyColor = variant.bodyColor;
+    explicitColorPatch.detailsColor = variant.detailsColor ?? variant.bodyColor;
+  }
+  if (typeof variant.details2Color === "string") {
+    setDetails2Color(variant.details2Color);
+    explicitColorPatch.details2Color = variant.details2Color;
+  }
+  if (typeof variant.venueColor === "string") {
+    setVenueColor(variant.venueColor);
+    explicitColorPatch.venueColor = variant.venueColor;
+  }
+  if (typeof variant.subtagTextColor === "string") {
+    setSubtagTextColor(variant.subtagTextColor);
+    explicitColorPatch.subtagTextColor = variant.subtagTextColor;
+  }
+  if (typeof variant.presenterColor === "string") {
+    setPresenterColor(variant.presenterColor);
+    explicitColorPatch.presenterColor = variant.presenterColor;
+  }
+  if (typeof variant.dateColor === "string") {
+    setDateColor(variant.dateColor);
+    explicitColorPatch.dateColor = variant.dateColor;
+  }
+  if (typeof variant.priceColor === "string") {
+    setPriceColor(variant.priceColor);
+    explicitColorPatch.priceColor = variant.priceColor;
+  }
+  if (typeof variant.leftRailColor === "string") {
+    setLeftRailColor(variant.leftRailColor);
+    explicitColorPatch.leftRailColor = variant.leftRailColor;
+  }
+  if (typeof variant.rightRailColor === "string") {
+    setRightRailColor(variant.rightRailColor);
+    explicitColorPatch.rightRailColor = variant.rightRailColor;
+  }
+  const explicitHeadColor =
+    typeof variant.textFx?.color === "string"
+      ? variant.textFx.color
+      : typeof variant.headColor === "string"
+      ? variant.headColor
+      : undefined;
+  const explicitHead2Color =
+    typeof variant.head2Fx?.color === "string"
+      ? variant.head2Fx.color
+      : typeof variant.head2Color === "string"
+      ? variant.head2Color
+      : undefined;
+  if (explicitHeadColor || variant.textFx) {
+    setTextFx((prev) => ({
+      ...prev,
+      ...(variant.textFx ?? {}),
+      ...(explicitHeadColor ? { color: explicitHeadColor } : {}),
+    }));
+  }
+  if (explicitHead2Color || variant.head2Fx) {
+    if (explicitHead2Color) setHead2Color(explicitHead2Color);
+    setHead2Fx((prev) => ({
+      ...prev,
+      ...(variant.head2Fx ?? {}),
+      ...(explicitHead2Color ? { color: explicitHead2Color } : {}),
+    }));
+  }
+  store.setSession((prev) => ({
+    ...prev,
+    [fmt]: {
+      ...(prev[fmt] ?? {}),
+      palette: analyzedPalette,
+      ...explicitColorPatch,
+      ...(explicitHeadColor || variant.textFx
+        ? {
+            textFx: {
+              ...((prev[fmt] as any)?.textFx ?? {}),
+              ...(variant.textFx ?? {}),
+              ...(explicitHeadColor ? { color: explicitHeadColor } : {}),
+            },
+          }
+        : {}),
+      ...(explicitHead2Color || variant.head2Fx
+        ? {
+            head2Fx: {
+              ...((prev[fmt] as any)?.head2Fx ?? {}),
+              ...(variant.head2Fx ?? {}),
+              ...(explicitHead2Color ? { color: explicitHead2Color } : {}),
+            },
+            ...(explicitHead2Color ? { head2Color: explicitHead2Color } : {}),
+          }
+        : {}),
+    },
+  }));
+  store.setSessionDirty((prev) => ({ ...prev, [fmt]: true }));
+}, [applySceneBuilderPaletteToCanvas]);
+
+const getOriginalTemplateVariant = React.useCallback((): Partial<TemplateBase> | null => {
+  const tpl =
+    activeTemplate ??
+    (templateId ? TEMPLATE_GALLERY.find((item) => item.id === templateId) ?? null : null);
+  if (!tpl) return null;
+  return tpl.formats?.[format] ?? tpl.formats?.square ?? tpl.base ?? null;
+}, [activeTemplate, format, templateId]);
+
+const originalSceneBuilderPalette = React.useMemo<Palette | null>(() => {
+  const variant = getOriginalTemplateVariant();
+  if (!variant) return null;
+  const originalPalette =
+    variant.palette && typeof variant.palette === "object"
+      ? (variant.palette as Partial<Palette>)
+      : {};
+  return resolveOriginalTemplatePalette(originalPalette, variant);
+}, [getOriginalTemplateVariant]);
+
+const resetSceneBuilderPaletteToTemplateOriginal = React.useCallback(() => {
+  const variant = getOriginalTemplateVariant();
+  if (!variant) return;
+  const originalPalette = resolveOriginalTemplatePalette(
+    variant.palette && typeof variant.palette === "object"
+      ? (variant.palette as Partial<Palette>)
+      : {},
+    variant
+  );
+
+  applySceneBuilderPaletteToCanvas(originalPalette);
+
+  const incomingFx: any = variant.textFx || {};
+  const headColor = incomingFx.color ?? variant.headColor;
+  if (headColor || variant.textFx) {
+    setTextFx((prev) => ({
+      ...prev,
+      ...incomingFx,
+      color: headColor ?? prev.color,
+      gradFrom: incomingFx.gradFrom ?? variant.headGradFrom ?? prev.gradFrom,
+      gradTo: incomingFx.gradTo ?? variant.headGradTo ?? prev.gradTo,
+      strokeColor: incomingFx.strokeColor ?? variant.headStrokeColor ?? prev.strokeColor,
+      strokeWidth: incomingFx.strokeWidth ?? variant.headStrokeWidth ?? prev.strokeWidth,
+      glow: incomingFx.glow ?? variant.headGlow ?? prev.glow,
+    }));
+  }
+  if (typeof variant.headShadow === "boolean") setHeadShadow(variant.headShadow);
+  if (typeof variant.headShadowStrength === "number") setHeadShadowStrength(variant.headShadowStrength);
+
+  if (variant.head2Fx && typeof variant.head2Fx === "object") {
+    setHead2Fx((prev) => ({ ...prev, ...variant.head2Fx }));
+  }
+  if (typeof variant.head2Color === "string") setHead2Color(variant.head2Color);
+
+  if (typeof variant.subtagTextColor === "string") setSubtagTextColor(variant.subtagTextColor);
+  if (typeof variant.subtagBgColor === "string") setSubtagBgColor(variant.subtagBgColor);
+  if (typeof variant.bodyColor === "string") setBodyColor(variant.bodyColor);
+  if (typeof variant.details2Color === "string") setDetails2Color(variant.details2Color);
+  if (typeof variant.venueColor === "string") setVenueColor(variant.venueColor);
+  if (typeof variant.presenterColor === "string") setPresenterColor(variant.presenterColor);
+  if (typeof variant.leftRailColor === "string") setLeftRailColor(variant.leftRailColor);
+  if (typeof variant.rightRailColor === "string") setRightRailColor(variant.rightRailColor);
+  if (typeof variant.dateColor === "string") setDateColor(variant.dateColor);
+  if (typeof variant.priceColor === "string") setPriceColor(variant.priceColor);
+
+  const templateAssets = Array.isArray(variant.emojiList) ? variant.emojiList : [];
+  if (templateAssets.length) {
+    const sourceById = new Map<string, any>();
+    templateAssets.forEach((item: any) => {
+      if (item?.id) sourceById.set(String(item.id), item);
+    });
+
+    if (sourceById.size) {
+      const store = useFlyerState.getState();
+      const current = Array.isArray(store.portraits?.[format]) ? store.portraits[format] : [];
+      const restored = current.map((item: any) => {
+        const source = sourceById.get(String(item?.id || ""));
+        if (!source) return item;
+
+        const svgTemplate =
+          typeof source.svgTemplate === "string" ? source.svgTemplate : item.svgTemplate;
+        const iconColor =
+          typeof source.iconColor === "string" ? source.iconColor : item.iconColor;
+        let url = item.url;
+        if (typeof source.url === "string" && source.url) {
+          url = source.url;
+        } else if (typeof svgTemplate === "string" && typeof iconColor === "string") {
+          url = rebuildSvgDataUrl(svgTemplate, iconColor);
+        }
+
+        return {
+          ...item,
+          url,
+          svgTemplate,
+          iconColor,
+          isFlare: !!source.isFlare,
+          isSticker: !!source.isSticker && !source.isExtracted,
+          isTexture: !!(source as any).isTexture,
+          isSeparator: !!(source as any).isSeparator,
+          separatorKind:
+            typeof (source as any).separatorKind === "string" ? (source as any).separatorKind : item.separatorKind,
+          separatorWidth:
+            typeof (source as any).separatorWidth === "number" ? (source as any).separatorWidth : item.separatorWidth,
+          separatorOffset:
+            typeof (source as any).separatorOffset === "number" ? (source as any).separatorOffset : item.separatorOffset,
+          isNightlifeGraphic: !!(source as any).isNightlifeGraphic,
+          tint: typeof source.tint === "number" ? source.tint : 0,
+          tintMode: (source as any).tintMode,
+          blendMode: source.isFlare && !source.isSticker ? "screen" : (source.blendMode ?? item.blendMode),
+          opacity: typeof source.opacity === "number" ? source.opacity : item.opacity,
+          ...(!isPaletteProtectedFlare(source) && isPaletteRole((source as any).paletteRole)
+            ? { paletteRole: (source as any).paletteRole }
+            : { paletteRole: undefined }),
+          hitTestMode: typeof (source as any).hitTestMode === "string" ? (source as any).hitTestMode : item.hitTestMode,
+        };
+      });
+      store.setPortraits(format, restored as any);
+    }
+  }
+}, [applySceneBuilderPaletteToCanvas, format, getOriginalTemplateVariant]);
+
+const applyGeneratedSceneBuilderPalette = React.useCallback(() => {
+  const tpl =
+    activeTemplate ??
+    (templateId ? TEMPLATE_GALLERY.find((item) => item.id === templateId) ?? null : null);
+  if (!tpl) return;
+  const source = String(bgUploadUrl || bgUrl || resolveTemplateBackgroundPaletteSource(tpl, format) || "").trim();
+  if (!source) return;
+  void applyTemplateBackgroundPalette(tpl, format, source);
+}, [activeTemplate, applyTemplateBackgroundPalette, bgUploadUrl, bgUrl, format, templateId]);
+
+React.useEffect(() => {
+  const store = useFlyerState.getState();
+  const current = Array.isArray(store.portraits?.[format]) ? store.portraits[format] : [];
+  if (!current.length) return;
+
+  let changed = false;
+  const next = current.map((item: any) => {
+    if (!isCenterHeroBottomStripAsset(item)) return item;
+
+    const iconColor = typeof item.iconColor === "string" ? item.iconColor : "#9F3245";
+    const url = rebuildSvgDataUrl(CENTER_HERO_BOTTOM_STRIP_SVG, iconColor);
+    const needsUpdate =
+      item.url !== url ||
+      item.svgTemplate !== CENTER_HERO_BOTTOM_STRIP_SVG ||
+      !item.isSticker ||
+      !item.isTexture ||
+      item.paletteRole !== "accent" ||
+      item.hitTestMode !== "alpha-bounds";
+
+    if (!needsUpdate) return item;
+    changed = true;
+    return {
+      ...item,
+      url,
+      svgTemplate: CENTER_HERO_BOTTOM_STRIP_SVG,
+      iconColor,
+      isFlare: false,
+      isSticker: true,
+      isTexture: true,
+      isNightlifeGraphic: true,
+      tint: 0,
+      tintMode: "colorize",
+      paletteRole: "accent",
+      hitTestMode: "alpha-bounds",
+      label: typeof item.label === "string" && item.label.trim() ? item.label : "Bottom Strip",
+      showLabel: false,
+      blendMode: item.blendMode || "normal",
+    };
+  });
+
+  if (changed) store.setPortraits(format, next as any);
+}, [format, portraits]);
+
+const prepareReplacementSubject = React.useCallback(
+  async (file: File) => {
+    if (!selectedPortrait || selectedPortraitIsAsset) {
+      alert("Select the subject portrait on the canvas before replacing it.");
+      return;
+    }
+    try {
+      setReplaceSubjectBusy(true);
+      const sourceUrl = await blobToDataURL(file);
+      const cutDataUrl = await removeBackgroundLocal(sourceUrl, {
+        cleanup: EXTRACT_SUBJECT_CLEANUP,
+      });
+      const cutoutUrl = await downscaleDataUrlIfNeeded(cutDataUrl, 1800);
+      const direction = await analyzeSubjectCreativeDirection(cutoutUrl);
+      setSubjectPaletteDecision({
+        portraitId: selectedPortrait.id,
+        cutoutUrl,
+        sourceUrl,
+        direction,
+      });
+    } catch (err: any) {
+      alert(err?.message || "Subject replacement failed.");
+    } finally {
+      setReplaceSubjectBusy(false);
+    }
+  },
+  [selectedPortrait, selectedPortraitIsAsset]
+);
+
+const commitReplacementSubject = React.useCallback(
+  (useNewPalette: boolean) => {
+    const pending = subjectPaletteDecision;
+    if (!pending) return;
+    const store = useFlyerState.getState();
+    const current = Array.isArray(store.portraits?.[format]) ? store.portraits[format] : [];
+    const existing = current.find((item: any) => item?.id === pending.portraitId);
+    if (!existing) {
+      setSubjectPaletteDecision(null);
+      alert("The selected subject is no longer on the canvas.");
+      return;
+    }
+
+    store.updatePortrait(format, pending.portraitId, {
+      url: pending.cutoutUrl,
+      cleanupBaseUrl: pending.sourceUrl,
+      cleanup: EXTRACT_SUBJECT_CLEANUP,
+      isExtracted: true,
+      shadowBlur: Number((existing as any).shadowBlur ?? 22),
+      shadowAlpha: Number((existing as any).shadowAlpha ?? 0.48),
+      tintMode: "colorize",
+    });
+    store.setSelectedPortraitId(pending.portraitId);
+    store.setSelectedPanel("portrait");
+    store.setMoveTarget("portrait");
+    void setPortraitUrlSafe(pending.cutoutUrl);
+    ensureCutoutInPortraitSlot(pending.cutoutUrl, pending.sourceUrl);
+
+    if (useNewPalette) {
+      creativeDirectionRef.current = pending.direction;
+      applyCreativeDirectionToCanvas(pending.direction, format);
+    }
+
+    setSubjectPaletteDecision(null);
+    transitionCueRef.current?.(useNewPalette ? "ai_scene" : "portrait");
+  },
+  [
+    applyCreativeDirectionToCanvas,
+    ensureCutoutInPortraitSlot,
+    format,
+    setPortraitUrlSafe,
+    subjectPaletteDecision,
+  ]
+);
+
+const autoGenerateTemplateBackground = React.useCallback(
+  (tpl: TemplateSpec, fmt: Format) => {
+    if (!isCenterHeroTemplateId(tpl.id)) return;
+
+    window.setTimeout(async () => {
+      const subjectSrc = findArtDirectionSubjectSrc(tpl, fmt);
+      const direction = subjectSrc
+        ? await analyzeSubjectCreativeDirection(subjectSrc)
+        : fallbackCreativeDirection();
+      creativeDirectionRef.current = direction;
+      applyCreativeDirectionToCanvas(direction, fmt);
+      const prompt = buildDirectedBackgroundPrompt(direction, fmt);
+      setGenPrompt(prompt);
+      void generateBackgroundRef.current({
+        prompt,
+        providerOverride: "openai",
+        formatOverride: fmt,
+        style: "urban",
+        allowPeopleOverride: false,
+        varietyOverride: 0,
+        exactPrompt: true,
+      });
+    }, 350);
+  },
+  [applyCreativeDirectionToCanvas, findArtDirectionSubjectSrc]
+);
 
 const generateSubjectForBackground = async () => {
   if (subjectGenLoading) return;
@@ -16010,6 +23461,27 @@ const buildEdgeAwareLassoMask = (
       headRushDotSize, headRushDotSpacing, headRushShadowOffset,
       headLineEnabled, headLineFrontOffsetX, headLineFrontOffsetY,
       headLineBackOffsetX, headLineBackOffsetY,
+      headGlassPaletteLinked,
+      headGlassEnabled, headGlassPrimaryColor, headGlassSecondaryColor,
+      headGlassHighlightColor, headGlassBlur, headGlassGlow,
+      headGlassStroke, headGlassFillAlpha,
+      headKineticEnabled,
+      headKineticPaletteLinked, headKineticTextColor, headKineticTopColor,
+      headKineticBottomColor, headKineticSliceOffsetX, headKineticSliceOffsetY,
+      headKineticShadowOpacity,
+      headDashStrokeEnabled, headColorStrokeEnabled,
+      headDashStrokePaletteLinked, headDashStrokeColors,
+      headDashStrokeFrame, headColorStrokeFrame,
+      headDoodleAngleX, headDoodleAngleY, headDoodleRotate, headDoodleSpread,
+      headPure3dEnabled,
+      headCyberEmbossEnabled, headRetroShadowEnabled, headRetroShadowAlpha,
+      headQuantumEnabled, headQuantumPaletteLinked, headQuantumCyanColor,
+      headQuantumBlueColor, headQuantumHighlightColor, headQuantumPurpleColor,
+      headQuantumMagentaColor, headQuantumStrokeWidth, headQuantumSplitOffset,
+      headQuantumGlowEnabled, headQuantumGlow,
+      headQuantumScanlineOpacity, headQuantumStreakOpacity,
+      headVerticalStretchEnabled, headVerticalStretchScaleY,
+      headVerticalStretchScaleX, headVerticalStretchShadowOpacity,
       headGlitchEnabled, headGlitchIntensity, headGlitchRgbSplit,
       headGlitchNoise, headGlitchGlow,
       headGlitchRedColor, headGlitchMagentaColor, headGlitchBlueColor, headGlitchYellowColor,
@@ -16153,6 +23625,68 @@ const buildEdgeAwareLassoMask = (
       if (typeof s.headLineFrontOffsetY === 'number') setHeadLineFrontOffsetY(s.headLineFrontOffsetY);
       if (typeof s.headLineBackOffsetX === 'number') setHeadLineBackOffsetX(s.headLineBackOffsetX);
       if (typeof s.headLineBackOffsetY === 'number') setHeadLineBackOffsetY(s.headLineBackOffsetY);
+      if (typeof s.headGlassEnabled === 'boolean') setHeadGlassEnabled(s.headGlassEnabled);
+      if (typeof s.headGlassPaletteLinked === 'boolean') setHeadGlassPaletteLinked(s.headGlassPaletteLinked);
+      if (typeof s.headGlassPrimaryColor === 'string') setHeadGlassPrimaryColor(s.headGlassPrimaryColor);
+      if (typeof s.headGlassSecondaryColor === 'string') setHeadGlassSecondaryColor(s.headGlassSecondaryColor);
+      if (typeof s.headGlassHighlightColor === 'string') setHeadGlassHighlightColor(s.headGlassHighlightColor);
+      if (typeof s.headGlassBlur === 'number') setHeadGlassBlur(s.headGlassBlur);
+      if (typeof s.headGlassGlow === 'number') setHeadGlassGlow(s.headGlassGlow);
+      if (typeof s.headGlassStroke === 'number') setHeadGlassStroke(s.headGlassStroke);
+      if (typeof s.headGlassFillAlpha === 'number') setHeadGlassFillAlpha(s.headGlassFillAlpha);
+      if (typeof s.headKineticEnabled === 'boolean') setHeadKineticEnabled(s.headKineticEnabled);
+      if (typeof s.headKineticPaletteLinked === 'boolean') setHeadKineticPaletteLinked(s.headKineticPaletteLinked);
+      if (typeof s.headKineticTextColor === 'string') setHeadKineticTextColor(s.headKineticTextColor);
+      if (typeof s.headKineticTopColor === 'string') setHeadKineticTopColor(s.headKineticTopColor);
+      if (typeof s.headKineticBottomColor === 'string') setHeadKineticBottomColor(s.headKineticBottomColor);
+      if (typeof s.headKineticSliceOffsetX === 'number') setHeadKineticSliceOffsetX(s.headKineticSliceOffsetX);
+      if (typeof s.headKineticSliceOffsetY === 'number') setHeadKineticSliceOffsetY(s.headKineticSliceOffsetY);
+      if (typeof s.headKineticShadowOpacity === 'number') setHeadKineticShadowOpacity(s.headKineticShadowOpacity);
+      if (typeof s.headDashStrokeEnabled === 'boolean') setHeadDashStrokeEnabled(s.headDashStrokeEnabled);
+      if (typeof s.headColorStrokeEnabled === 'boolean') setHeadColorStrokeEnabled(s.headColorStrokeEnabled);
+      if (typeof s.headDashStrokePaletteLinked === 'boolean') setHeadDashStrokePaletteLinked(s.headDashStrokePaletteLinked);
+      if (Array.isArray(s.headDashStrokeColors)) setHeadDashStrokeColors(s.headDashStrokeColors);
+      if (typeof s.headDashStrokeFrame === 'number') setHeadDashStrokeFrame(s.headDashStrokeFrame);
+      if (typeof s.headColorStrokeFrame === 'number') setHeadColorStrokeFrame(s.headColorStrokeFrame);
+      if (typeof s.headDoodleAngleX === 'number') setHeadDoodleAngleX(s.headDoodleAngleX);
+      if (typeof s.headDoodleAngleY === 'number') setHeadDoodleAngleY(s.headDoodleAngleY);
+      if (typeof s.headDoodleRotate === 'number') setHeadDoodleRotate(s.headDoodleRotate);
+      if (typeof s.headDoodleSpread === 'number') setHeadDoodleSpread(s.headDoodleSpread);
+      if (typeof s.headPure3dEnabled === 'boolean') setHeadPure3dEnabled(s.headPure3dEnabled);
+      if (typeof s.headPure3dPaletteLinked === 'boolean') setHeadPure3dPaletteLinked(s.headPure3dPaletteLinked);
+      if (typeof s.headPure3dFaceColor === 'string') setHeadPure3dFaceColor(s.headPure3dFaceColor);
+      if (typeof s.headPure3dEdgeColor === 'string') setHeadPure3dEdgeColor(s.headPure3dEdgeColor);
+      if (typeof s.headPure3dShadowColor === 'string') setHeadPure3dShadowColor(s.headPure3dShadowColor);
+      if (typeof s.headPure3dFrame === 'number') setHeadPure3dFrame(s.headPure3dFrame);
+      if (typeof s.headGoldBlockEnabled === 'boolean') setHeadGoldBlockEnabled(s.headGoldBlockEnabled);
+      if (typeof s.headGoldBlockPaletteLinked === 'boolean') setHeadGoldBlockPaletteLinked(s.headGoldBlockPaletteLinked);
+      if (typeof s.headGoldBlockLightColor === 'string') setHeadGoldBlockLightColor(s.headGoldBlockLightColor);
+      if (typeof s.headGoldBlockMidColor === 'string') setHeadGoldBlockMidColor(s.headGoldBlockMidColor);
+      if (typeof s.headGoldBlockDarkColor === 'string') setHeadGoldBlockDarkColor(s.headGoldBlockDarkColor);
+      if (typeof s.headGoldBlockStrokeColor === 'string') setHeadGoldBlockStrokeColor(s.headGoldBlockStrokeColor);
+      if (typeof s.headGoldBlockStrokeWidth === 'number') setHeadGoldBlockStrokeWidth(s.headGoldBlockStrokeWidth);
+      if (typeof s.headGoldBlockTexture === 'number') setHeadGoldBlockTexture(s.headGoldBlockTexture);
+      if (typeof s.headGoldBlockRoughness === 'number') setHeadGoldBlockRoughness(s.headGoldBlockRoughness);
+      if (typeof s.headCyberEmbossEnabled === 'boolean') setHeadCyberEmbossEnabled(s.headCyberEmbossEnabled);
+      if (typeof s.headRetroShadowEnabled === 'boolean') setHeadRetroShadowEnabled(s.headRetroShadowEnabled);
+      if (typeof s.headRetroShadowAlpha === 'number') setHeadRetroShadowAlpha(s.headRetroShadowAlpha);
+      if (typeof s.headQuantumEnabled === 'boolean') setHeadQuantumEnabled(s.headQuantumEnabled);
+      if (typeof s.headQuantumPaletteLinked === 'boolean') setHeadQuantumPaletteLinked(s.headQuantumPaletteLinked);
+      if (typeof s.headQuantumCyanColor === 'string') setHeadQuantumCyanColor(s.headQuantumCyanColor);
+      if (typeof s.headQuantumBlueColor === 'string') setHeadQuantumBlueColor(s.headQuantumBlueColor);
+      if (typeof s.headQuantumHighlightColor === 'string') setHeadQuantumHighlightColor(s.headQuantumHighlightColor);
+      if (typeof s.headQuantumPurpleColor === 'string') setHeadQuantumPurpleColor(s.headQuantumPurpleColor);
+      if (typeof s.headQuantumMagentaColor === 'string') setHeadQuantumMagentaColor(s.headQuantumMagentaColor);
+      if (typeof s.headQuantumStrokeWidth === 'number') setHeadQuantumStrokeWidth(s.headQuantumStrokeWidth);
+      if (typeof s.headQuantumSplitOffset === 'number') setHeadQuantumSplitOffset(s.headQuantumSplitOffset);
+      if (typeof s.headQuantumGlowEnabled === 'boolean') setHeadQuantumGlowEnabled(s.headQuantumGlowEnabled);
+      if (typeof s.headQuantumGlow === 'number') setHeadQuantumGlow(s.headQuantumGlow);
+      if (typeof s.headQuantumScanlineOpacity === 'number') setHeadQuantumScanlineOpacity(s.headQuantumScanlineOpacity);
+      if (typeof s.headQuantumStreakOpacity === 'number') setHeadQuantumStreakOpacity(s.headQuantumStreakOpacity);
+      if (typeof s.headVerticalStretchEnabled === 'boolean') setHeadVerticalStretchEnabled(s.headVerticalStretchEnabled);
+      if (typeof s.headVerticalStretchScaleY === 'number') setHeadVerticalStretchScaleY(s.headVerticalStretchScaleY);
+      if (typeof s.headVerticalStretchScaleX === 'number') setHeadVerticalStretchScaleX(s.headVerticalStretchScaleX);
+      if (typeof s.headVerticalStretchShadowOpacity === 'number') setHeadVerticalStretchShadowOpacity(s.headVerticalStretchShadowOpacity);
       if (typeof s.headGlitchEnabled === 'boolean') setHeadGlitchEnabled(s.headGlitchEnabled);
       if (typeof s.headGlitchIntensity === 'number') setHeadGlitchIntensity(s.headGlitchIntensity);
       if (typeof s.headGlitchRgbSplit === 'number') setHeadGlitchRgbSplit(s.headGlitchRgbSplit);
@@ -16268,9 +23802,7 @@ const buildEdgeAwareLassoMask = (
 
       // palette & bg fx
       if (s.palette && typeof s.palette === 'object') {
-        // palette is immutable in your current code, so we ignore setting it here
-        // (uncomment next line if you later make palette stateful)
-        // setPalette(s.palette);
+        setPalette((prev) => ({ ...prev, ...s.palette }));
       }
       if (typeof s.vignette === 'boolean') setVignette(s.vignette);
       if (typeof s.vignette === 'number') setVignette(s.vignette > 0);
@@ -16493,7 +24025,20 @@ useEffect(() => {
         case 'details2':  return { x: details2X, y: details2Y };
         case 'venue':     return { x: venueX,    y: venueY };
         case 'subtag':    return { x: subtagX,   y: subtagY };
-        case 'portrait':  return { x: portraitX, y: portraitY };
+        case 'presenter': return { x: presenterX, y: presenterY };
+        case 'leftRail':  return { x: leftRailX,  y: leftRailY };
+        case 'rightRail': return { x: rightRailX, y: rightRailY };
+        case 'date':      return { x: dateX,      y: dateY };
+        case 'price':     return { x: priceX,     y: priceY };
+        case 'qr':        return { x: qrX,        y: qrY };
+        case 'portrait': {
+          const selectedStorePortrait = selectedPortraitId
+            ? (portraits?.[format] || []).find((p: any) => p.id === selectedPortraitId)
+            : null;
+          return selectedStorePortrait
+            ? { x: Number(selectedStorePortrait.x ?? 50), y: Number(selectedStorePortrait.y ?? 50) }
+            : { x: portraitX, y: portraitY };
+        }
         case 'logo':      return { x: logoX,     y: logoY };
         case 'background':return { x: bgPosX,    y: bgPosY };
         default:          return null;
@@ -16531,11 +24076,26 @@ useEffect(() => {
         case 'details2':   setDetails2X(x); setDetails2Y(y); break;
         case 'venue':      setVenueX(x);    setVenueY(y);    break;
         case 'subtag':     setSubtagX(x);   setSubtagY(y);   break;
-       case 'portrait':
-            if (portraitLocked) return;        // ← HARD STOP when locked
-            setPortraitX(x);
-            setPortraitY(y);
+        case 'presenter':  setPresenterX(x); setPresenterY(y); break;
+        case 'leftRail':   setLeftRailX(x);  setLeftRailY(y);  break;
+        case 'rightRail':  setRightRailX(x); setRightRailY(y); break;
+        case 'date':       setDateX(x);      setDateY(y);      break;
+        case 'price':      setPriceX(x);     setPriceY(y);     break;
+        case 'qr':         setQrX(x);        setQrY(y);        break;
+        case 'portrait': {
+          const selectedStorePortrait = selectedPortraitId
+            ? (portraits?.[format] || []).find((p: any) => p.id === selectedPortraitId)
+            : null;
+          if (selectedStorePortrait) {
+            if (selectedStorePortrait.locked) return;
+            updatePortrait(format, selectedStorePortrait.id, { x, y });
             break;
+          }
+          if (portraitLocked) return;
+          setPortraitX(x);
+          setPortraitY(y);
+          break;
+        }
         case 'logo':       setLogoX(x);     setLogoY(y);     break;
         case 'background': setBgPosX(x);    setBgPosY(y);    break;
       }
@@ -16547,8 +24107,11 @@ useEffect(() => {
   headX, headY, head2X, head2Y,
   detailsX, detailsY, details2X, details2Y,
   venueX, venueY, subtagX, subtagY,
+  presenterX, presenterY, leftRailX, leftRailY, rightRailX, rightRailY,
+  dateX, dateY, priceX, priceY, qrX, qrY,
   portraitX, portraitY, logoX, logoY,
-  bgPosX, bgPosY
+  bgPosX, bgPosY,
+  selectedPortraitId, portraits, format, updatePortrait, portraitLocked
 ]);
     // ===== /NAV-001 hookup =====
     // >>> HOOKAH HOTKEY (Alt + H) — paste right below "// ===== /NAV-001 hookup ====="
@@ -16590,7 +24153,7 @@ useEffect(() => {
 
       const STARTER_TEMPLATES: Record<string, StarterTpl> = {
         edm_tunnel: {
-          label: 'EDM / Laser Tunnel',
+          label: 'Rave / EDM Flyer',
           state: {
             format: 'square',
             headline: 'FRIDAY // EDM RAVE',
@@ -16626,7 +24189,7 @@ useEffect(() => {
         },
 
         latin_tropical: {
-          label: 'Latin / Tropical Street',
+          label: 'Latin Night Flyer',
           state: {
             format: 'square',
             headline: 'NOCHE LATINA',
@@ -16657,7 +24220,7 @@ useEffect(() => {
                       },
 
         hiphop_graffiti: {
-          label: 'Hip Hop Block Party',
+          label: 'Hip Hop Night Flyer',
           state: {
             format: 'square',
             headline: 'HIP-HOP NIGHT',
@@ -16687,37 +24250,6 @@ useEffect(() => {
                   'gritty graffiti alley with wet asphalt, cinematic rim light through haze, puddle reflections, layered posters and bricks, high contrast pools of light, underground block party vibe, background only, no text'
               }
         },
-
-        ladies_pinkchrome: {
-          label: 'Ladies Night / Pink Chrome',
-          state: {
-            format: 'square',
-            headline: 'LADIES NIGHT',
-            headlineFamily: 'Poppins',
-            align: 'left', lineHeight: 0.92, textColWidth: 56,
-            headSizeAuto: true, headMaxPx: 116,
-            textFx: {
-              uppercase: true, bold: true, italic: false, underline: false,
-              tracking: 0.018, gradient: true, gradFrom: '#F8A9FF', gradTo: '#FF5AB3',
-              color: '#FFFFFF', strokeWidth: 0, strokeColor: '#000000',
-              shadow: 0.5, glow: 0.25, shadowEnabled: true,
-            },
-            details:
-              'No Cover Before 11PM\nComplimentary Champagne\n21+ • Dress to Impress',
-            bodyFamily: 'Inter', bodyColor: '#FFE9F6', bodySize: 15,
-            bodyUppercase: true, bodyBold: true, bodyItalic: false, bodyUnderline: false, bodyTracking: 0.03,
-            detailsLineHeight: 1.2, detailsAlign: 'left',
-            venue: 'CHROME LOUNGE', venueFamily: 'Oswald', venueColor: '#FFFFFF', venueSize: 38,
-            subtagEnabled: true, subtag: 'all pink everything', subtagFamily: 'Inter',
-            subtagBgColor: '#2D0E20', subtagTextColor: '#FFFFFF', subtagAlpha: 0.6, subtagUppercase: true,
-            headX: 6, headY: 10, detailsX: 6, detailsY: 74, venueX: 6, venueY: 80, subtagX: 6, subtagY: 24,
-          },
-          bg: {
-                style: 'neon',
-                prompt:
-                  'glossy chrome nightclub hallway, hot pink and violet neon glow, mirror reflections, soft bloom, tasteful luxury vibe, light haze sparkle, background only, no text'
-              }
-                      },
 
         college_stadium: {
           label: 'College / Stadium Lights',
@@ -17430,6 +24962,27 @@ function exportDesignJSON(): string {
     headRushDotSize, headRushDotSpacing, headRushShadowOffset,
     headLineEnabled, headLineFrontOffsetX, headLineFrontOffsetY,
     headLineBackOffsetX, headLineBackOffsetY,
+    headGlassEnabled, headGlassPaletteLinked, headGlassPrimaryColor, headGlassSecondaryColor,
+    headGlassHighlightColor, headGlassBlur, headGlassGlow,
+    headGlassStroke, headGlassFillAlpha,
+    headKineticEnabled,
+    headKineticPaletteLinked, headKineticTextColor, headKineticTopColor,
+    headKineticBottomColor, headKineticSliceOffsetX, headKineticSliceOffsetY,
+    headKineticShadowOpacity,
+    headDashStrokeEnabled, headDashStrokePaletteLinked, headDashStrokeColors, headDashStrokeFrame,
+    headPure3dEnabled, headPure3dPaletteLinked,
+    headPure3dFaceColor, headPure3dEdgeColor, headPure3dShadowColor, headPure3dFrame,
+    headGoldBlockEnabled, headGoldBlockPaletteLinked,
+    headGoldBlockLightColor, headGoldBlockMidColor, headGoldBlockDarkColor,
+    headGoldBlockStrokeColor, headGoldBlockStrokeWidth, headGoldBlockTexture, headGoldBlockRoughness,
+    headCyberEmbossEnabled, headRetroShadowEnabled, headRetroShadowAlpha,
+    headQuantumEnabled, headQuantumPaletteLinked, headQuantumCyanColor,
+    headQuantumBlueColor, headQuantumHighlightColor, headQuantumPurpleColor,
+    headQuantumMagentaColor, headQuantumStrokeWidth, headQuantumSplitOffset,
+    headQuantumGlowEnabled, headQuantumGlow,
+    headQuantumScanlineOpacity, headQuantumStreakOpacity,
+    headVerticalStretchEnabled, headVerticalStretchScaleY,
+    headVerticalStretchScaleX, headVerticalStretchShadowOpacity,
     headGlitchEnabled, headGlitchIntensity, headGlitchRgbSplit,
     headGlitchNoise, headGlitchGlow,
     headGlitchRedColor, headGlitchMagentaColor, headGlitchBlueColor, headGlitchYellowColor,
@@ -17469,6 +25022,22 @@ function exportDesignJSON(): string {
     // logo
     logoUrl, logoX, logoY, logoScale, logoRotate,
     logoSlots,
+
+    // template labels
+    presenterEnabled, presenter: presenterText, presenterX, presenterY,
+    presenterWidth, presenterSize, presenterLineHeight, presenterFamily,
+    presenterColor, presenterAlign, presenterRotation,
+    leftRailEnabled, leftRail: leftRailText, leftRailX, leftRailY,
+    leftRailSize, leftRailLineHeight, leftRailFamily, leftRailColor, leftRailRotation,
+    rightRailEnabled, rightRail: rightRailText, rightRailX, rightRailY,
+    rightRailSize, rightRailLineHeight, rightRailFamily, rightRailColor, rightRailRotation,
+    dateEnabled, date: dateText, dateX, dateY, dateSize, dateLineHeight,
+    dateFamily, dateColor, dateAlign, dateRotation,
+    priceEnabled, price: priceText, priceX, priceY, priceSize, priceLineHeight,
+    priceScale, priceFamily, priceColor, priceAlign,
+
+    // QR
+    qrEnabled, qrX, qrY, qrScale, qrImageUrl,
 
     // icons
     iconList,
@@ -17613,6 +25182,20 @@ function buildHistoryState() {
     headRushDotSize, headRushDotSpacing, headRushShadowOffset,
     headLineEnabled, headLineFrontOffsetX, headLineFrontOffsetY,
     headLineBackOffsetX, headLineBackOffsetY,
+    headGlassEnabled, headGlassPaletteLinked, headGlassPrimaryColor, headGlassSecondaryColor,
+    headGlassHighlightColor, headGlassBlur, headGlassGlow,
+    headGlassStroke, headGlassFillAlpha,
+    headKineticEnabled,
+    headKineticPaletteLinked, headKineticTextColor, headKineticTopColor,
+    headKineticBottomColor, headKineticSliceOffsetX, headKineticSliceOffsetY,
+    headKineticShadowOpacity,
+    headQuantumEnabled, headQuantumPaletteLinked, headQuantumCyanColor,
+    headQuantumBlueColor, headQuantumHighlightColor, headQuantumPurpleColor,
+    headQuantumMagentaColor, headQuantumStrokeWidth, headQuantumSplitOffset,
+    headQuantumGlowEnabled, headQuantumGlow,
+    headQuantumScanlineOpacity, headQuantumStreakOpacity,
+    headVerticalStretchEnabled, headVerticalStretchScaleY,
+    headVerticalStretchScaleX, headVerticalStretchShadowOpacity,
     headGlitchEnabled, headGlitchIntensity, headGlitchRgbSplit,
     headGlitchNoise, headGlitchGlow,
     headGlitchRedColor, headGlitchMagentaColor, headGlitchBlueColor, headGlitchYellowColor,
@@ -17696,6 +25279,20 @@ const historySignature = React.useMemo(() => {
   headRushDotSize, headRushDotSpacing, headRushShadowOffset,
   headLineEnabled, headLineFrontOffsetX, headLineFrontOffsetY,
   headLineBackOffsetX, headLineBackOffsetY,
+  headGlassEnabled, headGlassPaletteLinked, headGlassPrimaryColor, headGlassSecondaryColor,
+  headGlassHighlightColor, headGlassBlur, headGlassGlow,
+  headGlassStroke, headGlassFillAlpha,
+  headKineticEnabled,
+  headKineticPaletteLinked, headKineticTextColor, headKineticTopColor,
+  headKineticBottomColor, headKineticSliceOffsetX, headKineticSliceOffsetY,
+  headKineticShadowOpacity,
+  headQuantumEnabled, headQuantumPaletteLinked, headQuantumCyanColor,
+  headQuantumBlueColor, headQuantumHighlightColor, headQuantumPurpleColor,
+  headQuantumMagentaColor, headQuantumStrokeWidth, headQuantumSplitOffset,
+  headQuantumGlowEnabled, headQuantumGlow,
+  headQuantumScanlineOpacity, headQuantumStreakOpacity,
+  headVerticalStretchEnabled, headVerticalStretchScaleY,
+  headVerticalStretchScaleX, headVerticalStretchShadowOpacity,
   headGlitchEnabled, headGlitchIntensity, headGlitchRgbSplit,
   headGlitchNoise, headGlitchGlow,
   headGlitchRedColor, headGlitchMagentaColor, headGlitchBlueColor, headGlitchYellowColor,
@@ -18204,6 +25801,19 @@ function applyTextShadowFallbackForExport(root: HTMLElement) {
     const computed = getComputedStyle(el);
     const ts = computed.textShadow;
     if (!ts || ts === "none") continue;
+    const backgroundClip =
+      computed.backgroundClip ||
+      (computed as CSSStyleDeclaration & { webkitBackgroundClip?: string }).webkitBackgroundClip ||
+      "";
+    const webkitTextFill =
+      (computed as CSSStyleDeclaration & { webkitTextFillColor?: string }).webkitTextFillColor ||
+      "";
+    const hasClippedTextFill =
+      /text/i.test(backgroundClip) &&
+      computed.backgroundImage &&
+      computed.backgroundImage !== "none" &&
+      (/transparent/i.test(webkitTextFill) || /rgba\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*\)/i.test(webkitTextFill));
+    if (hasClippedTextFill) continue;
     const ds = textShadowToDropShadowFilter(ts);
     if (!ds) continue;
 
@@ -19043,6 +26653,61 @@ React.useEffect(() => {
 const portraitCanvasRef = useRef<HTMLDivElement>(null);
 // === /DUMMY PORTRAIT CANVAS REF + ALIGNMENT ===
 
+type LiveAlignmentPosition = {
+  target: NonNullable<MoveTarget>;
+  id?: string | null;
+  x: number;
+  y: number;
+};
+
+const [liveAlignmentPosition, setLiveAlignmentPosition] =
+  React.useState<LiveAlignmentPosition | null>(null);
+const liveAlignmentPositionRef = React.useRef<LiveAlignmentPosition | null>(null);
+const pendingLiveAlignmentPositionRef = React.useRef<LiveAlignmentPosition | null>(null);
+const liveAlignmentRafRef = React.useRef<number | null>(null);
+
+const publishLiveAlignmentPosition = React.useCallback(
+  (target: NonNullable<MoveTarget>, x: number, y: number, id?: string | null) => {
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    pendingLiveAlignmentPositionRef.current = { target, id: id ?? null, x, y };
+    if (liveAlignmentRafRef.current != null) return;
+
+    liveAlignmentRafRef.current = window.requestAnimationFrame(() => {
+      liveAlignmentRafRef.current = null;
+      const next = pendingLiveAlignmentPositionRef.current;
+      pendingLiveAlignmentPositionRef.current = null;
+      if (!next) return;
+      liveAlignmentPositionRef.current = next;
+      setLiveAlignmentPosition(next);
+    });
+  },
+  []
+);
+
+const clearLiveAlignmentPosition = React.useCallback(() => {
+  pendingLiveAlignmentPositionRef.current = null;
+  if (liveAlignmentRafRef.current != null) {
+    window.cancelAnimationFrame(liveAlignmentRafRef.current);
+    liveAlignmentRafRef.current = null;
+  }
+  liveAlignmentPositionRef.current = null;
+  setLiveAlignmentPosition(null);
+}, []);
+
+React.useEffect(() => {
+  return () => {
+    if (liveAlignmentRafRef.current != null) {
+      window.cancelAnimationFrame(liveAlignmentRafRef.current);
+    }
+  };
+}, []);
+
+React.useEffect(() => {
+  if (isLiveDragging) return;
+  if (!liveAlignmentPositionRef.current) return;
+  clearLiveAlignmentPosition();
+}, [clearLiveAlignmentPosition, isLiveDragging]);
+
 // === SYNC DUMMY PORTRAIT CANVAS TRANSFORM TO ARTBOARD ===
 useEffect(() => {
   function syncTransform() {
@@ -19074,15 +26739,15 @@ useEffect(() => {
 // === PORTRAIT LAYER BEGIN (Consolidated: Handles Portraits AND Flares) ===
 const portraitCanvas = React.useMemo(() => {
   const list = portraits[format] || [];
-  const mobileLiveAssetMode = !!isMobileView && !hideUiForExport;
+  const mobileLiveAssetMode = !!isMobileView;
   const liveAssetMaxSide = mobileLiveAssetMode ? "110vh" : "140vh";
 
   const classify = (item: any) => {
     const id = String(item?.id || "");
     const isLogo = id.startsWith("logo_") || !!item?.isLogo;
-    const isSticker = !!item?.isSticker;
-    const isFlare = !!item?.isFlare && !isSticker;
     const isExtracted = !!item?.isExtracted;
+    const isSticker = (!!item?.isSticker || isCenterHeroBottomStripAsset(item)) && !isExtracted;
+    const isFlare = !!item?.isFlare && !isSticker;
     return { isLogo, isFlare, isSticker, isExtracted };
   };
 
@@ -19093,7 +26758,7 @@ const portraitCanvas = React.useMemo(() => {
     const sel = liveList.find((x: any) => x.id === pid);
     const isBrandFace = !!(sel as any)?.isBrandFace;
 
-    const { isLogo, isFlare, isSticker, isExtracted } = classify(sel);
+    const { isLogo, isFlare, isSticker } = classify(sel);
 
     const panel = isBrandFace
       ? "dj_branding"
@@ -19101,8 +26766,6 @@ const portraitCanvas = React.useMemo(() => {
       ? "logo"
       : isFlare || isSticker
       ? "icons"
-      : isExtracted
-      ? "extract_subject"
       : "portrait";
     const target = isLogo ? "logo" : isFlare || isSticker ? "icon" : "portrait";
 
@@ -19110,6 +26773,8 @@ const portraitCanvas = React.useMemo(() => {
     if (!isSame) {
       store.setSelectedPortraitId(pid);
     }
+    store.setSelectedEmojiId(null);
+    setSelectedEmojiId(null);
 
     if ((store as any).moveTarget !== target) {
       store.setMoveTarget(target);
@@ -19119,24 +26784,13 @@ const portraitCanvas = React.useMemo(() => {
       showMobileFloat("asset");
       return;
     }
-    if (isExtracted) {
-      if (!isMobileView) {
-        focusCanvasSelectionHome(panel);
-        window.setTimeout(() => {
-          document
-            .getElementById("extract-selected-controls")
-            ?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }, 80);
-      } 
-    } else {
-      focusCanvasSelectionHome(panel);
-      if (!isBrandFace && !isLogo && !isFlare && !isSticker) {
+    focusCanvasSelectionHome(panel);
+    if (!isBrandFace && !isLogo && !isFlare && !isSticker) {
       window.setTimeout(() => {
         document
           .getElementById("portrait-selected-controls")
           ?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 80);
-      }
     }
   };
 
@@ -19149,8 +26803,10 @@ const portraitCanvas = React.useMemo(() => {
 
     useFlyerState.setState({
       selectedPortraitId: item.id,
+      selectedEmojiId: null,
       moveTarget: target,
     });
+    setSelectedEmojiId(null);
   };
 
   const canDrag = (item: any) => {
@@ -19165,9 +26821,12 @@ const portraitCanvas = React.useMemo(() => {
   };
 
   // Render stickers here; flares are rendered in the dedicated flareCanvas layer
-  const backLayer = list.filter((p: any) => !!p?.isSticker);
+  const backLayer = list.filter((p: any) => classify(p).isSticker && !p?.isExtracted);
   const frontLayer = list.filter(
-    (p: any) => !(p as any).isFlare && !(p as any).isSticker
+    (p: any) => {
+      const layerType = classify(p);
+      return !layerType.isFlare && (!layerType.isSticker || !!(p as any).isExtracted);
+    }
   );
 
   const renderItem = (p: any, i: number, baseZ: number) => {
@@ -19213,6 +26872,9 @@ const portraitCanvas = React.useMemo(() => {
     const labelSize = Number.isFinite((p as any).labelSize)
       ? Math.max(7, Math.min(isShapeGraphic ? 32 : 14, Number((p as any).labelSize)))
       : 9;
+    const labelLineHeight = Number.isFinite((p as any).labelLineHeight)
+      ? Math.max(0.6, Math.min(1.8, Number((p as any).labelLineHeight)))
+      : 1;
     const labelColor =
       typeof (p as any).labelColor === "string"
         ? String((p as any).labelColor)
@@ -19236,6 +26898,7 @@ const portraitCanvas = React.useMemo(() => {
     const shapeHeight = Math.max(12, Math.round(160 * shapeScale));
     const portraitLighting = normalizeMainFaceLighting((p as any).lighting);
     const dragTarget: MoveTarget = isLogo ? "logo" : isFlare || isSticker ? "icon" : "portrait";
+    const layerOffset = Number((p as any).layerOffset ?? 0);
     const isDragging = dragging === dragTarget && isSelected;
     const reduceDragEffects =
       isSelected &&
@@ -19466,6 +27129,12 @@ const portraitCanvas = React.useMemo(() => {
 
             const finalX = Number(el.dataset.sx || "0") + (dx / cw) * 100;
             const finalY = Number(el.dataset.sy || "0") + (dy / ch) * 100;
+            publishLiveAlignmentPosition(
+              dragTarget,
+              Number.isFinite(finalX) ? clamp100(finalX) : p.x,
+              Number.isFinite(finalY) ? clamp100(finalY) : p.y,
+              p.id
+            );
 
             if (moved) {
               useFlyerState.getState().updatePortrait(format, p.id, {
@@ -19516,7 +27185,7 @@ const portraitCanvas = React.useMemo(() => {
               : canDrag(p)
               ? "grab"
               : "default",
-            zIndex: baseZ + i + Number((p as any).layerOffset ?? 0),
+            zIndex: baseZ + i + layerOffset,
 
             // ✅ FIX: making the duplicate highlight invisible while moving
             filter:
@@ -19530,6 +27199,7 @@ const portraitCanvas = React.useMemo(() => {
             <div
               data-hit-bounds="true"
               data-hit-mode={useAlphaBoundsHit ? "alpha-bounds" : undefined}
+              data-hit-precision={isExtracted ? "high" : undefined}
               style={{
                 position: "relative",
                 display: "inline-block",
@@ -19547,6 +27217,7 @@ const portraitCanvas = React.useMemo(() => {
               <img
                 data-hit-source="true"
                 data-hit-mode={useAlphaBoundsHit ? "alpha-bounds" : undefined}
+                data-hit-precision={isExtracted ? "high" : undefined}
                 src={p.url}
                 crossOrigin="anonymous"
                 alt=""
@@ -19929,6 +27600,7 @@ const portraitCanvas = React.useMemo(() => {
                 padding: labelBg ? `${labelPaddingY}px ${labelPaddingX}px` : "0",
                 borderRadius: labelBg && labelMultiline ? 10 : 999,
                 fontSize: labelSize,
+                lineHeight: labelLineHeight,
                 letterSpacing: "0.06em",
                 textTransform: "uppercase",
                 background: labelBg ? "rgba(0,0,0,0.55)" : "transparent",
@@ -19962,7 +27634,7 @@ const portraitCanvas = React.useMemo(() => {
               left: `${p.x}%`,
               top: `${p.y}%`,
               transform: "translate(-50%, -50%)",
-              zIndex: baseZ + i + 2,
+              zIndex: baseZ + i + layerOffset + 1000,
               width: 34,
               height: 34,
               borderRadius: 999,
@@ -20031,6 +27703,7 @@ const portraitCanvas = React.useMemo(() => {
   hideUiForExport,
   ignoreTransparentAssetClick,
   redirectTransparentAssetPointer,
+  publishLiveAlignmentPosition,
 ]);
 
 
@@ -20045,7 +27718,7 @@ const portraitCanvas = React.useMemo(() => {
 const flareCanvas = React.useMemo(() => {
   const list = portraits?.[format] || [];
   const flares = list.filter((p: any) => !!(p as any).isFlare && !(p as any).isSticker);
-  const mobileLiveFlareMode = !!isMobileView && !hideUiForExport;
+  const mobileLiveFlareMode = !!isMobileView;
   const flareMaxSide = mobileLiveFlareMode ? "110vh" : "140vh";
 
   return (
@@ -20106,10 +27779,12 @@ const flareCanvas = React.useMemo(() => {
                 setFloatingAssetVisible(false);
                 useFlyerState.setState({
                   selectedPortraitId: p.id,
+                  selectedEmojiId: null,
                   moveTarget: "icon",
                   dragging: "icon",
                   isLiveDragging: true,
                 });
+                setSelectedEmojiId(null);
 
                 recordMove({
                   kind: "portrait",
@@ -20186,6 +27861,12 @@ const flareCanvas = React.useMemo(() => {
                 if (moved && cw > 5 && ch > 5) {
                   const finalX = startX + (dx / cw) * 100;
                   const finalY = startY + (dy / ch) * 100;
+                  publishLiveAlignmentPosition(
+                    "icon",
+                    Number.isFinite(finalX) ? clamp100(finalX) : p.x,
+                    Number.isFinite(finalY) ? clamp100(finalY) : p.y,
+                    p.id
+                  );
                   useFlyerState.getState().updatePortrait(format, p.id, {
                     x: Number.isFinite(finalX) ? clamp100(finalX) : p.x,
                     y: Number.isFinite(finalY) ? clamp100(finalY) : p.y,
@@ -20202,6 +27883,8 @@ const flareCanvas = React.useMemo(() => {
 
                 const store = useFlyerState.getState();
                 if (!isSelected) store.setSelectedPortraitId(p.id);
+                store.setSelectedEmojiId(null);
+                setSelectedEmojiId(null);
                 store.setMoveTarget("icon");
                 if (!moved) {
                   focusCanvasSelectionHome("icons");
@@ -20398,6 +28081,7 @@ const flareCanvas = React.useMemo(() => {
   hideUiForExport,
   ignoreTransparentAssetClick,
   redirectTransparentAssetPointer,
+  publishLiveAlignmentPosition,
 ]);
 
 
@@ -20824,6 +28508,68 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       applyIfDefined(data.headLineFrontOffsetY, setHeadLineFrontOffsetY);
       applyIfDefined(data.headLineBackOffsetX, setHeadLineBackOffsetX);
       applyIfDefined(data.headLineBackOffsetY, setHeadLineBackOffsetY);
+      applyIfDefined(data.headGlassEnabled, setHeadGlassEnabled);
+      applyIfDefined(data.headGlassPaletteLinked, setHeadGlassPaletteLinked);
+      applyIfDefined(data.headGlassPrimaryColor, setHeadGlassPrimaryColor);
+      applyIfDefined(data.headGlassSecondaryColor, setHeadGlassSecondaryColor);
+      applyIfDefined(data.headGlassHighlightColor, setHeadGlassHighlightColor);
+      applyIfDefined(data.headGlassBlur, setHeadGlassBlur);
+      applyIfDefined(data.headGlassGlow, setHeadGlassGlow);
+      applyIfDefined(data.headGlassStroke, setHeadGlassStroke);
+      applyIfDefined(data.headGlassFillAlpha, setHeadGlassFillAlpha);
+      applyIfDefined(data.headKineticEnabled, setHeadKineticEnabled);
+      applyIfDefined(data.headKineticPaletteLinked, setHeadKineticPaletteLinked);
+      applyIfDefined(data.headKineticTextColor, setHeadKineticTextColor);
+      applyIfDefined(data.headKineticTopColor, setHeadKineticTopColor);
+      applyIfDefined(data.headKineticBottomColor, setHeadKineticBottomColor);
+      applyIfDefined(data.headKineticSliceOffsetX, setHeadKineticSliceOffsetX);
+      applyIfDefined(data.headKineticSliceOffsetY, setHeadKineticSliceOffsetY);
+      applyIfDefined(data.headKineticShadowOpacity, setHeadKineticShadowOpacity);
+      applyIfDefined(data.headDashStrokeEnabled, setHeadDashStrokeEnabled);
+      applyIfDefined(data.headColorStrokeEnabled, setHeadColorStrokeEnabled);
+      applyIfDefined(data.headDashStrokePaletteLinked, setHeadDashStrokePaletteLinked);
+      applyIfDefined(data.headDashStrokeColors, setHeadDashStrokeColors);
+      applyIfDefined(data.headDashStrokeFrame, setHeadDashStrokeFrame);
+      applyIfDefined(data.headColorStrokeFrame, setHeadColorStrokeFrame);
+      applyIfDefined(data.headDoodleAngleX, setHeadDoodleAngleX);
+      applyIfDefined(data.headDoodleAngleY, setHeadDoodleAngleY);
+      applyIfDefined(data.headDoodleRotate, setHeadDoodleRotate);
+      applyIfDefined(data.headDoodleSpread, setHeadDoodleSpread);
+      applyIfDefined(data.headPure3dEnabled, setHeadPure3dEnabled);
+      applyIfDefined(data.headPure3dPaletteLinked, setHeadPure3dPaletteLinked);
+      applyIfDefined(data.headPure3dFaceColor, setHeadPure3dFaceColor);
+      applyIfDefined(data.headPure3dEdgeColor, setHeadPure3dEdgeColor);
+      applyIfDefined(data.headPure3dShadowColor, setHeadPure3dShadowColor);
+      applyIfDefined(data.headPure3dFrame, setHeadPure3dFrame);
+      applyIfDefined(data.headGoldBlockEnabled, setHeadGoldBlockEnabled);
+      applyIfDefined(data.headGoldBlockPaletteLinked, setHeadGoldBlockPaletteLinked);
+      applyIfDefined(data.headGoldBlockLightColor, setHeadGoldBlockLightColor);
+      applyIfDefined(data.headGoldBlockMidColor, setHeadGoldBlockMidColor);
+      applyIfDefined(data.headGoldBlockDarkColor, setHeadGoldBlockDarkColor);
+      applyIfDefined(data.headGoldBlockStrokeColor, setHeadGoldBlockStrokeColor);
+      applyIfDefined(data.headGoldBlockStrokeWidth, setHeadGoldBlockStrokeWidth);
+      applyIfDefined(data.headGoldBlockTexture, setHeadGoldBlockTexture);
+      applyIfDefined(data.headGoldBlockRoughness, setHeadGoldBlockRoughness);
+      applyIfDefined(data.headCyberEmbossEnabled, setHeadCyberEmbossEnabled);
+      applyIfDefined(data.headRetroShadowEnabled, setHeadRetroShadowEnabled);
+      applyIfDefined(data.headRetroShadowAlpha, setHeadRetroShadowAlpha);
+      applyIfDefined(data.headQuantumEnabled, setHeadQuantumEnabled);
+      applyIfDefined(data.headQuantumPaletteLinked, setHeadQuantumPaletteLinked);
+      applyIfDefined(data.headQuantumCyanColor, setHeadQuantumCyanColor);
+      applyIfDefined(data.headQuantumBlueColor, setHeadQuantumBlueColor);
+      applyIfDefined(data.headQuantumHighlightColor, setHeadQuantumHighlightColor);
+      applyIfDefined(data.headQuantumPurpleColor, setHeadQuantumPurpleColor);
+      applyIfDefined(data.headQuantumMagentaColor, setHeadQuantumMagentaColor);
+      applyIfDefined(data.headQuantumStrokeWidth, setHeadQuantumStrokeWidth);
+      applyIfDefined(data.headQuantumSplitOffset, setHeadQuantumSplitOffset);
+      applyIfDefined(data.headQuantumGlowEnabled, setHeadQuantumGlowEnabled);
+      applyIfDefined(data.headQuantumGlow, setHeadQuantumGlow);
+      applyIfDefined(data.headQuantumScanlineOpacity, setHeadQuantumScanlineOpacity);
+      applyIfDefined(data.headQuantumStreakOpacity, setHeadQuantumStreakOpacity);
+      applyIfDefined(data.headVerticalStretchEnabled, setHeadVerticalStretchEnabled);
+      applyIfDefined(data.headVerticalStretchScaleY, setHeadVerticalStretchScaleY);
+      applyIfDefined(data.headVerticalStretchScaleX, setHeadVerticalStretchScaleX);
+      applyIfDefined(data.headVerticalStretchShadowOpacity, setHeadVerticalStretchShadowOpacity);
       applyIfDefined(data.headGlitchEnabled, setHeadGlitchEnabled);
       applyIfDefined(data.headGlitchIntensity, setHeadGlitchIntensity);
       applyIfDefined(data.headGlitchRgbSplit, setHeadGlitchRgbSplit);
@@ -20877,9 +28623,75 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       applyIfDefined(data.logoScale, setLogoScale);
       applyIfDefined(data.logoRotate, setLogoRotate);
 
+      // ✅ restore QR
+      applyIfDefined(data.qrEnabled, setQrEnabled);
+      applyIfDefined(data.qrX, setQrX);
+      applyIfDefined(data.qrY, setQrY);
+      applyIfDefined(data.qrScale, setQrScale);
+      if ("qrImageUrl" in data) {
+        setQrImageUrl(typeof data.qrImageUrl === "string" && data.qrImageUrl ? data.qrImageUrl : null);
+      }
+
+      applyIfDefined(data.presenterEnabled, setPresenterEnabled);
+      applyIfDefined(data.presenter, setPresenterText);
+      applyIfDefined(data.presenterX, setPresenterX);
+      applyIfDefined(data.presenterY, setPresenterY);
+      applyIfDefined(data.presenterWidth, setPresenterWidth);
+      applyIfDefined(data.presenterSize, setPresenterSize);
+      applyIfDefined(data.presenterLineHeight, setPresenterLineHeight);
+      applyIfDefined(data.presenterFamily, setPresenterFamily);
+      applyIfDefined(data.presenterColor, setPresenterColor);
+      if (data.presenterAlign) setPresenterAlign(data.presenterAlign as Align);
+      applyIfDefined(data.presenterRotation, setPresenterRotation);
+      applyIfDefined(data.leftRailEnabled, setLeftRailEnabled);
+      applyIfDefined(data.leftRail, setLeftRailText);
+      applyIfDefined(data.leftRailX, setLeftRailX);
+      applyIfDefined(data.leftRailY, setLeftRailY);
+      applyIfDefined(data.leftRailSize, setLeftRailSize);
+      applyIfDefined(data.leftRailLineHeight, setLeftRailLineHeight);
+      applyIfDefined(data.leftRailFamily, setLeftRailFamily);
+      applyIfDefined(data.leftRailColor, setLeftRailColor);
+      applyIfDefined(data.leftRailRotation, setLeftRailRotation);
+      applyIfDefined(data.rightRailEnabled, setRightRailEnabled);
+      applyIfDefined(data.rightRail, setRightRailText);
+      applyIfDefined(data.rightRailX, setRightRailX);
+      applyIfDefined(data.rightRailY, setRightRailY);
+      applyIfDefined(data.rightRailSize, setRightRailSize);
+      applyIfDefined(data.rightRailLineHeight, setRightRailLineHeight);
+      applyIfDefined(data.rightRailFamily, setRightRailFamily);
+      applyIfDefined(data.rightRailColor, setRightRailColor);
+      applyIfDefined(data.rightRailRotation, setRightRailRotation);
+      applyIfDefined(data.dateEnabled, setDateEnabled);
+      applyIfDefined(data.date, setDateText);
+      applyIfDefined(data.dateX, setDateX);
+      applyIfDefined(data.dateY, setDateY);
+      applyIfDefined(data.dateSize, setDateSize);
+      applyIfDefined(data.dateLineHeight, setDateLineHeight);
+      applyIfDefined(data.dateFamily, setDateFamily);
+      applyIfDefined(data.dateColor, setDateColor);
+      if (data.dateAlign) setDateAlign(data.dateAlign as Align);
+      applyIfDefined(data.dateRotation, setDateRotation);
+      applyIfDefined(data.priceEnabled, setPriceEnabled);
+      applyIfDefined(data.price, setPriceText);
+      applyIfDefined(data.priceX, setPriceX);
+      applyIfDefined(data.priceY, setPriceY);
+      applyIfDefined(data.priceSize, setPriceSize);
+      applyIfDefined(data.priceLineHeight, setPriceLineHeight);
+      applyIfDefined(data.priceScale, setPriceScale);
+      applyIfDefined(data.priceFamily, setPriceFamily);
+      applyIfDefined(data.priceColor, setPriceColor);
+      if (data.priceAlign) setPriceAlign(data.priceAlign as Align);
+
       // ✅ restore typography
       const headlineLH = data.headlineLineHeight ?? data.headlineHeight ?? data.lineHeight;
-      applyIfDefined(headlineLH, setLineHeight);
+      const safeHeadlineLH =
+        data.headGlassEnabled && headlineLH !== undefined && headlineLH !== null
+          ? Math.max(
+              HEADLINE_GLASS_MIN_LINE_HEIGHT,
+              Number.isFinite(Number(headlineLH)) ? Number(headlineLH) : HEADLINE_GLASS_DEFAULT_LINE_HEIGHT
+            )
+          : headlineLH;
+      applyIfDefined(safeHeadlineLH, setLineHeight);
       applyIfDefined(data.textColWidth, setTextColWidth);
 
       applyIfDefined(data.headSizeAuto, setHeadSizeAuto);
@@ -21171,6 +28983,33 @@ const applyTemplate = React.useCallback<
       store.setSessionDirty((prev) => ({ ...prev, [fmt]: true }));
     }
 
+    const templateBgPrompt =
+      typeof tpl.bgPrompt === "string" ? tpl.bgPrompt.trim() : "";
+    if (templateBgPrompt) {
+      setGenPrompt(templateBgPrompt);
+    }
+    if (isCenterHeroTemplateId(tpl.id)) {
+      setAllowPeople(false);
+      setLockVar(true);
+      setVariety(0);
+      if (fmt === "square") setCenterHeroLayoutId("layout1");
+    }
+    if (isNocturneTemplateId(tpl.id) && fmt === "square") {
+      setCenterHeroLayoutId("layout1");
+    }
+    if (isEdmTunnelTemplateId(tpl.id) && fmt === "square") {
+      setCenterHeroLayoutId("layout1");
+    }
+    if (isEdmStageCo2TemplateId(tpl.id) && fmt === "square") {
+      setCenterHeroLayoutId("layout1");
+    }
+    if (isSugarRushTemplateId(tpl.id) && fmt === "square") {
+      setCenterHeroLayoutId("layout1");
+    }
+    if (isBlackTieTemplateId(tpl.id) && fmt === "square") {
+      setCenterHeroLayoutId("layout1");
+    }
+
     // 4) APPLY TO UI (With Explicit Fallbacks!)
     
     // --- TEXT CONTENT ---
@@ -21181,6 +29020,22 @@ const applyTemplate = React.useCallback<
     setSubtag(merged.subtag ?? 'Subtag');
     setHead2(merged.head2line ?? '');
     setDetails2(merged.details2 ?? '');
+    setPresenterEnabled(merged.presenterEnabled ?? false);
+    setPresenterText(merged.presenter ?? '');
+    setLeftRailEnabled(merged.leftRailEnabled ?? false);
+    setLeftRailText(merged.leftRail ?? '');
+    setRightRailEnabled((merged as any).rightRailEnabled ?? false);
+    setRightRailText((merged as any).rightRail ?? '');
+    setDateEnabled(merged.dateEnabled ?? false);
+    setDateText(merged.date ?? '');
+    setPriceEnabled(merged.priceEnabled ?? false);
+    setPriceText(merged.price ?? '');
+    setQrEnabled(merged.qrEnabled ?? false);
+    setQrImageUrl(
+      typeof (merged as any).qrImageUrl === "string" && (merged as any).qrImageUrl
+        ? String((merged as any).qrImageUrl)
+        : null
+    );
 
     // --- POSITIONS ---
     setHeadX(merged.headX ?? 50);
@@ -21195,6 +29050,18 @@ const applyTemplate = React.useCallback<
     setVenueY(merged.venueY ?? 90);
     setSubtagX(merged.subtagX ?? 50);
     setSubtagY(merged.subtagY ?? 10);
+    setPresenterX(merged.presenterX ?? 31.5);
+    setPresenterY(merged.presenterY ?? 7.5);
+    setLeftRailX(merged.leftRailX ?? 3.5);
+    setLeftRailY(merged.leftRailY ?? 53);
+    setRightRailX((merged as any).rightRailX ?? 86.8);
+    setRightRailY((merged as any).rightRailY ?? 36);
+    setDateX(merged.dateX ?? 8);
+    setDateY(merged.dateY ?? 6);
+    setPriceX(merged.priceX ?? 78);
+    setPriceY(merged.priceY ?? 66);
+    setQrX(merged.qrX ?? 90);
+    setQrY(merged.qrY ?? 8);
     setBgPosX(merged.bgPosX ?? (merged as any).bgX ?? 50);
     setBgPosY(merged.bgPosY ?? (merged as any).bgY ?? 50);
     setBgRotate((merged as any).bgRotate ?? 0);
@@ -21209,23 +29076,100 @@ const applyTemplate = React.useCallback<
     setHeadRushEnabled((merged as any).headRushEnabled ?? false);
     setHeadRushDotColor((merged as any).headRushDotColor ?? "#ff2a45");
     setHeadRushContrastColor((merged as any).headRushContrastColor ?? "#ffffff");
-    setHeadRushDotSize((merged as any).headRushDotSize ?? 7.8);
-    setHeadRushDotSpacing((merged as any).headRushDotSpacing ?? 8.5);
+    setHeadRushDotSize((merged as any).headRushDotSize ?? HEADLINE_HALFTONE_DEFAULTS.dotSize);
+    setHeadRushDotSpacing((merged as any).headRushDotSpacing ?? HEADLINE_HALFTONE_DEFAULTS.dotSpacing);
     setHeadRushShadowOffset((merged as any).headRushShadowOffset ?? 0);
     setHeadLineEnabled((merged as any).headLineEnabled ?? false);
     setHeadLineFrontOffsetX((merged as any).headLineFrontOffsetX ?? 0);
     setHeadLineFrontOffsetY((merged as any).headLineFrontOffsetY ?? 0);
     setHeadLineBackOffsetX((merged as any).headLineBackOffsetX ?? 10);
     setHeadLineBackOffsetY((merged as any).headLineBackOffsetY ?? 8);
+    setHeadGlassEnabled((merged as any).headGlassEnabled ?? false);
+    setHeadGlassPaletteLinked((merged as any).headGlassPaletteLinked ?? true);
+    const templateGlassColors = resolveGlassPaletteColors((merged as any).palette || palette);
+    setHeadGlassPrimaryColor((merged as any).headGlassPrimaryColor ?? templateGlassColors.primaryColor);
+    setHeadGlassSecondaryColor((merged as any).headGlassSecondaryColor ?? templateGlassColors.secondaryColor);
+    setHeadGlassHighlightColor((merged as any).headGlassHighlightColor ?? templateGlassColors.highlightColor);
+    setHeadGlassBlur((merged as any).headGlassBlur ?? HEADLINE_GLASS_DEFAULTS.blur);
+    setHeadGlassGlow((merged as any).headGlassGlow ?? HEADLINE_GLASS_DEFAULTS.glow);
+    setHeadGlassStroke((merged as any).headGlassStroke ?? HEADLINE_GLASS_DEFAULTS.stroke);
+    setHeadGlassFillAlpha((merged as any).headGlassFillAlpha ?? HEADLINE_GLASS_DEFAULTS.fillAlpha);
+    setHeadKineticEnabled((merged as any).headKineticEnabled ?? false);
+    setHeadKineticPaletteLinked((merged as any).headKineticPaletteLinked ?? true);
+    const templateKineticColors = resolveKineticPaletteColors((merged as any).palette || palette);
+    setHeadKineticTextColor((merged as any).headKineticTextColor ?? templateKineticColors.textColor);
+    setHeadKineticTopColor((merged as any).headKineticTopColor ?? templateKineticColors.topColor);
+    setHeadKineticBottomColor((merged as any).headKineticBottomColor ?? templateKineticColors.bottomColor);
+    setHeadKineticSliceOffsetX((merged as any).headKineticSliceOffsetX ?? HEADLINE_KINETIC_DEFAULTS.sliceOffsetX);
+    setHeadKineticSliceOffsetY((merged as any).headKineticSliceOffsetY ?? HEADLINE_KINETIC_DEFAULTS.sliceOffsetY);
+    setHeadKineticShadowOpacity((merged as any).headKineticShadowOpacity ?? HEADLINE_KINETIC_DEFAULTS.shadowOpacity);
+    setHeadDashStrokeEnabled((merged as any).headDashStrokeEnabled ?? false);
+    setHeadColorStrokeEnabled((merged as any).headColorStrokeEnabled ?? false);
+    setHeadDashStrokePaletteLinked((merged as any).headDashStrokePaletteLinked ?? true);
+    setHeadDashStrokeColors((merged as any).headDashStrokeColors ?? resolveDashStrokePaletteColors((merged as any).palette || palette));
+    setHeadDashStrokeFrame((merged as any).headDashStrokeFrame ?? HEADLINE_DASH_STROKE_DEFAULTS.frame);
+    setHeadColorStrokeFrame((merged as any).headColorStrokeFrame ?? HEADLINE_DASH_STROKE_DEFAULTS.frame);
+    setHeadDoodleAngleX((merged as any).headDoodleAngleX ?? HEADLINE_DOODLE_STACK_DEFAULTS.angleX);
+    setHeadDoodleAngleY((merged as any).headDoodleAngleY ?? HEADLINE_DOODLE_STACK_DEFAULTS.angleY);
+    setHeadDoodleRotate((merged as any).headDoodleRotate ?? HEADLINE_DOODLE_STACK_DEFAULTS.rotate);
+    setHeadDoodleSpread((merged as any).headDoodleSpread ?? HEADLINE_DOODLE_STACK_DEFAULTS.spread);
+    setHeadPure3dEnabled((merged as any).headPure3dEnabled ?? false);
+    setHeadPure3dPaletteLinked((merged as any).headPure3dPaletteLinked ?? true);
+    const templatePure3dColors = resolvePure3dPaletteColors((merged as any).palette || palette);
+    setHeadPure3dFaceColor((merged as any).headPure3dFaceColor ?? templatePure3dColors.faceColor);
+    setHeadPure3dEdgeColor((merged as any).headPure3dEdgeColor ?? templatePure3dColors.edgeColor);
+    setHeadPure3dShadowColor((merged as any).headPure3dShadowColor ?? templatePure3dColors.shadowColor);
+    setHeadPure3dFrame((merged as any).headPure3dFrame ?? HEADLINE_PURE_3D_DEFAULTS.frame);
+    setHeadGoldBlockEnabled((merged as any).headGoldBlockEnabled ?? false);
+    setHeadGoldBlockPaletteLinked((merged as any).headGoldBlockPaletteLinked ?? true);
+    const templateGoldBlockColors = resolveGoldBlockPaletteColors((merged as any).palette || palette);
+    setHeadGoldBlockLightColor((merged as any).headGoldBlockLightColor ?? templateGoldBlockColors.lightColor);
+    setHeadGoldBlockMidColor((merged as any).headGoldBlockMidColor ?? templateGoldBlockColors.midColor);
+    setHeadGoldBlockDarkColor((merged as any).headGoldBlockDarkColor ?? templateGoldBlockColors.darkColor);
+    setHeadGoldBlockStrokeColor((merged as any).headGoldBlockStrokeColor ?? HEADLINE_GOLD_BLOCK_DEFAULTS.strokeColor);
+    setHeadGoldBlockStrokeWidth((merged as any).headGoldBlockStrokeWidth ?? HEADLINE_GOLD_BLOCK_DEFAULTS.strokeWidth);
+    setHeadGoldBlockTexture((merged as any).headGoldBlockTexture ?? HEADLINE_GOLD_BLOCK_DEFAULTS.texture);
+    setHeadGoldBlockRoughness((merged as any).headGoldBlockRoughness ?? HEADLINE_GOLD_BLOCK_DEFAULTS.roughness);
+    setHeadCyberEmbossEnabled((merged as any).headCyberEmbossEnabled ?? false);
+    setHeadRetroShadowEnabled((merged as any).headRetroShadowEnabled ?? HEADLINE_RETRO_ENGRAVED_DEFAULTS.shadowEnabled);
+    setHeadRetroShadowAlpha((merged as any).headRetroShadowAlpha ?? HEADLINE_RETRO_ENGRAVED_DEFAULTS.shadowAlpha);
+    setHeadQuantumEnabled((merged as any).headQuantumEnabled ?? false);
+    setHeadQuantumPaletteLinked((merged as any).headQuantumPaletteLinked ?? true);
+    const templateQuantumColors = resolveQuantumPaletteColors((merged as any).palette || palette);
+    setHeadQuantumCyanColor((merged as any).headQuantumCyanColor ?? templateQuantumColors.cyanColor);
+    setHeadQuantumBlueColor((merged as any).headQuantumBlueColor ?? templateQuantumColors.blueColor);
+    setHeadQuantumHighlightColor((merged as any).headQuantumHighlightColor ?? templateQuantumColors.highlightColor);
+    setHeadQuantumPurpleColor((merged as any).headQuantumPurpleColor ?? templateQuantumColors.purpleColor);
+    setHeadQuantumMagentaColor((merged as any).headQuantumMagentaColor ?? templateQuantumColors.magentaColor);
+    setHeadQuantumStrokeWidth((merged as any).headQuantumStrokeWidth ?? HEADLINE_QUANTUM_DEFAULTS.strokeWidth);
+    setHeadQuantumSplitOffset((merged as any).headQuantumSplitOffset ?? HEADLINE_QUANTUM_DEFAULTS.splitOffset);
+    setHeadQuantumGlowEnabled((merged as any).headQuantumGlowEnabled ?? HEADLINE_QUANTUM_DEFAULTS.glowEnabled);
+    setHeadQuantumGlow((merged as any).headQuantumGlow ?? HEADLINE_QUANTUM_DEFAULTS.glow);
+    setHeadQuantumScanlineOpacity(
+      (merged as any).headQuantumScanlineOpacity ?? HEADLINE_QUANTUM_DEFAULTS.scanlineOpacity
+    );
+    setHeadQuantumStreakOpacity(
+      (merged as any).headQuantumStreakOpacity ?? HEADLINE_QUANTUM_DEFAULTS.streakOpacity
+    );
+    setHeadVerticalStretchEnabled((merged as any).headVerticalStretchEnabled ?? false);
+    setHeadVerticalStretchScaleY(
+      (merged as any).headVerticalStretchScaleY ?? HEADLINE_VERTICAL_STRETCH_DEFAULTS.scaleY
+    );
+    setHeadVerticalStretchScaleX(
+      (merged as any).headVerticalStretchScaleX ?? HEADLINE_VERTICAL_STRETCH_DEFAULTS.scaleX
+    );
+    setHeadVerticalStretchShadowOpacity(
+      (merged as any).headVerticalStretchShadowOpacity ?? HEADLINE_VERTICAL_STRETCH_DEFAULTS.shadowOpacity
+    );
     setHeadGlitchEnabled((merged as any).headGlitchEnabled ?? false);
-    setHeadGlitchIntensity((merged as any).headGlitchIntensity ?? 0.55);
-    setHeadGlitchRgbSplit((merged as any).headGlitchRgbSplit ?? 18);
-    setHeadGlitchNoise((merged as any).headGlitchNoise ?? 0.04);
-    setHeadGlitchGlow((merged as any).headGlitchGlow ?? 0.42);
-    setHeadGlitchRedColor((merged as any).headGlitchRedColor ?? "#ff1d25");
-    setHeadGlitchMagentaColor((merged as any).headGlitchMagentaColor ?? "#00ff66");
-    setHeadGlitchBlueColor((merged as any).headGlitchBlueColor ?? "#004bff");
-    setHeadGlitchYellowColor((merged as any).headGlitchYellowColor ?? "#d8ff25");
+    setHeadGlitchIntensity((merged as any).headGlitchIntensity ?? HEADLINE_GLITCH_DEFAULTS.intensity);
+    setHeadGlitchRgbSplit((merged as any).headGlitchRgbSplit ?? HEADLINE_GLITCH_DEFAULTS.rgbSplit);
+    setHeadGlitchNoise((merged as any).headGlitchNoise ?? HEADLINE_GLITCH_DEFAULTS.noise);
+    setHeadGlitchGlow((merged as any).headGlitchGlow ?? HEADLINE_GLITCH_DEFAULTS.glow);
+    setHeadGlitchRedColor((merged as any).headGlitchRedColor ?? "#ff2bd6");
+    setHeadGlitchMagentaColor((merged as any).headGlitchMagentaColor ?? "#8b4dff");
+    setHeadGlitchBlueColor((merged as any).headGlitchBlueColor ?? "#00eaff");
+    setHeadGlitchYellowColor((merged as any).headGlitchYellowColor ?? "#fff5ff");
     setHeadExtrudeDepth((merged as any).headExtrudeDepth ?? 0);
     setHeadExtrudeAngle((merged as any).headExtrudeAngle ?? 38);
     setHeadExtrudeDistance((merged as any).headExtrudeDistance ?? 0);
@@ -21241,12 +29185,27 @@ const applyTemplate = React.useCallback<
     setBgScale(incomingScale);
     setLogoScale(merged.logoScale ?? 1);
     setBgBlur(merged.bgBlur ?? 0); 
+    setPresenterRotation(merged.presenterRotation ?? 0);
+    setLeftRailRotation(merged.leftRailRotation ?? -90);
+    setRightRailRotation((merged as any).rightRailRotation ?? 90);
+    setDateRotation(merged.dateRotation ?? 0);
+    setQrScale(merged.qrScale ?? 0.55);
 
     // --- STYLES & FONTS ---
     setHeadlineFamily(merged.headlineFamily ?? 'Inter');
     setHeadAlign((merged.headAlign as any) ?? 'center');
     setAlign((merged.align as any) ?? 'center');
-    setLineHeight(merged.headlineLineHeight ?? merged.headlineHeight ?? merged.lineHeight ?? 0.9);
+    const mergedLineHeight = merged.headlineLineHeight ?? merged.headlineHeight ?? merged.lineHeight ?? 0.7;
+    setLineHeight(
+      (merged as any).headGlassEnabled
+        ? Math.max(
+            HEADLINE_GLASS_MIN_LINE_HEIGHT,
+            Number.isFinite(Number(mergedLineHeight))
+              ? Number(mergedLineHeight)
+              : HEADLINE_GLASS_DEFAULT_LINE_HEIGHT
+          )
+        : mergedLineHeight
+    );
     setTextColWidth(merged.textColWidth ?? 80);
     
     setHeadSizeAuto(merged.headSizeAuto ?? false);
@@ -21265,7 +29224,7 @@ const applyTemplate = React.useCallback<
     setBodyFamily(merged.bodyFamily ?? merged.detailsFamily ?? 'Inter');
     setDetails2Size(merged.details2Size ?? 12);
     setDetails2Family(merged.details2Family ?? 'Inter');
-    setDetails2LineHeight(merged.details2LineHeight ?? 1.2);
+    setDetails2LineHeight(merged.details2LineHeight ?? 0.7);
     setDetails2LetterSpacing(merged.details2LetterSpacing ?? 0);
     setDetails2Uppercase(merged.details2Uppercase ?? false);
     setDetails2Bold(merged.details2Bold ?? false);
@@ -21280,17 +29239,42 @@ const applyTemplate = React.useCallback<
     setBodyItalic(merged.detailsItalic ?? false);
     setBodyUnderline(merged.detailsUnderline ?? false);
     setBodyTracking(merged.detailsTracking ?? 0.04);
-    
-    setDetailsLineHeight(merged.detailsLineHeight ?? 1.2); 
+
+    setDetailsLineHeight(merged.detailsLineHeight ?? 0.7);
 
     setVenueFamily(merged.venueFamily ?? 'Inter');
     setVenueAlign((merged.venueAlign as any) ?? 'center');
     setVenueColor(merged.venueColor ?? '#ffffff');
     setVenueSize(merged.venueSize ?? 30);
-    setVenueLineHeight(merged.venueLineHeight ?? 1);
+    setVenueLineHeight(merged.venueLineHeight ?? 0.7);
     setVenueUppercase((merged as any).venueUppercase ?? true);
     setVenueBold((merged as any).venueBold ?? true);
     setVenueItalic((merged as any).venueItalic ?? false);
+    setPresenterWidth(merged.presenterWidth ?? 40);
+    setPresenterFamily(merged.presenterFamily ?? 'Inter');
+    setPresenterSize(merged.presenterSize ?? 10);
+    setPresenterLineHeight((merged as any).presenterLineHeight ?? 0.7);
+    setPresenterColor(merged.presenterColor ?? '#ffffff');
+    setPresenterAlign((merged.presenterAlign as any) ?? 'center');
+    setLeftRailFamily(merged.leftRailFamily ?? 'Inter');
+    setLeftRailSize(merged.leftRailSize ?? 10);
+    setLeftRailLineHeight((merged as any).leftRailLineHeight ?? 0.7);
+    setLeftRailColor(merged.leftRailColor ?? '#ffffff');
+    setRightRailFamily((merged as any).rightRailFamily ?? 'Inter');
+    setRightRailSize((merged as any).rightRailSize ?? 10);
+    setRightRailLineHeight((merged as any).rightRailLineHeight ?? 0.7);
+    setRightRailColor((merged as any).rightRailColor ?? '#ffffff');
+    setDateFamily(merged.dateFamily ?? 'Bebas Neue');
+    setDateSize(merged.dateSize ?? 24);
+    setDateLineHeight((merged as any).dateLineHeight ?? 0.7);
+    setDateColor(merged.dateColor ?? '#ffffff');
+    setDateAlign((merged.dateAlign as any) ?? 'left');
+    setPriceFamily(merged.priceFamily ?? 'Bebas Neue');
+    setPriceSize(merged.priceSize ?? 30);
+    setPriceLineHeight((merged as any).priceLineHeight ?? 0.7);
+    setPriceScale(merged.priceScale ?? 1);
+    setPriceColor(merged.priceColor ?? '#ffffff');
+    setPriceAlign((merged.priceAlign as any) ?? 'center');
 
     setSubtagFamily(merged.subtagFamily ?? 'Inter');
     setSubtagSize(merged.subtagSize ?? 12);
@@ -21466,16 +29450,13 @@ const applyTemplate = React.useCallback<
               typeof e.labelBg === "boolean" ? e.labelBg : true;
             const labelSize =
               typeof e.labelSize === "number" ? e.labelSize : undefined;
+            const labelLineHeight =
+              typeof (e as any).labelLineHeight === "number" ? (e as any).labelLineHeight : undefined;
             const labelColor =
               typeof e.labelColor === "string" ? e.labelColor : undefined;
 
             if (svgTemplate) {
-              const nextSvg = svgTemplate.replace(
-                "{{COLOR}}",
-                iconColor || "#ffffff"
-              );
-              const svgBase64 = btoa(unescape(encodeURIComponent(nextSvg)));
-              url = `data:image/svg+xml;base64,${svgBase64}`;
+              url = rebuildSvgDataUrl(svgTemplate, iconColor || "#ffffff");
             }
 
             return {
@@ -21489,16 +29470,51 @@ const applyTemplate = React.useCallback<
               locked: !!e.locked,
               blendMode: e.isFlare && !e.isSticker ? "screen" : (e.blendMode ?? "normal"),
               isFlare: !!e.isFlare,
-              isSticker: !!e.isSticker,
+              isSticker: !!e.isSticker && !e.isExtracted,
+              isTexture: !!(e as any).isTexture,
+              isExtracted: !!e.isExtracted,
+              isLogo: !!e.isLogo,
+              isBrandFace: !!e.isBrandFace,
+              isShapeGraphic: !!(e as any).isShapeGraphic,
+              isSeparator: !!(e as any).isSeparator,
+              separatorKind:
+                typeof (e as any).separatorKind === "string" ? (e as any).separatorKind : undefined,
+              separatorWidth:
+                typeof (e as any).separatorWidth === "number" ? (e as any).separatorWidth : undefined,
+              separatorOffset:
+                typeof (e as any).separatorOffset === "number" ? (e as any).separatorOffset : undefined,
+              isNightlifeGraphic: !!(e as any).isNightlifeGraphic,
+              shapeKind:
+                typeof (e as any).shapeKind === "string" ? (e as any).shapeKind : undefined,
+              shapeGradient:
+                typeof (e as any).shapeGradient === "boolean"
+                  ? (e as any).shapeGradient
+                  : undefined,
+              shapeLength:
+                typeof (e as any).shapeLength === "number" ? (e as any).shapeLength : undefined,
+              shapeSkew:
+                typeof (e as any).shapeSkew === "number" ? (e as any).shapeSkew : undefined,
               tint: e.tint ?? 0,
               tintMode: e.tintMode ?? "hue",
+              layerOffset:
+                typeof e.layerOffset === "number" ? e.layerOffset : undefined,
+              shadowBlur:
+                typeof e.shadowBlur === "number" ? e.shadowBlur : undefined,
+              shadowAlpha:
+                typeof e.shadowAlpha === "number" ? e.shadowAlpha : undefined,
+              hitTestMode:
+                typeof e.hitTestMode === "string" ? e.hitTestMode : undefined,
               label: label || undefined,
               showLabel,
               labelBg,
               labelSize,
+              labelLineHeight,
               labelColor,
               svgTemplate,
               iconColor: iconColor || (svgTemplate ? "#ffffff" : undefined),
+              ...(!isPaletteProtectedFlare(e) && isPaletteRole((e as any).paletteRole)
+                ? { paletteRole: (e as any).paletteRole }
+                : {}),
             };
           });
 
@@ -21509,11 +29525,21 @@ const applyTemplate = React.useCallback<
     }
 
    // --- COLORS/FX ---
+    setPalette(
+      resolveOriginalTemplatePalette(
+        merged.palette && typeof merged.palette === "object"
+          ? (merged.palette as Partial<Palette>)
+          : {},
+        merged
+      )
+    );
+
     // 1. HEADLINE 1 (Main)
     const incomingFx: any = merged.textFx || {};
     setTextFx({
       ...DEFAULT_TEXT_FX,
       ...incomingFx,
+      texture: isCenterHeroTemplateId(tpl.id) ? undefined : incomingFx.texture,
       italic: incomingFx.italic ?? merged.headlineItalic ?? merged.headItalic ?? DEFAULT_TEXT_FX.italic,
       bold: incomingFx.bold ?? merged.headlineBold ?? merged.headBold ?? DEFAULT_TEXT_FX.bold,
       underline: incomingFx.underline ?? merged.headUnderline ?? DEFAULT_TEXT_FX.underline,
@@ -21593,7 +29619,15 @@ const applyTemplate = React.useCallback<
 // =========================================================
 // Apply button handler (shared with Choose-a-Vibe)
 const applyTemplateFromGallery = React.useCallback(
-  (tpl: TemplateSpec, opts?: { targetFormat?: Format; advanceWorkflow?: boolean; allowStarterPreview?: boolean }) => {
+  (
+    tpl: TemplateSpec,
+    opts?: {
+      targetFormat?: Format;
+      advanceWorkflow?: boolean;
+      allowStarterPreview?: boolean;
+      autoGenerateBackground?: boolean;
+    }
+  ) => {
     if (isStarterPlan && !opts?.allowStarterPreview && !STARTER_TEMPLATE_IDS.has(tpl.id)) {
       alert(`Trial access includes ${STARTER_TEMPLATE_COUNT} editable templates. Log in and choose a plan to unlock the full template library.`);
       return;
@@ -21603,8 +29637,17 @@ const applyTemplateFromGallery = React.useCallback(
 
     const fmt = opts?.targetFormat ?? format;
     const store = useFlyerState.getState();
-    // Clear both formats so the story side doesn't inherit stale session values.
-    store.setSession((prev) => ({ ...prev, square: {}, story: {} }));
+    templatePaletteAnalysisRef.current += 1;
+    const squareVariant =
+      tpl.formats?.square ?? tpl.base ?? tpl.formats?.story ?? {};
+    const storyVariant =
+      tpl.formats?.story ?? tpl.formats?.square ?? tpl.base ?? {};
+    // Seed both formats so Story gets the template's original palette too.
+    store.setSession((prev) => ({
+      ...prev,
+      square: cloneTemplateSessionVariant(squareVariant),
+      story: cloneTemplateSessionVariant(storyVariant),
+    }));
     store.setSessionDirty((prev) => ({ ...prev, square: false, story: false }));
 
     setTemplateId(tpl.id);
@@ -21625,6 +29668,9 @@ const applyTemplateFromGallery = React.useCallback(
       setBgUploadUrl(null);
       setBgUrl(resolvedBgUrl);
     }
+    if (opts?.autoGenerateBackground === true) {
+      autoGenerateTemplateBackground(tpl, fmt);
+    }
 
     // 🔓 release on next tick after state settles
     setTimeout(() => {
@@ -21639,8 +29685,168 @@ const applyTemplateFromGallery = React.useCallback(
       }, 120);
     }
   },
-  [applyTemplate, format, isStarterPlan]
+  [applyTemplate, autoGenerateTemplateBackground, format, isStarterPlan]
 );
+
+const getAutoLayoutSubjectPayload = React.useCallback(() => {
+  const normalizeSrc = (src: unknown) => {
+    const value = String(src || "").trim();
+    if (!value || value.startsWith("blob:")) return "";
+    if (value.startsWith("/")) {
+      return typeof window !== "undefined" ? `${window.location.origin}${value}` : value;
+    }
+    return value;
+  };
+
+  const isSubjectLayer = (item: any) => {
+    if (!item?.url) return false;
+    if (item.isExtracted) return true;
+    if (item.isSticker || item.isFlare || item.isLogo || item.scenePackId) return false;
+    const id = String(item.id || "");
+    if (id.startsWith("logo_")) return false;
+    return true;
+  };
+  const buildPayload = (src: string, subject: any, fallbackId: string) => {
+    const measuredBounds =
+      subject?.id && typeof subject.id === "string"
+        ? capturePortraitPlacementFromCanvas(subject.id)
+        : null;
+    if (!measuredBounds) {
+      throw new Error("Missing rendered subject bounds");
+    }
+    const x = Number(subject?.x);
+    const y = Number(subject?.y);
+    const scale = Number(subject?.scale);
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(scale) || scale <= 0) {
+      throw new Error("Missing current subject placement");
+    }
+    const subjectPlacement = {
+      id: String(subject?.id || fallbackId),
+      x,
+      y,
+      scale,
+      renderedBounds: measuredBounds,
+    };
+    return {
+      hasSubject: true,
+      subject: src,
+      subjectPlacement,
+    };
+  };
+
+  const list = Array.isArray(portraits?.[format]) ? portraits[format] : [];
+  const selected = selectedPortraitId
+    ? list.find((item: any) => item?.id === selectedPortraitId && isSubjectLayer(item))
+    : null;
+  const subject = selected || list.find(isSubjectLayer);
+  if (subject) {
+    const src = normalizeSrc((subject as any).url);
+    if (src) {
+      return buildPayload(src, subject, "canvas_subject");
+    }
+  }
+
+  const fallbackSrc = normalizeSrc(portraitUrl);
+  if (!fallbackSrc) return null;
+  return buildPayload(
+    fallbackSrc,
+    { id: "main_portrait", x: portraitX, y: portraitY, scale: portraitScale },
+    "main_portrait"
+  );
+}, [
+  capturePortraitPlacementFromCanvas,
+  format,
+  portraitScale,
+  portraitUrl,
+  portraitX,
+  portraitY,
+  portraits,
+  selectedPortraitId,
+]);
+
+const getActiveGeometryLayout = React.useCallback((): Partial<TemplateBase> => {
+  const liveSession = useFlyerState.getState().session?.[format] ?? {};
+  const liveTemplate = useFlyerState.getState().currentTemplate?.[format] ?? {};
+  const activeVariant =
+    activeTemplate?.formats?.[format] ??
+    activeTemplate?.formats?.square ??
+    activeTemplate?.base ??
+    {};
+  return {
+    ...activeVariant,
+    ...liveTemplate,
+    ...liveSession,
+  } as Partial<TemplateBase>;
+}, [activeTemplate, format]);
+
+const handleFitActiveTemplateGeometry = React.useCallback(async () => {
+  try {
+    setGeometryFitLoading(true);
+    setGeometryFitError(null);
+
+    const layout = getActiveGeometryLayout();
+    const subjectVisibleRect = layout.subjectVisibleRect;
+    if (!subjectVisibleRect) {
+      throw new Error("This template does not define a subject geometry box.");
+    }
+
+    const subjectPayload = getAutoLayoutSubjectPayload();
+    if (!subjectPayload?.subject || !subjectPayload.subjectPlacement) {
+      throw new Error("Select or place a cutout subject first.");
+    }
+
+    const subjectPlacement = subjectPayload.subjectPlacement;
+    const patch = await computeStrictSubjectAutoLayoutPatch({
+      subject: {
+        id: subjectPlacement.id,
+        imageUrl: subjectPayload.subject,
+        placement: {
+          x: Number(subjectPlacement.x),
+          y: Number(subjectPlacement.y),
+          scale: Number(subjectPlacement.scale),
+        },
+        renderedBounds: subjectPlacement.renderedBounds,
+      },
+      coordinatePlan: { subjectVisibleRect },
+      canvasSize: format === "story" ? { width: 1080, height: 1920 } : { width: 1080, height: 1080 },
+      placementMode: "center",
+      fitPadding: 1,
+      alphaThreshold: 28,
+    });
+
+    const nextPatch = {
+      x: clamp100(patch.x),
+      y: clamp100(patch.y),
+      scale: Math.max(0.05, Math.min(5, patch.scale)),
+    };
+    const targetId = String(subjectPlacement.id || "");
+    const store = useFlyerState.getState();
+    const subjectExists =
+      !!targetId && (store.portraits?.[format] || []).some((item: any) => item?.id === targetId);
+
+    if (subjectExists) {
+      store.updatePortrait(format, targetId, nextPatch);
+      store.setSelectedPortraitId(targetId);
+      store.setMoveTarget("portrait");
+      store.setSelectedPanel("portrait");
+    } else {
+      setPortraitX(nextPatch.x);
+      setPortraitY(nextPatch.y);
+      setPortraitScale(nextPatch.scale);
+    }
+
+    window.setTimeout(scrollToArtboard, 120);
+  } catch (err: any) {
+    setGeometryFitError(err?.message || "Could not fit the subject to the template geometry.");
+  } finally {
+    setGeometryFitLoading(false);
+  }
+}, [
+  format,
+  getActiveGeometryLayout,
+  getAutoLayoutSubjectPayload,
+  scrollToArtboard,
+]);
 
 const handleAutoLayoutFromBackground = React.useCallback(async () => {
   if (!hasCreatorAutoLayoutAccess) {
@@ -21662,6 +29868,14 @@ const handleAutoLayoutFromBackground = React.useCallback(async () => {
       throw new Error("Log in to use Auto Layout.");
     }
 
+    const subjectPayload = getAutoLayoutSubjectPayload();
+    if (!subjectPayload?.subject) {
+      throw new Error("Missing subject imageUrl");
+    }
+    if (!subjectPayload.subjectPlacement) {
+      throw new Error("Missing current subject placement");
+    }
+
     const res = await fetch("/api/analyze-template", {
       method: "POST",
       headers: {
@@ -21679,6 +29893,8 @@ const handleAutoLayoutFromBackground = React.useCallback(async () => {
           venue,
           subtag,
         },
+        requireSubject: true,
+        ...subjectPayload,
         tracking: getClientTrackingPayload(),
       }),
     });
@@ -21697,6 +29913,129 @@ const handleAutoLayoutFromBackground = React.useCallback(async () => {
       bgUrl: null,
     };
 
+    const cameraPlacement = (layout as any).subjectCameraPlacement;
+    if (!cameraPlacement) {
+      throw new Error("Missing director subject coordinates");
+    }
+
+    const subjectPlacement = subjectPayload.subjectPlacement;
+    const targetId =
+      typeof cameraPlacement.id === "string" && cameraPlacement.id
+        ? cameraPlacement.id
+        : typeof subjectPlacement.id === "string"
+        ? String(subjectPlacement.id)
+        : "";
+    const store = useFlyerState.getState();
+    const subjectImageUrl = String(subjectPayload.subject || "").trim();
+    const currentPlacement = {
+      x: Number(subjectPlacement.x),
+      y: Number(subjectPlacement.y),
+      scale: Number(subjectPlacement.scale),
+    };
+    const blueprintId = String((layout as any).blueprintId || "");
+    const style: FlyerStyle = blueprintId.includes("BOTTLE")
+      ? "bottle_service"
+      : blueprintId.includes("MIAMI")
+      ? "miami_luxe"
+      : blueprintId.includes("NEON")
+      ? "neon_club"
+      : blueprintId.includes("EDITORIAL")
+      ? "editorial"
+      : "red_only_center_hero";
+    const rawCrop = String((layout as any).subjectCameraProfile?.crop || "");
+    const crop: SubjectCrop =
+      rawCrop === "product"
+        ? "product"
+        : rawCrop === "closeup" || rawCrop === "half_body" || rawCrop === "full_body"
+        ? rawCrop
+        : "three_quarter";
+    const rawOrientation = String((layout as any).subjectCameraProfile?.orientation || "");
+    const orientation: SubjectOrientation =
+      rawOrientation === "left_facing"
+        ? "facing_left"
+        : rawOrientation === "right_facing"
+        ? "facing_right"
+        : rawOrientation === "left_weighted"
+        ? "weight_left"
+        : rawOrientation === "right_weighted"
+        ? "weight_right"
+        : "front";
+    const metadata = [
+      (layout as any).details,
+      (layout as any).details2,
+      (layout as any).venue,
+      (layout as any).subtag,
+    ].filter((value) => typeof value === "string" && value.trim());
+    const suppressed = Array.isArray((layout as any).artDirectorScore?.failures)
+      ? (layout as any).artDirectorScore.failures
+      : [];
+    const rawSubjectVisualPressure = Number(
+      (cameraPlacement as any).visualMass?.visualPressure ??
+        subjectPlacement.renderedBounds?.visualMass?.visualPressure
+    );
+    const coordinatePlan = createOptimizedCoordinatePlan({
+      flyerStyle: style,
+      subjectCrop: crop,
+      subjectOrientation: orientation,
+      textPriority: {
+        hero: String((layout as any).headline || headline || ""),
+        support: String((layout as any).head2 || head2 || ""),
+        metadata,
+        suppressed,
+      },
+      requiredTextZones: [
+        "topPresenter",
+        "ghostTitle",
+        "scriptAccent",
+        "leftDate",
+        "rightArtist",
+        "bottomOffer",
+        "bottomFooter",
+        "fineprint",
+      ],
+      overlapIntent: {
+        ghostTitle: "behind_subject",
+        scriptAccent: "cross_torso",
+        heroTitle: "overlap_lower_body",
+      },
+      negativeSpaceNeed: 0.7,
+      subjectVisualPressure: Number.isFinite(rawSubjectVisualPressure) ? rawSubjectVisualPressure : undefined,
+    });
+    const coordinateEditorPatch = coordinatePlanToEditorPatch(coordinatePlan);
+    const coordinatedLayout = {
+      ...layout,
+      ...coordinateEditorPatch,
+      coordinatePlan,
+      subjectVisibleRect: coordinatePlan.subjectVisibleRect,
+    };
+    const renderedBounds = subjectPlacement.renderedBounds || null;
+    const strictPatch = await computeStrictSubjectAutoLayoutPatch({
+      subject: {
+        id: targetId || subjectPlacement.id,
+        imageUrl: subjectImageUrl,
+        placement: currentPlacement,
+        renderedBounds,
+      },
+      coordinatePlan,
+      canvasSize: format === "story" ? { width: 1080, height: 1920 } : { width: 1080, height: 1080 },
+      placementMode: "center",
+      fitPadding: 0.92,
+      alphaThreshold: 28,
+    });
+    const patch = {
+      x: clamp100(strictPatch.x),
+      y: clamp100(strictPatch.y),
+      scale: Math.max(0.05, Math.min(5, strictPatch.scale)),
+    };
+    console.log("coordinate search plan", {
+      subjectVisibleRect: coordinatePlan.subjectVisibleRect,
+      editorPatch: coordinateEditorPatch,
+      score: coordinatePlan.score,
+      candidates: coordinatePlan.candidates?.slice(0, 5),
+      notes: coordinatePlan.notes,
+    });
+    console.log("strict auto layout subject patch", strictPatch.debug);
+
     setTemplateId(null);
     setActiveTemplate(null);
     applyTemplate(
@@ -21706,11 +30045,24 @@ const handleAutoLayoutFromBackground = React.useCallback(async () => {
         tags: ["AI"],
         preview: currentBgSrc,
         formats: {
-          [format]: layout,
+          [format]: coordinatedLayout,
         },
       },
       { targetFormat: format }
     );
+
+    const subjectExists = targetId
+      ? (store.portraits?.[format] || []).some((item: any) => item?.id === targetId)
+      : false;
+    if (subjectExists) {
+      store.updatePortrait(format, targetId, patch);
+      store.setSelectedPortraitId(targetId);
+      store.setMoveTarget("portrait");
+    } else {
+      setPortraitX(patch.x);
+      setPortraitY(patch.y);
+      setPortraitScale(patch.scale);
+    }
 
     window.setTimeout(scrollToArtboard, 180);
     transitionCueRef.current?.("ai_scene");
@@ -21730,6 +30082,7 @@ const handleAutoLayoutFromBackground = React.useCallback(async () => {
   details2,
   format,
   getAccessToken,
+  getAutoLayoutSubjectPayload,
   hasCreatorAutoLayoutAccess,
   head2,
   headline,
@@ -21918,7 +30271,10 @@ React.useEffect(() => {
   if (prev === signature) return;
 
   devTemplateSignatureRef.current[key] = signature;
-  applyTemplateFromGallery(tpl, { targetFormat: format });
+  applyTemplateFromGallery(tpl, {
+    targetFormat: format,
+    autoGenerateBackground: false,
+  });
 }, [templateId, format, applyTemplateFromGallery]);
 
 /* ============================================================
@@ -22159,6 +30515,68 @@ const syncCurrentStateToSession = () => {
     headLineFrontOffsetY,
     headLineBackOffsetX,
     headLineBackOffsetY,
+    headGlassEnabled,
+    headGlassPaletteLinked,
+    headGlassPrimaryColor,
+    headGlassSecondaryColor,
+    headGlassHighlightColor,
+    headGlassBlur,
+    headGlassGlow,
+    headGlassStroke,
+    headGlassFillAlpha,
+    headKineticEnabled,
+    headKineticPaletteLinked,
+    headKineticTextColor,
+    headKineticTopColor,
+    headKineticBottomColor,
+    headKineticSliceOffsetX,
+    headKineticSliceOffsetY,
+    headKineticShadowOpacity,
+    headDashStrokeEnabled,
+    headColorStrokeEnabled,
+    headDashStrokePaletteLinked,
+    headDashStrokeColors,
+    headDashStrokeFrame,
+    headColorStrokeFrame,
+    headDoodleAngleX,
+    headDoodleAngleY,
+    headDoodleRotate,
+    headDoodleSpread,
+    headPure3dEnabled,
+    headPure3dPaletteLinked,
+    headPure3dFaceColor,
+    headPure3dEdgeColor,
+    headPure3dShadowColor,
+    headPure3dFrame,
+    headGoldBlockEnabled,
+    headGoldBlockPaletteLinked,
+    headGoldBlockLightColor,
+    headGoldBlockMidColor,
+    headGoldBlockDarkColor,
+    headGoldBlockStrokeColor,
+    headGoldBlockStrokeWidth,
+    headGoldBlockTexture,
+    headGoldBlockRoughness,
+    headCyberEmbossEnabled,
+    headRetroShadowEnabled,
+    headRetroShadowAlpha,
+    headQuantumEnabled,
+    headQuantumPaletteLinked,
+    headQuantumCyanColor,
+    headQuantumBlueColor,
+    headQuantumHighlightColor,
+    headQuantumPurpleColor,
+    headQuantumMagentaColor,
+    headQuantumStrokeWidth,
+    headQuantumSplitOffset,
+    headQuantumGlowEnabled,
+    headQuantumGlow,
+    headQuantumScanlineOpacity,
+    headQuantumStreakOpacity,
+    headVerticalStretchEnabled,
+    headVerticalStretchScaleY,
+    headVerticalStretchScaleX,
+    headVerticalStretchShadowOpacity,
     headGlitchEnabled,
     headGlitchIntensity,
     headGlitchRgbSplit,
@@ -22301,6 +30719,64 @@ const syncCurrentStateToSession = () => {
     pillAlpha: subtagAlpha,
 
     // ------------------------------------------------
+    // 6b. AUXILIARY TEMPLATE FIELDS
+    // ------------------------------------------------
+    presenterEnabled,
+    presenter: presenterText,
+    presenterX,
+    presenterY,
+    presenterWidth,
+    presenterSize,
+    presenterLineHeight,
+    presenterFamily,
+    presenterColor,
+    presenterAlign,
+    presenterRotation,
+    leftRailEnabled,
+    leftRail: leftRailText,
+    leftRailX,
+    leftRailY,
+    leftRailSize,
+    leftRailLineHeight,
+    leftRailFamily,
+    leftRailColor,
+    leftRailRotation,
+    rightRailEnabled,
+    rightRail: rightRailText,
+    rightRailX,
+    rightRailY,
+    rightRailSize,
+    rightRailLineHeight,
+    rightRailFamily,
+    rightRailColor,
+    rightRailRotation,
+    dateEnabled,
+    date: dateText,
+    dateX,
+    dateY,
+    dateSize,
+    dateLineHeight,
+    dateFamily,
+    dateColor,
+    dateAlign,
+    dateRotation,
+    priceEnabled,
+    price: priceText,
+    priceX,
+    priceY,
+    priceSize,
+    priceLineHeight,
+    priceScale,
+    priceFamily,
+    priceColor,
+    priceAlign,
+    qrEnabled,
+    qrX,
+    qrY,
+    qrScale,
+    qrImageUrl,
+
+    // ------------------------------------------------
     // 7. GLOBAL & BACKGROUND
     // ------------------------------------------------
     // Background Image
@@ -22362,6 +30838,7 @@ const syncCurrentStateToSession = () => {
 const applySessionForFormat = (fmt: Format) => {
   const session = useFlyerState.getState().session?.[fmt] ?? {};
   if (!session || Object.keys(session).length === 0) return false;
+  const dirty = !!useFlyerState.getState().sessionDirty?.[fmt];
 
   const sessionTemplate: TemplateSpec = {
     id: "__session__",
@@ -22371,7 +30848,7 @@ const applySessionForFormat = (fmt: Format) => {
     formats: fmt === "square" ? { square: session } : { story: session },
   };
 
-  applyTemplate(sessionTemplate, { targetFormat: fmt, initialLoad: false });
+  applyTemplate(sessionTemplate, { targetFormat: fmt, initialLoad: !dirty });
   return true;
 };
 
@@ -22426,6 +30903,43 @@ const syncHeadlineStyleToSession = React.useCallback(() => {
     headLineFrontOffsetY,
     headLineBackOffsetX,
     headLineBackOffsetY,
+    headGlassEnabled,
+    headGlassPaletteLinked,
+    headGlassPrimaryColor,
+    headGlassSecondaryColor,
+    headGlassHighlightColor,
+    headGlassBlur,
+    headGlassGlow,
+    headGlassStroke,
+    headGlassFillAlpha,
+    headKineticEnabled,
+    headKineticPaletteLinked,
+    headKineticTextColor,
+    headKineticTopColor,
+    headKineticBottomColor,
+    headKineticSliceOffsetX,
+    headKineticSliceOffsetY,
+    headKineticShadowOpacity,
+    headCyberEmbossEnabled,
+    headRetroShadowEnabled,
+    headRetroShadowAlpha,
+    headQuantumEnabled,
+    headQuantumPaletteLinked,
+    headQuantumCyanColor,
+    headQuantumBlueColor,
+    headQuantumHighlightColor,
+    headQuantumPurpleColor,
+    headQuantumMagentaColor,
+    headQuantumStrokeWidth,
+    headQuantumSplitOffset,
+    headQuantumGlowEnabled,
+    headQuantumGlow,
+    headQuantumScanlineOpacity,
+    headQuantumStreakOpacity,
+    headVerticalStretchEnabled,
+    headVerticalStretchScaleY,
+    headVerticalStretchScaleX,
+    headVerticalStretchShadowOpacity,
     headGlitchEnabled,
     headGlitchIntensity,
     headGlitchRgbSplit,
@@ -22495,6 +31009,64 @@ const syncHeadlineStyleToSession = React.useCallback(() => {
   headLineEnabled,
   headLineFrontOffsetX,
   headLineFrontOffsetY,
+  headGlassEnabled,
+  headGlassPaletteLinked,
+  headGlassPrimaryColor,
+  headGlassSecondaryColor,
+  headGlassHighlightColor,
+  headGlassBlur,
+  headGlassGlow,
+  headGlassStroke,
+  headGlassFillAlpha,
+  headKineticEnabled,
+  headKineticPaletteLinked,
+  headKineticTextColor,
+  headKineticTopColor,
+  headKineticBottomColor,
+  headKineticSliceOffsetX,
+  headKineticSliceOffsetY,
+  headKineticShadowOpacity,
+  headDashStrokeEnabled,
+  headColorStrokeEnabled,
+  headDashStrokePaletteLinked,
+  headDashStrokeColors,
+  headDashStrokeFrame,
+  headColorStrokeFrame,
+  headPure3dEnabled,
+  headPure3dPaletteLinked,
+  headPure3dFaceColor,
+  headPure3dEdgeColor,
+  headPure3dShadowColor,
+  headPure3dFrame,
+  headGoldBlockEnabled,
+  headGoldBlockPaletteLinked,
+  headGoldBlockLightColor,
+  headGoldBlockMidColor,
+  headGoldBlockDarkColor,
+  headGoldBlockStrokeColor,
+  headGoldBlockStrokeWidth,
+  headGoldBlockTexture,
+  headGoldBlockRoughness,
+  headCyberEmbossEnabled,
+  headRetroShadowEnabled,
+  headRetroShadowAlpha,
+  headQuantumEnabled,
+  headQuantumPaletteLinked,
+  headQuantumCyanColor,
+  headQuantumBlueColor,
+  headQuantumHighlightColor,
+  headQuantumPurpleColor,
+  headQuantumMagentaColor,
+  headQuantumStrokeWidth,
+  headQuantumSplitOffset,
+  headQuantumGlowEnabled,
+  headQuantumGlow,
+  headQuantumScanlineOpacity,
+  headQuantumStreakOpacity,
+  headVerticalStretchEnabled,
+  headVerticalStretchScaleY,
+  headVerticalStretchScaleX,
+  headVerticalStretchShadowOpacity,
   headGlitchEnabled,
   headGlitchIntensity,
   headGlitchRgbSplit,
@@ -22527,6 +31099,78 @@ React.useEffect(() => {
   store.setSession({ square: {}, story: {} });
   store.setSessionDirty({ square: false, story: false });
 }, []);
+
+const didApplyLadiesNightTestRef = React.useRef(false);
+React.useEffect(() => {
+  if (didApplyLadiesNightTestRef.current) return;
+  if (typeof window === "undefined") return;
+
+  const params = new URLSearchParams(window.location.search);
+  const directLadiesNightTest =
+    params.get("test") === "ladies-night" ||
+    params.get("ladiesNightTest") === "1" ||
+    params.get("template") === "ladies_night_center_hero" ||
+    params.get("template") === "ladies_night_isolation_test";
+
+  if (!directLadiesNightTest) return;
+
+  const tpl = TEMPLATE_GALLERY.find((item) => item.id === "ladies_night_center_hero");
+  if (!tpl) return;
+
+  didApplyLadiesNightTestRef.current = true;
+  const targetFormat: Format = params.get("format") === "square" ? "square" : "story";
+
+  setLoadingStartup(false);
+  setShowStartup(false);
+  setFormat(targetFormat);
+  applyTemplateFromGallery(tpl, {
+    targetFormat,
+    allowStarterPreview: true,
+  });
+
+  window.setTimeout(() => {
+    const subjectId =
+      targetFormat === "story"
+        ? "ladies_night_subject_story"
+        : "ladies_night_subject_square";
+    const store = useFlyerState.getState();
+    store.setSelectedPortraitId(subjectId);
+    store.setMoveTarget("portrait");
+    store.setSelectedPanel("portrait");
+  }, 120);
+}, [applyTemplateFromGallery]);
+
+const didApplyDirectTemplateRef = React.useRef(false);
+React.useEffect(() => {
+  if (didApplyDirectTemplateRef.current) return;
+  if (typeof window === "undefined") return;
+
+  const params = new URLSearchParams(window.location.search);
+  const directTemplateId =
+    params.get("leftAlign") === "1"
+      ? "square_center_hero_nightlife"
+      : params.get("template") || "";
+
+  if (
+    !directTemplateId ||
+    directTemplateId === "ladies_night_isolation_test" ||
+    directTemplateId === "ladies_night_center_hero"
+  ) return;
+
+  const tpl = TEMPLATE_GALLERY.find((item) => item.id === directTemplateId);
+  if (!tpl) return;
+
+  didApplyDirectTemplateRef.current = true;
+  const targetFormat: Format = params.get("format") === "story" ? "story" : "square";
+
+  setLoadingStartup(false);
+  setShowStartup(false);
+  setFormat(targetFormat);
+  applyTemplateFromGallery(tpl, {
+    targetFormat,
+    allowStarterPreview: true,
+  });
+}, [applyTemplateFromGallery]);
 
 
 // keep this new state near the other useStates at the top of your component
@@ -22592,9 +31236,9 @@ const handleTemplateSelect = React.useCallback(
           // ✅ Map each vibe to a real template index
           const vibeToTemplateId: Record<string, string> = {
             club: isStarterPlan ? "disco_mirrorball" : "miami2",
-            tropical: isStarterPlan ? resolveStarterTemplateChoiceId(0) : "latin_street_tropical",
+            tropical: isStarterPlan ? resolveStarterTemplateChoiceId(1) : "latin_street_tropical",
             luxury: isStarterPlan ? "new-york" : "atlanta",
-            urban: isStarterPlan ? "mardi_gras" : "hiphop_graffiti",
+            urban: "square_center_hero_nightlife",
           };
 
           const selectedTemplate = TEMPLATE_GALLERY.find((t) => t.id === key);
@@ -22685,7 +31329,8 @@ const [floatingAssetVisible, setFloatingAssetVisible] = React.useState(false);
 const [floatingBgVisible, setFloatingBgVisible] = React.useState(false);
 const [floatingLightingVisible, setFloatingLightingVisible] = React.useState(false);
 const [mobileTextFloatTab, setMobileTextFloatTab] = React.useState<"text" | "style">("text");
-const [mobileHeadlineStyleFocus, setMobileHeadlineStyleFocus] = React.useState<"3d" | "gradient" | "echo" | "rush" | "glitch" | "line" | null>(null);
+type MobileHeadlineStyleFocus = "3d" | "pure3d" | "goldblock" | "gradient" | "rush" | "glitch" | "line" | "glass" | "kinetic" | "dash" | "doodle" | "retro" | "quantum" | "stretch" | null;
+const [mobileHeadlineStyleFocus, setMobileHeadlineStyleFocus] = React.useState<MobileHeadlineStyleFocus>(null);
 const [mobileLightingSlide, setMobileLightingSlide] = React.useState<0 | 1 | 2>(0);
 const [projectHelpOpen, setProjectHelpOpen] = React.useState(false);
 const [workflowHelpOpen, setWorkflowHelpOpen] = React.useState(false);
@@ -22746,6 +31391,59 @@ const headlinePresetBaselineRef = React.useRef<null | {
   headLineFrontOffsetY?: number;
   headLineBackOffsetX?: number;
   headLineBackOffsetY?: number;
+  headKineticEnabled?: boolean;
+  headKineticPaletteLinked?: boolean;
+  headKineticTextColor?: string;
+  headKineticTopColor?: string;
+  headKineticBottomColor?: string;
+  headKineticSliceOffsetX?: number;
+  headKineticSliceOffsetY?: number;
+  headKineticShadowOpacity?: number;
+  headDashStrokeEnabled?: boolean;
+  headColorStrokeEnabled?: boolean;
+  headDashStrokePaletteLinked?: boolean;
+  headDashStrokeColors?: string[];
+  headDashStrokeFrame?: number;
+  headColorStrokeFrame?: number;
+  headDoodleAngleX?: number;
+  headDoodleAngleY?: number;
+  headDoodleRotate?: number;
+  headDoodleSpread?: number;
+  headPure3dEnabled?: boolean;
+  headPure3dPaletteLinked?: boolean;
+  headPure3dFaceColor?: string;
+  headPure3dEdgeColor?: string;
+  headPure3dShadowColor?: string;
+  headPure3dFrame?: number;
+  headGoldBlockEnabled?: boolean;
+  headGoldBlockPaletteLinked?: boolean;
+  headGoldBlockLightColor?: string;
+  headGoldBlockMidColor?: string;
+  headGoldBlockDarkColor?: string;
+  headGoldBlockStrokeColor?: string;
+  headGoldBlockStrokeWidth?: number;
+  headGoldBlockTexture?: number;
+  headGoldBlockRoughness?: number;
+  headCyberEmbossEnabled?: boolean;
+  headRetroShadowEnabled?: boolean;
+  headRetroShadowAlpha?: number;
+  headQuantumEnabled?: boolean;
+  headQuantumPaletteLinked?: boolean;
+  headQuantumCyanColor?: string;
+  headQuantumBlueColor?: string;
+  headQuantumHighlightColor?: string;
+  headQuantumPurpleColor?: string;
+  headQuantumMagentaColor?: string;
+  headQuantumStrokeWidth?: number;
+  headQuantumSplitOffset?: number;
+  headQuantumGlowEnabled?: boolean;
+  headQuantumGlow?: number;
+  headQuantumScanlineOpacity?: number;
+  headQuantumStreakOpacity?: number;
+  headVerticalStretchEnabled?: boolean;
+  headVerticalStretchScaleY?: number;
+  headVerticalStretchScaleX?: number;
+  headVerticalStretchShadowOpacity?: number;
   headGlitchEnabled: boolean;
   headGlitchIntensity: number;
   headGlitchRgbSplit: number;
@@ -23026,6 +31724,12 @@ const [lastMoveStack, setLastMoveStack] = React.useState<{
     | "details2"
     | "venue"
     | "subtag"
+    | "presenter"
+    | "leftRail"
+    | "rightRail"
+    | "date"
+    | "price"
+    | "qr"
     | "logo"
     | "background";
   id: string;
@@ -23034,10 +31738,35 @@ const [lastMoveStack, setLastMoveStack] = React.useState<{
 }[]>([]);
 //const [isMobileView, setIsMobileView] = React.useState(false);
 const activeTextTarget = React.useMemo(() => {
-  const byPanel = selectedPanel && ["headline", "head2", "details", "details2", "venue", "subtag"].includes(selectedPanel)
+  const editableTextPanels = [
+    "headline",
+    "head2",
+    "details",
+    "details2",
+    "venue",
+    "subtag",
+    "presenter",
+    "leftRail",
+    "rightRail",
+    "date",
+    "price",
+  ];
+  const byPanel = selectedPanel && editableTextPanels.includes(selectedPanel)
     ? selectedPanel
     : null;
-  const byMove = moveTarget && ["headline", "headline2", "details", "details2", "venue", "subtag"].includes(moveTarget)
+  const byMove = moveTarget && [
+    "headline",
+    "headline2",
+    "details",
+    "details2",
+    "venue",
+    "subtag",
+    "presenter",
+    "leftRail",
+    "rightRail",
+    "date",
+    "price",
+  ].includes(moveTarget)
     ? moveTarget
     : null;
   return (byPanel ?? byMove ?? null) as
@@ -23047,12 +31776,18 @@ const activeTextTarget = React.useMemo(() => {
     | "details2"
     | "venue"
     | "subtag"
+    | "presenter"
+    | "leftRail"
+    | "rightRail"
+    | "date"
+    | "price"
     | "headline2"
     | null;
 }, [selectedPanel, moveTarget]);
 const activeTextLayerKey = React.useMemo(() => {
   if (!activeTextTarget) return null;
   if (activeTextTarget === "head2" || activeTextTarget === "headline2") return "headline2";
+  if (["presenter", "leftRail", "rightRail", "date", "price"].includes(activeTextTarget)) return null;
   return activeTextTarget as TextLayerKey;
 }, [activeTextTarget]);
 const TEXT_LAYER_STEP = 8;
@@ -23149,10 +31884,16 @@ const creatorWorkflowCurrent =
       selectedPanel === "details" ||
       selectedPanel === "details2" ||
       selectedPanel === "venue" ||
-      selectedPanel === "subtag"
+      selectedPanel === "subtag" ||
+      selectedPanel === "presenter" ||
+      selectedPanel === "leftRail" ||
+      selectedPanel === "rightRail" ||
+      selectedPanel === "date" ||
+      selectedPanel === "price"
     ? "copy"
     : selectedPanel === "icons" ||
       selectedPanel === "portrait" ||
+      selectedPanel === "qr" ||
       selectedPanel === "cinema" ||
       selectedPanel === "magic_blend"
     ? "assets"
@@ -23163,6 +31904,42 @@ const creatorStepPanelClass = (step: "scene" | "copy" | "assets" | "finish") =>
   creatorFlowCurrentStep !== step
     ? "opacity-45 transition-opacity"
     : "transition-opacity";
+const activeTemplateLabelPanel = isTemplateLabelPanelKey(selectedPanel) ? selectedPanel : null;
+const setTemplateLabelPanel = (panel: TemplateLabelPanelKey | null) => {
+  setSelectedPanel(panel);
+  setMoveTarget(panel);
+};
+const templateLabelCardClass = (panel: TemplateLabelPanelKey) =>
+  clsx(
+    "border p-3 transition-colors",
+    activeTemplateLabelPanel === panel
+      ? "border-[#00FFF0]/45 bg-cyan-400/[0.06]"
+      : "border-white/10 bg-black/15"
+  );
+const renderTemplateLabelHeader = (
+  panel: TemplateLabelPanelKey,
+  label: string,
+  enabled: boolean,
+  onEnabledToggle: () => void
+) => {
+  const isActive = activeTemplateLabelPanel === panel;
+  return (
+    <div className="mb-2 flex items-center justify-between gap-2">
+      <button
+        type="button"
+        aria-expanded={isActive}
+        onClick={() => setTemplateLabelPanel(isActive ? null : panel)}
+        className="flex min-w-0 flex-1 items-center gap-2 text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-300 transition hover:text-white"
+      >
+        <span className={clsx("inline-block transition-transform", isActive ? "rotate-90" : "rotate-0")}>▸</span>
+        <span className="truncate">{label}</span>
+      </button>
+      <Chip small active={enabled} onClick={onEnabledToggle}>
+        {enabled ? "On" : "Off"}
+      </Chip>
+    </div>
+  );
+};
 
 const clearTransientCanvasFocus = React.useCallback(() => {
   const store = useFlyerState.getState();
@@ -23470,7 +32247,12 @@ const currentMobileAction = React.useMemo(() => {
     selectedPanel === "details" ||
     selectedPanel === "details2" ||
     selectedPanel === "venue" ||
-    selectedPanel === "subtag"
+    selectedPanel === "subtag" ||
+    selectedPanel === "presenter" ||
+    selectedPanel === "leftRail" ||
+    selectedPanel === "rightRail" ||
+    selectedPanel === "date" ||
+    selectedPanel === "price"
   ) {
     return {
       label: "Text",
@@ -23501,11 +32283,13 @@ const currentMobileAction = React.useMemo(() => {
     };
   }
 
-  if (selectedPanel === "icons" || selectedPanel === "portrait" || selectedPanel === "dj_branding") {
+  if (selectedPanel === "icons" || selectedPanel === "portrait" || selectedPanel === "qr" || selectedPanel === "dj_branding") {
     return {
       label:
         selectedPanel === "portrait"
           ? "Portraits"
+          : selectedPanel === "qr"
+          ? "QR"
           : selectedPanel === "icons"
           ? "Graphics & FX"
           : "DJ Branding",
@@ -23515,6 +32299,8 @@ const currentMobileAction = React.useMemo(() => {
       targetId:
         selectedPanel === "portrait"
           ? "portrait-panel"
+          : selectedPanel === "qr"
+          ? "icons-panel"
           : selectedPanel === "icons"
           ? "icons-panel"
           : undefined,
@@ -23572,7 +32358,18 @@ const mobileVisibleCreatorPanels = React.useMemo(() => {
 
   const design = new Set<string>();
   const assets = new Set<string>();
-  const copyPanels = new Set(["headline", "head2", "details", "details2", "venue", "subtag"]);
+  const copyPanels = new Set([
+    "headline",
+    "head2",
+    "details",
+    "details2",
+    "venue",
+    "subtag",
+    "presenter",
+    "leftRail",
+    "date",
+    "price",
+  ]);
 
   design.add("template");
   design.add("template_backgrounds");
@@ -23583,12 +32380,248 @@ const mobileVisibleCreatorPanels = React.useMemo(() => {
   if (MAGIC_BLEND_ENABLED) assets.add("magic_blend");
   assets.add("icons");
   assets.add("portrait");
+  assets.add("qr");
 
   return { design, assets };
 }, [
   isDjStartupMode,
   isMobileView,
 ]);
+
+const applyCurrentPaletteToGlass = React.useCallback((linkToPalette = true) => {
+  const colors = resolveGlassPaletteColors(palette);
+  setHeadGlassPrimaryColor(colors.primaryColor);
+  setHeadGlassSecondaryColor(colors.secondaryColor);
+  setHeadGlassHighlightColor(colors.highlightColor);
+  if (linkToPalette) {
+    setHeadGlassPaletteLinked(true);
+  }
+  return colors;
+}, [palette]);
+
+React.useEffect(() => {
+  if (!headGlassEnabled || !headGlassPaletteLinked) return;
+  applyCurrentPaletteToGlass(false);
+}, [applyCurrentPaletteToGlass, headGlassEnabled, headGlassPaletteLinked]);
+
+const applyCurrentPaletteToKinetic = React.useCallback((linkToPalette = true) => {
+  const colors = resolveKineticPaletteColors(palette);
+  setHeadKineticTextColor(colors.textColor);
+  setHeadKineticTopColor(colors.topColor);
+  setHeadKineticBottomColor(colors.bottomColor);
+  if (linkToPalette) {
+    setHeadKineticPaletteLinked(true);
+  }
+  return colors;
+}, [palette]);
+
+React.useEffect(() => {
+  if (!headKineticEnabled || !headKineticPaletteLinked) return;
+  applyCurrentPaletteToKinetic(false);
+}, [applyCurrentPaletteToKinetic, headKineticEnabled, headKineticPaletteLinked]);
+
+const applyCurrentPaletteToPure3d = React.useCallback((linkToPalette = true) => {
+  const colors = resolvePure3dPaletteColors(palette);
+  setHeadPure3dFaceColor(colors.faceColor);
+  setHeadPure3dEdgeColor(colors.edgeColor);
+  setHeadPure3dShadowColor(colors.shadowColor);
+  setHeadExtrudeColor(colors.edgeColor);
+  setTextFx((current) => ({ ...current, color: colors.faceColor }));
+  if (linkToPalette) {
+    setHeadPure3dPaletteLinked(true);
+  }
+  return colors;
+}, [palette]);
+
+React.useEffect(() => {
+  if (!headPure3dEnabled || !headPure3dPaletteLinked) return;
+  applyCurrentPaletteToPure3d(false);
+}, [applyCurrentPaletteToPure3d, headPure3dEnabled, headPure3dPaletteLinked]);
+
+const applyCurrentPaletteToGoldBlock = React.useCallback((linkToPalette = true) => {
+  const colors = resolveGoldBlockPaletteColors(palette);
+  setHeadGoldBlockLightColor(colors.lightColor);
+  setHeadGoldBlockMidColor(colors.midColor);
+  setHeadGoldBlockDarkColor(colors.darkColor);
+  if (linkToPalette) {
+    setHeadGoldBlockPaletteLinked(true);
+  }
+  return colors;
+}, [palette]);
+
+React.useEffect(() => {
+  if (!headGoldBlockEnabled || !headGoldBlockPaletteLinked) return;
+  applyCurrentPaletteToGoldBlock(false);
+}, [applyCurrentPaletteToGoldBlock, headGoldBlockEnabled, headGoldBlockPaletteLinked]);
+
+const applyCurrentPaletteToDashStroke = React.useCallback((linkToPalette = true) => {
+  const colors = resolveDashStrokePaletteColors(palette);
+  setHeadDashStrokeColors(colors);
+  if (linkToPalette) {
+    setHeadDashStrokePaletteLinked(true);
+  }
+  return colors;
+}, [palette]);
+
+const updateDashStrokeColor = React.useCallback((index: number, color: string) => {
+  setHeadDashStrokePaletteLinked(false);
+  setHeadDashStrokeColors((previous) =>
+    HEADLINE_DASH_STROKE_DEFAULTS.colors.map((fallback, colorIndex) =>
+      colorIndex === index
+        ? normalizePaletteHexString(String(color || ""), fallback)
+        : normalizePaletteHexString(String(previous[colorIndex] || ""), fallback)
+    )
+  );
+}, []);
+
+React.useEffect(() => {
+  if (!(headDashStrokeEnabled || headColorStrokeEnabled) || !headDashStrokePaletteLinked) return;
+  applyCurrentPaletteToDashStroke(false);
+}, [applyCurrentPaletteToDashStroke, headColorStrokeEnabled, headDashStrokeEnabled, headDashStrokePaletteLinked]);
+
+const applyCurrentPaletteToQuantum = React.useCallback((linkToPalette = true) => {
+  const colors = resolveQuantumPaletteColors(palette);
+  setHeadQuantumCyanColor(colors.cyanColor);
+  setHeadQuantumBlueColor(colors.blueColor);
+  setHeadQuantumHighlightColor(colors.highlightColor);
+  setHeadQuantumPurpleColor(colors.purpleColor);
+  setHeadQuantumMagentaColor(colors.magentaColor);
+  if (linkToPalette) {
+    setHeadQuantumPaletteLinked(true);
+  }
+  return colors;
+}, [palette]);
+
+React.useEffect(() => {
+  if (!headQuantumEnabled || !headQuantumPaletteLinked) return;
+  applyCurrentPaletteToQuantum(false);
+}, [applyCurrentPaletteToQuantum, headQuantumEnabled, headQuantumPaletteLinked]);
+
+type FlyerCoordinateSnapshot = {
+  format: Format;
+  headline: { x: number; y: number };
+  headlineAlign: { panel: Align; editor: Align; style: Align };
+  headline2: { x: number; y: number };
+  details: { x: number; y: number };
+  details2: { x: number; y: number };
+  venue: { x: number; y: number };
+  subtag: { x: number; y: number };
+  presenter: { x: number; y: number };
+  leftRail: { x: number; y: number };
+  rightRail: { x: number; y: number };
+  date: { x: number; y: number };
+  price: { x: number; y: number };
+  qr: { x: number; y: number; scale: number };
+  portrait: { x: number; y: number; scale: number };
+  logo: { x: number; y: number; scale: number };
+  background: { x: number; y: number; posX: number; posY: number; scale: number; rotate: number };
+  portraits: Array<{ id: string; x: number; y: number; scale: number }>;
+};
+
+const captureFlyerCoordinates = (): FlyerCoordinateSnapshot => {
+  const store = useFlyerState.getState();
+  const livePortraits = Array.isArray(store.portraits?.[format]) ? store.portraits[format] : [];
+
+  return {
+    format,
+    headline: { x: headX, y: headY },
+    headlineAlign: {
+      panel: headAlign,
+      editor: align,
+      style: textStyles.headline[format]?.align ?? headAlign,
+    },
+    headline2: { x: head2X, y: head2Y },
+    details: { x: detailsX, y: detailsY },
+    details2: { x: details2X, y: details2Y },
+    venue: { x: venueX, y: venueY },
+    subtag: { x: subtagX, y: subtagY },
+    presenter: { x: presenterX, y: presenterY },
+    leftRail: { x: leftRailX, y: leftRailY },
+    rightRail: { x: rightRailX, y: rightRailY },
+    date: { x: dateX, y: dateY },
+    price: { x: priceX, y: priceY },
+    qr: { x: qrX, y: qrY, scale: qrScale },
+    portrait: { x: portraitX, y: portraitY, scale: portraitScale },
+    logo: { x: logoX, y: logoY, scale: logoScale },
+    background: { x: bgX, y: bgY, posX: bgPosX, posY: bgPosY, scale: bgScale, rotate: bgRotate },
+    portraits: livePortraits
+      .filter((portrait: any) => portrait?.id)
+      .map((portrait: any) => ({
+        id: String(portrait.id),
+        x: Number.isFinite(Number(portrait.x)) ? Number(portrait.x) : 50,
+        y: Number.isFinite(Number(portrait.y)) ? Number(portrait.y) : 50,
+        scale: Number.isFinite(Number(portrait.scale)) ? Number(portrait.scale) : 1,
+      })),
+  };
+};
+
+const restoreFlyerCoordinates = (snapshot: FlyerCoordinateSnapshot) => {
+  setHeadX(snapshot.headline.x);
+  setHeadY(snapshot.headline.y);
+  setHeadAlign(snapshot.headlineAlign.panel);
+  setAlign(snapshot.headlineAlign.editor);
+  setTextStyle("headline", snapshot.format, { align: snapshot.headlineAlign.style });
+  setHead2X(snapshot.headline2.x);
+  setHead2Y(snapshot.headline2.y);
+  setDetailsX(snapshot.details.x);
+  setDetailsY(snapshot.details.y);
+  setDetails2X(snapshot.details2.x);
+  setDetails2Y(snapshot.details2.y);
+  setVenueX(snapshot.venue.x);
+  setVenueY(snapshot.venue.y);
+  setSubtagX(snapshot.subtag.x);
+  setSubtagY(snapshot.subtag.y);
+  setPresenterX(snapshot.presenter.x);
+  setPresenterY(snapshot.presenter.y);
+  setLeftRailX(snapshot.leftRail.x);
+  setLeftRailY(snapshot.leftRail.y);
+  setRightRailX(snapshot.rightRail.x);
+  setRightRailY(snapshot.rightRail.y);
+  setDateX(snapshot.date.x);
+  setDateY(snapshot.date.y);
+  setPriceX(snapshot.price.x);
+  setPriceY(snapshot.price.y);
+  setQrX(snapshot.qr.x);
+  setQrY(snapshot.qr.y);
+  setQrScale(snapshot.qr.scale);
+  setPortraitX(snapshot.portrait.x);
+  setPortraitY(snapshot.portrait.y);
+  setPortraitScale(snapshot.portrait.scale);
+  setLogoX(snapshot.logo.x);
+  setLogoY(snapshot.logo.y);
+  setLogoScale(snapshot.logo.scale);
+  setBgX(snapshot.background.x);
+  setBgY(snapshot.background.y);
+  setBgPosX(snapshot.background.posX);
+  setBgPosY(snapshot.background.posY);
+  setBgScale(snapshot.background.scale);
+  setBgRotate(snapshot.background.rotate);
+
+  const store = useFlyerState.getState();
+  const livePortraits = Array.isArray(store.portraits?.[snapshot.format]) ? store.portraits[snapshot.format] : [];
+  snapshot.portraits.forEach((portrait) => {
+    if (livePortraits.some((live: any) => String(live?.id) === portrait.id)) {
+      store.updatePortrait(snapshot.format, portrait.id, {
+        x: portrait.x,
+        y: portrait.y,
+        scale: portrait.scale,
+      });
+    }
+  });
+};
+
+const applyHeadlinePresetPreservingCoordinates = (applyPreset: () => void) => {
+  const snapshot = captureFlyerCoordinates();
+  setHeadPure3dEnabled(false);
+  setHeadGoldBlockEnabled(false);
+  applyPreset();
+  restoreFlyerCoordinates(snapshot);
+
+  if (typeof window !== "undefined") {
+    window.requestAnimationFrame(() => restoreFlyerCoordinates(snapshot));
+    window.setTimeout(() => restoreFlyerCoordinates(snapshot), 0);
+  }
+};
 
 const applyHeadlineSportsPreset = React.useCallback(() => {
   if (!headlinePresetBaselineRef.current) {
@@ -23655,6 +32688,12 @@ const applyHeadlineSportsPreset = React.useCallback(() => {
   setHeadSliceEnabled(false);
   setHeadRushEnabled(false);
   setHeadLineEnabled(false);
+  setHeadGlassEnabled(false);
+  setHeadKineticEnabled(false);
+  setHeadDashStrokeEnabled(false);
+  setHeadColorStrokeEnabled(false);
+  setHeadQuantumEnabled(false);
+  setHeadVerticalStretchEnabled(false);
   setHeadGlitchEnabled(false);
   setHeadShadow(false);
   setHeadShadowStrength(0);
@@ -23704,6 +32743,117 @@ const applyHeadlineSportsPreset = React.useCallback(() => {
   headGlitchYellowColor,
   headlineFamily,
   lineHeight,
+  setSessionValue,
+  setTextStyle,
+  textFx,
+]);
+
+const applyHeadlinePure3dPreset = React.useCallback(() => {
+  const pureColors = applyCurrentPaletteToPure3d(true);
+  const nextFx: TextFx = {
+    ...textFx,
+    uppercase: false,
+    bold: true,
+    italic: false,
+    tracking: -0.02,
+    gradient: false,
+    color: pureColors.faceColor,
+    gradFrom: pureColors.faceColor,
+    gradTo: pureColors.edgeColor,
+    strokeWidth: 0,
+    strokeColor: "transparent",
+    glow: 0,
+    shadowEnabled: false,
+  };
+
+  setTextStyle("headline", format, { align: "center" });
+  setTextFx(nextFx);
+  setSessionValue(format, "textFx", nextFx);
+  setHeadPure3dEnabled(true);
+  setHeadPure3dFrame(HEADLINE_PURE_3D_DEFAULTS.frame);
+  setHeadSkew(0);
+  setHeadRotate(0);
+  setHeadSliceEnabled(false);
+  setHeadRushEnabled(false);
+  setHeadLineEnabled(false);
+  setHeadGlassEnabled(false);
+  setHeadKineticEnabled(false);
+  setHeadDashStrokeEnabled(false);
+  setHeadColorStrokeEnabled(false);
+  setHeadCyberEmbossEnabled(false);
+  setHeadQuantumEnabled(false);
+  setHeadVerticalStretchEnabled(false);
+  setHeadGlitchEnabled(false);
+  setHeadShadow(false);
+  setHeadShadowStrength(0);
+  setHeadExtrudeDepth(0);
+  setHeadExtrudeAngle(0);
+  setHeadExtrudeDistance(0);
+  setHeadExtrudeColor(pureColors.edgeColor);
+  setHeadAlign("center");
+  setAlign("center");
+  setLineHeight(0.68);
+  setMobileHeadlineStyleFocus("pure3d");
+}, [
+  applyCurrentPaletteToPure3d,
+  format,
+  setSessionValue,
+  setTextStyle,
+  textFx,
+]);
+
+const applyHeadlineGoldBlockPreset = React.useCallback(() => {
+  const goldColors = applyCurrentPaletteToGoldBlock(true);
+  const nextFx: TextFx = {
+    ...textFx,
+    uppercase: true,
+    bold: true,
+    italic: false,
+    tracking: -0.04,
+    gradient: false,
+    color: goldColors.lightColor,
+    gradFrom: goldColors.lightColor,
+    gradTo: goldColors.darkColor,
+    strokeWidth: 0,
+    strokeColor: HEADLINE_GOLD_BLOCK_DEFAULTS.strokeColor,
+    glow: 0,
+    shadowEnabled: false,
+  };
+
+  setTextFx(nextFx);
+  setSessionValue(format, "textFx", nextFx);
+  setHeadGoldBlockEnabled(true);
+  setHeadGoldBlockStrokeColor(HEADLINE_GOLD_BLOCK_DEFAULTS.strokeColor);
+  setHeadGoldBlockStrokeWidth(HEADLINE_GOLD_BLOCK_DEFAULTS.strokeWidth);
+  setHeadGoldBlockTexture(HEADLINE_GOLD_BLOCK_DEFAULTS.texture);
+  setHeadGoldBlockRoughness(HEADLINE_GOLD_BLOCK_DEFAULTS.roughness);
+  setHeadPure3dEnabled(false);
+  setHeadSkew(0);
+  setHeadRotate(0);
+  setHeadSliceEnabled(false);
+  setHeadRushEnabled(false);
+  setHeadLineEnabled(false);
+  setHeadGlassEnabled(false);
+  setHeadKineticEnabled(false);
+  setHeadDashStrokeEnabled(false);
+  setHeadColorStrokeEnabled(false);
+  setHeadCyberEmbossEnabled(false);
+  setHeadQuantumEnabled(false);
+  setHeadVerticalStretchEnabled(false);
+  setHeadGlitchEnabled(false);
+  setHeadShadow(false);
+  setHeadShadowStrength(0);
+  setHeadExtrudeDepth(0);
+  setHeadExtrudeAngle(0);
+  setHeadExtrudeDistance(0);
+  setHeadExtrudeColor(HEADLINE_GOLD_BLOCK_DEFAULTS.strokeColor);
+  setHeadAlign("center");
+  setAlign("center");
+  setLineHeight(0.98);
+  setMobileHeadlineStyleFocus("goldblock");
+}, [
+  applyCurrentPaletteToGoldBlock,
+  format,
   setSessionValue,
   textFx,
 ]);
@@ -23783,6 +32933,13 @@ const applyHeadlineLinePreset = React.useCallback(() => {
   setHeadLineBackOffsetY(8);
   setHeadSliceEnabled(false);
   setHeadRushEnabled(false);
+  setHeadGlassEnabled(false);
+  setHeadKineticEnabled(false);
+  setHeadDashStrokeEnabled(false);
+  setHeadColorStrokeEnabled(false);
+  setHeadCyberEmbossEnabled(false);
+  setHeadQuantumEnabled(false);
+  setHeadVerticalStretchEnabled(false);
   setHeadGlitchEnabled(false);
   setHeadShadow(false);
   setHeadShadowStrength(0);
@@ -23845,7 +33002,7 @@ const applyHeadlineLinePreset = React.useCallback(() => {
   textFx,
 ]);
 
-const applyHeadlineRetroSlicePreset = React.useCallback(() => {
+const applyHeadlineGlassPreset = React.useCallback(() => {
   if (!headlinePresetBaselineRef.current) {
     headlinePresetBaselineRef.current = {
       headlineFamily,
@@ -23868,6 +33025,11 @@ const applyHeadlineRetroSlicePreset = React.useCallback(() => {
       headRushDotSize,
       headRushDotSpacing,
       headRushShadowOffset,
+      headLineEnabled,
+      headLineFrontOffsetX,
+      headLineFrontOffsetY,
+      headLineBackOffsetX,
+      headLineBackOffsetY,
       headGlitchEnabled,
       headGlitchIntensity,
       headGlitchRgbSplit,
@@ -23888,53 +33050,94 @@ const applyHeadlineRetroSlicePreset = React.useCallback(() => {
       lineHeight,
     };
   }
+
+  const glassFamily = "Bebas Neue";
+  const glassColors = {
+    primaryColor: "#FF2BBF",
+    secondaryColor: "#FF8ADF",
+    highlightColor: "#FFF4FF",
+  };
   const nextFx: TextFx = {
     ...textFx,
     uppercase: true,
     bold: true,
-    italic: false,
-    tracking: 0,
+    italic: true,
+    tracking: -0.05,
     gradient: false,
-    color: "#ffe9b3",
+    color: "#ffffff",
+    gradFrom: glassColors.primaryColor,
+    gradTo: glassColors.secondaryColor,
     strokeWidth: 0,
-    strokeColor: "#111827",
+    strokeColor: "#ffffff",
     glow: 0,
     shadowEnabled: false,
   };
 
+  setHeadlineFamily(glassFamily);
+  setTextStyle("headline", format, { family: glassFamily, align: "center" });
   setTextFx(nextFx);
   setSessionValue(format, "textFx", nextFx);
-  setHeadAlign("center");
-  setAlign("center");
-  setLineHeight(0.9);
-  setHeadSkew(0);
-  setHeadRotate(0);
-  setHeadShadow(false);
-  setHeadShadowStrength(0);
-  setHeadExtrudeDepth(0);
-  setHeadExtrudeDistance(0);
+  setHeadGlassEnabled(true);
+  setHeadGlassPaletteLinked(false);
+  setHeadGlassPrimaryColor(glassColors.primaryColor);
+  setHeadGlassSecondaryColor(glassColors.secondaryColor);
+  setHeadGlassHighlightColor(glassColors.highlightColor);
+  setHeadGlassBlur(4);
+  setHeadGlassGlow(16);
+  setHeadGlassStroke(4.4);
+  setHeadGlassFillAlpha(0.24);
+  setHeadSliceEnabled(false);
   setHeadRushEnabled(false);
   setHeadLineEnabled(false);
+  setHeadKineticEnabled(false);
+  setHeadDashStrokeEnabled(false);
+  setHeadColorStrokeEnabled(false);
+  setHeadCyberEmbossEnabled(false);
+  setHeadQuantumEnabled(false);
+  setHeadVerticalStretchEnabled(false);
   setHeadGlitchEnabled(false);
-  setHeadSliceEnabled(true);
-  setHeadSliceBandCount(7);
-  setHeadSliceBandGap(10);
-  setHeadSliceEchoDistance(135);
-  setHeadSliceTopColor("#e85b2e");
-  setHeadSliceMidColor("#ffe9b3");
-  setHeadSliceBottomColor("#55b6c7");
-  setHeadSliceBlur(6);
-  setHeadSliceFade(0.5);
-  setHeadSliceShadowStrength(0.35);
+  setHeadShadow(false);
+  setHeadShadowStrength(0);
+  setHeadSkew(-6);
+  setHeadRotate(0);
+  setHeadExtrudeDepth(0);
+  setHeadExtrudeAngle(38);
+  setHeadExtrudeDistance(0);
+  setHeadExtrudeColor("#090713");
+  setHeadAlign("center");
+  setAlign("center");
+  setLineHeight(HEADLINE_GLASS_DEFAULT_LINE_HEIGHT);
+  setMobileHeadlineStyleFocus("glass");
 }, [
   align,
+  applyCurrentPaletteToGlass,
   format,
   headAlign,
   headExtrudeAngle,
   headExtrudeColor,
   headExtrudeDepth,
   headExtrudeDistance,
+  headGlitchEnabled,
+  headGlitchGlow,
+  headGlitchIntensity,
+  headGlitchNoise,
+  headGlitchRgbSplit,
+  headGlitchRedColor,
+  headGlitchMagentaColor,
+  headGlitchBlueColor,
+  headGlitchYellowColor,
+  headLineBackOffsetX,
+  headLineBackOffsetY,
+  headLineEnabled,
+  headLineFrontOffsetX,
+  headLineFrontOffsetY,
   headRotate,
+  headRushContrastColor,
+  headRushDotColor,
+  headRushDotSize,
+  headRushDotSpacing,
+  headRushEnabled,
+  headRushShadowOffset,
   headShadow,
   headShadowStrength,
   headSkew,
@@ -23948,24 +33151,10 @@ const applyHeadlineRetroSlicePreset = React.useCallback(() => {
   headSliceMidColor,
   headSliceShadowStrength,
   headSliceTopColor,
-  headRushContrastColor,
-  headRushDotColor,
-  headRushDotSize,
-  headRushDotSpacing,
-  headRushEnabled,
-  headRushShadowOffset,
-  headGlitchEnabled,
-  headGlitchIntensity,
-  headGlitchRgbSplit,
-  headGlitchNoise,
-  headGlitchGlow,
-  headGlitchRedColor,
-  headGlitchMagentaColor,
-  headGlitchBlueColor,
-  headGlitchYellowColor,
   headlineFamily,
   lineHeight,
   setSessionValue,
+  setTextStyle,
   textFx,
 ]);
 
@@ -24034,11 +33223,17 @@ const applyHeadlineRushHalftonePreset = React.useCallback(() => {
   setSessionValue(format, "textFx", nextFx);
   setHeadRushEnabled(true);
   setHeadLineEnabled(false);
+  setHeadGlassEnabled(false);
+  setHeadKineticEnabled(false);
+  setHeadDashStrokeEnabled(false);
+  setHeadColorStrokeEnabled(false);
+  setHeadQuantumEnabled(false);
+  setHeadVerticalStretchEnabled(false);
   setHeadGlitchEnabled(false);
   setHeadRushDotColor("#ff2a45");
   setHeadRushContrastColor("#ffffff");
-  setHeadRushDotSize(7.8);
-  setHeadRushDotSpacing(9);
+  setHeadRushDotSize(HEADLINE_HALFTONE_DEFAULTS.dotSize);
+  setHeadRushDotSpacing(HEADLINE_HALFTONE_DEFAULTS.dotSpacing);
   setHeadRushShadowOffset(0);
   setHeadSkew(0);
   setHeadRotate(0);
@@ -24051,7 +33246,7 @@ const applyHeadlineRushHalftonePreset = React.useCallback(() => {
   setHeadExtrudeColor("#080d13");
   setHeadAlign("center");
   setAlign("center");
-  setLineHeight(0.84);
+  setLineHeight(1.1);
   setMobileHeadlineStyleFocus("rush");
 }, [
   align,
@@ -24090,6 +33285,803 @@ const applyHeadlineRushHalftonePreset = React.useCallback(() => {
   headSliceMidColor,
   headSliceShadowStrength,
   headSliceTopColor,
+  headlineFamily,
+  lineHeight,
+  setSessionValue,
+  setTextStyle,
+  textFx,
+]);
+
+const applyHeadlineKineticPreset = React.useCallback(() => {
+  if (!headlinePresetBaselineRef.current) {
+    headlinePresetBaselineRef.current = {
+      headlineFamily,
+      textFx,
+      headSkew,
+      headRotate,
+      headSliceEnabled,
+      headSliceBandCount,
+      headSliceBandGap,
+      headSliceEchoDistance,
+      headSliceTopColor,
+      headSliceMidColor,
+      headSliceBottomColor,
+      headSliceBlur,
+      headSliceFade,
+      headSliceShadowStrength,
+      headRushEnabled,
+      headRushDotColor,
+      headRushContrastColor,
+      headRushDotSize,
+      headRushDotSpacing,
+      headRushShadowOffset,
+      headLineEnabled,
+      headLineFrontOffsetX,
+      headLineFrontOffsetY,
+      headLineBackOffsetX,
+      headLineBackOffsetY,
+      headKineticEnabled,
+      headGlitchEnabled,
+      headGlitchIntensity,
+      headGlitchRgbSplit,
+      headGlitchNoise,
+      headGlitchGlow,
+      headGlitchRedColor,
+      headGlitchMagentaColor,
+      headGlitchBlueColor,
+      headGlitchYellowColor,
+      headShadow,
+      headShadowStrength,
+      headExtrudeDepth,
+      headExtrudeAngle,
+      headExtrudeDistance,
+      headExtrudeColor,
+      headAlign,
+      align,
+      lineHeight,
+    };
+  }
+
+  const kineticFamily = headlineFamily;
+  const kineticColors = applyCurrentPaletteToKinetic(true);
+  const nextFx: TextFx = {
+    ...textFx,
+    uppercase: true,
+    bold: true,
+    italic: false,
+    tracking: -0.04,
+    gradient: false,
+    color: kineticColors.textColor,
+    gradFrom: kineticColors.textColor,
+    gradTo: kineticColors.textColor,
+    strokeWidth: 0,
+    strokeColor: kineticColors.textColor,
+    glow: 0,
+    shadowEnabled: false,
+  };
+
+  setHeadlineFamily(kineticFamily);
+  setTextStyle("headline", format, { family: kineticFamily, align: "center" });
+  setTextFx(nextFx);
+  setSessionValue(format, "textFx", nextFx);
+  setHeadKineticEnabled(true);
+  setHeadKineticPaletteLinked(true);
+  setHeadKineticSliceOffsetX(HEADLINE_KINETIC_DEFAULTS.sliceOffsetX);
+  setHeadKineticSliceOffsetY(HEADLINE_KINETIC_DEFAULTS.sliceOffsetY);
+  setHeadKineticShadowOpacity(HEADLINE_KINETIC_DEFAULTS.shadowOpacity);
+  setHeadSliceEnabled(false);
+  setHeadRushEnabled(false);
+  setHeadLineEnabled(false);
+  setHeadGlassEnabled(false);
+  setHeadGlitchEnabled(false);
+  setHeadDashStrokeEnabled(false);
+  setHeadColorStrokeEnabled(false);
+  setHeadCyberEmbossEnabled(false);
+  setHeadQuantumEnabled(false);
+  setHeadVerticalStretchEnabled(false);
+  setHeadShadow(false);
+  setHeadShadowStrength(0);
+  setHeadSkew(0);
+  setHeadRotate(0);
+  setHeadExtrudeDepth(0);
+  setHeadExtrudeAngle(38);
+  setHeadExtrudeDistance(0);
+  setHeadExtrudeColor("#050812");
+  setHeadAlign("center");
+  setAlign("center");
+  setLineHeight(1.08);
+  setMobileHeadlineStyleFocus("kinetic");
+}, [
+  align,
+  applyCurrentPaletteToKinetic,
+  format,
+  headAlign,
+  headExtrudeAngle,
+  headExtrudeColor,
+  headExtrudeDepth,
+  headExtrudeDistance,
+  headGlitchEnabled,
+  headGlitchGlow,
+  headGlitchIntensity,
+  headGlitchNoise,
+  headGlitchRgbSplit,
+  headGlitchRedColor,
+  headGlitchMagentaColor,
+  headGlitchBlueColor,
+  headGlitchYellowColor,
+  headKineticEnabled,
+  headLineBackOffsetX,
+  headLineBackOffsetY,
+  headLineEnabled,
+  headLineFrontOffsetX,
+  headLineFrontOffsetY,
+  headRotate,
+  headRushContrastColor,
+  headRushDotColor,
+  headRushDotSize,
+  headRushDotSpacing,
+  headRushEnabled,
+  headRushShadowOffset,
+  headShadow,
+  headShadowStrength,
+  headSkew,
+  headSliceBandCount,
+  headSliceBandGap,
+  headSliceBlur,
+  headSliceBottomColor,
+  headSliceEchoDistance,
+  headSliceEnabled,
+  headSliceFade,
+  headSliceMidColor,
+  headSliceShadowStrength,
+  headSliceTopColor,
+  headlineFamily,
+  lineHeight,
+  setSessionValue,
+  setTextStyle,
+  textFx,
+]);
+
+const applyHeadlineQuantumPreset = React.useCallback(() => {
+  if (!headlinePresetBaselineRef.current) {
+    headlinePresetBaselineRef.current = {
+      headlineFamily,
+      textFx,
+      headSkew,
+      headRotate,
+      headSliceEnabled,
+      headSliceBandCount,
+      headSliceBandGap,
+      headSliceEchoDistance,
+      headSliceTopColor,
+      headSliceMidColor,
+      headSliceBottomColor,
+      headSliceBlur,
+      headSliceFade,
+      headSliceShadowStrength,
+      headRushEnabled,
+      headRushDotColor,
+      headRushContrastColor,
+      headRushDotSize,
+      headRushDotSpacing,
+      headRushShadowOffset,
+      headLineEnabled,
+      headLineFrontOffsetX,
+      headLineFrontOffsetY,
+      headLineBackOffsetX,
+      headLineBackOffsetY,
+      headKineticEnabled,
+      headQuantumEnabled,
+      headQuantumPaletteLinked,
+      headQuantumCyanColor,
+      headQuantumBlueColor,
+      headQuantumHighlightColor,
+      headQuantumPurpleColor,
+      headQuantumMagentaColor,
+      headQuantumStrokeWidth,
+      headQuantumSplitOffset,
+      headQuantumGlowEnabled,
+      headQuantumGlow,
+      headQuantumScanlineOpacity,
+      headQuantumStreakOpacity,
+      headVerticalStretchEnabled,
+      headVerticalStretchScaleY,
+      headVerticalStretchScaleX,
+      headVerticalStretchShadowOpacity,
+      headGlitchEnabled,
+      headGlitchIntensity,
+      headGlitchRgbSplit,
+      headGlitchNoise,
+      headGlitchGlow,
+      headGlitchRedColor,
+      headGlitchMagentaColor,
+      headGlitchBlueColor,
+      headGlitchYellowColor,
+      headShadow,
+      headShadowStrength,
+      headExtrudeDepth,
+      headExtrudeAngle,
+      headExtrudeDistance,
+      headExtrudeColor,
+      headAlign,
+      align,
+      lineHeight,
+    };
+  }
+
+  const quantumFamily = headlineFamily;
+  const quantumColors = applyCurrentPaletteToQuantum(true);
+  const nextFx: TextFx = {
+    ...textFx,
+    uppercase: true,
+    bold: true,
+    italic: true,
+    tracking: -0.06,
+    gradient: false,
+    color: quantumColors.highlightColor,
+    gradFrom: quantumColors.cyanColor,
+    gradTo: quantumColors.magentaColor,
+    strokeWidth: 0,
+    strokeColor: quantumColors.highlightColor,
+    glow: 0,
+    shadowEnabled: false,
+  };
+
+  setHeadlineFamily(quantumFamily);
+  setTextStyle("headline", format, { family: quantumFamily, align: "center" });
+  setTextFx(nextFx);
+  setSessionValue(format, "textFx", nextFx);
+  setHeadQuantumEnabled(true);
+  setHeadQuantumPaletteLinked(true);
+  setHeadQuantumStrokeWidth(HEADLINE_QUANTUM_DEFAULTS.strokeWidth);
+  setHeadQuantumSplitOffset(HEADLINE_QUANTUM_DEFAULTS.splitOffset);
+  setHeadQuantumGlowEnabled(HEADLINE_QUANTUM_DEFAULTS.glowEnabled);
+  setHeadQuantumGlow(HEADLINE_QUANTUM_DEFAULTS.glow);
+  setHeadQuantumScanlineOpacity(HEADLINE_QUANTUM_DEFAULTS.scanlineOpacity);
+  setHeadQuantumStreakOpacity(HEADLINE_QUANTUM_DEFAULTS.streakOpacity);
+  setHeadSliceEnabled(false);
+  setHeadRushEnabled(false);
+  setHeadLineEnabled(false);
+  setHeadGlassEnabled(false);
+  setHeadKineticEnabled(false);
+  setHeadDashStrokeEnabled(false);
+  setHeadColorStrokeEnabled(false);
+  setHeadCyberEmbossEnabled(false);
+  setHeadVerticalStretchEnabled(false);
+  setHeadGlitchEnabled(false);
+  setHeadShadow(false);
+  setHeadShadowStrength(0);
+  setHeadSkew(0);
+  setHeadRotate(0);
+  setHeadExtrudeDepth(0);
+  setHeadExtrudeAngle(38);
+  setHeadExtrudeDistance(0);
+  setHeadExtrudeColor("#050812");
+  setHeadAlign("center");
+  setAlign("center");
+  setLineHeight(0.82);
+  setMobileHeadlineStyleFocus("quantum");
+}, [
+  align,
+  applyCurrentPaletteToQuantum,
+  format,
+  headAlign,
+  headExtrudeAngle,
+  headExtrudeColor,
+  headExtrudeDepth,
+  headExtrudeDistance,
+  headGlitchEnabled,
+  headGlitchGlow,
+  headGlitchIntensity,
+  headGlitchNoise,
+  headGlitchRgbSplit,
+  headGlitchRedColor,
+  headGlitchMagentaColor,
+  headGlitchBlueColor,
+  headGlitchYellowColor,
+  headKineticEnabled,
+  headLineBackOffsetX,
+  headLineBackOffsetY,
+  headLineEnabled,
+  headLineFrontOffsetX,
+  headLineFrontOffsetY,
+  headQuantumBlueColor,
+  headQuantumCyanColor,
+  headQuantumEnabled,
+  headQuantumGlowEnabled,
+  headQuantumGlow,
+  headQuantumHighlightColor,
+  headQuantumMagentaColor,
+  headQuantumPaletteLinked,
+  headQuantumPurpleColor,
+  headQuantumScanlineOpacity,
+  headQuantumStrokeWidth,
+  headQuantumSplitOffset,
+  headQuantumStreakOpacity,
+  headRotate,
+  headRushContrastColor,
+  headRushDotColor,
+  headRushDotSize,
+  headRushDotSpacing,
+  headRushEnabled,
+  headRushShadowOffset,
+  headShadow,
+  headShadowStrength,
+  headSkew,
+  headSliceBandCount,
+  headSliceBandGap,
+  headSliceBlur,
+  headSliceBottomColor,
+  headSliceEchoDistance,
+  headSliceEnabled,
+  headSliceFade,
+  headSliceMidColor,
+  headSliceShadowStrength,
+  headSliceTopColor,
+  headVerticalStretchEnabled,
+  headVerticalStretchScaleX,
+  headVerticalStretchScaleY,
+  headVerticalStretchShadowOpacity,
+  headlineFamily,
+  lineHeight,
+  setSessionValue,
+  setTextStyle,
+  textFx,
+]);
+
+const applyHeadlineDashStrokePreset = React.useCallback(() => {
+  const dashFamily = "Open Sans";
+  const dashColors = applyCurrentPaletteToDashStroke(true);
+  const nextFx: TextFx = {
+    ...textFx,
+    uppercase: true,
+    bold: true,
+    italic: false,
+    tracking: -0.02,
+    gradient: false,
+    color: "#E9EDEF",
+    gradFrom: dashColors[0],
+    gradTo: dashColors[3],
+    strokeWidth: 0,
+    strokeColor: dashColors[0],
+    glow: 0,
+    shadowEnabled: false,
+  };
+
+  setHeadlineFamily(dashFamily);
+  setTextStyle("headline", format, { family: dashFamily, align: "center" });
+  setTextFx(nextFx);
+  setSessionValue(format, "textFx", nextFx);
+  setHeadDashStrokeEnabled(true);
+  setHeadColorStrokeEnabled(false);
+  setHeadDashStrokePaletteLinked(true);
+  setHeadDashStrokeFrame(HEADLINE_DASH_STROKE_DEFAULTS.frame);
+  setHeadSliceEnabled(false);
+  setHeadRushEnabled(false);
+  setHeadLineEnabled(false);
+  setHeadGlassEnabled(false);
+  setHeadKineticEnabled(false);
+  setHeadCyberEmbossEnabled(false);
+  setHeadQuantumEnabled(false);
+  setHeadVerticalStretchEnabled(false);
+  setHeadGlitchEnabled(false);
+  setHeadShadow(false);
+  setHeadShadowStrength(0);
+  setHeadSkew(0);
+  setHeadRotate(0);
+  setHeadExtrudeDepth(0);
+  setHeadExtrudeAngle(38);
+  setHeadExtrudeDistance(0);
+  setHeadExtrudeColor("#050812");
+  setHeadAlign("center");
+  setAlign("center");
+  setLineHeight(1);
+  setMobileHeadlineStyleFocus("dash");
+}, [
+  align,
+  applyCurrentPaletteToDashStroke,
+  format,
+  setSessionValue,
+  setTextStyle,
+  textFx,
+]);
+
+const applyHeadlineDoodleStackPreset = React.useCallback(() => {
+  const stackColors = applyCurrentPaletteToDashStroke(true);
+  const nextFx: TextFx = {
+    ...textFx,
+    uppercase: false,
+    bold: true,
+    italic: false,
+    tracking: -0.035,
+    gradient: false,
+    color: stackColors[0] || HEADLINE_DOODLE_STACK_DEFAULTS.colors[0],
+    gradFrom: stackColors[0] || HEADLINE_DOODLE_STACK_DEFAULTS.colors[0],
+    gradTo: stackColors[3] || HEADLINE_DOODLE_STACK_DEFAULTS.colors[3],
+    strokeWidth: 0,
+    strokeColor: HEADLINE_DOODLE_STACK_DEFAULTS.strokeColor,
+    glow: 0,
+    shadowEnabled: false,
+  };
+
+  setTextFx(nextFx);
+  setSessionValue(format, "textFx", nextFx);
+  setHeadDashStrokeEnabled(false);
+  setHeadColorStrokeEnabled(true);
+  setHeadDashStrokePaletteLinked(true);
+  setHeadDashStrokeColors(stackColors);
+  setHeadColorStrokeFrame(HEADLINE_DASH_STROKE_DEFAULTS.frame);
+  setHeadDoodleAngleX(HEADLINE_DOODLE_STACK_DEFAULTS.angleX);
+  setHeadDoodleAngleY(HEADLINE_DOODLE_STACK_DEFAULTS.angleY);
+  setHeadDoodleRotate(HEADLINE_DOODLE_STACK_DEFAULTS.rotate);
+  setHeadDoodleSpread(HEADLINE_DOODLE_STACK_DEFAULTS.spread);
+  setHeadSliceEnabled(false);
+  setHeadRushEnabled(false);
+  setHeadLineEnabled(false);
+  setHeadGlassEnabled(false);
+  setHeadKineticEnabled(false);
+  setHeadPure3dEnabled(false);
+  setHeadGoldBlockEnabled(false);
+  setHeadCyberEmbossEnabled(false);
+  setHeadQuantumEnabled(false);
+  setHeadVerticalStretchEnabled(false);
+  setHeadGlitchEnabled(false);
+  setHeadShadow(false);
+  setHeadShadowStrength(0);
+  setHeadSkew(0);
+  setHeadRotate(0);
+  setHeadExtrudeDepth(0);
+  setHeadExtrudeAngle(38);
+  setHeadExtrudeDistance(0);
+  setHeadExtrudeColor("#050812");
+  setHeadAlign("center");
+  setAlign("center");
+  setLineHeight(0.82);
+  setMobileHeadlineStyleFocus("doodle");
+}, [
+  align,
+  applyCurrentPaletteToDashStroke,
+  format,
+  setSessionValue,
+  textFx,
+]);
+
+const applyHeadlineCyberEmbossPreset = React.useCallback(() => {
+  if (!headlinePresetBaselineRef.current) {
+    headlinePresetBaselineRef.current = {
+      headlineFamily,
+      textFx,
+      headSkew,
+      headRotate,
+      headSliceEnabled,
+      headSliceBandCount,
+      headSliceBandGap,
+      headSliceEchoDistance,
+      headSliceTopColor,
+      headSliceMidColor,
+      headSliceBottomColor,
+      headSliceBlur,
+      headSliceFade,
+      headSliceShadowStrength,
+      headRushEnabled,
+      headRushDotColor,
+      headRushContrastColor,
+      headRushDotSize,
+      headRushDotSpacing,
+      headRushShadowOffset,
+      headLineEnabled,
+      headLineFrontOffsetX,
+      headLineFrontOffsetY,
+      headLineBackOffsetX,
+      headLineBackOffsetY,
+      headKineticEnabled,
+      headCyberEmbossEnabled,
+      headRetroShadowEnabled,
+      headRetroShadowAlpha,
+      headQuantumEnabled,
+      headQuantumPaletteLinked,
+      headQuantumCyanColor,
+      headQuantumBlueColor,
+      headQuantumHighlightColor,
+      headQuantumPurpleColor,
+      headQuantumMagentaColor,
+      headQuantumStrokeWidth,
+      headQuantumSplitOffset,
+      headQuantumGlowEnabled,
+      headQuantumGlow,
+      headQuantumScanlineOpacity,
+      headQuantumStreakOpacity,
+      headVerticalStretchEnabled,
+      headVerticalStretchScaleY,
+      headVerticalStretchScaleX,
+      headVerticalStretchShadowOpacity,
+      headGlitchEnabled,
+      headGlitchIntensity,
+      headGlitchRgbSplit,
+      headGlitchNoise,
+      headGlitchGlow,
+      headGlitchRedColor,
+      headGlitchMagentaColor,
+      headGlitchBlueColor,
+      headGlitchYellowColor,
+      headShadow,
+      headShadowStrength,
+      headExtrudeDepth,
+      headExtrudeAngle,
+      headExtrudeDistance,
+      headExtrudeColor,
+      headAlign,
+      align,
+      lineHeight,
+    };
+  }
+
+  const retroFamily = "Playfair Display";
+  const retroColors = resolveRetroEngravedPaletteColors(palette);
+  const nextFx: TextFx = {
+    ...textFx,
+    uppercase: true,
+    bold: true,
+    italic: false,
+    tracking: -0.025,
+    gradient: false,
+    color: retroColors.faceColor,
+    gradFrom: retroColors.faceColor,
+    gradTo: retroColors.raisedColor,
+    strokeWidth: 0,
+    strokeColor: retroColors.borderColor,
+    glow: 0,
+    shadowEnabled: false,
+  };
+
+  setHeadlineFamily(retroFamily);
+  setTextStyle("headline", format, { family: retroFamily, align: "center" });
+  setTextFx(nextFx);
+  setSessionValue(format, "textFx", nextFx);
+  setHeadCyberEmbossEnabled(true);
+  setHeadRetroShadowEnabled(HEADLINE_RETRO_ENGRAVED_DEFAULTS.shadowEnabled);
+  setHeadRetroShadowAlpha(HEADLINE_RETRO_ENGRAVED_DEFAULTS.shadowAlpha);
+  setHeadSliceEnabled(false);
+  setHeadRushEnabled(false);
+  setHeadLineEnabled(false);
+  setHeadGlassEnabled(false);
+  setHeadKineticEnabled(false);
+  setHeadDashStrokeEnabled(false);
+  setHeadColorStrokeEnabled(false);
+  setHeadQuantumEnabled(false);
+  setHeadVerticalStretchEnabled(false);
+  setHeadGlitchEnabled(false);
+  setHeadShadow(false);
+  setHeadShadowStrength(0);
+  setHeadSkew(0);
+  setHeadRotate(0);
+  setHeadExtrudeDepth(0);
+  setHeadExtrudeAngle(38);
+  setHeadExtrudeDistance(0);
+  setHeadExtrudeColor(retroColors.shadowColor);
+  setHeadAlign("center");
+  setAlign("center");
+  setLineHeight(1);
+  setMobileHeadlineStyleFocus("retro");
+}, [
+  align,
+  format,
+  headCyberEmbossEnabled,
+  headRetroShadowEnabled,
+  headRetroShadowAlpha,
+  headAlign,
+  headExtrudeAngle,
+  headExtrudeColor,
+  headExtrudeDepth,
+  headExtrudeDistance,
+  headGlitchEnabled,
+  headGlitchGlow,
+  headGlitchIntensity,
+  headGlitchNoise,
+  headGlitchRgbSplit,
+  headGlitchRedColor,
+  headGlitchMagentaColor,
+  headGlitchBlueColor,
+  headGlitchYellowColor,
+  headKineticEnabled,
+  headLineBackOffsetX,
+  headLineBackOffsetY,
+  headLineEnabled,
+  headLineFrontOffsetX,
+  headLineFrontOffsetY,
+  headQuantumBlueColor,
+  headQuantumCyanColor,
+  headQuantumEnabled,
+  headQuantumGlowEnabled,
+  headQuantumGlow,
+  headQuantumHighlightColor,
+  headQuantumMagentaColor,
+  headQuantumPaletteLinked,
+  headQuantumPurpleColor,
+  headQuantumScanlineOpacity,
+  headQuantumStrokeWidth,
+  headQuantumSplitOffset,
+  headQuantumStreakOpacity,
+  headRotate,
+  headRushContrastColor,
+  headRushDotColor,
+  headRushDotSize,
+  headRushDotSpacing,
+  headRushEnabled,
+  headRushShadowOffset,
+  headShadow,
+  headShadowStrength,
+  headSkew,
+  headSliceBandCount,
+  headSliceBandGap,
+  headSliceBlur,
+  headSliceBottomColor,
+  headSliceEchoDistance,
+  headSliceEnabled,
+  headSliceFade,
+  headSliceMidColor,
+  headSliceShadowStrength,
+  headSliceTopColor,
+  headVerticalStretchEnabled,
+  headVerticalStretchScaleX,
+  headVerticalStretchScaleY,
+  headVerticalStretchShadowOpacity,
+  headlineFamily,
+  lineHeight,
+  palette,
+  setSessionValue,
+  setTextStyle,
+  textFx,
+]);
+
+const applyHeadlineVerticalStretchPreset = React.useCallback(() => {
+  if (!headlinePresetBaselineRef.current) {
+    headlinePresetBaselineRef.current = {
+      headlineFamily,
+      textFx,
+      headSkew,
+      headRotate,
+      headSliceEnabled,
+      headSliceBandCount,
+      headSliceBandGap,
+      headSliceEchoDistance,
+      headSliceTopColor,
+      headSliceMidColor,
+      headSliceBottomColor,
+      headSliceBlur,
+      headSliceFade,
+      headSliceShadowStrength,
+      headRushEnabled,
+      headRushDotColor,
+      headRushContrastColor,
+      headRushDotSize,
+      headRushDotSpacing,
+      headRushShadowOffset,
+      headLineEnabled,
+      headLineFrontOffsetX,
+      headLineFrontOffsetY,
+      headLineBackOffsetX,
+      headLineBackOffsetY,
+      headKineticEnabled,
+      headVerticalStretchEnabled,
+      headVerticalStretchScaleY,
+      headVerticalStretchScaleX,
+      headVerticalStretchShadowOpacity,
+      headGlitchEnabled,
+      headGlitchIntensity,
+      headGlitchRgbSplit,
+      headGlitchNoise,
+      headGlitchGlow,
+      headGlitchRedColor,
+      headGlitchMagentaColor,
+      headGlitchBlueColor,
+      headGlitchYellowColor,
+      headShadow,
+      headShadowStrength,
+      headExtrudeDepth,
+      headExtrudeAngle,
+      headExtrudeDistance,
+      headExtrudeColor,
+      headAlign,
+      align,
+      lineHeight,
+    };
+  }
+
+  const stretchFamily = headlineFamily;
+  const nextFx: TextFx = {
+    ...textFx,
+    uppercase: true,
+    bold: true,
+    italic: false,
+    tracking: -0.08,
+    gradient: false,
+    color: "#ffffff",
+    gradFrom: "#ffffff",
+    gradTo: "#ffffff",
+    strokeWidth: 0,
+    strokeColor: "#ffffff",
+    glow: 0,
+    shadowEnabled: false,
+  };
+
+  setHeadlineFamily(stretchFamily);
+  setTextStyle("headline", format, { family: stretchFamily, align: "center" });
+  setTextFx(nextFx);
+  setSessionValue(format, "textFx", nextFx);
+  setHeadVerticalStretchEnabled(true);
+  setHeadVerticalStretchScaleY(HEADLINE_VERTICAL_STRETCH_DEFAULTS.scaleY);
+  setHeadVerticalStretchScaleX(HEADLINE_VERTICAL_STRETCH_DEFAULTS.scaleX);
+  setHeadVerticalStretchShadowOpacity(HEADLINE_VERTICAL_STRETCH_DEFAULTS.shadowOpacity);
+  setHeadSliceEnabled(false);
+  setHeadRushEnabled(false);
+  setHeadLineEnabled(false);
+  setHeadGlassEnabled(false);
+  setHeadKineticEnabled(false);
+  setHeadDashStrokeEnabled(false);
+  setHeadColorStrokeEnabled(false);
+  setHeadCyberEmbossEnabled(false);
+  setHeadQuantumEnabled(false);
+  setHeadGlitchEnabled(false);
+  setHeadShadow(false);
+  setHeadShadowStrength(0);
+  setHeadSkew(0);
+  setHeadRotate(0);
+  setHeadExtrudeDepth(0);
+  setHeadExtrudeAngle(38);
+  setHeadExtrudeDistance(0);
+  setHeadExtrudeColor("#050812");
+  setHeadAlign("center");
+  setAlign("center");
+  setLineHeight(0.72);
+  setMobileHeadlineStyleFocus("stretch");
+}, [
+  align,
+  format,
+  headAlign,
+  headExtrudeAngle,
+  headExtrudeColor,
+  headExtrudeDepth,
+  headExtrudeDistance,
+  headGlitchEnabled,
+  headGlitchGlow,
+  headGlitchIntensity,
+  headGlitchNoise,
+  headGlitchRgbSplit,
+  headGlitchRedColor,
+  headGlitchMagentaColor,
+  headGlitchBlueColor,
+  headGlitchYellowColor,
+  headKineticEnabled,
+  headLineBackOffsetX,
+  headLineBackOffsetY,
+  headLineEnabled,
+  headLineFrontOffsetX,
+  headLineFrontOffsetY,
+  headRotate,
+  headRushContrastColor,
+  headRushDotColor,
+  headRushDotSize,
+  headRushDotSpacing,
+  headRushEnabled,
+  headRushShadowOffset,
+  headShadow,
+  headShadowStrength,
+  headSkew,
+  headSliceBandCount,
+  headSliceBandGap,
+  headSliceBlur,
+  headSliceBottomColor,
+  headSliceEchoDistance,
+  headSliceEnabled,
+  headSliceFade,
+  headSliceMidColor,
+  headSliceShadowStrength,
+  headSliceTopColor,
+  headVerticalStretchEnabled,
+  headVerticalStretchScaleX,
+  headVerticalStretchScaleY,
+  headVerticalStretchShadowOpacity,
   headlineFamily,
   lineHeight,
   setSessionValue,
@@ -24145,43 +34137,51 @@ const applyHeadlineGlitchPreset = React.useCallback(() => {
     ...textFx,
     uppercase: true,
     bold: true,
-    italic: true,
-    tracking: 0.17,
+    italic: false,
+    tracking: 0.02,
     gradient: false,
-	    color: "#00ff66",
-	    gradFrom: "#ff1d25",
-	    gradTo: "#004bff",
-    strokeWidth: 1.6,
-    strokeColor: "#f2ffff",
+	    color: "#fff5ff",
+	    gradFrom: "#ff2bd6",
+	    gradTo: "#00eaff",
+    strokeWidth: 0,
+    strokeColor: "#ffffff",
     glow: 0,
     shadowEnabled: false,
   };
 
-  setTextStyle("headline", format, { align: "center" });
+  setHeadlineFamily("TR2N");
+  setTextStyle("headline", format, { align: "center", family: "TR2N" });
   setTextFx(nextFx);
   setSessionValue(format, "textFx", nextFx);
   setHeadGlitchEnabled(true);
-  setHeadGlitchIntensity(0.55);
-  setHeadGlitchRgbSplit(18);
-	  setHeadGlitchNoise(0.04);
-	  setHeadGlitchGlow(0.42);
-	  setHeadGlitchRedColor("#ff1d25");
-	  setHeadGlitchMagentaColor("#00ff66");
-	  setHeadGlitchBlueColor("#004bff");
-	  setHeadGlitchYellowColor("#d8ff25");
+  setHeadGlitchIntensity(0.18);
+  setHeadGlitchRgbSplit(8);
+	  setHeadGlitchNoise(0.22);
+	  setHeadGlitchGlow(0.35);
+	  setHeadGlitchRedColor("#d8fbff");
+	  setHeadGlitchMagentaColor("#4ddfff");
+	  setHeadGlitchBlueColor("#0aa8ff");
+	  setHeadGlitchYellowColor("#f7ffff");
   setHeadRushEnabled(false);
   setHeadLineEnabled(false);
+  setHeadGlassEnabled(false);
+  setHeadKineticEnabled(false);
+  setHeadDashStrokeEnabled(false);
+  setHeadColorStrokeEnabled(false);
+  setHeadCyberEmbossEnabled(false);
+  setHeadQuantumEnabled(false);
+  setHeadVerticalStretchEnabled(false);
   setHeadSliceEnabled(false);
   setHeadShadow(false);
   setHeadShadowStrength(0);
-  setHeadSkew(-11);
+  setHeadSkew(0);
   setHeadRotate(0);
   setHeadExtrudeDepth(0);
   setHeadExtrudeDistance(0);
   setHeadExtrudeColor("#050812");
   setHeadAlign("center");
   setAlign("center");
-  setLineHeight(0.76);
+  setLineHeight(0.9);
   setMobileHeadlineStyleFocus("glitch");
 }, [
   align,
@@ -24247,15 +34247,15 @@ const resetHeadlinePresetStyles = React.useCallback(() => {
   setHeadShadow(false);
   setHeadShadowStrength(0);
   setHeadSliceEnabled(false);
-  setHeadSliceBandCount(7);
-  setHeadSliceBandGap(10);
-  setHeadSliceEchoDistance(135);
-  setHeadSliceTopColor("#e85b2e");
-  setHeadSliceMidColor("#ffe9b3");
-  setHeadSliceBottomColor("#55b6c7");
-  setHeadSliceBlur(6);
-  setHeadSliceFade(0.5);
-  setHeadSliceShadowStrength(0.35);
+  setHeadSliceBandCount(HEADLINE_LEGACY_SLICE_DEFAULTS.bandCount);
+  setHeadSliceBandGap(HEADLINE_LEGACY_SLICE_DEFAULTS.bandGap);
+  setHeadSliceEchoDistance(HEADLINE_LEGACY_SLICE_DEFAULTS.echoDistance);
+  setHeadSliceTopColor(HEADLINE_LEGACY_SLICE_DEFAULTS.topColor);
+  setHeadSliceMidColor(HEADLINE_LEGACY_SLICE_DEFAULTS.midColor);
+  setHeadSliceBottomColor(HEADLINE_LEGACY_SLICE_DEFAULTS.bottomColor);
+  setHeadSliceBlur(HEADLINE_LEGACY_SLICE_DEFAULTS.blur);
+  setHeadSliceFade(HEADLINE_LEGACY_SLICE_DEFAULTS.fade);
+  setHeadSliceShadowStrength(HEADLINE_LEGACY_SLICE_DEFAULTS.shadowStrength);
   setHeadRushEnabled(false);
   setHeadLineEnabled(false);
   setHeadLineFrontOffsetX(0);
@@ -24264,18 +34264,80 @@ const resetHeadlinePresetStyles = React.useCallback(() => {
   setHeadLineBackOffsetY(8);
   setHeadRushDotColor("#ff2a45");
   setHeadRushContrastColor("#ffffff");
-  setHeadRushDotSize(7.8);
-  setHeadRushDotSpacing(9);
+  setHeadRushDotSize(HEADLINE_HALFTONE_DEFAULTS.dotSize);
+  setHeadRushDotSpacing(HEADLINE_HALFTONE_DEFAULTS.dotSpacing);
   setHeadRushShadowOffset(0);
+  setHeadGlassEnabled(false);
+  setHeadGlassPaletteLinked(true);
+  setHeadGlassPrimaryColor(HEADLINE_GLASS_DEFAULTS.primaryColor);
+  setHeadGlassSecondaryColor(HEADLINE_GLASS_DEFAULTS.secondaryColor);
+  setHeadGlassHighlightColor(HEADLINE_GLASS_DEFAULTS.highlightColor);
+  setHeadGlassBlur(HEADLINE_GLASS_DEFAULTS.blur);
+  setHeadGlassGlow(HEADLINE_GLASS_DEFAULTS.glow);
+  setHeadGlassStroke(HEADLINE_GLASS_DEFAULTS.stroke);
+  setHeadGlassFillAlpha(HEADLINE_GLASS_DEFAULTS.fillAlpha);
+  setHeadKineticEnabled(false);
+  setHeadKineticPaletteLinked(true);
+  setHeadKineticTextColor(HEADLINE_KINETIC_DEFAULTS.textColor);
+  setHeadKineticTopColor(HEADLINE_KINETIC_DEFAULTS.topColor);
+  setHeadKineticBottomColor(HEADLINE_KINETIC_DEFAULTS.bottomColor);
+  setHeadKineticSliceOffsetX(HEADLINE_KINETIC_DEFAULTS.sliceOffsetX);
+  setHeadKineticSliceOffsetY(HEADLINE_KINETIC_DEFAULTS.sliceOffsetY);
+  setHeadKineticShadowOpacity(HEADLINE_KINETIC_DEFAULTS.shadowOpacity);
+  setHeadDashStrokeEnabled(false);
+  setHeadColorStrokeEnabled(false);
+  setHeadDashStrokePaletteLinked(true);
+  setHeadDashStrokeColors([...HEADLINE_DASH_STROKE_DEFAULTS.colors]);
+  setHeadDashStrokeFrame(HEADLINE_DASH_STROKE_DEFAULTS.frame);
+  setHeadColorStrokeFrame(HEADLINE_DASH_STROKE_DEFAULTS.frame);
+  setHeadDoodleAngleX(HEADLINE_DOODLE_STACK_DEFAULTS.angleX);
+  setHeadDoodleAngleY(HEADLINE_DOODLE_STACK_DEFAULTS.angleY);
+  setHeadDoodleRotate(HEADLINE_DOODLE_STACK_DEFAULTS.rotate);
+  setHeadDoodleSpread(HEADLINE_DOODLE_STACK_DEFAULTS.spread);
+  setHeadPure3dEnabled(false);
+  setHeadPure3dPaletteLinked(true);
+  setHeadPure3dFaceColor(HEADLINE_PURE_3D_DEFAULTS.faceColor);
+  setHeadPure3dEdgeColor(HEADLINE_PURE_3D_DEFAULTS.edgeColor);
+  setHeadPure3dShadowColor(HEADLINE_PURE_3D_DEFAULTS.shadowColor);
+  setHeadPure3dFrame(HEADLINE_PURE_3D_DEFAULTS.frame);
+  setHeadGoldBlockEnabled(false);
+  setHeadGoldBlockPaletteLinked(true);
+  setHeadGoldBlockLightColor(HEADLINE_GOLD_BLOCK_DEFAULTS.lightColor);
+  setHeadGoldBlockMidColor(HEADLINE_GOLD_BLOCK_DEFAULTS.midColor);
+  setHeadGoldBlockDarkColor(HEADLINE_GOLD_BLOCK_DEFAULTS.darkColor);
+  setHeadGoldBlockStrokeColor(HEADLINE_GOLD_BLOCK_DEFAULTS.strokeColor);
+  setHeadGoldBlockStrokeWidth(HEADLINE_GOLD_BLOCK_DEFAULTS.strokeWidth);
+  setHeadGoldBlockTexture(HEADLINE_GOLD_BLOCK_DEFAULTS.texture);
+  setHeadGoldBlockRoughness(HEADLINE_GOLD_BLOCK_DEFAULTS.roughness);
+  setHeadCyberEmbossEnabled(false);
+  setHeadRetroShadowEnabled(HEADLINE_RETRO_ENGRAVED_DEFAULTS.shadowEnabled);
+  setHeadRetroShadowAlpha(HEADLINE_RETRO_ENGRAVED_DEFAULTS.shadowAlpha);
+  setHeadQuantumEnabled(false);
+  setHeadQuantumPaletteLinked(true);
+  setHeadQuantumCyanColor(HEADLINE_QUANTUM_DEFAULTS.cyanColor);
+  setHeadQuantumBlueColor(HEADLINE_QUANTUM_DEFAULTS.blueColor);
+  setHeadQuantumHighlightColor(HEADLINE_QUANTUM_DEFAULTS.highlightColor);
+  setHeadQuantumPurpleColor(HEADLINE_QUANTUM_DEFAULTS.purpleColor);
+  setHeadQuantumMagentaColor(HEADLINE_QUANTUM_DEFAULTS.magentaColor);
+  setHeadQuantumStrokeWidth(HEADLINE_QUANTUM_DEFAULTS.strokeWidth);
+  setHeadQuantumSplitOffset(HEADLINE_QUANTUM_DEFAULTS.splitOffset);
+  setHeadQuantumGlowEnabled(HEADLINE_QUANTUM_DEFAULTS.glowEnabled);
+  setHeadQuantumGlow(HEADLINE_QUANTUM_DEFAULTS.glow);
+  setHeadQuantumScanlineOpacity(HEADLINE_QUANTUM_DEFAULTS.scanlineOpacity);
+  setHeadQuantumStreakOpacity(HEADLINE_QUANTUM_DEFAULTS.streakOpacity);
+  setHeadVerticalStretchEnabled(false);
+  setHeadVerticalStretchScaleY(HEADLINE_VERTICAL_STRETCH_DEFAULTS.scaleY);
+  setHeadVerticalStretchScaleX(HEADLINE_VERTICAL_STRETCH_DEFAULTS.scaleX);
+  setHeadVerticalStretchShadowOpacity(HEADLINE_VERTICAL_STRETCH_DEFAULTS.shadowOpacity);
   setHeadGlitchEnabled(false);
-  setHeadGlitchIntensity(0.55);
-  setHeadGlitchRgbSplit(18);
-  setHeadGlitchNoise(0.04);
-  setHeadGlitchGlow(0.42);
-  setHeadGlitchRedColor("#ff1d25");
-  setHeadGlitchMagentaColor("#00ff66");
-  setHeadGlitchBlueColor("#004bff");
-  setHeadGlitchYellowColor("#d8ff25");
+  setHeadGlitchIntensity(HEADLINE_GLITCH_DEFAULTS.intensity);
+  setHeadGlitchRgbSplit(HEADLINE_GLITCH_DEFAULTS.rgbSplit);
+  setHeadGlitchNoise(HEADLINE_GLITCH_DEFAULTS.noise);
+  setHeadGlitchGlow(HEADLINE_GLITCH_DEFAULTS.glow);
+  setHeadGlitchRedColor("#ff2bd6");
+  setHeadGlitchMagentaColor("#8b4dff");
+  setHeadGlitchBlueColor("#00eaff");
+  setHeadGlitchYellowColor("#fff5ff");
   setHeadExtrudeDepth(0);
   setHeadExtrudeAngle(38);
   setHeadExtrudeDistance(0);
@@ -24349,14 +34411,30 @@ const studioAnalyticsContext = React.useMemo(
     access_plan: accessPlan,
     subscription_status: subscriptionStatus,
     has_background: Boolean(bgUrl || bgUploadUrl),
-    headline_style: headGlitchEnabled
-      ? "glitch"
+      headline_style: headGlitchEnabled
+        ? "neon_pulse"
+        : headKineticEnabled
+        ? "kinetic"
+        : headDashStrokeEnabled
+        ? "dash_stroke"
+        : headColorStrokeEnabled
+        ? "doodle_stack"
+        : headPure3dEnabled
+        ? "pure_3d"
+        : headGoldBlockEnabled
+        ? "gold_block"
+        : headCyberEmbossEnabled
+        ? "retro_engraved"
+        : headQuantumEnabled
+        ? "quantum"
+        : headVerticalStretchEnabled
+        ? "vertical_stretch"
+        : headGlassEnabled
+      ? "glass"
       : headRushEnabled
       ? "halftone"
       : headLineEnabled
       ? "line"
-      : headSliceEnabled
-      ? "echo"
       : "standard",
   }),
   [
@@ -24367,7 +34445,18 @@ const studioAnalyticsContext = React.useMemo(
     format,
     hasAuthSession,
     hasPaidAccess,
+    headGlassEnabled,
+    headDashStrokeEnabled,
+    headColorStrokeEnabled,
+    headPure3dEnabled,
+    headGoldBlockEnabled,
+    headCyberEmbossEnabled,
+    headRetroShadowEnabled,
+    headRetroShadowAlpha,
     headGlitchEnabled,
+    headKineticEnabled,
+    headQuantumEnabled,
+    headVerticalStretchEnabled,
     headLineEnabled,
     headRushEnabled,
     headSliceEnabled,
@@ -24523,6 +34612,8 @@ const applyWelcomeCoach3dEffect = React.useCallback(() => {
   setMobileControlsTab("design");
   setSelectedPanel("headline");
   setHeadRushEnabled(false);
+  setHeadQuantumEnabled(false);
+  setHeadVerticalStretchEnabled(false);
   setHeadExtrudeDepth((value) => Math.max(value, 24));
   setHeadExtrudeDistance((value) => Math.max(value, 28));
   setHeadExtrudeAngle(34);
@@ -24739,6 +34830,10 @@ type ActiveTextControls = {
   sizeMin: number;
   sizeMax: number;
   sizeStep: number;
+  scale?: number;
+  scaleMin?: number;
+  scaleMax?: number;
+  scaleStep?: number;
   lineHeight: number;
   lineMin: number;
   lineMax: number;
@@ -24757,6 +34852,7 @@ type ActiveTextControls = {
   onText?: (v: string) => void;
   onFont?: (v: string) => void;
   onSize?: (v: number) => void;
+  onScale?: (v: number) => void;
   onLine?: (v: number) => void;
   rotation?: number;
   onRotate?: (v: number) => void;
@@ -24781,9 +34877,9 @@ const activeTextControls = React.useMemo<ActiveTextControls | null>(() => {
         sizeMin: 36,
         sizeMax: 300,
         sizeStep: 2,
-        lineHeight,
-        lineMin: 0.2,
-        lineMax: 1.3,
+        lineHeight: headGlassEnabled ? Math.max(HEADLINE_GLASS_MIN_LINE_HEIGHT, lineHeight) : lineHeight,
+        lineMin: 0,
+        lineMax: headGlassEnabled ? HEADLINE_GLASS_MAX_LINE_HEIGHT : 1.3,
         lineStep: 0.02,
         color: textFx?.color,
         allowNoFill: true,
@@ -24810,7 +34906,7 @@ const activeTextControls = React.useMemo<ActiveTextControls | null>(() => {
           setHeadManualPx(v);
           setTextStyle("headline", format, { sizePx: v });
         },
-        onLine: (v: number) => setLineHeight(v),
+        onLine: (v: number) => setLineHeight(headGlassEnabled ? Math.max(HEADLINE_GLASS_MIN_LINE_HEIGHT, v) : v),
         rotation: headRotate,
         onRotate: (v: number) => setHeadRotate(v),
         skew: headSkew,
@@ -24831,7 +34927,7 @@ const activeTextControls = React.useMemo<ActiveTextControls | null>(() => {
         fonts: HEADLINE2_FONTS_LOCAL,
         size: head2SizePx,
         sizeMin: 12,
-        sizeMax: 120,
+        sizeMax: 300,
         sizeStep: 1,
         lineHeight: head2LineHeight,
         lineMin: 0.2,
@@ -24874,7 +34970,7 @@ const activeTextControls = React.useMemo<ActiveTextControls | null>(() => {
         font: detailsFamily,
         fonts: BODY_FONTS_LOCAL,
         size: bodySize,
-        sizeMin: 8,
+        sizeMin: isCenterHeroTemplateActive ? 5 : 8,
         sizeMax: 60,
         sizeStep: 1,
         lineHeight: detailsLineHeight,
@@ -24900,7 +34996,7 @@ const activeTextControls = React.useMemo<ActiveTextControls | null>(() => {
         font: details2Family ?? bodyFamily,
         fonts: BODY_FONTS2_LOCAL,
         size: details2Size,
-        sizeMin: 8,
+        sizeMin: isCenterHeroTemplateActive ? 5 : 8,
         sizeMax: 60,
         sizeStep: 1,
         lineHeight: details2LineHeight,
@@ -24926,7 +35022,7 @@ const activeTextControls = React.useMemo<ActiveTextControls | null>(() => {
         font: venueFamily,
         fonts: VENUE_FONTS_LOCAL,
         size: venueSize,
-        sizeMin: 10,
+        sizeMin: isCenterHeroTemplateActive ? 5 : 10,
         sizeMax: 96,
         sizeStep: 1,
         lineHeight: venueLineHeight,
@@ -24953,9 +35049,9 @@ const activeTextControls = React.useMemo<ActiveTextControls | null>(() => {
         fonts: SUBTAG_FONTS_LOCAL,
         size: subtagSize,
         sizeMin: 8,
-        sizeMax: 48,
+        sizeMax: 120,
         sizeStep: 1,
-        lineHeight: 1,
+        lineHeight: presenterLineHeight,
         lineMin: 0.2,
         lineMax: 1.8,
         lineStep: 0.05,
@@ -24964,12 +35060,130 @@ const activeTextControls = React.useMemo<ActiveTextControls | null>(() => {
         onText: (v: string) => setSubtag(v),
         onFont: (v: string) => setSubtagFamily(v),
         onSize: (v: number) => setSubtagSize(v),
-        onLine: () => {},
+        onLine: (v: number) => setPresenterLineHeight(v),
         rotation: subtagRotate,
         onRotate: (v: number) => setSubtagRotate(v),
         layerOffset: textLayerOffset.subtag,
         onLayerUp: () => nudgeTextLayer("subtag", "up"),
         onLayerDown: () => nudgeTextLayer("subtag", "down"),
+      };
+    case "presenter":
+      return {
+        label: "Presenter",
+        text: presenterText,
+        font: presenterFamily,
+        fonts: BODY_FONTS_LOCAL,
+        size: presenterSize,
+        sizeMin: isCenterHeroTemplateActive ? 5 : 6,
+        sizeMax: 36,
+        sizeStep: 1,
+        lineHeight: leftRailLineHeight,
+        lineMin: 0.6,
+        lineMax: 1.4,
+        lineStep: 0.05,
+        color: presenterColor,
+        onColor: (v: string) => setPresenterColor(v),
+        onText: (v: string) => setPresenterText(v),
+        onFont: (v: string) => setPresenterFamily(v),
+        onSize: (v: number) => setPresenterSize(v),
+        onLine: (v: number) => setLeftRailLineHeight(v),
+        rotation: presenterRotation,
+        onRotate: (v: number) => setPresenterRotation(v),
+      };
+    case "leftRail":
+      return {
+        label: "Left Rail",
+        text: leftRailText,
+        font: leftRailFamily,
+        fonts: BODY_FONTS_LOCAL,
+        size: leftRailSize,
+        sizeMin: isCenterHeroTemplateActive ? 5 : 6,
+        sizeMax: 40,
+        sizeStep: 1,
+        lineHeight: rightRailLineHeight,
+        lineMin: 0.6,
+        lineMax: 1.4,
+        lineStep: 0.05,
+        color: leftRailColor,
+        onColor: (v: string) => setLeftRailColor(v),
+        onText: (v: string) => setLeftRailText(v),
+        onFont: (v: string) => setLeftRailFamily(v),
+        onSize: (v: number) => setLeftRailSize(v),
+        onLine: (v: number) => setRightRailLineHeight(v),
+        rotation: leftRailRotation,
+        onRotate: (v: number) => setLeftRailRotation(v),
+      };
+    case "rightRail":
+      return {
+        label: "Right Rail",
+        text: rightRailText,
+        font: rightRailFamily,
+        fonts: BODY_FONTS_LOCAL,
+        size: rightRailSize,
+        sizeMin: isCenterHeroTemplateActive ? 5 : 6,
+        sizeMax: 40,
+        sizeStep: 1,
+        lineHeight: 1,
+        lineMin: 0.6,
+        lineMax: 1.4,
+        lineStep: 0.05,
+        color: rightRailColor,
+        onColor: (v: string) => setRightRailColor(v),
+        onText: (v: string) => setRightRailText(v),
+        onFont: (v: string) => setRightRailFamily(v),
+        onSize: (v: number) => setRightRailSize(v),
+        onLine: () => {},
+        rotation: rightRailRotation,
+        onRotate: (v: number) => setRightRailRotation(v),
+      };
+    case "date":
+      return {
+        label: "Date",
+        text: dateText,
+        font: dateFamily,
+        fonts: HEADLINE2_FONTS_LOCAL,
+        size: dateSize,
+        sizeMin: isCenterHeroTemplateActive ? 5 : 8,
+        sizeMax: 80,
+        sizeStep: 1,
+        lineHeight: dateLineHeight,
+        lineMin: 0.5,
+        lineMax: 1.4,
+        lineStep: 0.05,
+        color: dateColor,
+        onColor: (v: string) => setDateColor(v),
+        onText: (v: string) => setDateText(v),
+        onFont: (v: string) => setDateFamily(v),
+        onSize: (v: number) => setDateSize(v),
+        onLine: (v: number) => setDateLineHeight(v),
+        rotation: dateRotation,
+        onRotate: (v: number) => setDateRotation(v),
+      };
+    case "price":
+      return {
+        label: "Price",
+        text: priceText,
+        font: priceFamily,
+        fonts: HEADLINE2_FONTS_LOCAL,
+        size: priceSize,
+        sizeMin: isCenterHeroTemplateActive ? 5 : 8,
+        sizeMax: 80,
+        sizeStep: 1,
+        scale: priceScale,
+        scaleMin: 0.5,
+        scaleMax: 2.5,
+        scaleStep: 0.01,
+        lineHeight: priceLineHeight,
+        lineMin: 0.5,
+        lineMax: 1.4,
+        lineStep: 0.05,
+        color: priceColor,
+        onColor: (v: string) => setPriceColor(v),
+        onText: (v: string) => setPriceText(v),
+        onFont: (v: string) => setPriceFamily(v),
+        onSize: (v: number) => setPriceSize(v),
+        onScale: (v: number) => setPriceScale(v),
+        onLine: (v: number) => setPriceLineHeight(v),
       };
     default:
       return null;
@@ -24983,6 +35197,7 @@ const activeTextControls = React.useMemo<ActiveTextControls | null>(() => {
   headMaxPx,
   headRotate,
   headSkew,
+  headGlassEnabled,
   setTextFx,
   headShadowStrength,
   textFx,
@@ -24998,6 +35213,7 @@ const activeTextControls = React.useMemo<ActiveTextControls | null>(() => {
   head2Skew,
   head2ShadowStrength,
   head2Fx,
+  isCenterHeroTemplateActive,
   setHead2Color,
   setHead2Family,
   setHead2SizePx,
@@ -25040,6 +35256,36 @@ const activeTextControls = React.useMemo<ActiveTextControls | null>(() => {
   subtagSize,
   subtagTextColor,
   subtagRotate,
+  presenterText,
+  presenterFamily,
+  presenterSize,
+  presenterLineHeight,
+  presenterColor,
+  presenterRotation,
+  leftRailText,
+  leftRailFamily,
+  leftRailSize,
+  leftRailLineHeight,
+  leftRailColor,
+  leftRailRotation,
+  rightRailText,
+  rightRailFamily,
+  rightRailSize,
+  rightRailLineHeight,
+  rightRailColor,
+  rightRailRotation,
+  dateText,
+  dateFamily,
+  dateSize,
+  dateLineHeight,
+  dateColor,
+  dateRotation,
+  priceText,
+  priceFamily,
+  priceSize,
+  priceLineHeight,
+  priceScale,
+  priceColor,
   textLayerOffset,
   nudgeTextLayer,
   setSubtagTextColor,
@@ -25086,8 +35332,8 @@ const nudgePortraitLayer = React.useCallback(
     });
 
     const isLogo = String(cur.id || "").startsWith("logo_") || !!(cur as any).isLogo;
-    const isLibraryAsset = !!(cur as any).isFlare || !!(cur as any).isSticker;
-    const isExtracted = !!(cur as any).isExtracted;
+    const isLibraryAsset =
+      (!!(cur as any).isFlare || !!(cur as any).isSticker) && !(cur as any).isExtracted;
     st.setSelectedPortraitId(id);
     if (isLibraryAsset) {
       st.setSelectedPanel("icons");
@@ -25095,9 +35341,6 @@ const nudgePortraitLayer = React.useCallback(
     } else if (isLogo) {
       st.setSelectedPanel("logo");
       st.setMoveTarget("logo");
-    } else if (isExtracted) {
-      st.setSelectedPanel("extract_subject");
-      st.setMoveTarget("portrait");
     } else {
       st.setSelectedPanel("portrait");
       st.setMoveTarget("portrait");
@@ -25107,6 +35350,34 @@ const nudgePortraitLayer = React.useCallback(
 );
 
 const activeAssetControls = React.useMemo(() => {
+  if (selectedPanel === "qr" && qrEnabled) {
+    return {
+      label: "QR",
+      idLabel: qrImageUrl ? "Uploaded QR" : "Template QR",
+      showPosition: true,
+      posX: qrX,
+      posY: qrY,
+      scale: qrScale,
+      showScale: true,
+      scaleLabel: "Scale",
+      scaleMin: 0.3,
+      scaleMax: 1.2,
+      scaleStep: 0.01,
+      opacity: 1,
+      showOpacity: false,
+      locked: false,
+      rotation: 0,
+      onScale: (v: number) => setQrScale(v),
+      onPosX: (v: number) => setQrX(clamp100(v)),
+      onPosY: (v: number) => setQrY(clamp100(v)),
+      deleteLabel: "Hide QR",
+      onDelete: () => {
+        setQrEnabled(false);
+        useFlyerState.getState().setSelectedPanel(null);
+      },
+    };
+  }
+
   if (selectedEmojiId) {
     const list = Array.isArray(emojis) ? emojis : emojis?.[format] || [];
     const sel = list.find((e: any) => e.id === selectedEmojiId);
@@ -25154,21 +35425,26 @@ const activeAssetControls = React.useMemo(() => {
     const isBrandFace = !!(sel as any).isBrandFace;
     const isLogo = String(sel.id || "").startsWith("logo_") || !!(sel as any).isLogo;
     const isExtracted = !!(sel as any).isExtracted;
-    const isAsset = sel.isFlare || sel.isSticker || isLogo || isBrandFace;
+    const isPaletteTexture = !!(sel as any).isTexture || isCenterHeroBottomStripAsset(sel);
+    const isAsset = sel.isFlare || sel.isSticker || isPaletteTexture || isLogo || isBrandFace;
     const isSeparator = !!(sel as any).isSeparator;
     const isShapeGraphic = !!(sel as any).isShapeGraphic;
     const hasIconColor =
-      (!!(sel as any).isSticker && typeof (sel as any).svgTemplate === "string") || isSeparator;
+      (((!!(sel as any).isSticker || isPaletteTexture) &&
+        (typeof (sel as any).svgTemplate === "string" || isCenterHeroBottomStripAsset(sel))) ||
+        isSeparator);
     const assetName = resolveCanvasAssetName(sel) || (isLogo ? "3D Text" : null);
     const assetLabel = isBrandFace
       ? "Main Face"
-      : assetName || (sel.isFlare ? "Flare" : sel.isSticker ? "Graphic" : "3D Text");
+      : assetName || (sel.isFlare ? "Flare" : sel.isSticker || isPaletteTexture ? "Graphic" : "3D Text");
 
     if (isExtracted) {
       return {
         label: "Cutout",
         idLabel: `${sel.id}`,
-        showPosition: false,
+        showPosition: true,
+        posX: sel.x ?? 50,
+        posY: sel.y ?? 50,
         scale: sel.scale ?? 1,
         showScale: true,
         scaleLabel: "Scale",
@@ -25196,6 +35472,10 @@ const activeAssetControls = React.useMemo(() => {
           useFlyerState.getState().updatePortrait(format, sel.id, { shadowAlpha: v }),
         onRotate: (v: number) =>
           useFlyerState.getState().updatePortrait(format, sel.id, { rotation: v }),
+        onPosX: (v: number) =>
+          useFlyerState.getState().updatePortrait(format, sel.id, { x: clamp100(v) }),
+        onPosY: (v: number) =>
+          useFlyerState.getState().updatePortrait(format, sel.id, { y: clamp100(v) }),
         onToggleLock: () =>
           useFlyerState.getState().updatePortrait(format, sel.id, {
             locked: !sel.locked,
@@ -25204,6 +35484,7 @@ const activeAssetControls = React.useMemo(() => {
         onLayerDown: () => nudgePortraitLayer(sel.id, "down"),
         deleteLabel: "Delete Cutout",
         onDelete: () => {
+          ensureCutoutInPortraitSlot(sel.url, (sel as any).cleanupBaseUrl || sel.url);
           removePortrait(format, sel.id);
           useFlyerState.getState().setSelectedPortraitId(null);
         },
@@ -25240,7 +35521,7 @@ const activeAssetControls = React.useMemo(() => {
       return {
         label: formatUiLabelCaps(assetLabel),
         idLabel: `${sel.id}`,
-        showPosition: !(sel.isFlare || sel.isSticker || isLogo),
+        showPosition: !(sel.isFlare || sel.isSticker || isPaletteTexture || isLogo),
         posX: sel.x ?? 0,
         posY: sel.y ?? 0,
         scale: sel.scale ?? 1,
@@ -25255,7 +35536,7 @@ const activeAssetControls = React.useMemo(() => {
         opacity: sel.opacity ?? 1,
         locked: !!sel.locked,
         showColor: hasIconColor,
-        colorValue: (sel as any).iconColor || "#ffffff",
+        colorValue: (sel as any).iconColor || (isPaletteTexture ? "#9F3245" : "#ffffff"),
         shapeGradient: isShapeGraphic ? (sel as any).shapeGradient !== false : undefined,
         rotation: sel.rotation ?? 0,
         shadowBlur: isLogo ? Number((sel as any).shadowBlur ?? 0) : undefined,
@@ -25297,14 +35578,25 @@ const activeAssetControls = React.useMemo(() => {
                 return buildShapeSvgDataUrl(kind, value, gradientEnabled);
               })()
             : (() => {
-                const template = String((sel as any).svgTemplate || "");
-                const nextSvg = template.replace("{{COLOR}}", value);
-                const svgBase64 = btoa(unescape(encodeURIComponent(nextSvg)));
-                return `data:image/svg+xml;base64,${svgBase64}`;
+                const template = String(
+                  (sel as any).svgTemplate ||
+                    (isCenterHeroBottomStripAsset(sel) ? CENTER_HERO_BOTTOM_STRIP_SVG : "")
+                );
+                return template ? rebuildSvgDataUrl(template, value) : String(sel.url || "");
               })();
+          const template =
+            typeof (sel as any).svgTemplate === "string"
+              ? (sel as any).svgTemplate
+              : isCenterHeroBottomStripAsset(sel)
+              ? CENTER_HERO_BOTTOM_STRIP_SVG
+              : undefined;
           useFlyerState.getState().updatePortrait(format, sel.id, {
             url: nextUrl,
             iconColor: value,
+            ...(template ? { svgTemplate: template } : {}),
+            ...(isPaletteTexture
+              ? { isSticker: true, isTexture: true, tint: 0, tintMode: "colorize", paletteRole: "accent" }
+              : {}),
           });
         },
         onToggleShapeGradient: isShapeGraphic
@@ -25375,6 +35667,15 @@ const activeAssetControls = React.useMemo(() => {
           ? undefined
           : (v: number) =>
               useFlyerState.getState().updatePortrait(format, sel.id, { labelSize: v }),
+        labelLineHeight: isLogo
+          ? undefined
+          : Number.isFinite((sel as any).labelLineHeight)
+          ? Number((sel as any).labelLineHeight)
+          : 1,
+        onLabelLineHeight: isLogo
+          ? undefined
+          : (v: number) =>
+              useFlyerState.getState().updatePortrait(format, sel.id, { labelLineHeight: v }),
         labelOffsetY: isLogo ? undefined : Number((sel as any).labelOffsetY ?? 0),
         onLabelOffsetY: isLogo
           ? undefined
@@ -25447,6 +35748,7 @@ const activeAssetControls = React.useMemo(() => {
       onLayerUp: () => nudgePortraitLayer(sel.id, "up"),
       onLayerDown: () => nudgePortraitLayer(sel.id, "down"),
       onDelete: () => {
+        ensureCutoutInPortraitSlot(sel.url, (sel as any).cleanupBaseUrl || sel.url);
         removePortrait(format, sel.id);
         useFlyerState.getState().setSelectedPortraitId(null);
       },
@@ -25457,6 +35759,12 @@ const activeAssetControls = React.useMemo(() => {
 }, [
   selectedEmojiId,
   selectedPortraitId,
+  selectedPanel,
+  qrEnabled,
+  qrX,
+  qrY,
+  qrScale,
+  qrImageUrl,
   emojis,
   portraits,
   format,
@@ -25473,30 +35781,64 @@ const showMobileTextFloatBasics =
 const showMobileHeadlineStyleControls =
   headlineTextStyleTabsVisible && mobileTextFloatTab === "style";
 const headline3dStyleActive = headExtrudeDepth > 0 || headExtrudeDistance > 0;
-const headlineEchoStyleActive = !!headSliceEnabled;
+const headlineEchoStyleActive = false;
 const headlineGradientStyleActive = !!textFx.gradient;
 const headlineRushStyleActive = !!headRushEnabled;
 const headlineGlitchStyleActive = !!headGlitchEnabled;
 const headlineLineStyleActive = !!headLineEnabled;
+const headlineGlassStyleActive = !!headGlassEnabled;
+const headlineKineticStyleActive = !!headKineticEnabled;
+const headlineDashStrokeStyleActive = !!headDashStrokeEnabled;
+const headlineDoodleStackStyleActive = !!headColorStrokeEnabled;
+const headlinePure3dStyleActive = !!headPure3dEnabled;
+const headlineGoldBlockStyleActive = !!headGoldBlockEnabled;
+const headlineCyberEmbossStyleActive = !!headCyberEmbossEnabled;
+const headlineQuantumStyleActive = !!headQuantumEnabled;
+const headlineVerticalStretchStyleActive = !!headVerticalStretchEnabled;
 const headlineFlat3dStyleActive =
   headline3dStyleActive &&
   !headlineLineStyleActive &&
   !headlineRushStyleActive &&
   !headlineGlitchStyleActive &&
+  !headlineGlassStyleActive &&
+  !headlineKineticStyleActive &&
+  !headlineDashStrokeStyleActive &&
+  !headlineDoodleStackStyleActive &&
+  !headlinePure3dStyleActive &&
+  !headlineGoldBlockStyleActive &&
+  !headlineCyberEmbossStyleActive &&
+  !headlineQuantumStyleActive &&
+  !headlineVerticalStretchStyleActive &&
   !headlineEchoStyleActive;
 const showDesktopHeadline3dControls = headlineFlat3dStyleActive || headlineLineStyleActive;
 const showDesktopHeadlineShadowControls = !!headShadow;
 const showDesktopHeadlineStrokeControls =
   textFx.strokeWidth > 0 || headlineLineStyleActive || headlineGlitchStyleActive;
-const inferredMobileHeadlineStyleFocus: "3d" | "gradient" | "echo" | "rush" | "glitch" | "line" | null =
+const inferredMobileHeadlineStyleFocus: MobileHeadlineStyleFocus =
   headlineGlitchStyleActive
     ? "glitch"
+    : headlinePure3dStyleActive
+    ? "pure3d"
+    : headlineGoldBlockStyleActive
+    ? "goldblock"
+    : headlineKineticStyleActive
+    ? "kinetic"
+    : headlineDashStrokeStyleActive
+    ? "dash"
+    : headlineDoodleStackStyleActive
+    ? "doodle"
+    : headlineCyberEmbossStyleActive
+    ? "retro"
+    : headlineQuantumStyleActive
+    ? "quantum"
+    : headlineVerticalStretchStyleActive
+    ? "stretch"
+    : headlineGlassStyleActive
+    ? "glass"
     : headlineLineStyleActive
     ? "line"
     : headlineRushStyleActive
     ? "rush"
-    : headlineEchoStyleActive
-    ? "echo"
     : headline3dStyleActive
       ? "3d"
       : headlineGradientStyleActive
@@ -25508,20 +35850,51 @@ const showMobileHeadline3dControls =
   showMobileHeadlineStyleControls && activeMobileHeadlineStyleFocus === "3d";
 const showMobileHeadlineGradientControls =
   showMobileHeadlineStyleControls && activeMobileHeadlineStyleFocus === "gradient";
-const showMobileHeadlineEchoControls =
-  showMobileHeadlineStyleControls && activeMobileHeadlineStyleFocus === "echo";
 const showMobileHeadlineRushControls =
   showMobileHeadlineStyleControls && activeMobileHeadlineStyleFocus === "rush";
 const showMobileHeadlineGlitchControls =
   showMobileHeadlineStyleControls && activeMobileHeadlineStyleFocus === "glitch";
 const showMobileHeadlineLineControls =
   showMobileHeadlineStyleControls && activeMobileHeadlineStyleFocus === "line";
+const showMobileHeadlineGlassControls =
+  showMobileHeadlineStyleControls && activeMobileHeadlineStyleFocus === "glass";
+const showMobileHeadlineKineticControls =
+  showMobileHeadlineStyleControls && activeMobileHeadlineStyleFocus === "kinetic";
+const showMobileHeadlineDashControls =
+  showMobileHeadlineStyleControls && activeMobileHeadlineStyleFocus === "dash";
+const showMobileHeadlineDoodleControls =
+  showMobileHeadlineStyleControls && activeMobileHeadlineStyleFocus === "doodle";
+const showMobileHeadlinePure3dControls =
+  showMobileHeadlineStyleControls && activeMobileHeadlineStyleFocus === "pure3d";
+const showMobileHeadlineGoldBlockControls =
+  showMobileHeadlineStyleControls && activeMobileHeadlineStyleFocus === "goldblock";
+const showMobileHeadlineRetroControls =
+  showMobileHeadlineStyleControls && activeMobileHeadlineStyleFocus === "retro";
+const showMobileHeadlineQuantumControls =
+  showMobileHeadlineStyleControls && activeMobileHeadlineStyleFocus === "quantum";
+const showMobileHeadlineStretchControls =
+  showMobileHeadlineStyleControls && activeMobileHeadlineStyleFocus === "stretch";
 const activeMobileTextFloatPanelStyle = headlineTextStyleTabsVisible
   ? showMobileHeadlineStyleControls
     ? mobileHeadlineStyleFloatPanelStyle
     : mobileHeadlineFloatPanelStyle
   : mobileFloatPanelStyle;
 const hasAssetControls = !!activeAssetControls;
+const getSelectedPortraitLayer = React.useCallback(() => {
+  if (!selectedPortraitId) return null;
+  const list = portraits?.[format] || [];
+  return list.find((p: any) => p?.id === selectedPortraitId) || null;
+}, [format, portraits, selectedPortraitId]);
+
+const isLogoLayer = React.useCallback((item: any) => {
+  if (!item) return false;
+  return String(item.id || "").startsWith("logo_") || !!item.isLogo;
+}, []);
+
+const isIconPortraitLayer = React.useCallback(
+  (item: any) => !!item && !isLogoLayer(item) && (!!item.isFlare || !!item.isSticker),
+  [isLogoLayer]
+);
 
 React.useEffect(() => {
   if (!floatingEditorVisible) return;
@@ -25569,6 +35942,12 @@ const recordMove = React.useCallback(
       | "details2"
       | "venue"
       | "subtag"
+      | "presenter"
+      | "leftRail"
+      | "rightRail"
+      | "date"
+      | "price"
+      | "qr"
       | "logo"
       | "background";
     id: string;
@@ -25625,6 +36004,30 @@ const undoAssetPosition = React.useCallback(() => {
     case "subtag":
       setSubtagX(lastMovePos.x);
       setSubtagY(lastMovePos.y);
+      break;
+    case "presenter":
+      setPresenterX(lastMovePos.x);
+      setPresenterY(lastMovePos.y);
+      break;
+    case "leftRail":
+      setLeftRailX(lastMovePos.x);
+      setLeftRailY(lastMovePos.y);
+      break;
+    case "rightRail":
+      setRightRailX(lastMovePos.x);
+      setRightRailY(lastMovePos.y);
+      break;
+    case "date":
+      setDateX(lastMovePos.x);
+      setDateY(lastMovePos.y);
+      break;
+    case "price":
+      setPriceX(lastMovePos.x);
+      setPriceY(lastMovePos.y);
+      break;
+    case "qr":
+      setQrX(lastMovePos.x);
+      setQrY(lastMovePos.y);
       break;
     case "logo":
       setLogoX(lastMovePos.x);
@@ -27017,10 +37420,13 @@ const emojiCanvas = React.useMemo(() => {
     });
 
     // ✅ SAME AS FLARES: select + route FIRST
+    store.setSelectedPortraitId(null);
     store.setSelectedEmojiId(em.id);
     setSelectedEmojiId(em.id);
     store.setFocus("icon", "emoji");
     store.setMoveTarget("icon");
+    store.setDragging("icon");
+    store.setIsLiveDragging(true);
 
     const el = e.currentTarget as unknown as HTMLElement;
     try {
@@ -27061,9 +37467,9 @@ const emojiCanvas = React.useMemo(() => {
       el.dataset.esuppressclick = "1";
     }
 
-    el.style.setProperty("--edx", `${dx}px`);
-    el.style.setProperty("--edy", `${dy}px`);
-  }}
+	    el.style.setProperty("--edx", `${dx}px`);
+	    el.style.setProperty("--edy", `${dy}px`);
+	  }}
   // DRAG END
   onPointerUp={(e) => {
     const el = e.currentTarget as HTMLElement;
@@ -27089,14 +37495,23 @@ const emojiCanvas = React.useMemo(() => {
 
     const finalPctX = startLeft + (dx / cw) * 100;
     const finalPctY = startTop + (dy / ch) * 100;
+    publishLiveAlignmentPosition(
+      "icon",
+      Number.isFinite(finalPctX) ? clamp100(finalPctX) : em.x,
+      Number.isFinite(finalPctY) ? clamp100(finalPctY) : em.y,
+      eid
+    );
 
     if (moved) {
       onEmojiMove?.(eid, finalPctX, finalPctY);
     }
 
+    store.setSelectedPortraitId(null);
     store.setSelectedEmojiId(em.id);
     setSelectedEmojiId(em.id);
     store.setMoveTarget("icon");
+    store.setDragging(null);
+    store.setIsLiveDragging(false);
 
     el.style.setProperty("--edx", "0px");
     el.style.setProperty("--edy", "0px");
@@ -27114,6 +37529,9 @@ const emojiCanvas = React.useMemo(() => {
     const el = e.currentTarget as HTMLElement;
     el.dataset.edrag = "0";
     el.dataset.esuppressclick = "0";
+    const store = useFlyerState.getState();
+    store.setDragging(null);
+    store.setIsLiveDragging(false);
     el.style.setProperty("--edx", "0px");
     el.style.setProperty("--edy", "0px");
     try {
@@ -27200,7 +37618,7 @@ const emojiCanvas = React.useMemo(() => {
       })}
     </div>
   );
-}, [emojis, format, onEmojiMove, recordMove]);
+}, [emojis, format, onEmojiMove, publishLiveAlignmentPosition, recordMove]);
 const helperBotVisible =
   !isLiveDragging &&
   !workflowHelpOpen &&
@@ -27212,7 +37630,8 @@ const showHeadlineActionPrompt =
   helperBotVisible &&
   welcomeHelpPromptVisible &&
   welcomeHelperStage === "tap_headline";
-const showHeadlineEditCue = showHeadlineActionPrompt && welcomeHelperStage === "tap_headline";
+const showHeadlineEditCue =
+  !isMobileView && showHeadlineActionPrompt && welcomeHelperStage === "tap_headline";
 const showWelcomeCoachBubble = false;
 const headlineActionPromptText = "Tap the headline to edit text";
 const headlineActionPromptBody = "Start with the biggest text. After that, tap Guide for the next steps.";
@@ -27244,8 +37663,19 @@ if (redirectingToLanding) {
   );
 }
 
+if (!hydrated) {
+  return (
+    <main className="min-h-screen bg-[#050608] text-white" aria-label="Loading Nightlife Flyers">
+      <div className="flex min-h-screen items-center justify-center text-xs uppercase tracking-[0.24em] text-white/45">
+        Loading Nightlife Flyers
+      </div>
+    </main>
+  );
+}
+
 return (
   <>
+  <PaletteColorProvider colors={paletteColorChoices}>
   <AuthGate onStatusChange={setSubscriptionStatus} />
   {/* CONTINUE SESSION MODAL */}
     <AnimatePresence>
@@ -27327,6 +37757,10 @@ return (
             buildForYouLoading={loadingStartup}
             buildForYouError={startupBuildError}
             onBuildForYou={handleStartupBuildForYou}
+            onLoadLadiesNightTest={() => {
+              setShowStartup(false);
+              loadLadiesNightSubjectPosterTest();
+            }}
             guestMode={isGuestTrial}
             templateOptions={startupTemplateOptions}
             onLoadProjectFile={async (file) => {
@@ -27450,6 +37884,103 @@ return (
             Loading your flyer…
           </div>
           <div className="w-10 h-10 border-4 border-fuchsia-500 border-t-transparent rounded-full animate-spin" />
+        </motion.div>
+      )}
+    </AnimatePresence>
+
+    <AnimatePresence>
+      {subjectPaletteDecision && (
+        <motion.div
+          key="replace-subject-palette"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
+          className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/82 px-4 backdrop-blur-sm"
+        >
+          {(() => {
+            const nextPalette = subjectPaletteDecision.direction.palette;
+            const paletteSwatches = [
+              { key: "base", label: "Base", weight: "70%", color: nextPalette.secondary },
+              { key: "shadow", label: "Shadow", weight: "", color: darken(nextPalette.secondary, 0.35) },
+              { key: "main", label: "Main", weight: "20%", color: nextPalette.primary },
+              { key: "meta", label: "Meta", weight: "", color: nextPalette.neutral },
+              { key: "accent", label: "Accent", weight: "10%", color: nextPalette.accent },
+            ];
+
+            return (
+              <motion.div
+                initial={{ y: 12, scale: 0.985 }}
+                animate={{ y: 0, scale: 1 }}
+                exit={{ y: 10, scale: 0.985 }}
+                transition={{ duration: 0.18 }}
+                className="w-full max-w-[540px] rounded-lg border border-white/10 bg-neutral-950/95 p-4 text-white shadow-[0_24px_80px_rgba(0,0,0,0.62)] ring-1 ring-white/[0.04] backdrop-blur-xl"
+              >
+                <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-3">
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
+                      Replace Subject
+                    </div>
+                    <h2 className="mt-1 text-[18px] font-semibold leading-6 text-neutral-50">
+                      Match flyer palette to subject?
+                    </h2>
+                    <p className="mt-1 max-w-[390px] text-[12px] leading-5 text-neutral-400">
+                      Recolor the flyer with the detected subject palette, or keep the current colors.
+                    </p>
+                  </div>
+                  <div className="mt-1 flex h-8 w-32 shrink-0 overflow-hidden rounded-md border border-white/10" aria-hidden="true">
+                    {paletteSwatches.map((swatch) => (
+                      <span key={swatch.key} className="flex-1" style={{ backgroundColor: swatch.color }} />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-3 grid grid-cols-5 gap-2">
+                  {paletteSwatches.map((swatch) => (
+                    <div key={swatch.key} className="min-w-0">
+                      <div className="mb-1 truncate text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-500">
+                        {swatch.weight ? `${swatch.weight} ` : ""}
+                        {swatch.label}
+                      </div>
+                      <div className="rounded-md border border-white/10 bg-black/30 p-1">
+                        <div
+                          className="h-9 rounded-sm border border-white/10"
+                          style={{ backgroundColor: swatch.color }}
+                        />
+                      </div>
+                      <div className="mt-1 truncate rounded-md border border-white/10 bg-black/20 px-1.5 py-1 font-mono text-[10px] uppercase text-neutral-400">
+                        {swatch.color}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                  <button
+                    type="button"
+                    onClick={() => commitReplacementSubject(false)}
+                    className="min-h-10 rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 text-[12px] font-semibold text-neutral-100 transition hover:border-white/20 hover:bg-white/[0.08]"
+                  >
+                    Keep Current
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => commitReplacementSubject(true)}
+                    className="min-h-10 rounded-md border border-white/15 bg-neutral-100 px-3 py-2 text-[12px] font-semibold text-neutral-950 transition hover:bg-white"
+                  >
+                    Use Subject Palette
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSubjectPaletteDecision(null)}
+                    className="min-h-10 rounded-md border border-transparent px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500 transition hover:border-white/10 hover:text-neutral-200"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </motion.div>
+            );
+          })()}
         </motion.div>
       )}
     </AnimatePresence>
@@ -28361,7 +38892,7 @@ style={{ top: STICKY_TOP }}
 
 
     // Resolve active element
-    const active = s.moveTarget ?? s.selectedPanel ?? null;
+    const active = resolveCoordinateReaderTarget(s.moveTarget, s.selectedPanel) ?? s.selectedPanel ?? null;
 
 
     if (!active) {
@@ -28378,16 +38909,13 @@ style={{ top: STICKY_TOP }}
       const emojiSel = selectedEmojiId
         ? emList.find((e: any) => e.id === selectedEmojiId)
         : null;
-      const flareSel = selectedPortraitId
-        ? (portraits?.[format] || []).find(
-            (p: any) => p.id === selectedPortraitId && (p.isFlare || p.isSticker)
-          )
-        : null;
+      const selectedLayer = getSelectedPortraitLayer();
+      const flareSel = isIconPortraitLayer(selectedLayer) ? selectedLayer : null;
 
-      if (emojiSel) {
-        store.updateEmoji(format, emojiSel.id, { x: marginPct, y: emojiSel.y ?? 50 });
-      } else if (flareSel) {
+      if (flareSel) {
         store.updatePortrait(format, flareSel.id, { x: marginPct, y: flareSel.y ?? 50 });
+      } else if (emojiSel) {
+        store.updateEmoji(format, emojiSel.id, { x: marginPct, y: emojiSel.y ?? 50 });
       } else {
         alert("Select a flare/graphic/emoji to align.");
       }
@@ -28399,6 +38927,33 @@ style={{ top: STICKY_TOP }}
       return;
     }
 
+    if (active === "portrait") {
+      const store = useFlyerState.getState();
+      const selectedLayer = getSelectedPortraitLayer();
+      const selected =
+        selectedLayer && !isLogoLayer(selectedLayer) && !isIconPortraitLayer(selectedLayer)
+          ? selectedLayer
+          : null;
+      if (selected) {
+        store.updatePortrait(format, selected.id, { x: marginPct, y: selected.y ?? 50 });
+      } else {
+        setPortraitX(marginPct);
+      }
+      return;
+    }
+
+    if (active === "logo") {
+      const store = useFlyerState.getState();
+      const selectedLayer = getSelectedPortraitLayer();
+      const selected = isLogoLayer(selectedLayer) ? selectedLayer : null;
+      if (selected) {
+        store.updatePortrait(format, selected.id, { x: marginPct, y: selected.y ?? 50 });
+      } else {
+        setLogoX(marginPct);
+      }
+      return;
+    }
+
     // Root must exist
     const root = canvasRefs.root;
     if (!root) {
@@ -28407,7 +38962,10 @@ style={{ top: STICKY_TOP }}
     }
 
     // Element must exist
-    const el = canvasRefs[active as keyof typeof canvasRefs] as HTMLElement | null;
+    const el =
+      (canvasRefs[active as keyof typeof canvasRefs] as HTMLElement | null) ??
+      canvasRefs.root?.querySelector<HTMLElement>(`[data-node="${active}"]`) ??
+      null;
     if (!el) {
       alert(`❌ Could not find element for: ${active}`);
       return;
@@ -28428,6 +38986,12 @@ style={{ top: STICKY_TOP }}
       case "details2":  setDetails2X(newX); setDetails2Y(newY); break;
       case "venue":     setVenueX(newX); setVenueY(newY); break;
       case "subtag":    setSubtagX(newX); setSubtagY(newY); break;
+      case "presenter": setPresenterX(newX); setPresenterY(newY); break;
+      case "leftRail":  setLeftRailX(newX); setLeftRailY(newY); break;
+      case "rightRail": setRightRailX(newX); setRightRailY(newY); break;
+      case "date":      setDateX(newX); setDateY(newY); break;
+      case "price":     setPriceX(newX); setPriceY(newY); break;
+      case "qr":        setQrX(newX); setQrY(newY); break;
       default:
         alert(`⚠️ Alignment not supported for: ${active}`);
     }
@@ -28443,7 +39007,7 @@ style={{ top: STICKY_TOP }}
   type="button"
   onClick={() => {
     const s = useFlyerState.getState();
-    const active = s.moveTarget ?? s.selectedPanel ?? null;
+    const active = resolveCoordinateReaderTarget(s.moveTarget, s.selectedPanel) ?? s.selectedPanel ?? null;
 
     if (!active) {
       alert("❌ Nothing selected");
@@ -28457,16 +39021,13 @@ style={{ top: STICKY_TOP }}
       const emojiSel = selectedEmojiId
         ? emList.find((e: any) => e.id === selectedEmojiId)
         : null;
-      const flareSel = selectedPortraitId
-        ? (portraits?.[format] || []).find(
-            (p: any) => p.id === selectedPortraitId && (p.isFlare || p.isSticker)
-          )
-        : null;
+      const selectedLayer = getSelectedPortraitLayer();
+      const flareSel = isIconPortraitLayer(selectedLayer) ? selectedLayer : null;
 
-      if (emojiSel) {
-        store.updateEmoji(format, emojiSel.id, { x: 50, y: emojiSel.y ?? 50 });
-      } else if (flareSel) {
+      if (flareSel) {
         store.updatePortrait(format, flareSel.id, { x: 50, y: flareSel.y ?? 50 });
+      } else if (emojiSel) {
+        store.updateEmoji(format, emojiSel.id, { x: 50, y: emojiSel.y ?? 50 });
       } else {
         alert("Select a flare/graphic/emoji to align.");
       }
@@ -28478,8 +39039,38 @@ style={{ top: STICKY_TOP }}
       return;
     }
 
+    if (active === "portrait") {
+      const store = useFlyerState.getState();
+      const selectedLayer = getSelectedPortraitLayer();
+      const selected =
+        selectedLayer && !isLogoLayer(selectedLayer) && !isIconPortraitLayer(selectedLayer)
+          ? selectedLayer
+          : null;
+      if (selected) {
+        store.updatePortrait(format, selected.id, { x: 50, y: selected.y ?? 50 });
+      } else {
+        setPortraitX(50);
+      }
+      return;
+    }
+
+    if (active === "logo") {
+      const store = useFlyerState.getState();
+      const selectedLayer = getSelectedPortraitLayer();
+      const selected = isLogoLayer(selectedLayer) ? selectedLayer : null;
+      if (selected) {
+        store.updatePortrait(format, selected.id, { x: 50, y: selected.y ?? 50 });
+      } else {
+        setLogoX(50);
+      }
+      return;
+    }
+
     // Ensure element exists in canvasRefs
-    const el = canvasRefs[active as keyof typeof canvasRefs] as HTMLElement | null;
+    const el =
+      (canvasRefs[active as keyof typeof canvasRefs] as HTMLElement | null) ??
+      canvasRefs.root?.querySelector<HTMLElement>(`[data-node="${active}"]`) ??
+      null;
     if (!el) {
       alert(`❌ Could not find element for: ${active}`);
       return;
@@ -28507,6 +39098,12 @@ style={{ top: STICKY_TOP }}
       case "details2":  setDetails2X(newX); break;
       case "venue":     setVenueX(newX); break;
       case "subtag":    setSubtagX(newX); break;
+      case "presenter": setPresenterX(newX); break;
+      case "leftRail":  setLeftRailX(newX); break;
+      case "rightRail": setRightRailX(newX); break;
+      case "date":      setDateX(newX); break;
+      case "price":     setPriceX(newX); break;
+      case "qr":        setQrX(newX); break;
 
       default:
         alert(`⚠️ Alignment not supported for: ${active}`);
@@ -28524,7 +39121,7 @@ style={{ top: STICKY_TOP }}
   type="button"
   onClick={() => {
     const s = useFlyerState.getState();
-    const active = s.moveTarget ?? s.selectedPanel ?? null;
+    const active = resolveCoordinateReaderTarget(s.moveTarget, s.selectedPanel) ?? s.selectedPanel ?? null;
 
     if (!active) {
       alert("❌ Nothing selected");
@@ -28540,21 +39137,18 @@ style={{ top: STICKY_TOP }}
       const emojiSel = selectedEmojiId
         ? emList.find((e: any) => e.id === selectedEmojiId)
         : null;
-      const flareSel = selectedPortraitId
-        ? (portraits?.[format] || []).find(
-            (p: any) => p.id === selectedPortraitId && (p.isFlare || p.isSticker)
-          )
-        : null;
+      const selectedLayer = getSelectedPortraitLayer();
+      const flareSel = isIconPortraitLayer(selectedLayer) ? selectedLayer : null;
 
-      if (emojiSel) {
-        store.updateEmoji(format, emojiSel.id, {
-          x: 100 - marginPct,
-          y: emojiSel.y ?? 50,
-        });
-      } else if (flareSel) {
+      if (flareSel) {
         store.updatePortrait(format, flareSel.id, {
           x: 100 - marginPct,
           y: flareSel.y ?? 50,
+        });
+      } else if (emojiSel) {
+        store.updateEmoji(format, emojiSel.id, {
+          x: 100 - marginPct,
+          y: emojiSel.y ?? 50,
         });
       } else {
         alert("Select a flare/graphic/emoji to align.");
@@ -28567,8 +39161,38 @@ style={{ top: STICKY_TOP }}
       return;
     }
 
+    if (active === "portrait") {
+      const store = useFlyerState.getState();
+      const selectedLayer = getSelectedPortraitLayer();
+      const selected =
+        selectedLayer && !isLogoLayer(selectedLayer) && !isIconPortraitLayer(selectedLayer)
+          ? selectedLayer
+          : null;
+      if (selected) {
+        store.updatePortrait(format, selected.id, { x: 100 - marginPct, y: selected.y ?? 50 });
+      } else {
+        setPortraitX(100 - marginPct);
+      }
+      return;
+    }
+
+    if (active === "logo") {
+      const store = useFlyerState.getState();
+      const selectedLayer = getSelectedPortraitLayer();
+      const selected = isLogoLayer(selectedLayer) ? selectedLayer : null;
+      if (selected) {
+        store.updatePortrait(format, selected.id, { x: 100 - marginPct, y: selected.y ?? 50 });
+      } else {
+        setLogoX(100 - marginPct);
+      }
+      return;
+    }
+
     // Ensure element exists in canvasRefs
-    const el = canvasRefs[active as keyof typeof canvasRefs] as HTMLElement | null;
+    const el =
+      (canvasRefs[active as keyof typeof canvasRefs] as HTMLElement | null) ??
+      canvasRefs.root?.querySelector<HTMLElement>(`[data-node="${active}"]`) ??
+      null;
     if (!el) {
       alert(`❌ Could not find element for: ${active}`);
       return;
@@ -28619,6 +39243,30 @@ style={{ top: STICKY_TOP }}
         setSubtagX(newX);
         setSubtagY(newY);
         break;
+      case "presenter":
+        setPresenterX(newX);
+        setPresenterY(newY);
+        break;
+      case "leftRail":
+        setLeftRailX(newX);
+        setLeftRailY(newY);
+        break;
+      case "rightRail":
+        setRightRailX(newX);
+        setRightRailY(newY);
+        break;
+      case "date":
+        setDateX(newX);
+        setDateY(newY);
+        break;
+      case "price":
+        setPriceX(newX);
+        setPriceY(newY);
+        break;
+      case "qr":
+        setQrX(newX);
+        setQrY(newY);
+        break;
 
       default:
         alert(`⚠️ Alignment not supported for: ${active}`);
@@ -28635,7 +39283,8 @@ style={{ top: STICKY_TOP }}
 {/* LIVE POSITION READOUT */}
 <div className="mt-2 text-xs text-neutral-400 text-center w-full">
   {(() => {
-    if (!moveTarget) return <span>No object selected</span>;
+    const active = (resolveCoordinateReaderTarget(moveTarget, selectedPanel) ?? selectedPanel) as string | null;
+    if (!active) return <span>No object selected</span>;
 
     const displayLabels: Record<string, string> = {
       headline: "Headline",
@@ -28644,28 +39293,70 @@ style={{ top: STICKY_TOP }}
       details2: "More Details",
       venue: "Venue",
       subtag: "Subtag",
+      presenter: "Top Text",
+      leftRail: "Left Vertical Text",
+      rightRail: "Right Vertical Text",
+      date: "Date",
+      price: "Price",
+      qr: "QR",
       portrait: "Portrait",
       logo: "3D Logo",
       background: "Background",
       icon: "Asset",
     };
 
-    let x = 0, y = 0;
-    let label: string = displayLabels[moveTarget] ?? moveTarget;
+    const live = liveAlignmentPosition;
+    const liveFor = (target: NonNullable<MoveTarget>, id?: string | null) =>
+      live &&
+      live.target === target &&
+      (!id || !live.id || live.id === id)
+        ? live
+        : null;
 
-    switch (moveTarget) {
-      case "headline":  x = headX; y = headY; break;
-      case "headline2": x = head2X; y = head2Y; break;
-      case "details":   x = detailsX; y = detailsY; break;
-      case "details2":  x = details2X; y = details2Y; break;
-      case "venue":     x = venueX; y = venueY; break;
-      case "subtag":    x = subtagX; y = subtagY; break;
-      case "portrait":  x = portraitX; y = portraitY; break;
-      case "logo":      x = logoX; y = logoY; break;
+    let x = 0, y = 0;
+    let label: string = displayLabels[active] ?? active;
+
+    switch (active) {
+      case "headline":  { const v = liveFor("headline", "headline"); x = v?.x ?? headX; y = v?.y ?? headY; break; }
+      case "headline2": { const v = liveFor("headline2", "headline2"); x = v?.x ?? head2X; y = v?.y ?? head2Y; break; }
+      case "details":   { const v = liveFor("details", "details"); x = v?.x ?? detailsX; y = v?.y ?? detailsY; break; }
+      case "details2":  { const v = liveFor("details2", "details2"); x = v?.x ?? details2X; y = v?.y ?? details2Y; break; }
+      case "venue":     { const v = liveFor("venue", "venue"); x = v?.x ?? venueX; y = v?.y ?? venueY; break; }
+      case "subtag":    { const v = liveFor("subtag", "subtag"); x = v?.x ?? subtagX; y = v?.y ?? subtagY; break; }
+      case "presenter": { const v = liveFor("presenter", "presenter"); x = v?.x ?? presenterX; y = v?.y ?? presenterY; break; }
+      case "leftRail":  { const v = liveFor("leftRail", "leftRail"); x = v?.x ?? leftRailX; y = v?.y ?? leftRailY; break; }
+      case "rightRail": { const v = liveFor("rightRail", "rightRail"); x = v?.x ?? rightRailX; y = v?.y ?? rightRailY; break; }
+      case "date":      { const v = liveFor("date", "date"); x = v?.x ?? dateX; y = v?.y ?? dateY; break; }
+      case "price":     { const v = liveFor("price", "price"); x = v?.x ?? priceX; y = v?.y ?? priceY; break; }
+      case "qr":        { const v = liveFor("qr", "qr"); x = v?.x ?? qrX; y = v?.y ?? qrY; break; }
+      case "portrait": {
+        const selectedLayer = getSelectedPortraitLayer();
+        const selected =
+          selectedLayer && !isLogoLayer(selectedLayer) && !isIconPortraitLayer(selectedLayer)
+            ? selectedLayer
+            : null;
+        const v = liveFor("portrait", selected?.id ?? null);
+        x = v?.x ?? (Number.isFinite(Number(selected?.x)) ? Number(selected?.x) : portraitX);
+        y = v?.y ?? (Number.isFinite(Number(selected?.y)) ? Number(selected?.y) : portraitY);
+        label = selected?.isExtracted ? "Cutout" : "Portrait";
+        break;
+      }
+      case "logo": {
+        const selectedLayer = getSelectedPortraitLayer();
+        const selected = isLogoLayer(selectedLayer) ? selectedLayer : null;
+        const v = liveFor("logo", selected?.id ?? null);
+        x = v?.x ?? (Number.isFinite(Number(selected?.x)) ? Number(selected?.x) : logoX);
+        y = v?.y ?? (Number.isFinite(Number(selected?.y)) ? Number(selected?.y) : logoY);
+        label = selected ? resolveCanvasAssetName(selected) || "3D Logo" : "3D Logo";
+        break;
+      }
 
       case "background":
-        x = bgPosX;
-        y = bgPosY;
+        {
+          const v = liveFor("background", "background");
+          x = v?.x ?? bgPosX;
+          y = v?.y ?? bgPosY;
+        }
         label = "Background";
         break;
 
@@ -28674,23 +39365,24 @@ style={{ top: STICKY_TOP }}
         const em = selectedEmojiId
           ? (Array.isArray(emojis) ? emojis : emojis?.[format] || []).find((e: any) => e.id === selectedEmojiId)
           : null;
-        const flare = selectedPortraitId
-          ? (portraits?.[format] || []).find((p: any) => p.id === selectedPortraitId && (p.isFlare || p.isSticker))
-          : null;
+        const selectedLayer = getSelectedPortraitLayer();
+        const flare = isIconPortraitLayer(selectedLayer) ? selectedLayer : null;
 
-        if (em) {
-          x = em.x ?? 0; y = em.y ?? 0; label = em.char ? `Emoji ${em.char}` : "Emoji";
-        } else if (flare) {
-          x = flare.x ?? 0;
-          y = flare.y ?? 0;
+        if (flare) {
+          const v = liveFor("icon", flare.id);
+          x = v?.x ?? flare.x ?? 0;
+          y = v?.y ?? flare.y ?? 0;
           label = resolveCanvasAssetName(flare) || "Asset";
+        } else if (em) {
+          const v = liveFor("icon", em.id);
+          x = v?.x ?? em.x ?? 0; y = v?.y ?? em.y ?? 0; label = em.char ? `Emoji ${em.char}` : "Emoji";
         } else {
           return <span>Icon selected</span>;
         }
         break;
       }
 
-      default: return <span>{formatUiLabelCaps(displayLabels[moveTarget] ?? moveTarget)} selected</span>;
+      default: return <span>{formatUiLabelCaps(displayLabels[active] ?? active)} selected</span>;
     }
 
     return (
@@ -29116,7 +39808,7 @@ style={{ top: STICKY_TOP }}
 )}
 {/* UI: LOGO — MIRROR OF PORTRAIT LOGIC (END) */}
 
-{!isDjStartupMode && !isMobileView && (
+{false && !isDjStartupMode && !isMobileView && (
   <div className={clsx("px-1 pt-1 text-[10px] uppercase tracking-[0.16em] text-neutral-500", creatorStepPanelClass("copy"))}>
     Primary Copy
   </div>
@@ -29204,22 +39896,46 @@ style={{ top: STICKY_TOP }}
       </div>
 
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <Chip small active={headlineFlat3dStyleActive} onClick={applyHeadlineSportsPreset}>
+        <Chip small active={headlineFlat3dStyleActive} onClick={() => applyHeadlinePresetPreservingCoordinates(applyHeadlineSportsPreset)}>
           Flat 3D
         </Chip>
-        <Chip small active={headLineEnabled} onClick={applyHeadlineLinePreset}>
+        <Chip small active={headlinePure3dStyleActive} onClick={() => applyHeadlinePresetPreservingCoordinates(applyHeadlinePure3dPreset)}>
+          Pure 3D
+        </Chip>
+        <Chip small active={headlineGoldBlockStyleActive} onClick={() => applyHeadlinePresetPreservingCoordinates(applyHeadlineGoldBlockPreset)}>
+          Gold Block
+        </Chip>
+        <Chip small active={headLineEnabled} onClick={() => applyHeadlinePresetPreservingCoordinates(applyHeadlineLinePreset)}>
           Line
         </Chip>
-        <Chip small active={headRushEnabled} onClick={applyHeadlineRushHalftonePreset}>
+        <Chip small active={headGlassEnabled} onClick={() => applyHeadlinePresetPreservingCoordinates(applyHeadlineGlassPreset)}>
+          Glass
+        </Chip>
+        <Chip small active={headRushEnabled} onClick={() => applyHeadlinePresetPreservingCoordinates(applyHeadlineRushHalftonePreset)}>
           Halftone
         </Chip>
-        <Chip small active={headGlitchEnabled} onClick={applyHeadlineGlitchPreset}>
-          Glitch
+        <Chip small active={headGlitchEnabled} onClick={() => applyHeadlinePresetPreservingCoordinates(applyHeadlineGlitchPreset)}>
+          Neon Pulse
         </Chip>
-        <Chip small active={headSliceEnabled} onClick={applyHeadlineRetroSlicePreset}>
-          Echo
+        <Chip small active={headKineticEnabled} onClick={() => applyHeadlinePresetPreservingCoordinates(applyHeadlineKineticPreset)}>
+          Kinetic
         </Chip>
-        <Chip small onClick={resetHeadlinePresetStyles}>
+        <Chip small active={headlineDashStrokeStyleActive} onClick={() => applyHeadlinePresetPreservingCoordinates(applyHeadlineDashStrokePreset)}>
+          Stroke
+        </Chip>
+        <Chip small active={headlineDoodleStackStyleActive} onClick={() => applyHeadlinePresetPreservingCoordinates(applyHeadlineDoodleStackPreset)}>
+          Doodle
+        </Chip>
+        <Chip small active={headlineCyberEmbossStyleActive} onClick={() => applyHeadlinePresetPreservingCoordinates(applyHeadlineCyberEmbossPreset)}>
+          Retro
+        </Chip>
+        <Chip small active={headlineQuantumStyleActive} onClick={() => applyHeadlinePresetPreservingCoordinates(applyHeadlineQuantumPreset)}>
+          Quantum
+        </Chip>
+        <Chip small active={headVerticalStretchEnabled} onClick={() => applyHeadlinePresetPreservingCoordinates(applyHeadlineVerticalStretchPreset)}>
+          Stretch
+        </Chip>
+        <Chip small onClick={() => applyHeadlinePresetPreservingCoordinates(resetHeadlinePresetStyles)}>
           Reset
         </Chip>
       </div>
@@ -29270,7 +39986,15 @@ style={{ top: STICKY_TOP }}
           max={300}
           step={2}
         />
-        <Stepper label="Line Height" value={lineHeight} setValue={setLineHeight} min={0.2} max={1.3} step={0.02} digits={2} />
+        <Stepper
+          label="Line Height"
+          value={headGlassEnabled ? Math.max(HEADLINE_GLASS_MIN_LINE_HEIGHT, lineHeight) : lineHeight}
+          setValue={(v) => setLineHeight(headGlassEnabled ? Math.max(HEADLINE_GLASS_MIN_LINE_HEIGHT, v) : v)}
+          min={0}
+          max={headGlassEnabled ? HEADLINE_GLASS_MAX_LINE_HEIGHT : 1.3}
+          step={0.02}
+          digits={2}
+        />
         <Stepper label="Col Width %" value={textColWidth} setValue={setTextColWidth} min={30} max={100} step={1} />
         {showDesktopHeadlineShadowControls && (
           <Stepper
@@ -29392,62 +40116,49 @@ style={{ top: STICKY_TOP }}
         </div>
       )}
 
-      {headSliceEnabled && (
+      {headGlassEnabled && (
         <>
-          <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
-            <Stepper
-              label="Band Count"
-              value={headSliceBandCount}
-              setValue={setHeadSliceBandCount}
-              min={3}
-              max={15}
-              step={1}
-            />
-            <Stepper
-              label="Band Gap"
-              value={headSliceBandGap}
-              setValue={setHeadSliceBandGap}
-              min={0}
-              max={40}
-              step={1}
-            />
-            <Stepper
-              label="Echo Dist"
-              value={headSliceEchoDistance}
-              setValue={setHeadSliceEchoDistance}
-              min={0}
-              max={220}
-              step={1}
-            />
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Chip small active={headGlassPaletteLinked} onClick={() => applyCurrentPaletteToGlass(true)}>
+              Use Palette
+            </Chip>
           </div>
-
           <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
             <Stepper
-              label="Blur"
-              value={headSliceBlur}
-              setValue={setHeadSliceBlur}
+              label="Glass Blur"
+              value={headGlassBlur}
+              setValue={setHeadGlassBlur}
               min={0}
-              max={20}
+              max={28}
+              step={0.1}
+              digits={1}
+            />
+            <Stepper
+              label="Glass Glow"
+              value={headGlassGlow}
+              setValue={setHeadGlassGlow}
+              min={0}
+              max={60}
               step={0.5}
               digits={1}
             />
             <Stepper
-              label="Fade"
-              value={headSliceFade}
-              setValue={setHeadSliceFade}
-              min={0}
-              max={1}
-              step={0.05}
-              digits={2}
+              label="Edge"
+              value={headGlassStroke}
+              setValue={setHeadGlassStroke}
+              min={0.5}
+              max={8}
+              step={0.1}
+              digits={1}
             />
             <Stepper
-              label="Shadow"
-              value={headSliceShadowStrength}
-              setValue={setHeadSliceShadowStrength}
-              min={0}
-              max={1}
-              step={0.05}
-              digits={2}
+              label="Fill Alpha"
+              value={headGlassFillAlpha}
+              setValue={setHeadGlassFillAlpha}
+              min={0.01}
+              max={0.34}
+              step={0.002}
+              digits={3}
             />
           </div>
         </>
@@ -29476,11 +40187,347 @@ style={{ top: STICKY_TOP }}
         </div>
       )}
 
+      {headKineticEnabled && (
+        <>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Chip small active={headKineticPaletteLinked} onClick={() => applyCurrentPaletteToKinetic(true)}>
+              Use Palette
+            </Chip>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
+            <Stepper
+              label="Slice X"
+              value={headKineticSliceOffsetX}
+              setValue={setHeadKineticSliceOffsetX}
+              min={0}
+              max={48}
+              step={1}
+            />
+            <Stepper
+              label="Slice Y"
+              value={headKineticSliceOffsetY}
+              setValue={setHeadKineticSliceOffsetY}
+              min={-24}
+              max={24}
+              step={1}
+            />
+            <Stepper
+              label="Shadow"
+              value={headKineticShadowOpacity}
+              setValue={setHeadKineticShadowOpacity}
+              min={0}
+              max={1}
+              step={0.05}
+              digits={2}
+            />
+          </div>
+        </>
+      )}
+
+      {(headDashStrokeEnabled || headColorStrokeEnabled) && (
+        <>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Chip small active={headDashStrokePaletteLinked} onClick={() => applyCurrentPaletteToDashStroke(true)}>
+              Use Palette
+            </Chip>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
+            {HEADLINE_DASH_STROKE_DEFAULTS.colors.map((fallback, index) => (
+              <div key={`dash-stroke-color-${index}`} className="flex items-center justify-between gap-2 text-[11px] text-neutral-400">
+                <span>Stroke {index + 1}</span>
+                <ColorDot
+                  value={normalizePaletteHexString(String(headDashStrokeColors[index] || ""), fallback)}
+                  onChange={(color) => updateDashStrokeColor(index, color)}
+                  title={`Stroke ${index + 1} color`}
+                />
+              </div>
+            ))}
+            {headDashStrokeEnabled && (
+              <Stepper
+                label="Frame"
+                value={headDashStrokeFrame}
+                setValue={setHeadDashStrokeFrame}
+                min={0}
+                max={1}
+                step={0.01}
+                digits={2}
+              />
+            )}
+            {headColorStrokeEnabled && (
+              <div className="col-span-2 grid grid-cols-2 gap-x-4 gap-y-3">
+                <Stepper
+                  label="X Angle"
+                  value={headDoodleAngleX}
+                  setValue={setHeadDoodleAngleX}
+                  min={-28}
+                  max={28}
+                  step={0.5}
+                  digits={1}
+                />
+                <Stepper
+                  label="Y Angle"
+                  value={headDoodleAngleY}
+                  setValue={setHeadDoodleAngleY}
+                  min={-28}
+                  max={28}
+                  step={0.5}
+                  digits={1}
+                />
+                <Stepper
+                  label="Layer Rotate"
+                  value={headDoodleRotate}
+                  setValue={setHeadDoodleRotate}
+                  min={-8}
+                  max={8}
+                  step={0.1}
+                  digits={1}
+                />
+                <Stepper
+                  label="Spread"
+                  value={headDoodleSpread}
+                  setValue={setHeadDoodleSpread}
+                  min={0}
+                  max={3}
+                  step={0.05}
+                  digits={2}
+                />
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {headPure3dEnabled && (
+        <>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Chip small active={headPure3dPaletteLinked} onClick={() => applyCurrentPaletteToPure3d(true)}>
+              Use Palette
+            </Chip>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
+            <Stepper
+              label="Frame"
+              value={headPure3dFrame}
+              setValue={setHeadPure3dFrame}
+              min={0}
+              max={1}
+              step={0.01}
+              digits={2}
+            />
+            <div className="flex items-center justify-between gap-2 text-[11px] text-neutral-400">
+              <span>Face</span>
+              <ColorDot
+                value={headPure3dFaceColor}
+                onChange={(color) => {
+                  const next = normalizePaletteHexString(String(color || ""), HEADLINE_PURE_3D_DEFAULTS.faceColor);
+                  setHeadPure3dPaletteLinked(false);
+                  setHeadPure3dFaceColor(next);
+                  setTextFx((current) => ({ ...current, color: next }));
+                }}
+                title="Pure 3D face color"
+              />
+            </div>
+            <div className="flex items-center justify-between gap-2 text-[11px] text-neutral-400">
+              <span>Edge</span>
+              <ColorDot
+                value={headPure3dEdgeColor}
+                onChange={(color) => {
+                  const next = normalizePaletteHexString(String(color || ""), HEADLINE_PURE_3D_DEFAULTS.edgeColor);
+                  setHeadPure3dPaletteLinked(false);
+                  setHeadPure3dEdgeColor(next);
+                  setHeadExtrudeColor(next);
+                }}
+                title="Pure 3D edge color"
+              />
+            </div>
+            <div className="flex items-center justify-between gap-2 text-[11px] text-neutral-400">
+              <span>Shadow</span>
+              <ColorDot
+                value={headPure3dShadowColor}
+                onChange={(color) => {
+                  setHeadPure3dPaletteLinked(false);
+                  setHeadPure3dShadowColor(normalizePaletteHexString(String(color || ""), HEADLINE_PURE_3D_DEFAULTS.shadowColor));
+                }}
+                title="Pure 3D shadow color"
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      {headGoldBlockEnabled && (
+        <>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Chip small active={headGoldBlockPaletteLinked} onClick={() => applyCurrentPaletteToGoldBlock(true)}>
+              Use Palette
+            </Chip>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
+            <Stepper
+              label="Stroke"
+              value={headGoldBlockStrokeWidth}
+              setValue={setHeadGoldBlockStrokeWidth}
+              min={0}
+              max={46}
+              step={1}
+            />
+            <Stepper
+              label="Texture"
+              value={headGoldBlockTexture}
+              setValue={setHeadGoldBlockTexture}
+              min={0}
+              max={1}
+              step={0.05}
+              digits={2}
+            />
+            <Stepper
+              label="Roughness"
+              value={headGoldBlockRoughness}
+              setValue={setHeadGoldBlockRoughness}
+              min={0}
+              max={1}
+              step={0.05}
+              digits={2}
+            />
+            {[
+              ["Light", headGoldBlockLightColor, setHeadGoldBlockLightColor, HEADLINE_GOLD_BLOCK_DEFAULTS.lightColor],
+              ["Mid", headGoldBlockMidColor, setHeadGoldBlockMidColor, HEADLINE_GOLD_BLOCK_DEFAULTS.midColor],
+              ["Dark", headGoldBlockDarkColor, setHeadGoldBlockDarkColor, HEADLINE_GOLD_BLOCK_DEFAULTS.darkColor],
+              ["Stroke", headGoldBlockStrokeColor, setHeadGoldBlockStrokeColor, HEADLINE_GOLD_BLOCK_DEFAULTS.strokeColor],
+            ].map(([label, value, setter, fallback]) => (
+              <div key={`gold-block-color-${label}`} className="flex items-center justify-between gap-2 text-[11px] text-neutral-400">
+                <span>{label as string}</span>
+                <ColorDot
+                  value={normalizePaletteHexString(String(value || ""), String(fallback))}
+                  onChange={(color) => {
+                    setHeadGoldBlockPaletteLinked(false);
+                    (setter as React.Dispatch<React.SetStateAction<string>>)(normalizePaletteHexString(String(color || ""), String(fallback)));
+                  }}
+                  title={`Gold Block ${label} color`}
+                />
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {headCyberEmbossEnabled && (
+        <>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Chip small active={headRetroShadowEnabled} onClick={() => setHeadRetroShadowEnabled((v) => !v)}>
+              Back Shadow
+            </Chip>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
+            <Stepper
+              label="Shadow Alpha"
+              value={headRetroShadowAlpha}
+              setValue={setHeadRetroShadowAlpha}
+              min={0}
+              max={1}
+              step={0.05}
+              digits={2}
+            />
+          </div>
+        </>
+      )}
+
+      {headQuantumEnabled && (
+        <>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Chip small active={headQuantumPaletteLinked} onClick={() => applyCurrentPaletteToQuantum(true)}>
+              Use Palette
+            </Chip>
+            <Chip small active={headQuantumGlowEnabled} onClick={() => setHeadQuantumGlowEnabled((v) => !v)}>
+              Glow
+            </Chip>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
+            <Stepper
+              label="Split"
+              value={headQuantumSplitOffset}
+              setValue={setHeadQuantumSplitOffset}
+              min={0}
+              max={32}
+              step={1}
+            />
+            <Stepper
+              label="Stroke px"
+              value={headQuantumStrokeWidth}
+              setValue={setHeadQuantumStrokeWidth}
+              min={0}
+              max={10}
+              step={0.1}
+              digits={1}
+            />
+            <Stepper
+              label="Glow"
+              value={headQuantumGlow}
+              setValue={setHeadQuantumGlow}
+              min={0}
+              max={1}
+              step={0.05}
+              digits={2}
+            />
+            <Stepper
+              label="Scanlines"
+              value={headQuantumScanlineOpacity}
+              setValue={setHeadQuantumScanlineOpacity}
+              min={0}
+              max={0.5}
+              step={0.02}
+              digits={2}
+            />
+            <Stepper
+              label="Streaks"
+              value={headQuantumStreakOpacity}
+              setValue={setHeadQuantumStreakOpacity}
+              min={0}
+              max={1}
+              step={0.05}
+              digits={2}
+            />
+          </div>
+        </>
+      )}
+
+      {headVerticalStretchEnabled && (
+        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
+          <Stepper
+            label="Scale Y"
+            value={headVerticalStretchScaleY}
+            setValue={setHeadVerticalStretchScaleY}
+            min={0.8}
+            max={2.8}
+            step={0.05}
+            digits={2}
+          />
+          <Stepper
+            label="Scale X"
+            value={headVerticalStretchScaleX}
+            setValue={setHeadVerticalStretchScaleX}
+            min={0.5}
+            max={1.2}
+            step={0.02}
+            digits={2}
+          />
+          <Stepper
+            label="Shadow"
+            value={headVerticalStretchShadowOpacity}
+            setValue={setHeadVerticalStretchShadowOpacity}
+            min={0}
+            max={1}
+            step={0.05}
+            digits={2}
+          />
+        </div>
+      )}
+
       {headGlitchEnabled && (
         <>
           <div className="grid grid-cols-2 gap-3 mt-3">
             <Stepper
-              label="Intensity"
+              label="Tube"
               value={headGlitchIntensity}
               setValue={setHeadGlitchIntensity}
               min={0}
@@ -29489,7 +40536,7 @@ style={{ top: STICKY_TOP }}
               digits={2}
             />
             <Stepper
-              label="RGB Split"
+              label="Edge"
               value={headGlitchRgbSplit}
               setValue={setHeadGlitchRgbSplit}
               min={0}
@@ -29497,7 +40544,7 @@ style={{ top: STICKY_TOP }}
               step={1}
             />
             <Stepper
-              label="Noise"
+              label="Core"
               value={headGlitchNoise}
               setValue={setHeadGlitchNoise}
               min={0}
@@ -29517,16 +40564,20 @@ style={{ top: STICKY_TOP }}
           </div>
           <div className="mt-2 grid grid-cols-2 gap-2">
             <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
-              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Red</span>
+              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Start</span>
               <ColorDot value={headGlitchRedColor} onChange={setHeadGlitchRedColor} />
             </div>
             <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
-              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Green</span>
+              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Mid</span>
               <ColorDot value={headGlitchMagentaColor} onChange={setHeadGlitchMagentaColor} />
             </div>
             <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
-              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Blue</span>
+              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">End</span>
               <ColorDot value={headGlitchBlueColor} onChange={setHeadGlitchBlueColor} />
+            </div>
+            <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Core</span>
+              <ColorDot value={headGlitchYellowColor} onChange={setHeadGlitchYellowColor} />
             </div>
           </div>
         </>
@@ -29572,27 +40623,133 @@ style={{ top: STICKY_TOP }}
             </div>
           </>
         )}
-        {headSliceEnabled && (
-          <>
-            <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
-              <span className="uppercase tracking-[0.12em] opacity-80">Top</span>
-              <ColorDot value={headSliceTopColor} onChange={setHeadSliceTopColor} />
-            </div>
-            <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
-              <span className="uppercase tracking-[0.12em] opacity-80">Middle</span>
-              <ColorDot value={headSliceMidColor} onChange={setHeadSliceMidColor} />
-            </div>
-            <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
-              <span className="uppercase tracking-[0.12em] opacity-80">Bottom</span>
-              <ColorDot value={headSliceBottomColor} onChange={setHeadSliceBottomColor} />
-            </div>
-          </>
-        )}
         {headRushEnabled && (
           <>
             <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
               <span className="uppercase tracking-[0.12em] opacity-80">Dots</span>
               <ColorDot value={headRushDotColor} onChange={setHeadRushDotColor} />
+            </div>
+          </>
+        )}
+        {headKineticEnabled && (
+          <>
+            <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+              <span className="uppercase tracking-[0.12em] opacity-80">Kinetic Text</span>
+              <ColorDot
+                value={headKineticTextColor}
+                onChange={(c) => {
+                  setHeadKineticPaletteLinked(false);
+                  setHeadKineticTextColor(c);
+                }}
+              />
+            </div>
+            <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+              <span className="uppercase tracking-[0.12em] opacity-80">Slice A</span>
+              <ColorDot
+                value={headKineticTopColor}
+                onChange={(c) => {
+                  setHeadKineticPaletteLinked(false);
+                  setHeadKineticTopColor(c);
+                }}
+              />
+            </div>
+            <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+              <span className="uppercase tracking-[0.12em] opacity-80">Slice B</span>
+              <ColorDot
+                value={headKineticBottomColor}
+                onChange={(c) => {
+                  setHeadKineticPaletteLinked(false);
+                  setHeadKineticBottomColor(c);
+                }}
+              />
+            </div>
+          </>
+        )}
+        {headQuantumEnabled && (
+          <>
+            <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Quantum Cyan</span>
+              <ColorDot
+                value={headQuantumCyanColor}
+                onChange={(c) => {
+                  setHeadQuantumPaletteLinked(false);
+                  setHeadQuantumCyanColor(c);
+                }}
+              />
+            </div>
+            <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Quantum Blue</span>
+              <ColorDot
+                value={headQuantumBlueColor}
+                onChange={(c) => {
+                  setHeadQuantumPaletteLinked(false);
+                  setHeadQuantumBlueColor(c);
+                }}
+              />
+            </div>
+            <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Quantum Hi</span>
+              <ColorDot
+                value={headQuantumHighlightColor}
+                onChange={(c) => {
+                  setHeadQuantumPaletteLinked(false);
+                  setHeadQuantumHighlightColor(c);
+                }}
+              />
+            </div>
+            <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Quantum Purple</span>
+              <ColorDot
+                value={headQuantumPurpleColor}
+                onChange={(c) => {
+                  setHeadQuantumPaletteLinked(false);
+                  setHeadQuantumPurpleColor(c);
+                }}
+              />
+            </div>
+            <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+              <span className="min-w-0 truncate uppercase tracking-[0.12em] opacity-80">Quantum Pink</span>
+              <ColorDot
+                value={headQuantumMagentaColor}
+                onChange={(c) => {
+                  setHeadQuantumPaletteLinked(false);
+                  setHeadQuantumMagentaColor(c);
+                }}
+              />
+            </div>
+          </>
+        )}
+        {headGlassEnabled && (
+          <>
+            <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+              <span className="uppercase tracking-[0.12em] opacity-80">Glow A</span>
+              <ColorDot
+                value={headGlassPrimaryColor}
+                onChange={(c) => {
+                  setHeadGlassPaletteLinked(false);
+                  setHeadGlassPrimaryColor(c);
+                }}
+              />
+            </div>
+            <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+              <span className="uppercase tracking-[0.12em] opacity-80">Glow B</span>
+              <ColorDot
+                value={headGlassSecondaryColor}
+                onChange={(c) => {
+                  setHeadGlassPaletteLinked(false);
+                  setHeadGlassSecondaryColor(c);
+                }}
+              />
+            </div>
+            <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+              <span className="uppercase tracking-[0.12em] opacity-80">Highlight</span>
+              <ColorDot
+                value={headGlassHighlightColor}
+                onChange={(c) => {
+                  setHeadGlassPaletteLinked(false);
+                  setHeadGlassHighlightColor(c);
+                }}
+              />
             </div>
           </>
         )}
@@ -29767,7 +40924,7 @@ style={{ top: STICKY_TOP }}
             setSessionValue(format, "head2Size", v);
           }}
           min={24}
-          max={180}
+          max={300}
           step={2}
         />
 
@@ -29864,6 +41021,262 @@ style={{ top: STICKY_TOP }}
 </div>
 {/* UI: HEADLINE 2 (END) */}
 
+{!isMobileView && (
+  <>
+    <div
+      className={clsx("relative rounded-xl transition", creatorStepPanelClass("copy"))}
+      id="template-labels-panel"
+    >
+      <Collapsible
+        title="Template Labels"
+        storageKey="p:template-labels"
+        isOpen={activeTemplateLabelPanel != null}
+        onToggle={() => {
+          setTemplateLabelPanel(activeTemplateLabelPanel ? null : "presenter");
+        }}
+        panelClassName={
+          activeTemplateLabelPanel ? "ring-1 ring-inset ring-[#00FFF0]/70" : undefined
+        }
+        right={
+          <div className="flex items-center gap-1 text-[11px]">
+            <Chip small active={activeTemplateLabelPanel === "presenter"} onClick={() => setTemplateLabelPanel("presenter")}>Top</Chip>
+            <Chip small active={activeTemplateLabelPanel === "date"} onClick={() => setTemplateLabelPanel("date")}>Date</Chip>
+            <Chip small active={activeTemplateLabelPanel === "leftRail"} onClick={() => setTemplateLabelPanel("leftRail")}>Rail</Chip>
+            <Chip small active={activeTemplateLabelPanel === "rightRail"} onClick={() => setTemplateLabelPanel("rightRail")}>Right</Chip>
+            <Chip small active={activeTemplateLabelPanel === "price"} onClick={() => setTemplateLabelPanel("price")}>Price</Chip>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className={templateLabelCardClass("presenter")}>
+            {renderTemplateLabelHeader("presenter", "Top Presenter", presenterEnabled, () => setPresenterEnabled((v) => !v))}
+            {activeTemplateLabelPanel === "presenter" && (
+              <>
+            <textarea
+              value={presenterText}
+              onChange={(e) => setPresenterText(e.target.value)}
+              rows={2}
+              className="w-full rounded bg-[#17171b] p-2 text-white border border-neutral-700"
+            />
+            <div className="mt-3">
+              <FontPicker label="Font" value={presenterFamily} options={BODY_FONTS_LOCAL} onChange={setPresenterFamily} />
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <Stepper label="Size px" value={presenterSize} setValue={setPresenterSize} min={isCenterHeroTemplateActive ? 5 : 6} max={36} step={1} />
+              <Stepper label="Line Height" value={presenterLineHeight} setValue={setPresenterLineHeight} min={0.3} max={1.8} step={0.02} digits={2} />
+              <Stepper label="Width %" value={presenterWidth} setValue={setPresenterWidth} min={20} max={90} step={1} />
+              <Stepper label="X %" value={presenterX} setValue={setPresenterX} min={-10} max={100} step={0.5} digits={1} />
+              <Stepper label="Y %" value={presenterY} setValue={setPresenterY} min={-10} max={100} step={0.5} digits={1} />
+              <Stepper label="Rotation" value={presenterRotation} setValue={setPresenterRotation} min={-180} max={180} step={1} />
+              <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+                <span className="uppercase tracking-[0.12em] opacity-80">Color</span>
+                <ColorDot value={presenterColor} onChange={setPresenterColor} />
+              </div>
+            </div>
+              </>
+            )}
+          </div>
+
+          <div className={templateLabelCardClass("date")}>
+            {renderTemplateLabelHeader("date", "Date", dateEnabled, () => setDateEnabled((v) => !v))}
+            {activeTemplateLabelPanel === "date" && (
+              <>
+            <textarea
+              value={dateText}
+              onChange={(e) => setDateText(e.target.value)}
+              rows={2}
+              className="w-full rounded bg-[#17171b] p-2 text-white border border-neutral-700"
+            />
+            <div className="mt-3">
+              <FontPicker label="Font" value={dateFamily} options={HEADLINE2_FONTS_LOCAL} onChange={setDateFamily} />
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <Stepper label="Size px" value={dateSize} setValue={setDateSize} min={isCenterHeroTemplateActive ? 5 : 8} max={80} step={1} />
+              <Stepper label="Line Height" value={dateLineHeight} setValue={setDateLineHeight} min={0.3} max={1.8} step={0.02} digits={2} />
+              <Stepper label="Rotation" value={dateRotation} setValue={setDateRotation} min={-180} max={180} step={1} />
+              <Stepper label="X %" value={dateX} setValue={setDateX} min={-10} max={100} step={0.5} digits={1} />
+              <Stepper label="Y %" value={dateY} setValue={setDateY} min={-10} max={100} step={0.5} digits={1} />
+              <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+                <span className="uppercase tracking-[0.12em] opacity-80">Color</span>
+                <ColorDot value={dateColor} onChange={setDateColor} />
+              </div>
+            </div>
+              </>
+            )}
+          </div>
+
+          <div className={templateLabelCardClass("leftRail")}>
+            {renderTemplateLabelHeader("leftRail", "Left Rail", leftRailEnabled, () => setLeftRailEnabled((v) => !v))}
+            {activeTemplateLabelPanel === "leftRail" && (
+              <>
+            <textarea
+              value={leftRailText}
+              onChange={(e) => setLeftRailText(e.target.value)}
+              rows={2}
+              className="w-full rounded bg-[#17171b] p-2 text-white border border-neutral-700"
+            />
+            <div className="mt-3">
+              <FontPicker label="Font" value={leftRailFamily} options={BODY_FONTS_LOCAL} onChange={setLeftRailFamily} />
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <Stepper label="Size px" value={leftRailSize} setValue={setLeftRailSize} min={isCenterHeroTemplateActive ? 5 : 6} max={40} step={1} />
+              <Stepper label="Line Height" value={leftRailLineHeight} setValue={setLeftRailLineHeight} min={0.3} max={1.8} step={0.02} digits={2} />
+              <Stepper label="Rotation" value={leftRailRotation} setValue={setLeftRailRotation} min={-180} max={180} step={1} />
+              <Stepper label="X %" value={leftRailX} setValue={setLeftRailX} min={-10} max={100} step={0.5} digits={1} />
+              <Stepper label="Y %" value={leftRailY} setValue={setLeftRailY} min={-10} max={100} step={0.5} digits={1} />
+              <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+                <span className="uppercase tracking-[0.12em] opacity-80">Color</span>
+                <ColorDot value={leftRailColor} onChange={setLeftRailColor} />
+              </div>
+            </div>
+              </>
+            )}
+          </div>
+
+          <div className={templateLabelCardClass("rightRail")}>
+            {renderTemplateLabelHeader("rightRail", "Right Rail", rightRailEnabled, () => setRightRailEnabled((v) => !v))}
+            {activeTemplateLabelPanel === "rightRail" && (
+              <>
+            <textarea
+              value={rightRailText}
+              onChange={(e) => setRightRailText(e.target.value)}
+              rows={2}
+              className="w-full rounded bg-[#17171b] p-2 text-white border border-neutral-700"
+            />
+            <div className="mt-3">
+              <FontPicker label="Font" value={rightRailFamily} options={BODY_FONTS_LOCAL} onChange={setRightRailFamily} />
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <Stepper label="Size px" value={rightRailSize} setValue={setRightRailSize} min={isCenterHeroTemplateActive ? 5 : 6} max={40} step={1} />
+              <Stepper label="Line Height" value={rightRailLineHeight} setValue={setRightRailLineHeight} min={0.3} max={1.8} step={0.02} digits={2} />
+              <Stepper label="Rotation" value={rightRailRotation} setValue={setRightRailRotation} min={-180} max={180} step={1} />
+              <Stepper label="X %" value={rightRailX} setValue={setRightRailX} min={-10} max={100} step={0.5} digits={1} />
+              <Stepper label="Y %" value={rightRailY} setValue={setRightRailY} min={-10} max={100} step={0.5} digits={1} />
+              <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+                <span className="uppercase tracking-[0.12em] opacity-80">Color</span>
+                <ColorDot value={rightRailColor} onChange={setRightRailColor} />
+              </div>
+            </div>
+              </>
+            )}
+          </div>
+
+          <div className={templateLabelCardClass("price")}>
+            {renderTemplateLabelHeader("price", "Price Badge", priceEnabled, () => setPriceEnabled((v) => !v))}
+            {activeTemplateLabelPanel === "price" && (
+              <>
+            <textarea
+              value={priceText}
+              onChange={(e) => setPriceText(e.target.value)}
+              rows={1}
+              className="w-full rounded bg-[#17171b] p-2 text-white border border-neutral-700"
+            />
+            <div className="mt-3">
+              <FontPicker label="Font" value={priceFamily} options={HEADLINE2_FONTS_LOCAL} onChange={setPriceFamily} />
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <Stepper label="Size px" value={priceSize} setValue={setPriceSize} min={isCenterHeroTemplateActive ? 5 : 8} max={80} step={1} />
+              <Stepper label="Line Height" value={priceLineHeight} setValue={setPriceLineHeight} min={0.3} max={1.8} step={0.02} digits={2} />
+              <Stepper label="X %" value={priceX} setValue={setPriceX} min={-10} max={100} step={0.5} digits={1} />
+              <Stepper label="Y %" value={priceY} setValue={setPriceY} min={-10} max={100} step={0.5} digits={1} />
+              <div className="flex min-h-9 items-center justify-between gap-2 border border-white/10 bg-black/15 px-2.5 text-[11px] text-neutral-300">
+                <span className="uppercase tracking-[0.12em] opacity-80">Color</span>
+                <ColorDot value={priceColor} onChange={setPriceColor} />
+              </div>
+            </div>
+            <div className="mt-3">
+              <SliderRow
+                label="Circle Scale"
+                value={priceScale}
+                min={0.5}
+                max={2.5}
+                step={0.01}
+                precision={2}
+                onChange={setPriceScale}
+              />
+            </div>
+              </>
+            )}
+          </div>
+        </div>
+      </Collapsible>
+    </div>
+
+    <div className={clsx("relative rounded-xl transition", creatorStepPanelClass("assets"))} id="template-qr-panel">
+      <Collapsible
+        title="Template QR"
+        storageKey="p:template-qr"
+        isOpen={selectedPanel === "qr"}
+        onToggle={() => {
+          const next = selectedPanel === "qr" ? null : "qr";
+          setSelectedPanel(next);
+          setMoveTarget(next);
+        }}
+        panelClassName={selectedPanel === "qr" ? "ring-1 ring-inset ring-[#00FFF0]/70" : undefined}
+        right={
+          <Chip small active={qrEnabled} onClick={() => setQrEnabled((v) => !v)}>
+            {qrEnabled ? "On" : "Off"}
+          </Chip>
+        }
+      >
+        <div className={clsx(editorUploadHolderClass, "mb-3")}>
+          <div className={clsx(editorUploadPreviewClass, "aspect-square min-h-[120px] p-3")}>
+            {qrImageUrl ? (
+              <img
+                src={qrImageUrl}
+                alt=""
+                className="h-full w-full object-contain"
+                draggable={false}
+              />
+            ) : (
+              <div className="grid h-full w-full place-items-center bg-white p-4">
+                <svg viewBox="0 0 29 29" className="h-full w-full" aria-hidden="true">
+                  <rect width="29" height="29" fill="#fff" />
+                  <path fill="#111" d="M2 2h7v7H2zM20 2h7v7h-7zM2 20h7v7H2z" />
+                  <path fill="#fff" d="M3 3h5v5H3zM21 3h5v5h-5zM3 21h5v5H3z" />
+                  <path fill="#111" d="M4 4h3v3H4zM22 4h3v3h-3zM4 22h3v3H4zM12 3h2v2h-2zM15 3h2v2h-2zM12 6h5v2h-5zM11 10h2v2h-2zM15 10h2v2h-2zM19 11h2v2h-2zM23 11h2v2h-2zM10 14h2v2h-2zM13 14h6v2h-6zM22 15h4v2h-4zM11 18h2v2h-2zM16 18h2v2h-2zM20 19h2v2h-2zM24 19h3v2h-3zM12 22h4v2h-4zM18 23h2v4h-2zM22 23h5v2h-5zM12 26h2v2h-2zM22 27h2v2h-2z" />
+                </svg>
+              </div>
+            )}
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              className={`${editorUploadActionClass} whitespace-normal text-center`}
+              onClick={() => qrUploadInputRef.current?.click()}
+            >
+              {qrImageUrl ? "Replace QR" : "Upload QR"}
+            </button>
+            <button
+              type="button"
+              className={`${editorUploadClearClass} w-full whitespace-normal text-center`}
+              onClick={clearQrImage}
+              disabled={!qrImageUrl}
+            >
+              Use Default
+            </button>
+          </div>
+          <input
+            ref={qrUploadInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.currentTarget.value = "";
+              if (file) handleQrUploadFile(file);
+            }}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Stepper label="X %" value={qrX} setValue={setQrX} min={-10} max={100} step={0.5} digits={1} />
+          <Stepper label="Y %" value={qrY} setValue={setQrY} min={-10} max={100} step={0.5} digits={1} />
+          <Stepper label="Scale" value={qrScale} setValue={setQrScale} min={0.3} max={1.2} step={0.01} digits={2} />
+        </div>
+      </Collapsible>
+    </div>
+  </>
+)}
 
 
 {/* UI: DETAILS (BEGIN) */}
@@ -29916,7 +41329,7 @@ style={{ top: STICKY_TOP }}
 
       {/* ---------- STEPPERS ---------- */}
       <div className="grid grid-cols-2 gap-3 mt-4">
-        <Stepper label="Size px" value={bodySize} setValue={setBodySize} min={10} max={32} step={1} />
+        <Stepper label="Size px" value={bodySize} setValue={setBodySize} min={isCenterHeroTemplateActive ? 5 : 10} max={32} step={1} />
         <Stepper label="Track (em)" value={bodyTracking} setValue={setBodyTracking} min={0} max={0.12} step={0.01} digits={2} />
         <Stepper label="Line Height" value={detailsLineHeight} setValue={setDetailsLineHeight} min={0.2} max={2.0} step={0.02} digits={2} />
         <Stepper label="Rotation (°)" value={detailsRotate} setValue={(n) => setDetailsRotate(normDeg(n))} min={-360} max={360} step={1} />
@@ -30020,7 +41433,7 @@ style={{ top: STICKY_TOP }}
 
         {/* ---------- STEPPERS ---------- */}
         <div className="grid grid-cols-2 gap-3 mt-4">
-          <Stepper label="Size px" value={details2Size} setValue={setDetails2Size} min={10} max={80} step={1} />
+          <Stepper label="Size px" value={details2Size} setValue={setDetails2Size} min={isCenterHeroTemplateActive ? 5 : 10} max={80} step={1} />
           <Stepper label="Track (em)" value={details2LetterSpacing} setValue={setDetails2LetterSpacing} min={0} max={0.15} step={0.01} digits={2} />
           <Stepper label="Line Height" value={details2LineHeight} setValue={setDetails2LineHeight} min={0.2} max={2.5} step={0.05} digits={2} />
           <Stepper label="Rotation (°)" value={details2Rotate} setValue={(n) => setDetails2Rotate(normDeg(n))} min={-360} max={360} step={1} />
@@ -30107,7 +41520,7 @@ style={{ top: STICKY_TOP }}
 
       {/* ---------- STEPPERS ---------- */}
       <div className="grid grid-cols-3 gap-3 mt-4">
-        <Stepper label="Size px" value={venueSize} setValue={setVenueSize} min={10} max={96} step={1} />
+        <Stepper label="Size px" value={venueSize} setValue={setVenueSize} min={isCenterHeroTemplateActive ? 5 : 10} max={96} step={1} />
         <Stepper label="Line Height" value={venueLineHeight} setValue={setVenueLineHeight} min={0.2} max={1.4} step={0.02} digits={2} />
         <Stepper label="Rotation (°)" value={venueRotate} setValue={(n) => setVenueRotate(normDeg(n))} min={-360} max={360} step={1} />
       </div>
@@ -30196,7 +41609,7 @@ style={{ top: STICKY_TOP }}
         </div>
 
         <div className="grid grid-cols-3 gap-3 mt-3">
-          <Stepper label="Size px" value={subtagSize} setValue={setSubtagSize} min={10} max={48} step={1} />
+          <Stepper label="Size px" value={subtagSize} setValue={setSubtagSize} min={10} max={120} step={1} />
           <Stepper label="Alpha" value={subtagAlpha} setValue={setSubtagAlpha} min={0} max={1} step={0.05} digits={2} />
           <Stepper label="Rotation (°)" value={subtagRotate} setValue={(n) => setSubtagRotate(normDeg(n))} min={-360} max={360} step={1} />
         </div>
@@ -30769,7 +42182,7 @@ style={{ top: STICKY_TOP }}
             headlineFamily={headlineFamily}
             headSizeAuto={headSizeAuto}
             headManualPx={headManualPx}
-            textFx={textFx}
+            textFx={isCenterHeroTemplateActive ? { ...textFx, texture: undefined, gradient: false } : textFx}
             align={align}
             lineHeight={lineHeight}
             textColWidth={textColWidth}
@@ -30809,6 +42222,55 @@ style={{ top: STICKY_TOP }}
             subtagItalic={subtagItalic}
             subtagUnderline={subtagUnderline}
             subtagSize={subtagSize}
+            presenterEnabled={presenterEnabled}
+            presenter={presenterText}
+            presenterX={presenterX}
+            presenterY={presenterY}
+            presenterWidth={presenterWidth}
+            presenterSize={presenterSize}
+            presenterFamily={presenterFamily}
+            presenterColor={presenterColor}
+            presenterAlign={presenterAlign}
+            presenterRotation={presenterRotation}
+            leftRailEnabled={leftRailEnabled}
+            leftRail={leftRailText}
+            leftRailX={leftRailX}
+            leftRailY={leftRailY}
+            leftRailSize={leftRailSize}
+            leftRailFamily={leftRailFamily}
+            leftRailColor={leftRailColor}
+            leftRailRotation={leftRailRotation}
+            rightRailEnabled={rightRailEnabled}
+            rightRail={rightRailText}
+            rightRailX={rightRailX}
+            rightRailY={rightRailY}
+            rightRailSize={rightRailSize}
+            rightRailFamily={rightRailFamily}
+            rightRailColor={rightRailColor}
+            rightRailRotation={rightRailRotation}
+            dateEnabled={dateEnabled}
+            date={dateText}
+            dateX={dateX}
+            dateY={dateY}
+            dateSize={dateSize}
+            dateFamily={dateFamily}
+            dateColor={dateColor}
+            dateAlign={dateAlign}
+            dateRotation={dateRotation}
+            priceEnabled={priceEnabled}
+            price={priceText}
+            priceX={priceX}
+            priceY={priceY}
+            priceSize={priceSize}
+            priceScale={priceScale}
+            priceFamily={priceFamily}
+            priceColor={priceColor}
+            priceAlign={priceAlign}
+            qrEnabled={qrEnabled}
+            qrX={qrX}
+            qrY={qrY}
+            qrScale={qrScale}
+            qrImageUrl={qrImageUrl}
             icons={iconList}
             emojis={emojis[format]}
             head2Enabled={headline2Enabled[format]}
@@ -30850,6 +42312,65 @@ style={{ top: STICKY_TOP }}
             headLineFrontOffsetY={headLineFrontOffsetY}
             headLineBackOffsetX={headLineBackOffsetX}
             headLineBackOffsetY={headLineBackOffsetY}
+            headGlassEnabled={headGlassEnabled}
+            headGlassPrimaryColor={headGlassPrimaryColor}
+            headGlassSecondaryColor={headGlassSecondaryColor}
+            headGlassHighlightColor={headGlassHighlightColor}
+            headGlassBlur={headGlassBlur}
+            headGlassGlow={headGlassGlow}
+            headGlassStroke={headGlassStroke}
+            headGlassFillAlpha={headGlassFillAlpha}
+            headKineticEnabled={headKineticEnabled}
+            headKineticTextColor={headKineticTextColor}
+            headKineticTopColor={headKineticTopColor}
+            headKineticBottomColor={headKineticBottomColor}
+            headKineticSliceOffsetX={headKineticSliceOffsetX}
+            headKineticSliceOffsetY={headKineticSliceOffsetY}
+            headKineticShadowOpacity={headKineticShadowOpacity}
+            headDashStrokeEnabled={headDashStrokeEnabled}
+            headColorStrokeEnabled={headColorStrokeEnabled}
+            headDashStrokePaletteLinked={headDashStrokePaletteLinked}
+            headDashStrokeColors={headDashStrokeColors}
+            headDashStrokeFrame={headDashStrokeFrame}
+            headColorStrokeFrame={headColorStrokeFrame}
+            headDoodleAngleX={headDoodleAngleX}
+            headDoodleAngleY={headDoodleAngleY}
+            headDoodleRotate={headDoodleRotate}
+            headDoodleSpread={headDoodleSpread}
+            headPure3dEnabled={headPure3dEnabled}
+            headPure3dPaletteLinked={headPure3dPaletteLinked}
+            headPure3dFaceColor={headPure3dFaceColor}
+            headPure3dEdgeColor={headPure3dEdgeColor}
+            headPure3dShadowColor={headPure3dShadowColor}
+            headPure3dFrame={headPure3dFrame}
+            headGoldBlockEnabled={headGoldBlockEnabled}
+            headGoldBlockPaletteLinked={headGoldBlockPaletteLinked}
+            headGoldBlockLightColor={headGoldBlockLightColor}
+            headGoldBlockMidColor={headGoldBlockMidColor}
+            headGoldBlockDarkColor={headGoldBlockDarkColor}
+            headGoldBlockStrokeColor={headGoldBlockStrokeColor}
+            headGoldBlockStrokeWidth={headGoldBlockStrokeWidth}
+            headGoldBlockTexture={headGoldBlockTexture}
+            headGoldBlockRoughness={headGoldBlockRoughness}
+            headCyberEmbossEnabled={headCyberEmbossEnabled}
+            headRetroShadowEnabled={headRetroShadowEnabled}
+            headRetroShadowAlpha={headRetroShadowAlpha}
+            headQuantumEnabled={headQuantumEnabled}
+            headQuantumCyanColor={headQuantumCyanColor}
+            headQuantumBlueColor={headQuantumBlueColor}
+            headQuantumHighlightColor={headQuantumHighlightColor}
+            headQuantumPurpleColor={headQuantumPurpleColor}
+            headQuantumMagentaColor={headQuantumMagentaColor}
+            headQuantumStrokeWidth={headQuantumStrokeWidth}
+            headQuantumSplitOffset={headQuantumSplitOffset}
+            headQuantumGlowEnabled={headQuantumGlowEnabled}
+            headQuantumGlow={headQuantumGlow}
+            headQuantumScanlineOpacity={headQuantumScanlineOpacity}
+            headQuantumStreakOpacity={headQuantumStreakOpacity}
+            headVerticalStretchEnabled={headVerticalStretchEnabled}
+            headVerticalStretchScaleY={headVerticalStretchScaleY}
+            headVerticalStretchScaleX={headVerticalStretchScaleX}
+            headVerticalStretchShadowOpacity={headVerticalStretchShadowOpacity}
             headGlitchEnabled={headGlitchEnabled}
             headGlitchIntensity={headGlitchIntensity}
             headGlitchRgbSplit={headGlitchRgbSplit}
@@ -30910,7 +42431,32 @@ style={{ top: STICKY_TOP }}
             onDetails2Move={onDetails2MoveRafSafe}
             onVenueMove={onVenueMoveRafSafe}
             onSubtagMove={onSubtagMoveRafSafe}
+            onPresenterMove={(x, y) => {
+              setPresenterX(x);
+              setPresenterY(y);
+            }}
+            onLeftRailMove={(x, y) => {
+              setLeftRailX(x);
+              setLeftRailY(y);
+            }}
+            onRightRailMove={(x, y) => {
+              setRightRailX(x);
+              setRightRailY(y);
+            }}
+            onDateMove={(x, y) => {
+              setDateX(x);
+              setDateY(y);
+            }}
+            onPriceMove={(x, y) => {
+              setPriceX(x);
+              setPriceY(y);
+            }}
+            onQrMove={(x, y) => {
+              setQrX(x);
+              setQrY(y);
+            }}
             onBgMove={onBgMoveRaf}
+            onAlignmentPositionPreview={publishLiveAlignmentPosition}
             logoX={logoX}
             logoY={logoY}
             logoScale={logoScale}
@@ -30934,11 +42480,20 @@ style={{ top: STICKY_TOP }}
               if (!isMobileView) return;
               showMobileFloat("text");
             }}
+            onOpenAssetFloat={() => {
+              if (!isMobileView) return;
+              showMobileFloat("asset");
+            }}
             portraitCanvas={portraitCanvas}
             emojiCanvas={emojiCanvas}
             flareCanvas={flareCanvas}
             showDjTextEditing={showDjTextEditing}
             headlineEditCue={showHeadlineEditCue}
+            presenterLineHeight={presenterLineHeight}
+            leftRailLineHeight={leftRailLineHeight}
+            rightRailLineHeight={rightRailLineHeight}
+            dateLineHeight={dateLineHeight}
+            priceLineHeight={priceLineHeight}
           />
           </div>
           
@@ -31063,6 +42618,21 @@ style={{ top: STICKY_TOP }}
                   />
                 </div>
               </div>
+              {activeTextControls.onScale && (
+                <div>
+                  <InlineSliderInput
+                    label="Scale"
+                    value={Number(activeTextControls.scale || 1)}
+                    min={Number(activeTextControls.scaleMin ?? 0.5)}
+                    max={Number(activeTextControls.scaleMax ?? 2.5)}
+                    step={Number(activeTextControls.scaleStep ?? 0.01)}
+                    precision={2}
+                    onChange={(next) => activeTextControls.onScale?.(next)}
+                    rangeClassName="flex-1 accent-cyan-400"
+                  />
+                </div>
+              )}
+              {activeTextControls.onRotate && (
               <div>
                 <InlineSliderInput
                   label="Rotation"
@@ -31076,6 +42646,7 @@ style={{ top: STICKY_TOP }}
                   rangeClassName="flex-1 accent-cyan-400"
                 />
               </div>
+              )}
             </>
           )}
           {showMobileTextFloatBasics && activeTextControls.onSkew && (
@@ -31160,7 +42731,7 @@ style={{ top: STICKY_TOP }}
                     onClick={() => {
                       setMobileHeadlineStyleFocus("3d");
                       if (!headline3dStyleActive) {
-                        applyHeadlineSportsPreset();
+                        applyHeadlinePresetPreservingCoordinates(applyHeadlineSportsPreset);
                       }
                     }}
                   >
@@ -31169,11 +42740,37 @@ style={{ top: STICKY_TOP }}
                   <Chip
                     small
                     className="w-full justify-center text-center"
+                    active={activeMobileHeadlineStyleFocus === "pure3d"}
+                    onClick={() => {
+                      setMobileHeadlineStyleFocus("pure3d");
+                      if (!headlinePure3dStyleActive) {
+                        applyHeadlinePresetPreservingCoordinates(applyHeadlinePure3dPreset);
+                      }
+                    }}
+                  >
+                    Pure 3D
+                  </Chip>
+                  <Chip
+                    small
+                    className="w-full justify-center text-center"
+                    active={activeMobileHeadlineStyleFocus === "goldblock"}
+                    onClick={() => {
+                      setMobileHeadlineStyleFocus("goldblock");
+                      if (!headlineGoldBlockStyleActive) {
+                        applyHeadlinePresetPreservingCoordinates(applyHeadlineGoldBlockPreset);
+                      }
+                    }}
+                  >
+                    Gold Block
+                  </Chip>
+                  <Chip
+                    small
+                    className="w-full justify-center text-center"
                     active={activeMobileHeadlineStyleFocus === "line"}
                     onClick={() => {
                       setMobileHeadlineStyleFocus("line");
                       if (!headlineLineStyleActive) {
-                        applyHeadlineLinePreset();
+                        applyHeadlinePresetPreservingCoordinates(applyHeadlineLinePreset);
                       }
                     }}
                   >
@@ -31186,7 +42783,7 @@ style={{ top: STICKY_TOP }}
                     onClick={() => {
                       setMobileHeadlineStyleFocus("rush");
                       if (!headlineRushStyleActive) {
-                        applyHeadlineRushHalftonePreset();
+                        applyHeadlinePresetPreservingCoordinates(applyHeadlineRushHalftonePreset);
                       }
                     }}
                   >
@@ -31195,82 +42792,184 @@ style={{ top: STICKY_TOP }}
                   <Chip
                     small
                     className="w-full justify-center text-center"
-                    active={activeMobileHeadlineStyleFocus === "glitch"}
+                    active={activeMobileHeadlineStyleFocus === "glass"}
                     onClick={() => {
-                      setMobileHeadlineStyleFocus("glitch");
-                      if (!headlineGlitchStyleActive) {
-                        applyHeadlineGlitchPreset();
-                      }
+                      setMobileHeadlineStyleFocus("glass");
+                      applyHeadlinePresetPreservingCoordinates(applyHeadlineGlassPreset);
                     }}
                   >
-                    Glitch
+                    Glass
                   </Chip>
                   <Chip
                     small
                     className="w-full justify-center text-center"
-                    active={activeMobileHeadlineStyleFocus === "echo"}
+                    active={activeMobileHeadlineStyleFocus === "glitch"}
                     onClick={() => {
-                      setMobileHeadlineStyleFocus("echo");
-                      if (!headlineEchoStyleActive) {
-                        applyHeadlineRetroSlicePreset();
+                      setMobileHeadlineStyleFocus("glitch");
+                      if (!headlineGlitchStyleActive) {
+                        applyHeadlinePresetPreservingCoordinates(applyHeadlineGlitchPreset);
                       }
                     }}
                   >
-                    Echo
+                    Neon Pulse
+                  </Chip>
+                  <Chip
+                    small
+                    className="w-full justify-center text-center"
+                    active={activeMobileHeadlineStyleFocus === "kinetic"}
+                    onClick={() => {
+                      setMobileHeadlineStyleFocus("kinetic");
+                      if (!headlineKineticStyleActive) {
+                        applyHeadlinePresetPreservingCoordinates(applyHeadlineKineticPreset);
+                      }
+                    }}
+                  >
+                    Kinetic
+                  </Chip>
+                  <Chip
+                    small
+                    className="w-full justify-center text-center"
+                    active={activeMobileHeadlineStyleFocus === "retro"}
+                    onClick={() => {
+                      setMobileHeadlineStyleFocus("retro");
+                      if (!headlineCyberEmbossStyleActive) {
+                        applyHeadlinePresetPreservingCoordinates(applyHeadlineCyberEmbossPreset);
+                      }
+                    }}
+                  >
+                    Retro
+                  </Chip>
+                  <Chip
+                    small
+                    className="w-full justify-center text-center"
+                    active={activeMobileHeadlineStyleFocus === "dash"}
+                    onClick={() => {
+                      setMobileHeadlineStyleFocus("dash");
+                      if (!headlineDashStrokeStyleActive) {
+                        applyHeadlinePresetPreservingCoordinates(applyHeadlineDashStrokePreset);
+                      }
+                    }}
+                  >
+                    Stroke
+                  </Chip>
+                  <Chip
+                    small
+                    className="w-full justify-center text-center"
+                    active={activeMobileHeadlineStyleFocus === "doodle"}
+                    onClick={() => {
+                      setMobileHeadlineStyleFocus("doodle");
+                      if (!headlineDoodleStackStyleActive) {
+                        applyHeadlinePresetPreservingCoordinates(applyHeadlineDoodleStackPreset);
+                      }
+                    }}
+                  >
+                    Doodle
+                  </Chip>
+                  <Chip
+                    small
+                    className="w-full justify-center text-center"
+                    active={activeMobileHeadlineStyleFocus === "quantum"}
+                    onClick={() => {
+                      setMobileHeadlineStyleFocus("quantum");
+                      if (!headlineQuantumStyleActive) {
+                        applyHeadlinePresetPreservingCoordinates(applyHeadlineQuantumPreset);
+                      }
+                    }}
+                  >
+                    Quantum
+                  </Chip>
+                  <Chip
+                    small
+                    className="w-full justify-center text-center"
+                    active={activeMobileHeadlineStyleFocus === "stretch"}
+                    onClick={() => {
+                      setMobileHeadlineStyleFocus("stretch");
+                      if (!headlineVerticalStretchStyleActive) {
+                        applyHeadlinePresetPreservingCoordinates(applyHeadlineVerticalStretchPreset);
+                      }
+                    }}
+                  >
+                    Stretch
                   </Chip>
                   <Chip
                     small
                     className="w-full justify-center text-center"
                     active={activeMobileHeadlineStyleFocus === "gradient"}
                     onClick={() => {
-                      if (!headlinePresetBaselineRef.current) {
-                        headlinePresetBaselineRef.current = {
-                          headlineFamily,
-                          textFx,
-                          headSkew,
-                          headRotate,
-                          headSliceEnabled,
-                          headSliceBandCount,
-                          headSliceBandGap,
-                          headSliceEchoDistance,
-                          headSliceTopColor,
-                          headSliceMidColor,
-                          headSliceBottomColor,
-                          headSliceBlur,
-                          headSliceFade,
-                          headSliceShadowStrength,
-                          headRushEnabled,
-                          headRushDotColor,
-                          headRushContrastColor,
-                          headRushDotSize,
-                          headRushDotSpacing,
-                          headRushShadowOffset,
-                          headGlitchEnabled,
-                          headGlitchIntensity,
-                          headGlitchRgbSplit,
-                          headGlitchNoise,
-                          headGlitchGlow,
-                          headGlitchRedColor,
-                          headGlitchMagentaColor,
-                          headGlitchBlueColor,
-                          headGlitchYellowColor,
-                          headShadow,
-                          headShadowStrength,
-                          headExtrudeDepth,
-                          headExtrudeAngle,
-                          headExtrudeDistance,
-                          headExtrudeColor,
-                          headAlign,
-                          align,
-                          lineHeight,
-                        };
-                      }
-                      setMobileHeadlineStyleFocus("gradient");
-                      if (!headlineGradientStyleActive) {
-                        const next = { ...textFx, gradient: true };
-                        setTextFx(next);
-                        setSessionValue(format, "textFx", next);
-                      }
+                      applyHeadlinePresetPreservingCoordinates(() => {
+                        if (!headlinePresetBaselineRef.current) {
+                          headlinePresetBaselineRef.current = {
+                            headlineFamily,
+                            textFx,
+                            headSkew,
+                            headRotate,
+                            headSliceEnabled,
+                            headSliceBandCount,
+                            headSliceBandGap,
+                            headSliceEchoDistance,
+                            headSliceTopColor,
+                            headSliceMidColor,
+                            headSliceBottomColor,
+                            headSliceBlur,
+                            headSliceFade,
+                            headSliceShadowStrength,
+                            headRushEnabled,
+                            headRushDotColor,
+                            headRushContrastColor,
+                            headRushDotSize,
+                            headRushDotSpacing,
+                            headRushShadowOffset,
+                            headKineticEnabled,
+                            headQuantumEnabled,
+                            headQuantumPaletteLinked,
+                            headQuantumCyanColor,
+                            headQuantumBlueColor,
+                            headQuantumHighlightColor,
+                            headQuantumPurpleColor,
+                            headQuantumMagentaColor,
+                            headQuantumStrokeWidth,
+                            headQuantumSplitOffset,
+                            headQuantumGlowEnabled,
+                            headQuantumGlow,
+                            headQuantumScanlineOpacity,
+                            headQuantumStreakOpacity,
+                            headVerticalStretchEnabled,
+                            headVerticalStretchScaleY,
+                            headVerticalStretchScaleX,
+                            headVerticalStretchShadowOpacity,
+                            headGlitchEnabled,
+                            headGlitchIntensity,
+                            headGlitchRgbSplit,
+                            headGlitchNoise,
+                            headGlitchGlow,
+                            headGlitchRedColor,
+                            headGlitchMagentaColor,
+                            headGlitchBlueColor,
+                            headGlitchYellowColor,
+                            headShadow,
+                            headShadowStrength,
+                            headExtrudeDepth,
+                            headExtrudeAngle,
+                            headExtrudeDistance,
+                            headExtrudeColor,
+                            headAlign,
+                            align,
+                            lineHeight,
+                          };
+                        }
+                        setMobileHeadlineStyleFocus("gradient");
+                        setHeadKineticEnabled(false);
+                        setHeadDashStrokeEnabled(false);
+                        setHeadColorStrokeEnabled(false);
+                        setHeadCyberEmbossEnabled(false);
+                        setHeadQuantumEnabled(false);
+                        setHeadVerticalStretchEnabled(false);
+                        if (!headlineGradientStyleActive) {
+                          const next = { ...textFx, gradient: true };
+                          setTextFx(next);
+                          setSessionValue(format, "textFx", next);
+                        }
+                      });
                     }}
                   >
                     Gradient
@@ -31278,7 +42977,7 @@ style={{ top: STICKY_TOP }}
                   <Chip
                     small
                     className="w-full justify-center text-center"
-                    onClick={resetHeadlinePresetStyles}
+                    onClick={() => applyHeadlinePresetPreservingCoordinates(resetHeadlinePresetStyles)}
                     active={!activeMobileHeadlineStyleFocus}
                   >
                     Reset
@@ -31521,12 +43220,554 @@ style={{ top: STICKY_TOP }}
                   </div>
                 </>
               )}
+              {showMobileHeadlineKineticControls && (
+                <>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Chip small active={headKineticPaletteLinked} onClick={() => applyCurrentPaletteToKinetic(true)}>
+                      Use Palette
+                    </Chip>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/20 px-2.5 text-[10px] uppercase tracking-wider text-neutral-400">
+                      <span className="min-w-0 truncate">Text</span>
+                      <ColorDot
+                        value={headKineticTextColor}
+                        onChange={(c) => {
+                          setHeadKineticPaletteLinked(false);
+                          setHeadKineticTextColor(c);
+                        }}
+                      />
+                    </div>
+                    <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/20 px-2.5 text-[10px] uppercase tracking-wider text-neutral-400">
+                      <span className="min-w-0 truncate">Slice A</span>
+                      <ColorDot
+                        value={headKineticTopColor}
+                        onChange={(c) => {
+                          setHeadKineticPaletteLinked(false);
+                          setHeadKineticTopColor(c);
+                        }}
+                      />
+                    </div>
+                    <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/20 px-2.5 text-[10px] uppercase tracking-wider text-neutral-400">
+                      <span className="min-w-0 truncate">Slice B</span>
+                      <ColorDot
+                        value={headKineticBottomColor}
+                        onChange={(c) => {
+                          setHeadKineticPaletteLinked(false);
+                          setHeadKineticBottomColor(c);
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
+                    <div>
+                      <InlineSliderInput
+                        label="Slice X"
+                        value={headKineticSliceOffsetX}
+                        min={0}
+                        max={48}
+                        step={1}
+                        precision={0}
+                        onChange={setHeadKineticSliceOffsetX}
+                        rangeClassName="flex-1 accent-fuchsia-400"
+                      />
+                    </div>
+                    <div>
+                      <InlineSliderInput
+                        label="Slice Y"
+                        value={headKineticSliceOffsetY}
+                        min={-24}
+                        max={24}
+                        step={1}
+                        precision={0}
+                        onChange={setHeadKineticSliceOffsetY}
+                        rangeClassName="flex-1 accent-cyan-400"
+                      />
+                    </div>
+                    <div className="min-[420px]:col-span-2">
+                      <InlineSliderInput
+                        label="Shadow"
+                        value={headKineticShadowOpacity}
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        precision={2}
+                        onChange={setHeadKineticShadowOpacity}
+                        rangeClassName="flex-1 accent-slate-400"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+              {(showMobileHeadlineDashControls || showMobileHeadlineDoodleControls) && (
+                <>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Chip small active={headDashStrokePaletteLinked} onClick={() => applyCurrentPaletteToDashStroke(true)}>
+                      Use Palette
+                    </Chip>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2.5 min-[420px]:grid-cols-5">
+                    {HEADLINE_DASH_STROKE_DEFAULTS.colors.map((fallback, index) => (
+                      <div key={`mobile-dash-stroke-color-${index}`} className="flex items-center justify-between gap-2 text-[11px] text-neutral-400">
+                        <span>{index + 1}</span>
+                        <ColorDot
+                          value={normalizePaletteHexString(String(headDashStrokeColors[index] || ""), fallback)}
+                          onChange={(color) => updateDashStrokeColor(index, color)}
+                          title={`Stroke ${index + 1} color`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  {showMobileHeadlineDashControls && (
+                    <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
+                      <div>
+                        <InlineSliderInput
+                          label="Frame"
+                          value={headDashStrokeFrame}
+                          min={0}
+                          max={1}
+                          step={0.01}
+                          precision={2}
+                          onChange={setHeadDashStrokeFrame}
+                          rangeClassName="flex-1 accent-cyan-400"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {showMobileHeadlineDoodleControls && (
+                    <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
+                      <div>
+                        <InlineSliderInput
+                          label="X Angle"
+                          value={headDoodleAngleX}
+                          min={-28}
+                          max={28}
+                          step={0.5}
+                          precision={1}
+                          onChange={setHeadDoodleAngleX}
+                          rangeClassName="flex-1 accent-fuchsia-400"
+                        />
+                      </div>
+                      <div>
+                        <InlineSliderInput
+                          label="Y Angle"
+                          value={headDoodleAngleY}
+                          min={-28}
+                          max={28}
+                          step={0.5}
+                          precision={1}
+                          onChange={setHeadDoodleAngleY}
+                          rangeClassName="flex-1 accent-orange-400"
+                        />
+                      </div>
+                      <div>
+                        <InlineSliderInput
+                          label="Layer Rotate"
+                          value={headDoodleRotate}
+                          min={-8}
+                          max={8}
+                          step={0.1}
+                          precision={1}
+                          onChange={setHeadDoodleRotate}
+                          rangeClassName="flex-1 accent-sky-400"
+                        />
+                      </div>
+                      <div>
+                        <InlineSliderInput
+                          label="Spread"
+                          value={headDoodleSpread}
+                          min={0}
+                          max={3}
+                          step={0.05}
+                          precision={2}
+                          onChange={setHeadDoodleSpread}
+                          rangeClassName="flex-1 accent-emerald-400"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+              {showMobileHeadlinePure3dControls && (
+                <>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Chip small active={headPure3dPaletteLinked} onClick={() => applyCurrentPaletteToPure3d(true)}>
+                      Use Palette
+                    </Chip>
+                  </div>
+                  <div>
+                    <InlineSliderInput
+                      label="Frame"
+                      value={headPure3dFrame}
+                      min={0}
+                      max={1}
+                      step={0.01}
+                      precision={2}
+                      onChange={setHeadPure3dFrame}
+                      rangeClassName="flex-1 accent-blue-400"
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/20 px-2.5 text-[10px] uppercase tracking-wider text-neutral-400">
+                      <span className="min-w-0 truncate">Face</span>
+                      <ColorDot
+                        value={headPure3dFaceColor}
+                        onChange={(color) => {
+                          const next = normalizePaletteHexString(String(color || ""), HEADLINE_PURE_3D_DEFAULTS.faceColor);
+                          setHeadPure3dPaletteLinked(false);
+                          setHeadPure3dFaceColor(next);
+                          setTextFx((current) => ({ ...current, color: next }));
+                        }}
+                      />
+                    </div>
+                    <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/20 px-2.5 text-[10px] uppercase tracking-wider text-neutral-400">
+                      <span className="min-w-0 truncate">Edge</span>
+                      <ColorDot
+                        value={headPure3dEdgeColor}
+                        onChange={(color) => {
+                          const next = normalizePaletteHexString(String(color || ""), HEADLINE_PURE_3D_DEFAULTS.edgeColor);
+                          setHeadPure3dPaletteLinked(false);
+                          setHeadPure3dEdgeColor(next);
+                          setHeadExtrudeColor(next);
+                        }}
+                      />
+                    </div>
+                    <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/20 px-2.5 text-[10px] uppercase tracking-wider text-neutral-400">
+                      <span className="min-w-0 truncate">Shadow</span>
+                      <ColorDot
+                        value={headPure3dShadowColor}
+                        onChange={(color) => {
+                          setHeadPure3dPaletteLinked(false);
+                          setHeadPure3dShadowColor(normalizePaletteHexString(String(color || ""), HEADLINE_PURE_3D_DEFAULTS.shadowColor));
+                        }}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+              {showMobileHeadlineGoldBlockControls && (
+                <>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Chip small active={headGoldBlockPaletteLinked} onClick={() => applyCurrentPaletteToGoldBlock(true)}>
+                      Use Palette
+                    </Chip>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
+                    <div>
+                      <InlineSliderInput
+                        label="Stroke"
+                        value={headGoldBlockStrokeWidth}
+                        min={0}
+                        max={46}
+                        step={1}
+                        precision={0}
+                        onChange={setHeadGoldBlockStrokeWidth}
+                        rangeClassName="flex-1 accent-yellow-400"
+                      />
+                    </div>
+                    <div>
+                      <InlineSliderInput
+                        label="Texture"
+                        value={headGoldBlockTexture}
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        precision={2}
+                        onChange={setHeadGoldBlockTexture}
+                        rangeClassName="flex-1 accent-amber-400"
+                      />
+                    </div>
+                    <div>
+                      <InlineSliderInput
+                        label="Roughness"
+                        value={headGoldBlockRoughness}
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        precision={2}
+                        onChange={setHeadGoldBlockRoughness}
+                        rangeClassName="flex-1 accent-orange-400"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      ["Light", headGoldBlockLightColor, setHeadGoldBlockLightColor, HEADLINE_GOLD_BLOCK_DEFAULTS.lightColor],
+                      ["Mid", headGoldBlockMidColor, setHeadGoldBlockMidColor, HEADLINE_GOLD_BLOCK_DEFAULTS.midColor],
+                      ["Dark", headGoldBlockDarkColor, setHeadGoldBlockDarkColor, HEADLINE_GOLD_BLOCK_DEFAULTS.darkColor],
+                      ["Stroke", headGoldBlockStrokeColor, setHeadGoldBlockStrokeColor, HEADLINE_GOLD_BLOCK_DEFAULTS.strokeColor],
+                    ].map(([label, value, setter, fallback]) => (
+                      <div key={`mobile-gold-block-color-${label}`} className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/20 px-2.5 text-[10px] uppercase tracking-wider text-neutral-400">
+                        <span className="min-w-0 truncate">{label as string}</span>
+                        <ColorDot
+                          value={normalizePaletteHexString(String(value || ""), String(fallback))}
+                          onChange={(color) => {
+                            setHeadGoldBlockPaletteLinked(false);
+                            (setter as React.Dispatch<React.SetStateAction<string>>)(normalizePaletteHexString(String(color || ""), String(fallback)));
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+              {showMobileHeadlineRetroControls && (
+                <>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Chip small active={headRetroShadowEnabled} onClick={() => setHeadRetroShadowEnabled((v) => !v)}>
+                      Back Shadow
+                    </Chip>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
+                    <div>
+                      <InlineSliderInput
+                        label="Shadow Alpha"
+                        value={headRetroShadowAlpha}
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        precision={2}
+                        onChange={setHeadRetroShadowAlpha}
+                        rangeClassName="flex-1 accent-slate-400"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+              {showMobileHeadlineQuantumControls && (
+                <>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Chip small active={headQuantumPaletteLinked} onClick={() => applyCurrentPaletteToQuantum(true)}>
+                      Use Palette
+                    </Chip>
+                    <Chip small active={headQuantumGlowEnabled} onClick={() => setHeadQuantumGlowEnabled((v) => !v)}>
+                      Glow
+                    </Chip>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 min-[420px]:grid-cols-3">
+                    {[
+                      ["Cyan", headQuantumCyanColor, setHeadQuantumCyanColor],
+                      ["Blue", headQuantumBlueColor, setHeadQuantumBlueColor],
+                      ["Hi", headQuantumHighlightColor, setHeadQuantumHighlightColor],
+                      ["Purple", headQuantumPurpleColor, setHeadQuantumPurpleColor],
+                      ["Pink", headQuantumMagentaColor, setHeadQuantumMagentaColor],
+                    ].map(([label, value, setter]) => (
+                      <div
+                        key={String(label)}
+                        className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/20 px-2.5 text-[10px] uppercase tracking-wider text-neutral-400"
+                      >
+                        <span className="min-w-0 truncate">{String(label)}</span>
+                        <ColorDot
+                          value={String(value)}
+                          onChange={(c) => {
+                            setHeadQuantumPaletteLinked(false);
+                            (setter as (next: string) => void)(c);
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
+                    <div>
+                      <InlineSliderInput
+                        label="Split"
+                        value={headQuantumSplitOffset}
+                        min={0}
+                        max={32}
+                        step={1}
+                        precision={0}
+                        onChange={setHeadQuantumSplitOffset}
+                        rangeClassName="flex-1 accent-fuchsia-400"
+                      />
+                    </div>
+                    <div>
+                      <InlineSliderInput
+                        label="Stroke px"
+                        value={headQuantumStrokeWidth}
+                        min={0}
+                        max={10}
+                        step={0.1}
+                        precision={1}
+                        onChange={setHeadQuantumStrokeWidth}
+                        rangeClassName="flex-1 accent-sky-400"
+                      />
+                    </div>
+                    <div>
+                      <InlineSliderInput
+                        label="Glow"
+                        value={headQuantumGlow}
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        precision={2}
+                        onChange={setHeadQuantumGlow}
+                        rangeClassName="flex-1 accent-cyan-400"
+                      />
+                    </div>
+                    <div>
+                      <InlineSliderInput
+                        label="Scanlines"
+                        value={headQuantumScanlineOpacity}
+                        min={0}
+                        max={0.5}
+                        step={0.02}
+                        precision={2}
+                        onChange={setHeadQuantumScanlineOpacity}
+                        rangeClassName="flex-1 accent-slate-400"
+                      />
+                    </div>
+                    <div>
+                      <InlineSliderInput
+                        label="Streaks"
+                        value={headQuantumStreakOpacity}
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        precision={2}
+                        onChange={setHeadQuantumStreakOpacity}
+                        rangeClassName="flex-1 accent-violet-400"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+              {showMobileHeadlineStretchControls && (
+                <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
+                  <div>
+                    <InlineSliderInput
+                      label="Scale Y"
+                      value={headVerticalStretchScaleY}
+                      min={0.8}
+                      max={2.8}
+                      step={0.05}
+                      precision={2}
+                      onChange={setHeadVerticalStretchScaleY}
+                      rangeClassName="flex-1 accent-emerald-400"
+                    />
+                  </div>
+                  <div>
+                    <InlineSliderInput
+                      label="Scale X"
+                      value={headVerticalStretchScaleX}
+                      min={0.5}
+                      max={1.2}
+                      step={0.02}
+                      precision={2}
+                      onChange={setHeadVerticalStretchScaleX}
+                      rangeClassName="flex-1 accent-sky-400"
+                    />
+                  </div>
+                  <div className="min-[420px]:col-span-2">
+                    <InlineSliderInput
+                      label="Shadow"
+                      value={headVerticalStretchShadowOpacity}
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      precision={2}
+                      onChange={setHeadVerticalStretchShadowOpacity}
+                      rangeClassName="flex-1 accent-slate-400"
+                    />
+                  </div>
+                </div>
+              )}
+              {showMobileHeadlineGlassControls && (
+                <>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Chip small active={headGlassPaletteLinked} onClick={() => applyCurrentPaletteToGlass(true)}>
+                      Use Palette
+                    </Chip>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
+                    <div>
+                      <InlineSliderInput
+                        label="Blur"
+                        value={headGlassBlur}
+                        min={0}
+                        max={28}
+                        step={0.1}
+                        precision={1}
+                        onChange={setHeadGlassBlur}
+                        rangeClassName="flex-1 accent-violet-400"
+                      />
+                    </div>
+                    <div>
+                      <InlineSliderInput
+                        label="Glow"
+                        value={headGlassGlow}
+                        min={0}
+                        max={60}
+                        step={0.5}
+                        precision={1}
+                        onChange={setHeadGlassGlow}
+                        rangeClassName="flex-1 accent-fuchsia-400"
+                      />
+                    </div>
+                    <div>
+                      <InlineSliderInput
+                        label="Edge"
+                        value={headGlassStroke}
+                        min={0.5}
+                        max={8}
+                        step={0.1}
+                        precision={1}
+                        onChange={setHeadGlassStroke}
+                        rangeClassName="flex-1 accent-white"
+                      />
+                    </div>
+                    <div>
+                      <InlineSliderInput
+                        label="Fill"
+                        value={headGlassFillAlpha}
+                        min={0.01}
+                        max={0.34}
+                        step={0.002}
+                        precision={3}
+                        onChange={setHeadGlassFillAlpha}
+                        rangeClassName="flex-1 accent-sky-400"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/20 px-2.5 text-[10px] uppercase tracking-wider text-neutral-400">
+                      <span className="min-w-0 truncate">Glow A</span>
+                      <ColorDot
+                        value={headGlassPrimaryColor}
+                        onChange={(c) => {
+                          setHeadGlassPaletteLinked(false);
+                          setHeadGlassPrimaryColor(c);
+                        }}
+                      />
+                    </div>
+                    <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/20 px-2.5 text-[10px] uppercase tracking-wider text-neutral-400">
+                      <span className="min-w-0 truncate">Glow B</span>
+                      <ColorDot
+                        value={headGlassSecondaryColor}
+                        onChange={(c) => {
+                          setHeadGlassPaletteLinked(false);
+                          setHeadGlassSecondaryColor(c);
+                        }}
+                      />
+                    </div>
+                    <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/20 px-2.5 text-[10px] uppercase tracking-wider text-neutral-400">
+                      <span className="min-w-0 truncate">Light</span>
+                      <ColorDot
+                        value={headGlassHighlightColor}
+                        onChange={(c) => {
+                          setHeadGlassPaletteLinked(false);
+                          setHeadGlassHighlightColor(c);
+                        }}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
               {showMobileHeadlineGlitchControls && (
                 <>
                   <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
                     <div>
                       <InlineSliderInput
-                        label="Intensity"
+                        label="Tube"
                         value={headGlitchIntensity}
                         min={0}
                         max={1}
@@ -31538,7 +43779,7 @@ style={{ top: STICKY_TOP }}
                     </div>
                     <div>
                       <InlineSliderInput
-                        label="RGB Split"
+                        label="Edge"
                         value={headGlitchRgbSplit}
                         min={0}
                         max={32}
@@ -31550,7 +43791,7 @@ style={{ top: STICKY_TOP }}
                     </div>
                     <div>
                       <InlineSliderInput
-                        label="Noise"
+                        label="Core"
                         value={headGlitchNoise}
                         min={0}
                         max={1}
@@ -31573,18 +43814,22 @@ style={{ top: STICKY_TOP }}
                       />
                     </div>
                   </div>
-	                  <div className="grid grid-cols-3 gap-2">
+	                  <div className="grid grid-cols-2 gap-2">
 	                    <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/20 px-2.5 text-[10px] uppercase tracking-wider text-neutral-400">
-	                      <span className="min-w-0 truncate">Red</span>
+	                      <span className="min-w-0 truncate">Start</span>
 	                      <ColorDot value={headGlitchRedColor} onChange={setHeadGlitchRedColor} />
 	                    </div>
 	                    <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/20 px-2.5 text-[10px] uppercase tracking-wider text-neutral-400">
-	                      <span className="min-w-0 truncate">Green</span>
+	                      <span className="min-w-0 truncate">Mid</span>
 	                      <ColorDot value={headGlitchMagentaColor} onChange={setHeadGlitchMagentaColor} />
 	                    </div>
 	                    <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/20 px-2.5 text-[10px] uppercase tracking-wider text-neutral-400">
-	                      <span className="min-w-0 truncate">Blue</span>
+	                      <span className="min-w-0 truncate">End</span>
 	                      <ColorDot value={headGlitchBlueColor} onChange={setHeadGlitchBlueColor} />
+	                    </div>
+	                    <div className="flex min-h-9 min-w-0 items-center justify-between gap-2 overflow-hidden border border-white/10 bg-black/20 px-2.5 text-[10px] uppercase tracking-wider text-neutral-400">
+	                      <span className="min-w-0 truncate">Core</span>
+	                      <ColorDot value={headGlitchYellowColor} onChange={setHeadGlitchYellowColor} />
 	                    </div>
 	                  </div>
                 </>
@@ -31611,130 +43856,46 @@ style={{ top: STICKY_TOP }}
                   />
                 </div>
               )}
-              {showMobileHeadlineEchoControls && (
-                <>
-                  <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 items-center">
-                    <div>
-                      <InlineSliderInput
-                        label="Band Count"
-                        value={headSliceBandCount}
-                        min={3}
-                        max={15}
-                        step={1}
-                        precision={0}
-                        onChange={setHeadSliceBandCount}
-                        rangeClassName="flex-1 accent-rose-400"
-                      />
-                    </div>
-                    <div>
-                      <InlineSliderInput
-                        label="Band Gap"
-                        value={headSliceBandGap}
-                        min={0}
-                        max={40}
-                        step={1}
-                        precision={0}
-                        onChange={setHeadSliceBandGap}
-                        rangeClassName="flex-1 accent-fuchsia-400"
-                      />
-                    </div>
-                    <div>
-                      <InlineSliderInput
-                        label="Echo Dist"
-                        value={headSliceEchoDistance}
-                        min={0}
-                        max={220}
-                        step={1}
-                        precision={0}
-                        onChange={setHeadSliceEchoDistance}
-                        rangeClassName="flex-1 accent-sky-400"
-                      />
-                    </div>
-                    <div>
-                      <InlineSliderInput
-                        label="Blur"
-                        value={headSliceBlur}
-                        min={0}
-                        max={20}
-                        step={0.5}
-                        precision={1}
-                        onChange={setHeadSliceBlur}
-                        rangeClassName="flex-1 accent-indigo-400"
-                      />
-                    </div>
-                    <div>
-                      <InlineSliderInput
-                        label="Fade"
-                        value={headSliceFade}
-                        min={0}
-                        max={1}
-                        step={0.05}
-                        precision={2}
-                        onChange={setHeadSliceFade}
-                        rangeClassName="flex-1 accent-teal-400"
-                      />
-                    </div>
-                    <div>
-                      <InlineSliderInput
-                        label="Shadow"
-                        value={headSliceShadowStrength}
-                        min={0}
-                        max={1}
-                        step={0.05}
-                        precision={2}
-                        onChange={setHeadSliceShadowStrength}
-                        rangeClassName="flex-1 accent-violet-400"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[10px] uppercase tracking-wider text-neutral-400">Top</span>
-                    <ColorDot value={headSliceTopColor} onChange={setHeadSliceTopColor} />
-                    <span className="text-[10px] uppercase tracking-wider text-neutral-400">Middle</span>
-                    <ColorDot value={headSliceMidColor} onChange={setHeadSliceMidColor} />
-                    <span className="text-[10px] uppercase tracking-wider text-neutral-400">Bottom</span>
-                    <ColorDot value={headSliceBottomColor} onChange={setHeadSliceBottomColor} />
-                  </div>
-                </>
-              )}
             </>
           )}
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              data-mobile-float-lock="true"
-              onTouchStart={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                activeTextControls.onLayerDown?.();
-              }}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                activeTextControls.onLayerDown?.();
-              }}
-              className="text-[11px] border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-white hover:bg-neutral-800"
-            >
-              Text Down
-            </button>
-            <button
-              type="button"
-              data-mobile-float-lock="true"
-              onTouchStart={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                activeTextControls.onLayerUp?.();
-              }}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                activeTextControls.onLayerUp?.();
-              }}
-              className="text-[11px] border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-white hover:bg-neutral-800"
-            >
-              Text Up
-            </button>
-          </div>
+          {(activeTextControls.onLayerDown || activeTextControls.onLayerUp) && (
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                data-mobile-float-lock="true"
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  activeTextControls.onLayerDown?.();
+                }}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  activeTextControls.onLayerDown?.();
+                }}
+                className="text-[11px] border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-white hover:bg-neutral-800"
+              >
+                Text Down
+              </button>
+              <button
+                type="button"
+                data-mobile-float-lock="true"
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  activeTextControls.onLayerUp?.();
+                }}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  activeTextControls.onLayerUp?.();
+                }}
+                className="text-[11px] border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-white hover:bg-neutral-800"
+              >
+                Text Up
+              </button>
+            </div>
+          )}
         </div>
         </div>
       </div>
@@ -32012,6 +44173,19 @@ style={{ top: STICKY_TOP }}
                     suffix="px"
                     onChange={(next) => activeAssetControls.onLabelSize?.(next)}
                     rangeClassName="flex-1 accent-blue-400"
+                    disabled={activeAssetControls.locked}
+                  />
+                </div>
+                <div className="mt-2">
+                  <InlineSliderInput
+                    label="Label Line Height"
+                    value={Number(activeAssetControls.labelLineHeight || 1)}
+                    min={0.6}
+                    max={1.8}
+                    step={0.05}
+                    precision={2}
+                    onChange={(next) => activeAssetControls.onLabelLineHeight?.(next)}
+                    rangeClassName="flex-1 accent-violet-400"
                     disabled={activeAssetControls.locked}
                   />
                 </div>
@@ -32639,6 +44813,192 @@ style={{ top: STICKY_TOP }}
   </Collapsible>
 )}
 
+{/* UI: MAGIC BLEND PANEL (BEGIN) */}
+{MAGIC_BLEND_ENABLED && !isDjStartupMode && (
+  <div className={clsx(creatorStepPanelClass("assets"), mobilePanelClass("assets", "magic_blend"))}>
+    {isStarterPlan && (
+      <div className={`${editorSectionCardClass} mb-3 text-white/85`}>
+        <div className={editorSectionTitleClass}>Starter Trial</div>
+        <div className={editorHelperTextClass}>
+          Use your one portrait or logo upload here, then spend 2 generations on a full Portrait Blend if you want a fast before-and-after win.
+        </div>
+      </div>
+    )}
+    <MagicBlendPanel
+      selectedPanel={selectedPanel}
+      onToggle={() =>
+        setSelectedPanel(selectedPanel === "magic_blend" ? null : "magic_blend")
+      }
+      blendStyle={blendStyle}
+      setBlendStyle={setBlendStyle}
+      blendAttireColor={blendAttireColor}
+      setBlendAttireColor={setBlendAttireColor}
+      blendLighting={blendLighting}
+      setBlendLighting={setBlendLighting}
+      blendCameraZoom={blendCameraZoom}
+      setBlendCameraZoom={setBlendCameraZoom}
+      blendExpressionPose={blendExpressionPose}
+      setBlendExpressionPose={setBlendExpressionPose}
+      blendSubjectAction={blendSubjectAction}
+      setBlendSubjectAction={setBlendSubjectAction}
+      blendBackgroundPriority={blendBackgroundPriority}
+      setBlendBackgroundPriority={setBlendBackgroundPriority}
+      isCuttingOut={isCuttingOut}
+      blendSubject={blendSubject}
+      blendBackground={blendBackground}
+      handleBlendUpload={handleBlendUpload}
+      pushCanvasBgToBlend={pushCanvasBgToBlend}
+      handleMagicBlend={handleMagicBlend}
+      isBlending={isBlending}
+      isCapturingBackground={isCapturingBlendBackground}
+      hasSharedGeneratedBackground={!!sharedGeneratedBackground}
+      sharedGeneratedBackgroundSource="AI Scene"
+      originalBackgroundSrc={sharedGeneratedBackground?.original?.src ?? null}
+      generatedBackgroundSrc={sharedGeneratedBackground?.generated?.src ?? null}
+      canRestoreOriginalBackground={!!sharedGeneratedBackground?.original}
+      isOriginalBackgroundActive={
+        !!sharedGeneratedBackground?.original &&
+        (bgUploadUrl || bgUrl) === sharedGeneratedBackground.original.src
+      }
+      isGeneratedBackgroundActive={
+        !!sharedGeneratedBackground?.generated &&
+        (bgUploadUrl || bgUrl) === sharedGeneratedBackground.generated.src
+      }
+      onUseOriginalBackground={applyOriginalSharedBackground}
+      onUseGeneratedBackground={applyGeneratedSharedBackground}
+    />
+  </div>
+)}
+{/* UI: MAGIC BLEND PANEL (END) */}
+<div className={clsx(creatorStepPanelClass("scene"), mobilePanelClass("assets", "background"))}>
+  <BackgroundPanels
+    format={format}
+    scenePacks={SCENE_PACKS}
+    activeScenePackId={SCENE_PACKS.find((pack) => (bgUploadUrl || bgUrl) === pack.background)?.id ?? null}
+    onScenePackSelect={applyScenePack}
+    onSubjectUploadClick={() => triggerPortraitSlotUpload(0)}
+    onEditHeadlineClick={() => {
+      setUiMode("design");
+      setMobileControlsOpen(true);
+      setMobileControlsTab("design");
+      setSelectedPanel("headline");
+      window.requestAnimationFrame(() => {
+        document.getElementById("headline-panel")?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+    }}
+    presetBackgrounds={isDjStartupMode ? visibleStartupBackgrounds : []}
+    presetBackgroundLabel="DJ Backgrounds"
+    onPresetBackgroundSelect={applyStartupBackground}
+    currentPalette={palette}
+    originalPalette={originalSceneBuilderPalette}
+    onPaletteChange={applySceneBuilderPaletteToCanvas}
+    onOriginalPaletteReset={resetSceneBuilderPaletteToTemplateOriginal}
+    onGeneratedPaletteApply={applyGeneratedSceneBuilderPalette}
+    layoutOptions={format === "square" && hasSquareLayoutOptions ? CENTER_HERO_LAYOUT_OPTIONS : []}
+    activeLayoutId={centerHeroLayoutId}
+    onLayoutSelect={(id) => applyCenterHeroLayout(id as CenterHeroLayoutId)}
+    allowUploads={!isDjStartupMode}
+    selectedPanel={selectedPanel}
+    setSelectedPanel={setSelectedPanel}
+    triggerUpload={triggerUpload}
+    fitBackground={fitBackground}
+    setBgScale={setBgScale}
+    bgFitMode={bgFitMode}
+    setBgFitMode={setBgFitMode}
+    setBgPosX={setBgPosX}
+    setBgPosY={setBgPosY}
+    bgUploadUrl={bgUploadUrl}
+    bgUrl={bgUrl}
+    bgPosX={bgPosX}
+    bgPosY={bgPosY}
+    bgRightRef={bgRightRef}
+    onRightBgFile={onRightBgFile}
+    logoPickerRef={logoPickerRef}
+    onLogoFiles={onLogoFiles}
+    logoSlotPickerRef={logoSlotPickerRef}
+    onLogoSlotFile={onLogoSlotFile}
+    portraitSlotPickerRef={portraitSlotPickerRef}
+    onPortraitSlotFile={onPortraitSlotFile}
+    vibeUploadInputRef={vibeUploadInputRef}
+    handleUploadDesignFromVibe={async (file) => {
+      await handleUploadDesignFromVibe(file);
+    }}
+    bgScale={bgScale}
+    bgBlur={bgBlur}
+    hasSubject={
+      !!portraitUrl ||
+      (portraits?.[format] || []).some((p: any) => {
+        const id = String(p?.id || "");
+        return (
+          !!p?.isExtracted ||
+          (!!p?.url &&
+            !p?.isFlare &&
+            (!p?.isSticker || !!p?.isExtracted) &&
+            !p?.isBrandFace &&
+            !p?.isLogo &&
+            !id.startsWith("logo_"))
+        );
+      })
+    }
+    onGenerateSubject={generateSubjectForBackground}
+    isGeneratingSubject={subjectGenLoading}
+    subjectError={subjectGenError}
+    subjectGender={genGender}
+    setSubjectGender={(v) => setGenGender(v as any)}
+    subjectEthnicity={genEthnicity}
+    setSubjectEthnicity={(v) => setGenEthnicity(v as any)}
+    subjectAttire={genAttire}
+    setSubjectAttire={(v) => setGenAttire(v as any)}
+    subjectShot={genShot}
+    setSubjectShot={(v) => setGenShot(v as any)}
+    subjectEnergy={genEnergy}
+    setSubjectEnergy={(v) => setGenEnergy(v as any)}
+    subjectPose={genPose}
+    setSubjectPose={(v) => setGenPose(v as any)}
+    setBgBlur={setBgBlur}
+    bgRotate={bgRotate}
+    setBgRotate={setBgRotate}
+    setHue={setHue}
+    setVignette={setVignette}
+    setVignetteStrength={setVignetteStrength}
+    hue={hue}
+    vignetteStrength={vignetteStrength}
+    showAiTools={!isDjStartupMode}
+    enableExtractSubject={isStudioPlan}
+    extractedPortraitLayers={
+      ((portraits?.[format] || []) as any[])
+        .filter((p: any) => !!p?.isExtracted && !!p?.url && !p?.isFlare)
+        .slice(0, 4)
+    }
+    onSelectExtractedPortrait={(id) => {
+      const store = useFlyerState.getState();
+      store.setSelectedPortraitId(id);
+      store.setMoveTarget("portrait");
+      store.setSelectedPanel("portrait");
+      window.setTimeout(() => {
+        document
+          .getElementById("portrait-selected-controls")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 80);
+    }}
+    onRemoveExtractedPortrait={(id) => {
+      const store = useFlyerState.getState();
+      const existing = (store.portraits?.[format] || []).find((p: any) => p?.id === id);
+      if (existing?.url) {
+        ensureCutoutInPortraitSlot(existing.url, (existing as any).cleanupBaseUrl || existing.url);
+      }
+      store.removePortrait(format, id);
+      if (store.selectedPortraitId === id) {
+        store.setSelectedPortraitId(null);
+      }
+    }}
+    onPlaceExtractedLayer={placeExtractedLayer}
+  />
+</div>
+
 {/* UI: AI BACKGROUND (BEGIN) */}
 {!isDjStartupMode && (
   <div
@@ -32669,9 +45029,13 @@ style={{ top: STICKY_TOP }}
       autoLayoutReferenceUrl={autoLayoutReferenceUrl}
       autoLayoutLoading={autoLayoutLoading}
       autoLayoutError={autoLayoutError}
+      geometryFitLoading={geometryFitLoading}
+      geometryFitError={geometryFitError}
       onAutoLayoutReferenceUpload={handleAutoLayoutReferenceUpload}
       onClearAutoLayoutReference={clearAutoLayoutReference}
       onAutoLayoutFromBackground={handleAutoLayoutFromBackground}
+      onFitTemplateGeometry={handleFitActiveTemplateGeometry}
+      onLoadLadiesNightTest={loadLadiesNightSubjectPosterTest}
       genStyle={genStyle}
       setGenStyle={setGenStyle}
       presetKey={presetKey}
@@ -32737,126 +45101,6 @@ style={{ top: STICKY_TOP }}
   </div>
 )}
 {/* UI: AI BACKGROUND (END) */}
-
-
-
-{/* UI: MAGIC BLEND PANEL (BEGIN) */}
-{MAGIC_BLEND_ENABLED && !isDjStartupMode && (
-  <div className={clsx(creatorStepPanelClass("assets"), mobilePanelClass("assets", "magic_blend"))}>
-    {isStarterPlan && (
-      <div className={`${editorSectionCardClass} mb-3 text-white/85`}>
-        <div className={editorSectionTitleClass}>Starter Trial</div>
-        <div className={editorHelperTextClass}>
-          Use your one portrait or logo upload here, then spend 2 generations on a full Portrait Blend if you want a fast before-and-after win.
-        </div>
-      </div>
-    )}
-    <MagicBlendPanel
-      selectedPanel={selectedPanel}
-      onToggle={() =>
-        setSelectedPanel(selectedPanel === "magic_blend" ? null : "magic_blend")
-      }
-      blendStyle={blendStyle}
-      setBlendStyle={setBlendStyle}
-      blendAttireColor={blendAttireColor}
-      setBlendAttireColor={setBlendAttireColor}
-      blendLighting={blendLighting}
-      setBlendLighting={setBlendLighting}
-      blendCameraZoom={blendCameraZoom}
-      setBlendCameraZoom={setBlendCameraZoom}
-      blendExpressionPose={blendExpressionPose}
-      setBlendExpressionPose={setBlendExpressionPose}
-      blendSubjectAction={blendSubjectAction}
-      setBlendSubjectAction={setBlendSubjectAction}
-      blendBackgroundPriority={blendBackgroundPriority}
-      setBlendBackgroundPriority={setBlendBackgroundPriority}
-      isCuttingOut={isCuttingOut}
-      blendSubject={blendSubject}
-      blendBackground={blendBackground}
-      handleBlendUpload={handleBlendUpload}
-      pushCanvasBgToBlend={pushCanvasBgToBlend}
-      handleMagicBlend={handleMagicBlend}
-      isBlending={isBlending}
-      isCapturingBackground={isCapturingBlendBackground}
-      hasSharedGeneratedBackground={!!sharedGeneratedBackground}
-      sharedGeneratedBackgroundSource="AI Scene"
-      originalBackgroundSrc={sharedGeneratedBackground?.original?.src ?? null}
-      generatedBackgroundSrc={sharedGeneratedBackground?.generated?.src ?? null}
-      canRestoreOriginalBackground={!!sharedGeneratedBackground?.original}
-      isOriginalBackgroundActive={
-        !!sharedGeneratedBackground?.original &&
-        (bgUploadUrl || bgUrl) === sharedGeneratedBackground.original.src
-      }
-      isGeneratedBackgroundActive={
-        !!sharedGeneratedBackground?.generated &&
-        (bgUploadUrl || bgUrl) === sharedGeneratedBackground.generated.src
-      }
-      onUseOriginalBackground={applyOriginalSharedBackground}
-      onUseGeneratedBackground={applyGeneratedSharedBackground}
-    />
-  </div>
-)}
-{/* UI: MAGIC BLEND PANEL (END) */}
-<div className={clsx(creatorStepPanelClass("scene"), mobilePanelClass("assets", "background"))}>
-  <BackgroundPanels
-    presetBackgrounds={isDjStartupMode ? visibleStartupBackgrounds : []}
-    presetBackgroundLabel="DJ Backgrounds"
-    onPresetBackgroundSelect={applyStartupBackground}
-    allowUploads={!isDjStartupMode}
-    selectedPanel={selectedPanel}
-    setSelectedPanel={setSelectedPanel}
-    triggerUpload={triggerUpload}
-    fitBackground={fitBackground}
-    setBgScale={setBgScale}
-    bgFitMode={bgFitMode}
-    setBgFitMode={setBgFitMode}
-    setBgPosX={setBgPosX}
-    setBgPosY={setBgPosY}
-    bgUploadUrl={bgUploadUrl}
-    bgUrl={bgUrl}
-    bgRightRef={bgRightRef}
-    onRightBgFile={onRightBgFile}
-    logoPickerRef={logoPickerRef}
-    onLogoFiles={onLogoFiles}
-    logoSlotPickerRef={logoSlotPickerRef}
-    onLogoSlotFile={onLogoSlotFile}
-    portraitSlotPickerRef={portraitSlotPickerRef}
-    onPortraitSlotFile={onPortraitSlotFile}
-    vibeUploadInputRef={vibeUploadInputRef}
-    handleUploadDesignFromVibe={async (file) => {
-      await handleUploadDesignFromVibe(file);
-    }}
-    bgScale={bgScale}
-    bgBlur={bgBlur}
-    hasSubject={!!portraitUrl}
-    onGenerateSubject={generateSubjectForBackground}
-    isGeneratingSubject={subjectGenLoading}
-    subjectError={subjectGenError}
-    subjectGender={genGender}
-    setSubjectGender={(v) => setGenGender(v as any)}
-    subjectEthnicity={genEthnicity}
-    setSubjectEthnicity={(v) => setGenEthnicity(v as any)}
-    subjectAttire={genAttire}
-    setSubjectAttire={(v) => setGenAttire(v as any)}
-    subjectShot={genShot}
-    setSubjectShot={(v) => setGenShot(v as any)}
-    subjectEnergy={genEnergy}
-    setSubjectEnergy={(v) => setGenEnergy(v as any)}
-    subjectPose={genPose}
-    setSubjectPose={(v) => setGenPose(v as any)}
-    setBgBlur={setBgBlur}
-    bgRotate={bgRotate}
-    setBgRotate={setBgRotate}
-    setHue={setHue}
-    setVignette={setVignette}
-    setVignetteStrength={setVignetteStrength}
-    hue={hue}
-    vignetteStrength={vignetteStrength}
-    showAiTools={!isDjStartupMode}
-    enableExtractSubject={isStudioPlan}
-    onPlaceExtractedLayer={placeExtractedLayer}
-  />
-</div>
 
 
 
@@ -32964,6 +45208,10 @@ style={{ top: STICKY_TOP }}
             <button
               type="button"
               onClick={() => {
+                ensureCutoutInPortraitSlot(
+                  selectedPortrait.url,
+                  (selectedPortrait as any).cleanupBaseUrl || selectedPortrait.url
+                );
                 useFlyerState.getState().removePortrait(format, selectedPortrait.id);
                 useFlyerState.getState().setSelectedPortraitId(null);
               }}
@@ -32977,6 +45225,45 @@ style={{ top: STICKY_TOP }}
             <div className="flex justify-between items-center mb-2">
               <span className="text-xs font-bold text-neutral-300">Transform</span>
               <span className="text-[10px] text-neutral-500 font-mono">{selectedPortrait.id.slice(-4)}</span>
+            </div>
+
+            <div className="mb-3 grid grid-cols-2 gap-2">
+              <InlineSliderInput
+                label="X"
+                value={selectedPortrait.x ?? 50}
+                min={0}
+                max={100}
+                step={0.1}
+                precision={1}
+                suffix="%"
+                onChange={(next) =>
+                  useFlyerState.getState().updatePortrait(format, selectedPortrait.id, {
+                    x: clamp100(next),
+                  })
+                }
+                disabled={!!selectedPortrait.locked}
+                rangeClassName={`flex-1 h-1 rounded-lg appearance-none cursor-pointer ${
+                  selectedPortrait.locked ? "bg-neutral-800 accent-neutral-600" : "bg-neutral-700 accent-cyan-400"
+                }`}
+              />
+              <InlineSliderInput
+                label="Y"
+                value={selectedPortrait.y ?? 50}
+                min={0}
+                max={100}
+                step={0.1}
+                precision={1}
+                suffix="%"
+                onChange={(next) =>
+                  useFlyerState.getState().updatePortrait(format, selectedPortrait.id, {
+                    y: clamp100(next),
+                  })
+                }
+                disabled={!!selectedPortrait.locked}
+                rangeClassName={`flex-1 h-1 rounded-lg appearance-none cursor-pointer ${
+                  selectedPortrait.locked ? "bg-neutral-800 accent-neutral-600" : "bg-neutral-700 accent-cyan-400"
+                }`}
+              />
             </div>
 
             <div className="mb-3">
@@ -33080,7 +45367,7 @@ style={{ top: STICKY_TOP }}
         if (next === "portrait") {
           const list = store.portraits?.[format] || [];
           const sel = list.find((p: any) => p.id === store.selectedPortraitId);
-          if (sel?.isFlare || sel?.isSticker || sel?.isExtracted) {
+          if (sel?.isFlare || sel?.isSticker) {
             store.setSelectedPortraitId(null);
           }
           store.setMoveTarget("portrait");
@@ -33368,6 +45655,10 @@ style={{ top: STICKY_TOP }}
             <button
               type="button"
               onClick={() => {
+                ensureCutoutInPortraitSlot(
+                  selectedPortrait.url,
+                  (selectedPortrait as any).cleanupBaseUrl || selectedPortrait.url
+                );
                 useFlyerState.getState().removePortrait(format, selectedPortrait.id);
                 useFlyerState.getState().setSelectedPortraitId(null);
               }}
@@ -33376,6 +45667,24 @@ style={{ top: STICKY_TOP }}
               Remove From Canvas
             </button>
           </div>
+
+          <button
+            type="button"
+            disabled={replaceSubjectBusy}
+            onClick={() => {
+              const input = document.createElement("input");
+              input.type = "file";
+              input.accept = "image/*";
+              input.onchange = (event: any) => {
+                const file = event.target?.files?.[0];
+                if (file) void prepareReplacementSubject(file);
+              };
+              input.click();
+            }}
+            className="w-full min-h-[42px] rounded-lg border border-cyan-400/35 bg-cyan-500/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-cyan-100 transition hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-55"
+          >
+            {replaceSubjectBusy ? "Analyzing Subject..." : "Replace Subject"}
+          </button>
 
           {MAGIC_BLEND_ENABLED && !isStarterPlan && (
             <button
@@ -33694,7 +46003,7 @@ style={{ top: STICKY_TOP }}
             <div className="border border-white/10 bg-white/[0.03] p-3">
               <div className="text-sm font-semibold text-white">Headline layer styles</div>
               <div className="mt-1 text-[12px] leading-5 text-neutral-400">
-                Use these for Glitch, Halftone, and Echo headline looks. Pick one style, then tune the sliders and colors lightly.
+                Use these for Neon Pulse and Halftone headline looks. Pick one style, then tune the sliders and colors lightly.
               </div>
               <button
                 type="button"
@@ -34004,6 +46313,7 @@ style={{ top: STICKY_TOP }}
 </AnimatePresence>
 
    </main>
+  </PaletteColorProvider>
   </>
   );
 }
