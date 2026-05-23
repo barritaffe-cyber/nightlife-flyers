@@ -1,6 +1,7 @@
- 'use client';
+'use client';
  
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFlyerState } from '../../app/state/flyerState';
  
@@ -60,6 +61,10 @@ const SLIDER_LIVE_UPDATE_MS = 16;
 
 function sliderValuesEqual(a: number | null, b: number) {
   return a !== null && Math.abs(a - b) < 0.000001;
+}
+
+function numbersEqualForDisplay(a: number, b: number) {
+  return Math.abs(a - b) < 0.000001;
 }
 
 function beginSliderDragGate() {
@@ -127,6 +132,7 @@ export function Stepper({
   const rangeFrameRef = React.useRef<number | null>(null);
   const rangeTimerRef = React.useRef<number | null>(null);
   const pendingRangeRef = React.useRef<number | null>(null);
+  const manualDraftRef = React.useRef<{ value: number; text: string } | null>(null);
   const latestRangeValueRef = React.useRef(Number.isFinite(value as number) ? Number(value) : Number(min ?? 0));
   const rangeDraggingRef = React.useRef(false);
   const rangeDragTokenRef = React.useRef(0);
@@ -136,9 +142,15 @@ export function Stepper({
 
   React.useEffect(() => {
     if (!isEditing && !rangeDraggingRef.current) {
+      const manual = manualDraftRef.current;
+      if (manual && numbersEqualForDisplay(manual.value, Number(value))) {
+        setDraftValue(manual.text);
+        return;
+      }
+      manualDraftRef.current = null;
       setDraftValue(formattedValue);
     }
-  }, [formattedValue, isEditing]);
+  }, [formattedValue, isEditing, value]);
 
   React.useEffect(() => {
     setValueRef.current = setValue;
@@ -212,8 +224,9 @@ export function Stepper({
     run();
   }, []);
  
-   const onRange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onRange = (e: React.ChangeEvent<HTMLInputElement>) => {
      const n = clamp(parseFloat(e.target.value));
+     manualDraftRef.current = null;
      latestRangeValueRef.current = n;
      pendingRangeRef.current = n;
      if (rangeDraggingRef.current) {
@@ -277,7 +290,16 @@ export function Stepper({
   }, [clamp, flushPendingRangeSoon]);
  
    const onNumber = (e: React.ChangeEvent<HTMLInputElement>) => {
-     setDraftValue(e.target.value);
+     const raw = e.target.value;
+     setDraftValue(raw);
+     const trimmed = raw.trim();
+     if (trimmed === '' || trimmed === '-' || trimmed === '.' || trimmed === '-.') return;
+     const parsed = parseFloat(trimmed);
+     if (Number.isNaN(parsed)) return;
+     const next = clamp(parsed);
+     latestRangeValueRef.current = next;
+     lastAppliedRangeValueRef.current = next;
+     setValueRef.current(next);
    };
 
    const commitNumber = React.useCallback(
@@ -289,8 +311,11 @@ export function Stepper({
        }
        const n = clamp(parseFloat(trimmed));
        if (!Number.isNaN(n)) {
+         const parsed = parseFloat(trimmed);
+         const shouldPreserveDraft = numbersEqualForDisplay(parsed, n);
+         manualDraftRef.current = shouldPreserveDraft ? { value: n, text: trimmed } : null;
          setValue(n);
-         setDraftValue(formatNumericValue(n, Math.max(0, digits)));
+         setDraftValue(shouldPreserveDraft ? trimmed : formatNumericValue(n, Math.max(0, digits)));
          return;
        }
        setDraftValue(formattedValue);
@@ -306,6 +331,7 @@ export function Stepper({
      const next = clamp(
        parseFloat((value + dir * step).toFixed(Math.max(0, digits)))
      );
+     manualDraftRef.current = null;
      setValue(next);
    };
  
@@ -319,6 +345,7 @@ export function Stepper({
        const next = clamp(
          parseFloat((value + delta).toFixed(Math.max(0, digits)))
        );
+       manualDraftRef.current = null;
        setValue(next);
      }
    };
@@ -674,6 +701,7 @@ export function InlineSliderInput({
   const rangeFrameRef = React.useRef<number | null>(null);
   const rangeTimerRef = React.useRef<number | null>(null);
   const pendingRangeRef = React.useRef<number | null>(null);
+  const manualDraftRef = React.useRef<{ value: number; text: string } | null>(null);
   const latestRangeValueRef = React.useRef(safeValue);
   const rangeDraggingRef = React.useRef(false);
   const rangeDragTokenRef = React.useRef(0);
@@ -684,9 +712,15 @@ export function InlineSliderInput({
 
   React.useEffect(() => {
     if (!isEditing && !rangeDraggingRef.current) {
+      const manual = manualDraftRef.current;
+      if (manual && numbersEqualForDisplay(manual.value, safeValue)) {
+        setDraftValue(manual.text);
+        return;
+      }
+      manualDraftRef.current = null;
       setDraftValue(formattedValue);
     }
-  }, [formattedValue, isEditing]);
+  }, [formattedValue, isEditing, safeValue]);
 
   React.useEffect(() => {
     onChangeRef.current = onChange;
@@ -776,20 +810,35 @@ export function InlineSliderInput({
         return;
       }
       const next = clamp(parsed / displayScale);
+      const displayValue = next * displayScale;
+      const shouldPreserveDraft = numbersEqualForDisplay(parsed, displayValue);
+      manualDraftRef.current = shouldPreserveDraft ? { value: next, text: trimmed } : null;
       onChangeRef.current(next);
       onCommitRef.current?.(next);
-      setDraftValue(formatNumericValue(next * displayScale, inputDigits));
+      setDraftValue(
+        shouldPreserveDraft ? trimmed : formatNumericValue(displayValue, inputDigits)
+      );
     },
     [clamp, displayScale, formattedValue, inputDigits]
   );
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setDraftValue(e.target.value);
+    const raw = e.target.value;
+    setDraftValue(raw);
+    const trimmed = raw.trim();
+    if (trimmed === "" || trimmed === "-" || trimmed === "." || trimmed === "-.") return;
+    const parsed = Number(trimmed);
+    if (Number.isNaN(parsed)) return;
+    const next = clamp(parsed / displayScale);
+    latestRangeValueRef.current = next;
+    lastAppliedRangeValueRef.current = next;
+    onChangeRef.current(next);
   };
 
   const handleRangeChange = React.useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const next = clamp(Number(e.target.value));
+      manualDraftRef.current = null;
       latestRangeValueRef.current = next;
       pendingRangeRef.current = next;
       if (rangeDraggingRef.current) {
@@ -993,12 +1042,50 @@ type ColorDotProps = {
   disabled?: boolean;
   allowNone?: boolean;
   noneTitle?: string;
+  paletteColors?: PaletteColorChoice[];
+  showPaletteChoices?: boolean;
 };
 
 function normalizeColorInputValue(value: string) {
   const safe = String(value || "").trim().toLowerCase();
   if (!safe || safe === "transparent" || safe === "none") return "#ffffff";
   return safe;
+}
+
+export type PaletteColorChoice = {
+  label?: string;
+  color: string;
+};
+
+const PaletteColorChoiceContext = React.createContext<PaletteColorChoice[]>([]);
+
+export const PaletteColorProvider: React.FC<{
+  colors: PaletteColorChoice[];
+  children: React.ReactNode;
+}> = ({ colors, children }) => {
+  const normalized = React.useMemo(() => normalizePaletteColorChoices(colors), [colors]);
+  return (
+    <PaletteColorChoiceContext.Provider value={normalized}>
+      {children}
+    </PaletteColorChoiceContext.Provider>
+  );
+};
+
+function isHexColor(value: string) {
+  return /^#[0-9a-f]{6}$/i.test(String(value || "").trim());
+}
+
+function normalizePaletteColorChoices(colors: PaletteColorChoice[] | undefined) {
+  const seen = new Set<string>();
+  return (colors || []).reduce<PaletteColorChoice[]>((acc, item) => {
+    const color = String(item?.color || "").trim();
+    if (!isHexColor(color)) return acc;
+    const normalized = color.toUpperCase();
+    if (seen.has(normalized)) return acc;
+    seen.add(normalized);
+    acc.push({ label: item.label, color: normalized });
+    return acc;
+  }, []);
 }
 
 export const ColorDot: React.FC<ColorDotProps> = ({
@@ -1008,14 +1095,51 @@ export const ColorDot: React.FC<ColorDotProps> = ({
   disabled,
   allowNone = false,
   noneTitle,
+  paletteColors,
+  showPaletteChoices = true,
 }) => {
+  const buttonRef = React.useRef<HTMLButtonElement | null>(null);
+  const contextPaletteColors = React.useContext(PaletteColorChoiceContext);
+  const [paletteOpen, setPaletteOpen] = React.useState(false);
+  const [palettePosition, setPalettePosition] = React.useState<{ top: number; left: number } | null>(null);
+  const paletteChoices = React.useMemo(
+    () => normalizePaletteColorChoices(paletteColors || contextPaletteColors),
+    [contextPaletteColors, paletteColors]
+  );
+  const updatePalettePosition = React.useCallback(() => {
+    const button = buttonRef.current;
+    if (!button || typeof window === "undefined") return;
+    const rect = button.getBoundingClientRect();
+    const menuWidth = 144;
+    const gap = 6;
+    const left = Math.max(8, Math.min(window.innerWidth - menuWidth - 8, rect.right - menuWidth));
+    const below = rect.bottom + gap;
+    const top = below + 76 > window.innerHeight ? Math.max(8, rect.top - 84) : below;
+    setPalettePosition({ top, left });
+  }, []);
+
+  React.useEffect(() => {
+    if (!paletteOpen) return;
+    updatePalettePosition();
+    const close = () => setPaletteOpen(false);
+    const update = () => updatePalettePosition();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    document.addEventListener("pointerdown", close);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+      document.removeEventListener("pointerdown", close);
+    };
+  }, [paletteOpen, updatePalettePosition]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value);
   };
   const isNone = String(value || "").trim().toLowerCase() === "transparent";
 
   return (
-    <span className="inline-flex items-center gap-1">
+    <span className="relative inline-flex items-center gap-1">
       {allowNone ? (
         <button
           type="button"
@@ -1067,6 +1191,63 @@ export const ColorDot: React.FC<ColorDotProps> = ({
         aria-label={title || 'Pick color'}
       />
       </span>
+      {showPaletteChoices && paletteChoices.length > 0 ? (
+        <span className="relative inline-flex">
+          <button
+            ref={buttonRef}
+            type="button"
+            title="Choose from palette"
+            aria-label="Choose from palette"
+            disabled={disabled}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setPaletteOpen((open) => !open);
+            }}
+            className={clsx(
+              "inline-grid h-4 w-4 grid-cols-2 overflow-hidden rounded-full border border-white/25 transition-colors",
+              disabled
+                ? "cursor-not-allowed opacity-45"
+                : "hover:border-cyan-200/70"
+            )}
+          >
+            {paletteChoices.slice(0, 4).map((choice, index) => (
+              <span key={`${choice.color}-${index}`} style={{ backgroundColor: choice.color }} />
+            ))}
+          </button>
+          {paletteOpen && !disabled && palettePosition && typeof document !== "undefined" ? createPortal(
+            <div
+              className="fixed z-[5000] w-36 rounded-lg border border-white/10 bg-neutral-950/95 p-2 shadow-[0_16px_40px_rgba(0,0,0,0.55)] ring-1 ring-white/[0.04]"
+              style={{ top: palettePosition.top, left: palettePosition.left }}
+              onPointerDown={(event) => {
+                event.stopPropagation();
+              }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="mb-1 text-[8px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                Palette
+              </div>
+              <div className="grid grid-cols-5 gap-1.5">
+                {paletteChoices.map((choice, index) => (
+                  <button
+                    key={`${choice.color}-${index}`}
+                    type="button"
+                    title={choice.label ? `${choice.label}: ${choice.color}` : choice.color}
+                    aria-label={choice.label ? `${choice.label}: ${choice.color}` : choice.color}
+                    onClick={() => {
+                      onChange(choice.color);
+                      setPaletteOpen(false);
+                    }}
+                    className="h-5 w-5 rounded-full border border-white/20 shadow-[0_0_0_1px_rgba(0,0,0,0.45)_inset] transition hover:scale-110 hover:border-white/70"
+                    style={{ backgroundColor: choice.color }}
+                  />
+                ))}
+              </div>
+            </div>,
+            document.body
+          ) : null}
+        </span>
+      ) : null}
     </span>
   );
 };
