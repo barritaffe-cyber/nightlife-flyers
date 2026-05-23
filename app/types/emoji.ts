@@ -15,6 +15,7 @@ export type Emoji = {
   showLabel?: boolean;
   labelBg?: boolean;
   labelSize?: number;
+  labelLineHeight?: number;
   labelColor?: string;
   tintMode?: "hue" | "colorize";
 
@@ -22,8 +23,24 @@ export type Emoji = {
   url?: string;          // image source for stickers/flares
   isFlare?: boolean;     // treat as flare (screen blend, no cleanup)
   isSticker?: boolean;   // treat as sticker/graphic
+  isTexture?: boolean;   // treat as palette-tintable texture/strip
+  isNightlifeGraphic?: boolean; // use alpha-bounds and editor behavior for app vector graphics
+  isExtracted?: boolean;  // treat as an extracted foreground subject/cutout
+  isShapeGraphic?: boolean;
   blendMode?: string;    // css mix-blend-mode
   svgTemplate?: string;  // svg template with {{COLOR}} token (optional)
   iconColor?: string;    // initial svg stroke color (optional)
+  shapeKind?: string;
+  shapeGradient?: boolean;
+  shapeLength?: number;
+  shapeSkew?: number;
+  isSeparator?: boolean;
+  separatorKind?: string;
+  separatorWidth?: number;
+  separatorOffset?: number;
+  paletteRole?: 'base' | 'primary' | 'secondary' | 'accent' | 'neutral';
   layerOffset?: number;  // per-item z-order nudge
+  shadowBlur?: number;
+  shadowAlpha?: number;
+  hitTestMode?: "alpha-bounds";
 };

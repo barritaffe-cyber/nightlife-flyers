@@ -45,6 +45,7 @@ export const FONT_FILE_MAP: Record<string, string> = {
   "Techno Hideo": "/fonts/techno_hideo.ttf",
   "Techno Hideo Bold": "/fonts/techno_hideo_bold.ttf",
   "BTSE PS2": "/fonts/btseps2.TTF",
+  "TR2N": "/fonts/Tr2n.ttf",
   "DS-Digital": "/fonts/DS-DIGIB.TTF",
   "Digital Cards Demo": "/fonts/Digital Cards Demo.ttf",
   "Nexa-Heavy": "/fonts/Nexa-Heavy.ttf",

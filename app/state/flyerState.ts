@@ -84,6 +84,12 @@ export type MoveTarget =
   | "details2"
   | "venue"
   | "subtag"
+  | "presenter"
+  | "leftRail"
+  | "rightRail"
+  | "date"
+  | "price"
+  | "qr"
   | "background"
   | "portrait"
   | "logo"
@@ -166,13 +172,42 @@ type Portrait = {
   showLabel?: boolean;
   labelBg?: boolean;
   labelSize?: number;
+  labelLineHeight?: number;
   labelColor?: string;
   labelOffsetY?: number;
   labelRotate?: number;
   labelSkew?: number;
   isSticker?: boolean;
   isFlare?: boolean;
+  isTexture?: boolean;
   isExtracted?: boolean;
+  extraction?: {
+    sourceRect?: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      centerX: number;
+      centerY: number;
+    };
+    canvas?: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      scale: number;
+    };
+    cropSize?: {
+      width: number;
+      height: number;
+    };
+    background?: {
+      scale: number;
+      posX: number;
+      posY: number;
+      fitMode: boolean;
+    };
+  };
   isBrandFace?: boolean;
   isShapeGraphic?: boolean;
   shapeKind?: string;
@@ -181,6 +216,7 @@ type Portrait = {
   tintMode?: "hue" | "colorize";
   svgTemplate?: string;
   iconColor?: string;
+  paletteRole?: "base" | "primary" | "secondary" | "accent" | "neutral";
   isSeparator?: boolean;
   separatorKind?: string;
   separatorWidth?: number;
@@ -188,6 +224,10 @@ type Portrait = {
   shapeLength?: number;
   shapeSkew?: number;
   layerOffset?: number;
+  scenePackId?: string;
+  sceneLayerId?: string;
+  sceneRole?: "midground" | "foreground" | "overlay" | "color-grade";
+  sceneLayerName?: string;
   cleanup?: CleanupParams;
   cleanupBaseUrl?: string;
   shadowBlur?: number;
@@ -198,6 +238,67 @@ type Portrait = {
   filterPreset?: MainFaceFilterPreset;
   filterStrength?: number;
 };
+
+const EXTRACTED_PORTRAIT_SLOT_EVENT = "nf:portrait-slots-changed";
+const MAX_EXTRACTED_PORTRAIT_BACKUP_SLOTS = 4;
+
+function normalizeStoredPortraitSlots(values: unknown): string[] {
+  const arr = Array.isArray(values) ? values : [];
+  const safe = arr
+    .slice(0, MAX_EXTRACTED_PORTRAIT_BACKUP_SLOTS)
+    .map((value) => (typeof value === "string" ? value : ""));
+  return [
+    ...safe,
+    ...Array(Math.max(0, MAX_EXTRACTED_PORTRAIT_BACKUP_SLOTS - safe.length)).fill(""),
+  ];
+}
+
+function readStoredPortraitSlots(key: string): string[] {
+  if (typeof window === "undefined") return normalizeStoredPortraitSlots([]);
+  try {
+    const raw = window.localStorage.getItem(key);
+    return normalizeStoredPortraitSlots(raw ? JSON.parse(raw) : []);
+  } catch {
+    return normalizeStoredPortraitSlots([]);
+  }
+}
+
+function writeStoredPortraitSlots(key: string, values: string[]) {
+  if (typeof window === "undefined") return;
+  const normalized = normalizeStoredPortraitSlots(values);
+  try {
+    window.localStorage.setItem(key, JSON.stringify(normalized));
+  } catch {
+    try {
+      window.localStorage.removeItem("nf:portraitLibrary");
+      window.localStorage.setItem(key, JSON.stringify(normalized));
+    } catch {}
+  }
+}
+
+function backUpExtractedPortraitToSlot(portrait: Portrait | undefined) {
+  if (!portrait?.isExtracted || !portrait.url) return;
+  if (typeof window === "undefined") return;
+
+  const cutoutUrl = portrait.url;
+  const sourceUrl = portrait.cleanupBaseUrl || cutoutUrl;
+  const slots = readStoredPortraitSlots("nf:portraitSlots");
+  const sources = readStoredPortraitSlots("nf:portraitSlotSources");
+
+  let slotIndex = slots.findIndex((slot) => slot === cutoutUrl);
+  if (slotIndex === -1) slotIndex = slots.findIndex((slot) => !slot);
+  if (slotIndex === -1) slotIndex = 0;
+
+  slots[slotIndex] = cutoutUrl;
+  sources[slotIndex] = sourceUrl;
+
+  writeStoredPortraitSlots("nf:portraitSlots", slots);
+  writeStoredPortraitSlots("nf:portraitSlotSources", sources);
+
+  try {
+    window.dispatchEvent(new Event(EXTRACTED_PORTRAIT_SLOT_EVENT));
+  } catch {}
+}
 
 //
 // ============================================
@@ -416,17 +517,63 @@ export const useFlyerState = create<FlyerState>((set, get) => ({
     set((s) => ({
       portraits: {
         ...s.portraits,
-        [fmt]: s.portraits[fmt].map((pt) => (pt.id === id ? { ...pt, ...patch } : pt)),
+        [fmt]: s.portraits[fmt].map((pt) => {
+          if (pt.id !== id) return pt;
+          const next = { ...pt, ...patch };
+          const shouldSyncExtractionPlacement =
+            !!pt.isExtracted &&
+            !!pt.extraction?.canvas &&
+            (typeof patch.x === "number" ||
+              typeof patch.y === "number" ||
+              typeof patch.scale === "number");
+
+          if (!shouldSyncExtractionPlacement) return next;
+
+          const previousCanvas = pt.extraction!.canvas!;
+          const previousScale = Number(previousCanvas.scale ?? pt.scale ?? 1);
+          const nextScale = Number(
+            typeof patch.scale === "number" ? patch.scale : previousCanvas.scale ?? pt.scale ?? 1
+          );
+          const scaleRatio =
+            Number.isFinite(previousScale) && previousScale > 0 && Number.isFinite(nextScale)
+              ? nextScale / previousScale
+              : 1;
+
+          return {
+            ...next,
+            extraction: {
+              ...pt.extraction,
+              canvas: {
+                ...previousCanvas,
+                x: typeof patch.x === "number" ? patch.x : previousCanvas.x,
+                y: typeof patch.y === "number" ? patch.y : previousCanvas.y,
+                scale: Number.isFinite(nextScale) ? nextScale : previousCanvas.scale,
+                width:
+                  typeof patch.scale === "number"
+                    ? previousCanvas.width * scaleRatio
+                    : previousCanvas.width,
+                height:
+                  typeof patch.scale === "number"
+                    ? previousCanvas.height * scaleRatio
+                    : previousCanvas.height,
+              },
+            },
+          };
+        }),
       },
     })),
 
   removePortrait: (fmt, id) =>
-    set((s) => ({
-      portraits: {
-        ...s.portraits,
-        [fmt]: s.portraits[fmt].filter((pt) => pt.id !== id),
-      },
-    })),
+    set((s) => {
+      const current = s.portraits[fmt] || [];
+      backUpExtractedPortraitToSlot(current.find((pt) => pt.id === id));
+      return {
+        portraits: {
+          ...s.portraits,
+          [fmt]: current.filter((pt) => pt.id !== id),
+        },
+      };
+    }),
 
   selectedPortraitId: null,
   setSelectedPortraitId: (id) => set({ selectedPortraitId: id }),
@@ -444,12 +591,16 @@ export const useFlyerState = create<FlyerState>((set, get) => ({
   isPortraitLocked: (id) => !!get().portraitLocked[id],
 
   onDeletePortrait: (fmt, id) =>
-    set((s) => ({
-      portraits: {
-        ...s.portraits,
-        [fmt]: s.portraits[fmt].filter((pt) => pt.id !== id),
-      },
-    })),
+    set((s) => {
+      const current = s.portraits[fmt] || [];
+      backUpExtractedPortraitToSlot(current.find((pt) => pt.id === id));
+      return {
+        portraits: {
+          ...s.portraits,
+          [fmt]: current.filter((pt) => pt.id !== id),
+        },
+      };
+    }),
 
   onTogglePortraitLock: (id) =>
     set((s) => ({
@@ -525,14 +676,17 @@ setSelectedPanel: (panel: string | null) =>
 
     if (pid) {
       const sel = list.find((x: any) => x?.id === pid);
+      const id = String(sel?.id || "").toLowerCase();
       const isFlare = !!sel?.isFlare;
       const isSticker = !!sel?.isSticker;
-      const isExtracted = !!sel?.isExtracted;
+      const isPaletteTexture =
+        !!sel?.isTexture ||
+        id === "center_hero_burgundy_bottom_bar" ||
+        id === "center_teal_bottom_bar" ||
+        /center.*(bottom|torn).*bar/.test(id);
 
-      if ((isFlare || isSticker) && panel === "portrait") {
+      if ((isFlare || isSticker || isPaletteTexture) && panel === "portrait") {
         next.selectedPanel = "icons";
-      } else if (isExtracted && panel === "portrait") {
-        next.selectedPanel = "extract_subject";
       }
     }
 
@@ -570,16 +724,18 @@ setFocus: (t: any, panel: any) =>
 
     if (pid) {
       const sel = list.find((x: any) => x?.id === pid);
+      const id = String(sel?.id || "").toLowerCase();
       const isFlare = !!sel?.isFlare;
       const isSticker = !!sel?.isSticker;
-      const isExtracted = !!sel?.isExtracted;
+      const isPaletteTexture =
+        !!sel?.isTexture ||
+        id === "center_hero_burgundy_bottom_bar" ||
+        id === "center_teal_bottom_bar" ||
+        /center.*(bottom|torn).*bar/.test(id);
 
-      if (isFlare || isSticker) {
+      if (isFlare || isSticker || isPaletteTexture) {
         next.moveTarget = "icon";
         next.selectedPanel = "icons";
-      } else if (isExtracted) {
-        next.moveTarget = "portrait";
-        next.selectedPanel = "extract_subject";
       }
     }
 

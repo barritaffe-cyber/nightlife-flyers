@@ -9,6 +9,12 @@ export const canvasRefs = {
   details2: null as HTMLDivElement | null,
   venue: null as HTMLDivElement | null,
   subtag: null as HTMLDivElement | null,
+  presenter: null as HTMLDivElement | null,
+  leftRail: null as HTMLDivElement | null,
+  rightRail: null as HTMLDivElement | null,
+  date: null as HTMLDivElement | null,
+  price: null as HTMLDivElement | null,
+  qr: null as HTMLDivElement | null,
 
   // SPECIAL ELEMENTS
   portrait: null as HTMLDivElement | null,
