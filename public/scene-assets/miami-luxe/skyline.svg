@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
+  <defs>
+    <linearGradient id="water" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#071116" stop-opacity=".1"/>
+      <stop offset=".55" stop-color="#00171f" stop-opacity=".7"/>
+      <stop offset="1" stop-color="#000" stop-opacity=".94"/>
+    </linearGradient>
+    <linearGradient id="tower" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#1bb8c8" stop-opacity=".8"/>
+      <stop offset=".25" stop-color="#0a2730" stop-opacity=".9"/>
+      <stop offset="1" stop-color="#010608"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="694" width="1080" height="386" fill="url(#water)"/>
+  <g fill="url(#tower)">
+    <rect x="78" y="654" width="32" height="132"/>
+    <rect x="128" y="604" width="50" height="182"/>
+    <rect x="206" y="566" width="36" height="220"/>
+    <rect x="260" y="626" width="58" height="160"/>
+    <rect x="352" y="508" width="54" height="278"/>
+    <rect x="438" y="586" width="44" height="200"/>
+    <rect x="508" y="538" width="70" height="248"/>
+    <rect x="614" y="600" width="48" height="186"/>
+    <rect x="704" y="552" width="62" height="234"/>
+    <rect x="820" y="624" width="46" height="162"/>
+    <rect x="910" y="588" width="54" height="198"/>
+  </g>
+  <g fill="#2cf7ff" opacity=".72">
+    <rect x="88" y="674" width="8" height="24"/><rect x="144" y="628" width="9" height="20"/><rect x="162" y="668" width="9" height="20"/>
+    <rect x="216" y="590" width="8" height="22"/><rect x="270" y="646" width="10" height="18"/><rect x="292" y="690" width="10" height="18"/>
+    <rect x="370" y="544" width="9" height="26"/><rect x="390" y="602" width="9" height="26"/><rect x="452" y="610" width="10" height="22"/>
+    <rect x="532" y="566" width="10" height="24"/><rect x="558" y="632" width="10" height="24"/><rect x="638" y="626" width="10" height="22"/>
+    <rect x="726" y="580" width="10" height="24"/><rect x="746" y="650" width="10" height="24"/><rect x="936" y="612" width="10" height="24"/>
+  </g>
+  <g opacity=".55">
+    <path d="M0 792 C170 766 286 822 430 790 C590 754 744 806 1080 776 L1080 1080 L0 1080 Z" fill="#000"/>
+    <path d="M110 818 C240 800 320 842 458 816 C636 784 820 834 1000 808" fill="none" stroke="#00e5ff" stroke-opacity=".38" stroke-width="4"/>
+  </g>
+</svg>

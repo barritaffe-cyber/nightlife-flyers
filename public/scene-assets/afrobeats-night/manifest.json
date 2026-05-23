@@ -1,0 +1,14 @@
+{
+  "name": "Afrobeats Night",
+  "mood": "warm rooftop rhythm",
+  "defaultTextColor": "#FFE08A",
+  "accentColor": "#19D27C",
+  "layers": [
+    { "file": "/mood-brief/rooftop-party:premium.png", "type": "background" },
+    { "file": "sunset-haze.svg", "type": "overlay", "blendMode": "screen" },
+    { "file": "pattern-band.svg", "type": "midground" },
+    { "file": "foreground-palms.svg", "type": "foreground" },
+    { "file": "gold-particles.svg", "type": "overlay", "blendMode": "screen" },
+    { "file": "vignette.svg", "type": "overlay", "blendMode": "multiply" }
+  ]
+}

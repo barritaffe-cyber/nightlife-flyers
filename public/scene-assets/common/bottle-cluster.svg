@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
+  <defs>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fff4b8" stop-opacity=".9"/>
+      <stop offset="35%" stop-color="#f6c76a" stop-opacity=".62"/>
+      <stop offset="100%" stop-color="#2a1404" stop-opacity=".86"/>
+    </linearGradient>
+    <linearGradient id="pinkGlass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffe0f4" stop-opacity=".9"/>
+      <stop offset="48%" stop-color="#ff2fb3" stop-opacity=".52"/>
+      <stop offset="100%" stop-color="#210617" stop-opacity=".86"/>
+    </linearGradient>
+    <filter id="spark" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="7" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <g filter="url(#spark)">
+    <path d="M420 260h88v118c0 22 16 46 36 68 22 24 32 58 32 92v330H352V538c0-34 12-68 34-92 20-22 34-46 34-68V260Z" fill="url(#glass)" stroke="#ffe79c" stroke-width="8"/>
+    <path d="M594 334h74v98c0 20 12 38 30 58 22 24 32 54 32 88v290H522V578c0-34 10-64 32-88 18-20 40-38 40-58V334Z" fill="url(#pinkGlass)" stroke="#ff8ad6" stroke-width="7"/>
+    <path d="M288 394h72v78c0 20 10 36 26 54 20 22 28 50 28 82v260H220V608c0-32 8-60 28-82 16-18 40-34 40-54V394Z" fill="#081827" stroke="#6df5ff" stroke-width="7"/>
+  </g>
+  <g fill="#ffffff" opacity=".78">
+    <rect x="438" y="290" width="50" height="72" rx="10"/>
+    <rect x="618" y="362" width="28" height="74" rx="8"/>
+    <rect x="306" y="428" width="32" height="66" rx="8"/>
+  </g>
+  <g fill="none" stroke="#ffffff" stroke-width="6" opacity=".5">
+    <path d="M380 614h170"/>
+    <path d="M550 646h150"/>
+    <path d="M248 684h136"/>
+  </g>
+  <g fill="#f6c76a">
+    <path d="M776 264l18 48 50 12-44 28 4 52-40-34-48 20 20-48-34-40 52 4 22-42Z"/>
+    <path d="M310 260l10 28 30 8-26 16 2 32-24-20-30 12 12-30-20-24 32 2 14-24Z" opacity=".8"/>
+    <path d="M734 742l8 22 24 6-20 14 2 24-20-16-22 10 8-24-16-18 24 2 12-20Z" opacity=".9"/>
+  </g>
+</svg>

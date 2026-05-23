@@ -1,0 +1,14 @@
+{
+  "name": "Neon Club",
+  "mood": "laser stage energy",
+  "defaultTextColor": "#FFFFFF",
+  "accentColor": "#39FF14",
+  "layers": [
+    { "file": "/DJ/club01.jpg", "type": "background" },
+    { "file": "laser-beams.svg", "type": "overlay", "blendMode": "screen" },
+    { "file": "crowd-foreground.svg", "type": "foreground" },
+    { "file": "glow-overlay.svg", "type": "overlay", "blendMode": "screen" },
+    { "file": "particles.svg", "type": "overlay", "blendMode": "screen" },
+    { "file": "vignette.svg", "type": "overlay", "blendMode": "multiply" }
+  ]
+}

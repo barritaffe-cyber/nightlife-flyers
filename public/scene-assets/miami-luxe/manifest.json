@@ -1,0 +1,14 @@
+{
+  "name": "Miami Luxe",
+  "mood": "luxury nightlife",
+  "defaultTextColor": "#F6C76A",
+  "accentColor": "#00E5FF",
+  "layers": [
+    { "file": "/mood-brief/rooftop-party:cinematic.png", "type": "background" },
+    { "file": "skyline.svg", "type": "midground" },
+    { "file": "palms-foreground.svg", "type": "foreground" },
+    { "file": "glow-overlay.svg", "type": "overlay", "blendMode": "screen" },
+    { "file": "particles.svg", "type": "overlay", "blendMode": "screen" },
+    { "file": "vignette.svg", "type": "overlay", "blendMode": "multiply" }
+  ]
+}

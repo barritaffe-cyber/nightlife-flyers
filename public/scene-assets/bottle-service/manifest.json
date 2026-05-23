@@ -1,0 +1,14 @@
+{
+  "name": "Bottle Service",
+  "mood": "vip gold table",
+  "defaultTextColor": "#F8D47A",
+  "accentColor": "#FF2FA0",
+  "layers": [
+    { "file": "/mood-brief/luxury-vip.club-dark:cinematic.png", "type": "background" },
+    { "file": "vip-frame.svg", "type": "foreground", "blendMode": "screen" },
+    { "file": "spark-fountain.svg", "type": "midground", "blendMode": "screen" },
+    { "file": "glow-overlay.svg", "type": "overlay", "blendMode": "screen" },
+    { "file": "gold-dust.svg", "type": "overlay", "blendMode": "screen" },
+    { "file": "vignette.svg", "type": "overlay", "blendMode": "multiply" }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "Latin Night",
+  "mood": "tropical street heat",
+  "defaultTextColor": "#FFFFFF",
+  "accentColor": "#FF3D5A",
+  "layers": [
+    { "file": "/artists-bg/tropical01.jpg", "type": "background" },
+    { "file": "palm-midground.svg", "type": "midground" },
+    { "file": "lantern-glow.svg", "type": "overlay", "blendMode": "screen" },
+    { "file": "confetti.svg", "type": "overlay", "blendMode": "screen" },
+    { "file": "foreground-leaves.svg", "type": "foreground" },
+    { "file": "vignette.svg", "type": "overlay", "blendMode": "multiply" }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "industrial-legend",
+  "name": "Industrial Legend composition assets",
+  "assets": [
+    "warehouse-amber.svg",
+    "car-ground-shadow.svg",
+    "muscle-car-hero.svg",
+    "bottom-info-band.svg",
+    "social-rail.svg",
+    "warm-dust.svg",
+    "preview.svg",
+    "preview.png"
+  ]
+}

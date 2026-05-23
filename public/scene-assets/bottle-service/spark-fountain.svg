@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="900" viewBox="0 0 720 900">
+  <defs>
+    <filter id="blur"><feGaussianBlur stdDeviation="2"/></filter>
+  </defs>
+  <g stroke-linecap="round" filter="url(#blur)">
+    <path d="M358 860 L180 120" stroke="#fff0b6" stroke-width="7" stroke-opacity=".45"/>
+    <path d="M358 860 L300 60" stroke="#f8c65b" stroke-width="7" stroke-opacity=".45"/>
+    <path d="M358 860 L440 90" stroke="#fff0b6" stroke-width="7" stroke-opacity=".5"/>
+    <path d="M358 860 L560 160" stroke="#f8c65b" stroke-width="7" stroke-opacity=".42"/>
+  </g>
+  <g stroke-linecap="round">
+    <path d="M358 860 L180 120" stroke="#fff8d4" stroke-width="2" stroke-opacity=".9"/>
+    <path d="M358 860 L300 60" stroke="#fff8d4" stroke-width="2" stroke-opacity=".9"/>
+    <path d="M358 860 L440 90" stroke="#fff8d4" stroke-width="2" stroke-opacity=".9"/>
+    <path d="M358 860 L560 160" stroke="#fff8d4" stroke-width="2" stroke-opacity=".9"/>
+  </g>
+  <g fill="#fff0b6">
+    <circle cx="180" cy="120" r="5"/><circle cx="300" cy="60" r="4"/><circle cx="440" cy="90" r="5"/><circle cx="560" cy="160" r="4"/>
+    <circle cx="246" cy="318" r="3"/><circle cx="380" cy="260" r="3"/><circle cx="486" cy="360" r="3"/>
+  </g>
+</svg>

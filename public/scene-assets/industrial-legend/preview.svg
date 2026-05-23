@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
+  <image href="/scene-assets/industrial-legend/warehouse-amber.svg" width="1080" height="1080"/>
+  <image href="/scene-assets/industrial-legend/bottom-info-band.svg" x="0" y="820" width="1080" height="260"/>
+  <text x="218" y="375" font-family="Impact, Arial Black, sans-serif" font-size="172" letter-spacing="4" fill="none" stroke="#ff2c40" stroke-width="14">LEGEND</text>
+  <text x="218" y="375" font-family="Impact, Arial Black, sans-serif" font-size="172" letter-spacing="4" fill="#ffb43d" opacity=".24">LEGEND</text>
+  <image href="/scene-assets/industrial-legend/car-ground-shadow.svg" x="50" y="650" width="980" height="260"/>
+  <image href="/scene-assets/industrial-legend/muscle-car-hero.svg" x="45" y="360" width="1000" height="420"/>
+  <image href="/scene-assets/industrial-legend/social-rail.svg" x="104" y="250" width="96" height="260"/>
+  <text x="540" y="842" font-family="Impact, Arial Black, sans-serif" font-size="76" text-anchor="middle" fill="#ffe600">NEVER DIES</text>
+  <text x="540" y="892" font-family="Arial, sans-serif" font-size="34" text-anchor="middle" fill="#fff7d2">THE INDUSTRIAL CAR CULTURE NIGHT</text>
+</svg>
