@@ -285,7 +285,7 @@
     },
     "session": {
       "square": {
-        "backgroundUrl": "/templates/fantasy.jpg",
+        "backgroundUrl": "/templates/fantasy-editor.jpg",
         "headline": "Soiree",
         "headlineFamily": "Vartigo",
         "headlineSize": 194,
@@ -583,7 +583,7 @@
         "qrX": 88,
         "qrY": 10,
         "qrScale": 0.55,
-        "bgUrl": "/templates/fantasy.jpg",
+        "bgUrl": "/templates/fantasy-editor.jpg",
         "bgUploadUrl": null,
         "bgBlur": 0,
         "bgRotate": 0,
@@ -727,7 +727,7 @@
         }
       },
       "story": {
-        "backgroundUrl": "/templates/fantasy.jpg",
+        "backgroundUrl": "/templates/fantasy-editor.jpg",
         "headline": "FANTASY",
         "headlineFamily": "Bebas Neue",
         "headlineSize": 152,
@@ -828,7 +828,7 @@
     "selectedPanel": "project",
     "moveTarget": null,
     "selectedPortraitId": null,
-    "backgroundUrl": "/templates/fantasy.jpg",
+    "backgroundUrl": "/templates/fantasy-editor.jpg",
     "headline": "Soiree",
     "headlineFamily": "Vartigo",
     "headlineSize": 194,
@@ -1111,7 +1111,7 @@
     "qrX": 90,
     "qrY": 8,
     "qrScale": 0.55,
-    "bgUrl": "/templates/fantasy.jpg",
+    "bgUrl": "/templates/fantasy-editor.jpg",
     "bgUploadUrl": null,
     "bgBlur": 0,
     "bgRotate": 0,

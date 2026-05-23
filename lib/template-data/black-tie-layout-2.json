@@ -287,7 +287,7 @@
     },
     "session": {
       "square": {
-        "backgroundUrl": "/templates/blk-tie.jpg",
+        "backgroundUrl": "/templates/black-tie-editor.jpg",
         "headline": "BLACKTIE",
         "headlineFamily": "Bebas Neue",
         "headlineSize": 156,
@@ -586,7 +586,7 @@
         "qrX": 9,
         "qrY": 11,
         "qrScale": 0.55,
-        "bgUrl": "/templates/blk-tie.jpg",
+        "bgUrl": "/templates/black-tie-editor.jpg",
         "bgUploadUrl": null,
         "bgBlur": 0,
         "bgRotate": 0,
@@ -721,7 +721,7 @@
         "icons": []
       },
       "story": {
-        "backgroundUrl": "/templates/blk-tie.jpg",
+        "backgroundUrl": "/templates/black-tie-editor.jpg",
         "headline": "BLACK TIE",
         "headlineFamily": "Bebas Neue",
         "headlineSize": 148,
@@ -1020,7 +1020,7 @@
         "qrX": 22,
         "qrY": 14,
         "qrScale": 0.55,
-        "bgUrl": "/templates/blk-tie.jpg",
+        "bgUrl": "/templates/black-tie-editor.jpg",
         "bgUploadUrl": null,
         "bgBlur": 0,
         "bgRotate": 0,
@@ -1089,7 +1089,7 @@
     "selectedPanel": "project",
     "moveTarget": null,
     "selectedPortraitId": null,
-    "backgroundUrl": "/templates/blk-tie.jpg",
+    "backgroundUrl": "/templates/black-tie-editor.jpg",
     "headline": "BLACKTIE",
     "headlineFamily": "Bebas Neue",
     "headlineSize": 156,
@@ -1373,7 +1373,7 @@
     "qrX": 9,
     "qrY": 11,
     "qrScale": 0.55,
-    "bgUrl": "/templates/blk-tie.jpg",
+    "bgUrl": "/templates/black-tie-editor.jpg",
     "bgUploadUrl": null,
     "bgBlur": 0,
     "bgRotate": 0,

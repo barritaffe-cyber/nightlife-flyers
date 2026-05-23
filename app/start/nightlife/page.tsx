@@ -17,7 +17,7 @@ const FEATURED_TEMPLATE = {
   label: "Birthday Bash Flyer",
   eyebrow: "Post-ready club flyer",
   description: "A bright club flyer for birthdays, party hosts, DJs, and weekend events.",
-  samples: ["/samples/sugar-rush.png", "/samples/sugar-rush2.png"],
+  samples: ["/samples/optimized/sugar-rush.webp", "/samples/optimized/sugar-rush2.webp"],
   format: "square",
 };
 
@@ -26,63 +26,63 @@ const TEMPLATE_CARDS = [
     id: "blk_tie",
     label: "Black Tie Flyer",
     description: "Formal luxury flyer with polished gold accents and updated post/story layouts.",
-    preview: "/samples/black-tie.png",
+    preview: "/samples/optimized/black-tie.webp",
     format: "square",
   },
   {
     id: "luxe",
     label: "VIP Lounge Flyer",
     description: "Magenta lounge portrait with polished VIP event copy.",
-    preview: "/samples/vip-lounge.png",
+    preview: "/samples/optimized/vip-lounge.webp",
     format: "square",
   },
   {
     id: "edm_stage_co2",
     label: "Techno / Afterhours Flyer",
     description: "Dark system flyer for underground, cyber, and late-night events.",
-    preview: "/samples/techno.png",
+    preview: "/samples/optimized/techno.webp",
     format: "square",
   },
   {
     id: "afrobeat_rooftop",
     label: "Afrobeat Rooftop Flyer",
     description: "Sunset Afrobeat flyer with updated square/story layouts and social details.",
-    preview: "/samples/afro.png",
+    preview: "/samples/optimized/afro.webp",
     format: "square",
   },
   {
     id: "square_center_hero_nightlife",
     label: "DJ Night Flyer",
     description: "Cinematic portrait layout for upscale nightlife and guest DJs.",
-    preview: "/samples/dj-night.png",
+    preview: "/samples/optimized/dj-night.webp",
     format: "square",
   },
   {
     id: "ladies_night_center_hero",
     label: "Ladies Night Flyer",
     description: "Fashion-forward neon nightlife flyer with matching square and story layouts.",
-    preview: "/samples/nocturne.png",
+    preview: "/samples/optimized/nocturne.webp",
     format: "square",
   },
   {
     id: "kpop_pastel_led",
     label: "Cocktail Night Flyer",
     description: "Fresh mojito-style flyer for lounges, bars, happy hour, and drink specials.",
-    preview: "/samples/mojito.png",
+    preview: "/samples/optimized/mojito.webp",
     format: "square",
   },
   {
     id: "fantasy",
     label: "Fantasy Flyer",
     description: "Dream-glow event flyer with surreal color, soft neon, and polished post/story layouts.",
-    preview: "/samples/fantasy.png",
+    preview: "/samples/optimized/fantasy.webp",
     format: "square",
   },
   {
     id: "new-york",
     label: "New York Flyer",
     description: "Midnight city energy with bold nightlife copy and a rendered post layout.",
-    preview: "/samples/new-york.png",
+    preview: "/samples/optimized/new-york.webp",
     format: "square",
   },
 ] as const;
@@ -324,7 +324,11 @@ export default function NightlifeStarterPage() {
                       className={`absolute inset-0 h-full w-full object-cover transition duration-700 ${
                         index === featuredSampleIndex ? "opacity-100" : "opacity-0"
                       }`}
+                      width={720}
+                      height={720}
                       loading="eager"
+                      fetchPriority={index === 0 ? "high" : "low"}
+                      decoding="async"
                       onLoad={index === 0 ? () => setFeaturedHeroReady(true) : undefined}
                       onError={index === 0 ? () => setFeaturedHeroReady(true) : undefined}
                       draggable={false}
@@ -406,7 +410,10 @@ export default function NightlifeStarterPage() {
                       src={template.preview}
                       alt={`${template.label} rendered flyer preview`}
                       className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                      width={720}
+                      height={720}
                       loading="lazy"
+                      decoding="async"
                       draggable={false}
                     />
                     <div className="absolute left-2 top-2 border border-cyan-100/30 bg-black/55 px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-cyan-100 backdrop-blur">

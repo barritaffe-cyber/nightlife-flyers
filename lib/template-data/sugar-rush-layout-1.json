@@ -639,7 +639,7 @@
     },
     "session": {
       "square": {
-        "backgroundUrl": "/scene-assets/sugar-rush/background.jpg",
+        "backgroundUrl": "/scene-assets/sugar-rush/background-editor.jpg",
         "palette": {
           "bgFrom": "#1D041F",
           "bgTo": "#150416",
@@ -1199,7 +1199,7 @@
         "headGoldBlockRoughness": 0.48,
         "head2": "RUSH",
         "head2SizePx": 172,
-        "bgUrl": "/scene-assets/sugar-rush/background.jpg",
+        "bgUrl": "/scene-assets/sugar-rush/background-editor.jpg",
         "bgUploadUrl": null,
         "icons": [],
         "priceScale": 0.81,
@@ -1417,7 +1417,7 @@
         "emojis": []
       },
       "story": {
-        "backgroundUrl": "/scene-assets/sugar-rush/background.jpg",
+        "backgroundUrl": "/scene-assets/sugar-rush/background-editor.jpg",
         "palette": {
           "bgFrom": "#1D041F",
           "bgTo": "#150416",
@@ -1978,7 +1978,7 @@
         "head2": "RUSH",
         "head2SizePx": 220,
         "priceScale": 1,
-        "bgUrl": "/scene-assets/sugar-rush/background.jpg",
+        "bgUrl": "/scene-assets/sugar-rush/background-editor.jpg",
         "bgUploadUrl": null,
         "icons": [],
         "emojis": [],
@@ -2269,7 +2269,7 @@
     "selectedPanel": "project",
     "moveTarget": "headline",
     "selectedPortraitId": null,
-    "backgroundUrl": "/scene-assets/sugar-rush/background.jpg",
+    "backgroundUrl": "/scene-assets/sugar-rush/background-editor.jpg",
     "palette": {
       "bgFrom": "#1D041F",
       "bgTo": "#150416",
@@ -2772,7 +2772,7 @@
     "headGoldBlockRoughness": 0.48,
     "head2": "RUSH",
     "head2SizePx": 172,
-    "bgUrl": "/scene-assets/sugar-rush/background.jpg",
+    "bgUrl": "/scene-assets/sugar-rush/background-editor.jpg",
     "bgUploadUrl": null,
     "version": "3.0",
     "portraitSlots": [

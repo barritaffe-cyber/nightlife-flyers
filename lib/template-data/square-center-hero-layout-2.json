@@ -706,7 +706,7 @@
     },
     "session": {
       "square": {
-        "backgroundUrl": "/scene-assets/center-hero/background.jpg",
+        "backgroundUrl": "/scene-assets/center-hero/background-editor.jpg",
         "palette": {
           "bgFrom": "#1E1E20",
           "bgTo": "#050506",
@@ -1426,7 +1426,7 @@
         "pillAlpha": 0,
         "presenterRotation": 0,
         "dateRotation": 0,
-        "bgUrl": "/scene-assets/center-hero/background.jpg",
+        "bgUrl": "/scene-assets/center-hero/background-editor.jpg",
         "bgUploadUrl": null,
         "bgRotate": 0,
         "portraitLocked": false,
@@ -1719,7 +1719,7 @@
       },
       "story": {
         "format": "story",
-        "backgroundUrl": "/scene-assets/center-hero/background.jpg",
+        "backgroundUrl": "/scene-assets/center-hero/background-editor.jpg",
         "palette": {
           "bgFrom": "#1E1E20",
           "bgTo": "#050506",
@@ -2459,7 +2459,7 @@
         "presenterRotation": 0,
         "dateRotation": 0,
         "priceScale": 0.78,
-        "bgUrl": "/scene-assets/center-hero/background.jpg",
+        "bgUrl": "/scene-assets/center-hero/background-editor.jpg",
         "bgUploadUrl": null,
         "bgRotate": 0,
         "portraitLocked": false,
@@ -2767,7 +2767,7 @@
     "selectedPanel": "project",
     "moveTarget": "background",
     "selectedPortraitId": null,
-    "backgroundUrl": "/scene-assets/center-hero/background.jpg",
+    "backgroundUrl": "/scene-assets/center-hero/background-editor.jpg",
     "palette": {
       "bgFrom": "#1E1E20",
       "bgTo": "#050506",
@@ -3472,7 +3472,7 @@
     "pillAlpha": 0,
     "presenterRotation": 0,
     "dateRotation": 0,
-    "bgUrl": "/scene-assets/center-hero/background.jpg",
+    "bgUrl": "/scene-assets/center-hero/background-editor.jpg",
     "bgUploadUrl": null,
     "bgRotate": 0,
     "portraitLocked": false,

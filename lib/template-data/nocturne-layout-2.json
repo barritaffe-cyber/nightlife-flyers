@@ -369,7 +369,7 @@
     },
     "session": {
       "square": {
-        "backgroundUrl": "/scene-assets/ladies%20night/background.png",
+        "backgroundUrl": "/scene-assets/ladies-night/background-editor.jpg",
         "headline": "Noc\nturne",
         "headlineFamily": "Aqilah-JRYXK",
         "headlineSize": 80,
@@ -914,7 +914,7 @@
         "rightRailColor": "#ffffff",
         "rightRailRotation": 90,
         "priceScale": 1,
-        "bgUrl": "/scene-assets/ladies%20night/background.png",
+        "bgUrl": "/scene-assets/ladies-night/background-editor.jpg",
         "bgUploadUrl": null,
         "portraitX": 50,
         "portraitY": 50,
@@ -1146,7 +1146,7 @@
         "icons": []
       },
       "story": {
-        "backgroundUrl": "/scene-assets/ladies%20night/background.png",
+        "backgroundUrl": "/scene-assets/ladies-night/background-editor.jpg",
         "headline": "Noc\nturne",
         "headlineFamily": "Aqilah-JRYXK",
         "headlineSize": 120,
@@ -1829,7 +1829,7 @@
         "rightRailColor": "#ffffff",
         "rightRailRotation": 90,
         "priceScale": 1,
-        "bgUrl": "/scene-assets/ladies%20night/background.png",
+        "bgUrl": "/scene-assets/ladies-night/background-editor.jpg",
         "bgUploadUrl": null,
         "portraitX": 50,
         "portraitY": 50,
@@ -1849,7 +1849,7 @@
     "selectedPanel": "project",
     "moveTarget": "headline",
     "selectedPortraitId": null,
-    "backgroundUrl": "/scene-assets/ladies%20night/background.png",
+    "backgroundUrl": "/scene-assets/ladies-night/background-editor.jpg",
     "headline": "Noc\nturne",
     "headlineFamily": "Aqilah-JRYXK",
     "headlineSize": 80,
@@ -2379,7 +2379,7 @@
     "rightRailColor": "#ffffff",
     "rightRailRotation": 90,
     "priceScale": 1,
-    "bgUrl": "/scene-assets/ladies%20night/background.png",
+    "bgUrl": "/scene-assets/ladies-night/background-editor.jpg",
     "bgUploadUrl": null,
     "portraitX": 50,
     "portraitY": 50,

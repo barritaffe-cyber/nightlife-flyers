@@ -15206,7 +15206,7 @@ const renderMobileTourVisual = React.useCallback((stepId: string) => {
         }
       : stepId === "text_tab" || stepId === "headline"
       ? {
-          src: "/templates/new-york.png",
+          src: "/templates/new-york-editor.jpg",
           alt: "Text editing snapshot",
           label: "Text Tools",
           mode: "text" as const,
@@ -15249,7 +15249,7 @@ const renderMobileTourVisual = React.useCallback((stepId: string) => {
   const thumbImages = [
     "/templates/sunset-yacht.jpg",
     "/templates/disco_mirrorball.jpg",
-    "/templates/new-york.png",
+    "/templates/new-york-editor.jpg",
   ];
   const isTextTabSnapshot = snapshot.mode === "text" || snapshot.mode === "full_image";
   return (

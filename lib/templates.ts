@@ -142,12 +142,12 @@ const SOCIAL_MEDIA_STICKER_URLS = {
 } as const;
 
 const LADIES_NIGHT_SCENE_ASSET_PATHS = {
-  background: "/scene-assets/ladies%20night/background.png",
+  background: "/scene-assets/ladies-night/background-editor.jpg",
   subject: "/scene-assets/ladies%20night/subject-cutout.png",
 } as const;
 
 const MOJITO_ASSET_PATHS = {
-  background: "/scene-assets/mojito/background.jpg",
+  background: "/scene-assets/mojito/background-editor.jpg",
   cutout: "/scene-assets/mojito/cutout.png",
   preview: "/scene-assets/mojito/preview.jpg",
 } as const;
@@ -656,7 +656,6 @@ const LADIES_NIGHT_SQUARE_ASSETS: Emoji[] = [
 ];
 
 const SUGAR_RUSH_ASSET_PATHS = {
-  fullBackground: "/scene-assets/sugar-rush/background.jpg",
   background: "/scene-assets/sugar-rush/background-editor.jpg",
   subject: "/scene-assets/sugar-rush/subject-cutout.png",
 } as const;
@@ -1791,7 +1790,7 @@ export const SQUARE_NIGHTLIFE_LAYOUT_TEMPLATES: TemplateSpec[] = [
     tags: ['Square', 'Center', 'Hero', 'Nightlife'],
     style: 'urban',
     bgPrompt: 'Create a premium cinematic nightclub background plate for an event flyer. The center must stay open for a cutout portrait, with a soft crimson volumetric glow behind that subject area. Use deep black edges, rich red atmosphere, subtle fog layers, faint red particles, gentle film grain, and barely visible city-light texture for depth. Keep the left and right side lanes darker so typography remains readable. The mood should feel polished, expensive, editorial, and high contrast, like a luxury club poster background. Background only: no people, no faces, no silhouettes, no text, no logos, no signage, no watermark, no foreground objects.',
-    preview: '/scene-assets/center-hero/background.jpg',
+    preview: '/scene-assets/center-hero/background-editor.jpg',
     recipeId: 'center-hero-subject-title-system',
     recipeSummary: 'Subject-first center hero: huge title behind the cutout, ghost title depth, script accent, and metadata locked to lanes.',
     compositionGuardrails: [
@@ -1802,7 +1801,7 @@ export const SQUARE_NIGHTLIFE_LAYOUT_TEMPLATES: TemplateSpec[] = [
     ],
     formats: {
       square: {
-        backgroundUrl: '/scene-assets/center-hero/background.jpg',
+        backgroundUrl: '/scene-assets/center-hero/background-editor.jpg',
         palette: {
           bgFrom: '#1E1E20',
           bgTo: '#050506',
@@ -2225,7 +2224,7 @@ export const SQUARE_NIGHTLIFE_LAYOUT_TEMPLATES: TemplateSpec[] = [
       },
       story: {
         format: 'story',
-        backgroundUrl: '/scene-assets/center-hero/background.jpg',
+        backgroundUrl: '/scene-assets/center-hero/background-editor.jpg',
         palette: {
           bgFrom: '#1E1E20',
           bgTo: '#050506',
@@ -2663,7 +2662,7 @@ export const SQUARE_NIGHTLIFE_LAYOUT_TEMPLATES: TemplateSpec[] = [
     tags: ['Square', 'Right Hero', 'Left Text', 'Nightlife'],
     style: 'urban',
     bgPrompt: '',
-    preview: '/templates/new-york.png',
+    preview: '/templates/new-york-editor.jpg',
     formats: {
       square: {
         headline: 'JAQON',
@@ -2966,28 +2965,6 @@ const cloneSavedTemplateVariant = (
   return next;
 };
 
-const replaceTemplateAssetPaths = (
-  base: TemplateBase,
-  replacements: Record<string, string>
-): TemplateBase => {
-  const replaceValue = (value: unknown): unknown => {
-    if (typeof value === 'string') {
-      return replacements[value] ?? value;
-    }
-    if (Array.isArray(value)) {
-      return value.map(replaceValue);
-    }
-    if (value && typeof value === 'object') {
-      return Object.fromEntries(
-        Object.entries(value).map(([key, item]) => [key, replaceValue(item)])
-      );
-    }
-    return value;
-  };
-
-  return replaceValue(base) as TemplateBase;
-};
-
 const EDM_STAGE_CO2_LAYOUT1_SQUARE = cloneSavedTemplateVariant(
   edmStageCo2Layout1Data as unknown as SavedTemplateStateJson,
   'square'
@@ -3038,21 +3015,6 @@ const SUGAR_RUSH_LAYOUT2_SQUARE = cloneSavedTemplateVariant(
   sugarRushLayout2Data as unknown as SavedTemplateStateJson,
   'square',
   SUGAR_RUSH_LAYOUT1_SQUARE
-);
-const SUGAR_RUSH_ASSET_REPLACEMENTS = {
-  [SUGAR_RUSH_ASSET_PATHS.fullBackground]: SUGAR_RUSH_ASSET_PATHS.background,
-} as const;
-const SUGAR_RUSH_SAFE_LAYOUT1_SQUARE = replaceTemplateAssetPaths(
-  SUGAR_RUSH_LAYOUT1_SQUARE,
-  SUGAR_RUSH_ASSET_REPLACEMENTS
-);
-const SUGAR_RUSH_SAFE_LAYOUT1_STORY = replaceTemplateAssetPaths(
-  SUGAR_RUSH_LAYOUT1_STORY,
-  SUGAR_RUSH_ASSET_REPLACEMENTS
-);
-const SUGAR_RUSH_SAFE_LAYOUT2_SQUARE = replaceTemplateAssetPaths(
-  SUGAR_RUSH_LAYOUT2_SQUARE,
-  SUGAR_RUSH_ASSET_REPLACEMENTS
 );
 const LUXE_LAYOUT1_SQUARE = cloneSavedTemplateVariant(
   luxeLayout1Data as unknown as SavedTemplateStateJson,
@@ -3617,10 +3579,10 @@ export function getSugarRushLayoutVariant(
   format: Format = 'square'
 ): TemplateBase | null {
   if (format === 'story') {
-    return cloneTemplateBase(SUGAR_RUSH_SAFE_LAYOUT1_STORY);
+    return cloneTemplateBase(SUGAR_RUSH_LAYOUT1_STORY);
   }
   return cloneTemplateBase(
-    layoutId === 'layout2' ? SUGAR_RUSH_SAFE_LAYOUT2_SQUARE : SUGAR_RUSH_SAFE_LAYOUT1_SQUARE
+    layoutId === 'layout2' ? SUGAR_RUSH_LAYOUT2_SQUARE : SUGAR_RUSH_LAYOUT1_SQUARE
   );
 }
 
@@ -4932,10 +4894,10 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
     tags: ['EDM', 'Techno', 'Cyber', 'Neon'],
     style: 'neon',
     bgPrompt: PRESETS.find((p) => p.key === 'edm_stage_co2')!.prompt,
-    preview: '/templates/edm_stage_co2.jpg',
+    preview: '/templates/techno-afterhours-editor.jpg',
     formats: {
       square: {
-        backgroundUrl: '/templates/edm_stage_co2.jpg',
+        backgroundUrl: '/templates/techno-afterhours-editor.jpg',
         palette: {
           bgFrom: '#220202',
           bgTo: '#160404',
@@ -5360,7 +5322,7 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
         ],
       },
       story: {
-        backgroundUrl: "/templates/edm_stage_co2.jpg",
+        backgroundUrl: "/templates/techno-afterhours-editor.jpg",
         palette: {
                    "bgFrom": "#220202",
                    "bgTo": "#160404",
@@ -8684,7 +8646,7 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
     tags: ['Seasonal', 'Tropical'],
     style: 'tropical',
     bgPrompt: PRESETS.find((p) => p.key === 'afrobeat_rooftop')!.prompt,
-    preview: '/templates/afrobeat_rooftop.jpg',
+    preview: '/templates/afrobeat-rooftop-editor.jpg',
     formats: {
       square: {
         headline: 'AFRO\nSUNSET',
@@ -9519,7 +9481,7 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
     tags: ['Urban', 'City'],
     style: 'urban',
     bgPrompt: '',
-    preview: '/templates/new-york.png',
+    preview: '/templates/new-york-editor.jpg',
     formats: {
       square: {
         headline: 'MANHATTAN',
@@ -11257,10 +11219,10 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
     tags: ['Formal', 'Luxury', 'Upscale'],
     style: 'luxury',
     bgPrompt: '',
-    preview: '/templates/blk-tie.jpg',
+    preview: '/templates/black-tie-editor.jpg',
     formats: {
       square: {
-        backgroundUrl: '/templates/blk-tie.jpg',
+        backgroundUrl: '/templates/black-tie-editor.jpg',
         headline: 'BLACK',
         headlineFamily: 'Bebas Neue',
         headlineSize: 118,
@@ -11328,7 +11290,7 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
         textAlign: 'left',
       },
       story: {
-        backgroundUrl: '/templates/blk-tie.jpg',
+        backgroundUrl: '/templates/black-tie-editor.jpg',
         headline: 'BLACK TIE',
         headlineFamily: 'Bebas Neue',
         headlineSize: 148,
@@ -11403,7 +11365,7 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
     tags: ['Luxury', 'Ladies Night', 'Lounge', 'Editorial'],
     style: 'luxury',
     bgPrompt: '',
-    preview: '/templates/luxe.jpg',
+    preview: '/templates/luxe-editor.jpg',
     recipeSummary: 'Purple and magenta luxury nightlife template using the supplied Luxe layout 1 and layout 2 saved states.',
     formats: {
       square: LUXE_LAYOUT1_SQUARE,
@@ -11416,10 +11378,10 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
     tags: ['Fantasy', 'Glow', 'Editorial'],
     style: 'tropical',
     bgPrompt: '',
-    preview: '/templates/fantasy.jpg',
+    preview: '/templates/fantasy-editor.jpg',
     formats: {
       square: {
-        backgroundUrl: '/templates/fantasy.jpg',
+        backgroundUrl: '/templates/fantasy-editor.jpg',
         headline: 'FANTASY',
         headlineFamily: 'Bebas Neue',
         headlineSize: 110,
@@ -11487,7 +11449,7 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
         textAlign: 'left',
       },
       story: {
-        backgroundUrl: '/templates/fantasy.jpg',
+        backgroundUrl: '/templates/fantasy-editor.jpg',
         headline: 'FANTASY',
         headlineFamily: 'Bebas Neue',
         headlineSize: 152,
@@ -11995,8 +11957,8 @@ const sugarRushTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id ==
 if (sugarRushTemplate) {
   sugarRushTemplate.formats = {
     ...(sugarRushTemplate.formats ?? {}),
-    square: SUGAR_RUSH_SAFE_LAYOUT1_SQUARE,
-    story: SUGAR_RUSH_SAFE_LAYOUT1_STORY,
+    square: SUGAR_RUSH_LAYOUT1_SQUARE,
+    story: SUGAR_RUSH_LAYOUT1_STORY,
   };
 }
 
@@ -12067,6 +12029,26 @@ if (newYorkTemplate) {
     square: NEW_YORK_SQUARE,
   };
 }
+
+const STARTER_TEMPLATE_PREVIEWS: Record<string, string> = {
+  sugar_rush: '/samples/optimized/sugar-rush.webp',
+  blk_tie: '/samples/optimized/black-tie.webp',
+  luxe: '/samples/optimized/vip-lounge.webp',
+  edm_stage_co2: '/samples/optimized/techno.webp',
+  afrobeat_rooftop: '/samples/optimized/afro.webp',
+  square_center_hero_nightlife: '/samples/optimized/dj-night.webp',
+  ladies_night_center_hero: '/samples/optimized/nocturne.webp',
+  kpop_pastel_led: '/samples/optimized/mojito.webp',
+  fantasy: '/samples/optimized/fantasy.webp',
+  'new-york': '/samples/optimized/new-york.webp',
+};
+
+Object.entries(STARTER_TEMPLATE_PREVIEWS).forEach(([id, preview]) => {
+  const template = RAW_TEMPLATE_GALLERY.find((item) => item.id === id);
+  if (template) {
+    template.preview = preview;
+  }
+});
 
 const whiteMinimalTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'white_minimal');
 if (whiteMinimalTemplate?.formats?.square) {

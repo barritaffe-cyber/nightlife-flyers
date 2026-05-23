@@ -498,7 +498,7 @@
     },
     "session": {
       "square": {
-        "backgroundUrl": "/scene-assets/mojito/background.jpg",
+        "backgroundUrl": "/scene-assets/mojito/background-editor.jpg",
         "palette": {
           "bgFrom": "#130C08",
           "bgTo": "#050504",
@@ -960,7 +960,7 @@
         "qrX": 90,
         "qrY": 8,
         "qrScale": 0.55,
-        "bgUrl": "/scene-assets/mojito/background.jpg",
+        "bgUrl": "/scene-assets/mojito/background-editor.jpg",
         "bgUploadUrl": null,
         "bgBlur": 0,
         "bgRotate": 0,
@@ -1151,7 +1151,7 @@
         "emojis": []
       },
       "story": {
-        "backgroundUrl": "/scene-assets/mojito/background.jpg",
+        "backgroundUrl": "/scene-assets/mojito/background-editor.jpg",
         "palette": {
           "bgFrom": "#130C08",
           "bgTo": "#050504",
@@ -1602,7 +1602,7 @@
         "qrX": 90,
         "qrY": 8,
         "qrScale": 0.55,
-        "bgUrl": "/scene-assets/mojito/background.jpg",
+        "bgUrl": "/scene-assets/mojito/background-editor.jpg",
         "bgUploadUrl": null,
         "bgBlur": 0,
         "bgRotate": 0,
@@ -1831,7 +1831,7 @@
     "selectedPanel": "project",
     "moveTarget": "headline2",
     "selectedPortraitId": null,
-    "backgroundUrl": "/scene-assets/mojito/background.jpg",
+    "backgroundUrl": "/scene-assets/mojito/background-editor.jpg",
     "palette": {
       "bgFrom": "#130C08",
       "bgTo": "#050504",
@@ -2278,7 +2278,7 @@
     "qrX": 90,
     "qrY": 8,
     "qrScale": 0.55,
-    "bgUrl": "/scene-assets/mojito/background.jpg",
+    "bgUrl": "/scene-assets/mojito/background-editor.jpg",
     "bgUploadUrl": null,
     "bgBlur": 0,
     "bgRotate": 0,

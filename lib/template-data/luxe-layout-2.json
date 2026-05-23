@@ -337,7 +337,7 @@
     },
     "session": {
       "square": {
-        "backgroundUrl": "/templates/luxe.jpg",
+        "backgroundUrl": "/templates/luxe-editor.jpg",
         "palette": {
           "bgFrom": "#14051C",
           "bgTo": "#05030A",
@@ -664,7 +664,7 @@
         "qrX": 90,
         "qrY": 8,
         "qrScale": 0.55,
-        "bgUrl": "/templates/luxe.jpg",
+        "bgUrl": "/templates/luxe-editor.jpg",
         "bgUploadUrl": null,
         "portraitX": 50,
         "portraitY": 50,
@@ -810,7 +810,7 @@
         ]
       },
       "story": {
-        "backgroundUrl": "/templates/luxe.jpg",
+        "backgroundUrl": "/templates/luxe-editor.jpg",
         "palette": {
           "bgFrom": "#14051C",
           "bgTo": "#05030A",
@@ -1137,7 +1137,7 @@
         "qrX": 90,
         "qrY": 8,
         "qrScale": 0.55,
-        "bgUrl": "/templates/luxe.jpg",
+        "bgUrl": "/templates/luxe-editor.jpg",
         "bgUploadUrl": null,
         "portraitX": 50,
         "portraitY": 50,
@@ -1329,7 +1329,7 @@
     "selectedPanel": "project",
     "moveTarget": "headline",
     "selectedPortraitId": null,
-    "backgroundUrl": "/templates/luxe.jpg",
+    "backgroundUrl": "/templates/luxe-editor.jpg",
     "palette": {
       "bgFrom": "#14051C",
       "bgTo": "#05030A",
@@ -1641,7 +1641,7 @@
     "qrX": 90,
     "qrY": 8,
     "qrScale": 0.55,
-    "bgUrl": "/templates/luxe.jpg",
+    "bgUrl": "/templates/luxe-editor.jpg",
     "bgUploadUrl": null,
     "portraitX": 50,
     "portraitY": 50,

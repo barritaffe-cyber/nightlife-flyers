@@ -481,7 +481,7 @@
     },
     "session": {
       "square": {
-        "backgroundUrl": "/templates/edm_stage_co2.jpg",
+        "backgroundUrl": "/templates/techno-afterhours-editor.jpg",
         "palette": {
           "bgFrom": "#021B21",
           "bgTo": "#041216",
@@ -927,7 +927,7 @@
         "head2Skew": 0,
         "venueItalic": false,
         "pillAlpha": 0.92,
-        "bgUrl": "/templates/edm_stage_co2.jpg",
+        "bgUrl": "/templates/techno-afterhours-editor.jpg",
         "bgUploadUrl": null,
         "portraitX": 50,
         "portraitY": 50,
@@ -1113,7 +1113,7 @@
         "emojis": []
       },
       "story": {
-        "backgroundUrl": "/templates/edm_stage_co2.jpg",
+        "backgroundUrl": "/templates/techno-afterhours-editor.jpg",
         "palette": {
           "bgFrom": "#220202",
           "bgTo": "#160404",
@@ -1643,7 +1643,7 @@
         "head2SizePx": 24,
         "head2Skew": 0,
         "priceScale": 1,
-        "bgUrl": "/templates/edm_stage_co2.jpg",
+        "bgUrl": "/templates/techno-afterhours-editor.jpg",
         "bgUploadUrl": null,
         "portraits": [
           {
@@ -1815,7 +1815,7 @@
     "selectedPanel": "project",
     "moveTarget": null,
     "selectedPortraitId": null,
-    "backgroundUrl": "/templates/edm_stage_co2.jpg",
+    "backgroundUrl": "/templates/techno-afterhours-editor.jpg",
     "palette": {
       "bgFrom": "#021B21",
       "bgTo": "#041216",
@@ -2246,7 +2246,7 @@
     "head2Skew": 0,
     "venueItalic": false,
     "pillAlpha": 0.92,
-    "bgUrl": "/templates/edm_stage_co2.jpg",
+    "bgUrl": "/templates/techno-afterhours-editor.jpg",
     "bgUploadUrl": null,
     "portraitX": 50,
     "portraitY": 50,
