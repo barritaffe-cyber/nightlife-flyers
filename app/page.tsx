@@ -3971,7 +3971,6 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
   onIconResize?: (id: string, size: number) => void;
   onRecordMove?: (kind: any, x: number, y: number, id?: string) => void;
   isMobileView?: boolean;
-  renderGlassHeadlineFx?: boolean;
   onClearIconSelection?: () => void;
   
   selIconId?: string | null;
@@ -4055,7 +4054,6 @@ const Artboard = React.memo(React.forwardRef<HTMLDivElement, {
     onEmojiMove,
     onAlignmentPositionPreview,
     isMobileView,
-    renderGlassHeadlineFx = true,
     mobileDragEnabled = false,
     onMobileDragEnd,
     onOpenTextFloat,
@@ -6012,7 +6010,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
     const estimatedTextHeight = Math.max(headDisplayPx, headDisplayPx * lineHeight * explicitLineCount);
     const exportTextMode = !!hideUiForExport;
     const mobileLiveTextPerfMode = !!isMobileView && !exportTextMode;
-    const liveTextPerfMode = (!!isLiveDragging || mobileLiveTextPerfMode) && !exportTextMode;
+    const mobileStoryExportTextPerfMode = !!isMobileView && exportTextMode && format === "story";
+    const liveTextPerfMode = !!isLiveDragging || mobileLiveTextPerfMode || mobileStoryExportTextPerfMode;
     const extrudeRenderDepth = liveTextPerfMode
       ? Math.min(extrudeDepth, HEADLINE_EXTRUDE_LIVE_MAX_DEPTH)
       : extrudeDepth;
@@ -6060,7 +6059,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	    const sliceActive = false;
 	    const mainSliceShadow = "none";
 	    const rushActive = !!headRushEnabled && !glitchActive && !kineticActive && !dashStrokeActive && !doodleStackActive && !goldBlockActive && !quantumActive && !verticalStretchActive && !pure3dActive;
-	    const glassActive = !!renderGlassHeadlineFx && !!headGlassEnabled && !glitchActive && !kineticActive && !dashStrokeActive && !doodleStackActive && !goldBlockActive && !cyberEmbossActive && !quantumActive && !verticalStretchActive && !pure3dActive && !rushActive && !sliceActive;
+	    const glassActive = !!headGlassEnabled && !glitchActive && !kineticActive && !dashStrokeActive && !doodleStackActive && !goldBlockActive && !cyberEmbossActive && !quantumActive && !verticalStretchActive && !pure3dActive && !rushActive && !sliceActive;
 	    const rawGlassLineHeight = Number(lineHeight);
 	    const glassSafeLineHeight = glassActive
 	      ? Math.max(
@@ -6502,7 +6501,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	    const neonPulseSvgX = headAlign === "left" ? "0%" : headAlign === "right" ? "100%" : "50%";
 	    const neonPulseTextAnchor = (headAlign === "left" ? "start" : headAlign === "right" ? "end" : "middle") as "start" | "middle" | "end";
 	    const glitchGlowDropShadow =
-	      glitchGlow > 0 && !mobileLiveTextPerfMode
+	      glitchGlow > 0 && !liveTextPerfMode
 	        ? `drop-shadow(0 0 ${(2 + glitchGlow * 10).toFixed(1)}px rgba(255,255,255,${(0.08 + glitchGlow * 0.22).toFixed(2)}))`
 	        : "";
 	    const glitchGlowFilter = glitchGlowDropShadow || "none";
@@ -6527,7 +6526,7 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	        ? Math.max(
 	            2,
 	            Math.round(
-	              mobileLiveTextPerfMode
+	              liveTextPerfMode
 	                ? 2 + glitchNoise * 6 + glitchIntensity * glitchNoise * 4
 	                : 4 + glitchNoise * 18 + glitchIntensity * glitchNoise * 8
 	            )
@@ -7702,7 +7701,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	      "headline-glass-12-sharp-highlight",
 	      "headline-glass-15-final-white-edge",
 	    ]);
-	    const glassCssLayerSpecs = mobileLiveTextPerfMode
+	    const mobileGlassPerfMode = mobileLiveTextPerfMode || mobileStoryExportTextPerfMode;
+	    const glassCssLayerSpecs = mobileGlassPerfMode
 	      ? psgGlassCssLayerSpecs.filter((layer) => mobileGlassLiveLayerKeys.has(layer.key))
 	      : liveTextPerfMode
 	      ? psgGlassCssLayerSpecs.filter((layer) => layer.live)
@@ -20794,14 +20794,33 @@ const mobileFloatPanelClass =
     const isMobileExport =
       typeof navigator !== "undefined" &&
       /iPad|iPhone|iPod|Android/i.test(navigator.userAgent || "");
+    const mobileStoryExport = isMobileExport && format === "story";
+    const mobileHeavyFxExport =
+      mobileStoryExport &&
+      !!(
+        headGlassEnabled ||
+        headGlitchEnabled ||
+        headKineticEnabled ||
+        headDashStrokeEnabled ||
+        headColorStrokeEnabled ||
+        headGoldBlockEnabled ||
+        headCyberEmbossEnabled ||
+        headQuantumEnabled ||
+        headVerticalStretchEnabled ||
+        headPure3dEnabled ||
+        headRushEnabled
+      );
     const safeScale = isMobileExport
-      ? clampMobileExportScale(exportScale, canvasSize.w, canvasSize.h)
+      ? clampMobileExportScale(exportScale, canvasSize.w, canvasSize.h, {
+          story: mobileStoryExport,
+          heavyFx: mobileHeavyFxExport,
+        })
       : exportType === "jpg"
       ? clampDesktopJpgExportScale(exportScale, canvasSize.w, canvasSize.h)
       : exportScale;
-    let usedScale = exportScale;
-    let width = canvasSize.w * exportScale;
-    let height = canvasSize.h * exportScale;
+    let usedScale = safeScale;
+    let width = canvasSize.w * safeScale;
+    let height = canvasSize.h * safeScale;
     try {
       const needsRetry = () => {
         const art = artRef.current;
@@ -20819,17 +20838,22 @@ const mobileFloatPanelClass =
 
       const mustRetry = !!(bgUrl || bgUploadUrl || logoUrl);
       const maxAttempts = mustRetry ? 3 : 1;
+      const mobileScaleCandidates = mobileStoryExport
+        ? mobileHeavyFxExport
+          ? [safeScale, 1.15, 1]
+          : [safeScale, 1.25, 1]
+        : [safeScale, 1.5, 1.25, 1];
       const scaleAttempts = isMobileExport
         ? Array.from(
             new Set(
-              [safeScale, 2, 1.5, 1].filter(
+              mobileScaleCandidates.filter(
                 (value) =>
                   Number.isFinite(value) &&
                   value >= 1 &&
                   value <= safeScale
               )
             )
-          )
+          ).sort((a, b) => b - a)
         : exportType === "jpg"
         ? Array.from(
             new Set(
@@ -20963,6 +20987,18 @@ const mobileFloatPanelClass =
     exportType,
     exportStatus,
     isStarterPlan,
+    format,
+    headColorStrokeEnabled,
+    headCyberEmbossEnabled,
+    headDashStrokeEnabled,
+    headGlassEnabled,
+    headGlitchEnabled,
+    headGoldBlockEnabled,
+    headKineticEnabled,
+    headPure3dEnabled,
+    headQuantumEnabled,
+    headRushEnabled,
+    headVerticalStretchEnabled,
     refreshStarterRenderQuota,
     starterRenderLimitMessage,
     starterRenderQuota,
@@ -25963,22 +25999,34 @@ const EXPORT_TRANSPARENT_PIXEL =
 const MOBILE_EXPORT_MAX_DIM = 1440;
 const MOBILE_EXPORT_MAX_PIXELS = 1_600_000;
 const MOBILE_EXPORT_MAX_SCALE = 2;
+const MOBILE_STORY_EXPORT_MAX_DIM = 1200;
+const MOBILE_STORY_EXPORT_MAX_PIXELS = 900_000;
+const MOBILE_STORY_EXPORT_MAX_SCALE = 1.25;
+const MOBILE_STORY_HEAVY_FX_MAX_SCALE = 1.15;
 const DESKTOP_JPG_EXPORT_MAX_DIM = 3200;
 const DESKTOP_JPG_EXPORT_MAX_PIXELS = 9_000_000;
 
 function clampMobileExportScale(
   requestedScale: number,
   width: number,
-  height: number
+  height: number,
+  opts: { story?: boolean; heavyFx?: boolean } = {}
 ) {
   const baseMaxDim = Math.max(width, height, 1);
-  const safeByDim = MOBILE_EXPORT_MAX_DIM / baseMaxDim;
+  const maxDim = opts.story ? MOBILE_STORY_EXPORT_MAX_DIM : MOBILE_EXPORT_MAX_DIM;
+  const maxPixels = opts.story ? MOBILE_STORY_EXPORT_MAX_PIXELS : MOBILE_EXPORT_MAX_PIXELS;
+  const maxScale = opts.heavyFx
+    ? Math.min(MOBILE_STORY_EXPORT_MAX_SCALE, MOBILE_STORY_HEAVY_FX_MAX_SCALE)
+    : opts.story
+    ? MOBILE_STORY_EXPORT_MAX_SCALE
+    : MOBILE_EXPORT_MAX_SCALE;
+  const safeByDim = maxDim / baseMaxDim;
   const safeByPixels = Math.sqrt(
-    MOBILE_EXPORT_MAX_PIXELS / Math.max(width * height, 1)
+    maxPixels / Math.max(width * height, 1)
   );
   const safeScale = Math.max(
     1,
-    Math.min(requestedScale, MOBILE_EXPORT_MAX_SCALE, safeByDim, safeByPixels)
+    Math.min(requestedScale, maxScale, safeByDim, safeByPixels)
   );
   return Math.floor(safeScale * 100) / 100;
 }
@@ -26106,7 +26154,11 @@ async function waitForBackgroundImages(root: HTMLElement) {
   } catch {
     // ignore
   }
-  await Promise.all(Array.from(urls).map((u) => waitForImageUrl(u)));
+  for (const url of Array.from(urls)) {
+    await waitForImageUrl(url);
+    await waitForCanvasPreloadFrame();
+    await waitForCanvasPreloadPause(16);
+  }
 }
 
 function normalizeDomPreloadUrl(rawSrc: string) {
@@ -26201,10 +26253,9 @@ async function waitForImages(root: HTMLElement) {
   const imgs = Array.from(root.querySelectorAll('img')).filter(
     (img) => !img.closest?.('[data-nonexport="true"]')
   ) as HTMLImageElement[];
-  await Promise.all(
-    imgs.map(async (img) => {
-      try {
-        if (img.complete && img.naturalWidth > 0) return;
+  for (const img of imgs) {
+    try {
+      if (!(img.complete && img.naturalWidth > 0)) {
         if ('decode' in img) {
           await (img as any).decode();
         } else {
@@ -26213,11 +26264,13 @@ async function waitForImages(root: HTMLElement) {
             (img as HTMLImageElement).onerror = () => resolve();
           });
         }
-      } catch {
-        // ignore decode errors, proceed with export
       }
-    })
-  );
+    } catch {
+      // ignore decode errors, proceed with export
+    }
+    await waitForCanvasPreloadFrame();
+    await waitForCanvasPreloadPause(16);
+  }
 }
 
 async function inlineImagesForExport(
@@ -26467,6 +26520,10 @@ async function renderExportDataUrl(
   const isMobileExport =
     typeof navigator !== "undefined" &&
     /iPad|iPhone|iPod|Android/i.test(navigator.userAgent || "");
+  const isMobileStoryExport = isMobileExport && canvasSize.h > canvasSize.w;
+  const mobileExportMaxDim = isMobileStoryExport
+    ? MOBILE_STORY_EXPORT_MAX_DIM
+    : MOBILE_EXPORT_MAX_DIM;
   const shouldInlineProxy = !!(isMobileExport || forceProxy);
 
   try {
@@ -26560,7 +26617,7 @@ async function renderExportDataUrl(
     let bgSrcForExport: string | null = null;
     try {
       const snapSize = Math.min(
-        MOBILE_EXPORT_MAX_DIM,
+        mobileExportMaxDim,
         Math.max(canvasSize.w, canvasSize.h) * Math.max(1, scale)
       );
       const bgSnap = await (artRef.current as any)?.exportBackgroundDataUrl?.({ size: snapSize });
@@ -26610,7 +26667,7 @@ async function renderExportDataUrl(
 
     onStage?.("Baking image layers one at a time...");
     await preloadDomCanvasImagesSequentially(captureNode, {
-      pauseMs: isMobileExport ? 55 : 16,
+      pauseMs: isMobileStoryExport ? 75 : isMobileExport ? 55 : 16,
       onStep: (step) => {
         onStage?.(`Baking ${step.job.label}`);
         const total = Math.max(1, step.total);
@@ -26721,7 +26778,7 @@ async function renderExportDataUrl(
           return await htmlToImage.toPng(captureNode, captureOptions);
         };
 
-        const needsWarmup = format !== 'jpg' && !!(bgUploadUrl || bgUrl || logoUrl);
+        const needsWarmup = !isMobileExport && format !== 'jpg' && !!(bgUploadUrl || bgUrl || logoUrl);
         if (!needsWarmup) return await capture();
 
         await capture(); // warm-up pass
@@ -43014,7 +43071,6 @@ style={{ top: STICKY_TOP }}
             onClearIconSelection={handleClearIconSelection}
             onBgScale={setBgScale}
             isMobileView={isMobileView}
-            renderGlassHeadlineFx={mobileRenderFxPreviewEnabled}
             mobileDragEnabled={mobileDragEnabled}
             onMobileDragEnd={handleMobileDragEnd}
             onOpenTextFloat={() => {
