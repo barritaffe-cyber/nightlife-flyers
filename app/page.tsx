@@ -902,6 +902,174 @@ async function analyzeTemplateBackgroundPalette(src: string): Promise<Palette | 
 
 const tintedTextureCache = new Map<string, string>();
 
+type CanvasPreloadJob = {
+  key: string;
+  src: string;
+  label: string;
+  kind?: "image" | "tintedTexture";
+  hue?: number;
+};
+
+type CanvasPreloadQueueStep = {
+  job: CanvasPreloadJob;
+  index: number;
+  total: number;
+  done: number;
+  errors: number;
+  phase: "start" | "done";
+};
+
+const CANVAS_PRELOAD_PROBLEM_COPY = [
+  "Solving: make the event clear in the first three seconds.",
+  "Solving: keep post and story versions matched without rebuilding twice.",
+  "Solving: protect mobile memory by loading one premium layer at a time.",
+  "Solving: keep the date, venue, price, and social details export-ready.",
+  "Solving: prepare the design so edits stay responsive after load.",
+];
+
+function stablePreloadHash(value: string) {
+  if (value.length > 2048) {
+    value = `${value.slice(0, 768)}:${value.length}:${value.slice(-768)}`;
+  }
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function canPreloadCanvasSource(src?: string | null) {
+  const value = String(src || "").trim();
+  return !!value && !value.startsWith("about:") && !value.startsWith("javascript:");
+}
+
+function buildCanvasPreloadKey(src: string, kind: CanvasPreloadJob["kind"] = "image", hue = 0) {
+  return `${kind}:${stablePreloadHash(src)}:${Math.round(Number(hue) || 0)}`;
+}
+
+function waitForCanvasPreloadFrame() {
+  if (typeof window === "undefined") return Promise.resolve();
+  return new Promise<void>((resolve) => {
+    window.requestAnimationFrame(() => resolve());
+  });
+}
+
+function waitForCanvasPreloadPause(ms: number) {
+  if (!ms || typeof window === "undefined") return Promise.resolve();
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+async function loadCanvasPreloadImage(src: string): Promise<HTMLImageElement> {
+  if (!canPreloadCanvasSource(src)) throw new Error("Missing image source");
+  const img = new Image();
+  if (!src.startsWith("data:") && !src.startsWith("blob:")) {
+    img.crossOrigin = "anonymous";
+  }
+  img.decoding = "async";
+  img.loading = "eager";
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = () => reject(new Error("Image failed to preload"));
+    img.src = src;
+  });
+  if ((img as any).decode) {
+    try {
+      await (img as any).decode();
+    } catch {
+      // The onload path already proved the browser has the image.
+    }
+  }
+  return img;
+}
+
+async function preloadCanvasImageUrl(src?: string | null) {
+  if (!canPreloadCanvasSource(src)) return true;
+  try {
+    await loadCanvasPreloadImage(String(src));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function bakeTintedTextureSource(src: string, hue: number) {
+  if (!src || !hue) {
+    await preloadCanvasImageUrl(src);
+    return src;
+  }
+
+  const cacheKey = `${src}|${Math.round(hue)}`;
+  const cached = tintedTextureCache.get(cacheKey);
+  if (cached) return cached;
+
+  const img = await loadCanvasPreloadImage(src);
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth || img.width;
+    canvas.height = img.naturalHeight || img.height;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx || !canvas.width || !canvas.height) return src;
+
+    ctx.drawImage(img, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    const [tr, tg, tb] = hslToRgb(hue, 1, 0.5);
+
+    for (let i = 0; i < data.length; i += 4) {
+      const alpha = data[i + 3];
+      if (alpha === 0) continue;
+
+      const luminance =
+        (0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]) / 255;
+      const boosted = Math.max(0, Math.min(1, luminance * 1.15 + 0.05));
+
+      data[i] = Math.round(tr * boosted);
+      data[i + 1] = Math.round(tg * boosted);
+      data[i + 2] = Math.round(tb * boosted);
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+    const tinted = canvas.toDataURL("image/png");
+    tintedTextureCache.set(cacheKey, tinted);
+    return tinted;
+  } catch {
+    return src;
+  }
+}
+
+async function preloadCanvasJobsSequentially(
+  jobs: CanvasPreloadJob[],
+  opts: {
+    onStep?: (step: CanvasPreloadQueueStep) => void;
+    pauseMs?: number;
+    shouldCancel?: () => boolean;
+  } = {}
+) {
+  let errors = 0;
+  const total = jobs.length;
+
+  for (let index = 0; index < jobs.length; index += 1) {
+    if (opts.shouldCancel?.()) break;
+    const job = jobs[index];
+    opts.onStep?.({ job, index, total, done: index, errors, phase: "start" });
+
+    const ok =
+      job.kind === "tintedTexture"
+        ? await bakeTintedTextureSource(job.src, Number(job.hue || 0)).then(() => true).catch(() => false)
+        : await preloadCanvasImageUrl(job.src);
+    if (!ok) errors += 1;
+
+    opts.onStep?.({ job, index, total, done: index + 1, errors, phase: "done" });
+    await waitForCanvasPreloadFrame();
+    await waitForCanvasPreloadPause(opts.pauseMs ?? 0);
+  }
+
+  return { errors };
+}
+
 function TintedTextureImage({
   src,
   hue,
@@ -924,58 +1092,13 @@ function TintedTextureImage({
       };
     }
 
-    const cacheKey = `${src}|${Math.round(hue)}`;
-    const cached = tintedTextureCache.get(cacheKey);
-    if (cached) {
-      setDisplaySrc(cached);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      try {
-        const canvas = document.createElement("canvas");
-        canvas.width = img.naturalWidth || img.width;
-        canvas.height = img.naturalHeight || img.height;
-        const ctx = canvas.getContext("2d", { willReadFrequently: true });
-        if (!ctx || !canvas.width || !canvas.height) {
-          if (!cancelled) setDisplaySrc(src);
-          return;
-        }
-
-        ctx.drawImage(img, 0, 0);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const data = imageData.data;
-        const [tr, tg, tb] = hslToRgb(hue, 1, 0.5);
-
-        for (let i = 0; i < data.length; i += 4) {
-          const alpha = data[i + 3];
-          if (alpha === 0) continue;
-
-          const luminance =
-            (0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]) / 255;
-          const boosted = Math.max(0, Math.min(1, luminance * 1.15 + 0.05));
-
-          data[i] = Math.round(tr * boosted);
-          data[i + 1] = Math.round(tg * boosted);
-          data[i + 2] = Math.round(tb * boosted);
-        }
-
-        ctx.putImageData(imageData, 0, 0);
-        const tinted = canvas.toDataURL("image/png");
-        tintedTextureCache.set(cacheKey, tinted);
-        if (!cancelled) setDisplaySrc(tinted);
-      } catch {
+    void bakeTintedTextureSource(src, hue)
+      .then((nextSrc) => {
+        if (!cancelled) setDisplaySrc(nextSrc || src);
+      })
+      .catch(() => {
         if (!cancelled) setDisplaySrc(src);
-      }
-    };
-    img.onerror = () => {
-      if (!cancelled) setDisplaySrc(src);
-    };
-    img.src = src;
+      });
 
     return () => {
       cancelled = true;
@@ -5280,6 +5403,8 @@ return (
         crossOrigin="anonymous"
         alt="background"
         draggable={false}
+        decoding="async"
+        loading="eager"
         // ✅ FIX: Also catch standard load events
         onLoad={(e) => {
           const img = e.currentTarget;
@@ -11220,6 +11345,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
         src={qrImageUrl}
         alt=""
         draggable={false}
+        decoding="async"
+        loading="eager"
         style={{
           display: 'block',
           width: '100%',
@@ -19542,6 +19669,7 @@ React.useEffect(() => {
     scale: number;
   } | null>(null);
   const [exportProgress, setExportProgress] = useState(0);
+  const [exportProgressLabel, setExportProgressLabel] = useState("Merging final flyer...");
   const [exportProgressActive, setExportProgressActive] = useState(false);
   const [exportBlobUrl, setExportBlobUrl] = useState<string | null>(null);
   const [exportFilename, setExportFilename] = useState<string | null>(null);
@@ -20653,6 +20781,7 @@ const mobileFloatPanelClass =
     setExportModalOpen(true);
     setExportStatus('rendering');
     setExportError(null);
+    setExportProgressLabel("Preparing final render...");
     setExportDataUrl(null);
     if (exportBlobUrl) {
       try { URL.revokeObjectURL(exportBlobUrl); } catch {}
@@ -20729,7 +20858,8 @@ const mobileFloatPanelClass =
               exportType,
               scale,
               (p) => setExportProgress(p),
-              false
+              false,
+              setExportProgressLabel
             );
             usedScale = scale;
             width = Math.round(canvasSize.w * scale);
@@ -20756,7 +20886,8 @@ const mobileFloatPanelClass =
                   exportType,
                   scale,
                   (p) => setExportProgress(p),
-                  true
+                  true,
+                  setExportProgressLabel
                 );
                 usedScale = scale;
                 width = Math.round(canvasSize.w * scale);
@@ -20804,10 +20935,12 @@ const mobileFloatPanelClass =
         scale: usedScale,
       });
       setExportProgress(100);
+      setExportProgressLabel("Export ready.");
       setExportStatus('ready');
       finishExportProgress();
     } catch (err) {
       setExportStatus('error');
+      setExportProgressLabel("Export failed.");
       let msg: string;
       if (err instanceof Error) {
         msg = `${err.name}: ${err.message}`;
@@ -25957,22 +26090,7 @@ function applyTextShadowFallbackForExport(root: HTMLElement) {
 }
 
 async function waitForImageUrl(url?: string | null) {
-  if (!url) return;
-  try {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = url;
-    if ((img as any).decode) {
-      await (img as any).decode();
-    } else {
-      await new Promise<void>((resolve) => {
-        img.onload = () => resolve();
-        img.onerror = () => resolve();
-      });
-    }
-  } catch {
-    // ignore
-  }
+  await preloadCanvasImageUrl(url);
 }
 
 async function waitForBackgroundImages(root: HTMLElement) {
@@ -25989,6 +26107,62 @@ async function waitForBackgroundImages(root: HTMLElement) {
     // ignore
   }
   await Promise.all(Array.from(urls).map((u) => waitForImageUrl(u)));
+}
+
+function normalizeDomPreloadUrl(rawSrc: string) {
+  const raw = String(rawSrc || "").trim();
+  if (!raw || raw.startsWith("about:")) return "";
+  if (raw.startsWith("http") || raw.startsWith("blob:") || raw.startsWith("data:")) return raw;
+  try {
+    return new URL(raw, window.location.href).toString();
+  } catch {
+    return raw;
+  }
+}
+
+function collectDomCanvasPreloadJobs(root: HTMLElement) {
+  const jobs: CanvasPreloadJob[] = [];
+  const seen = new Set<string>();
+  const add = (src: string, label: string) => {
+    const normalized = normalizeDomPreloadUrl(src);
+    if (!canPreloadCanvasSource(normalized)) return;
+    const key = buildCanvasPreloadKey(normalized);
+    if (seen.has(key)) return;
+    seen.add(key);
+    jobs.push({ key, src: normalized, label, kind: "image" });
+  };
+
+  try {
+    const imgs = Array.from(root.querySelectorAll("img")).filter(
+      (img) => !img.closest?.('[data-nonexport="true"]')
+    ) as HTMLImageElement[];
+    imgs.forEach((img, index) => {
+      add(img.currentSrc || img.getAttribute("src") || "", img.alt || `image layer ${index + 1}`);
+    });
+
+    const nodes = Array.from(root.querySelectorAll("*")) as HTMLElement[];
+    nodes.forEach((el, index) => {
+      const bg = getComputedStyle(el).backgroundImage;
+      if (!bg || bg === "none" || bg.includes("gradient")) return;
+      extractCssUrls(bg).forEach((url) => add(url, `background layer ${index + 1}`));
+    });
+  } catch {
+    // best effort
+  }
+
+  return jobs;
+}
+
+async function preloadDomCanvasImagesSequentially(
+  root: HTMLElement,
+  opts: {
+    onStep?: (step: CanvasPreloadQueueStep) => void;
+    pauseMs?: number;
+    shouldCancel?: () => boolean;
+  } = {}
+) {
+  const jobs = collectDomCanvasPreloadJobs(root);
+  return preloadCanvasJobsSequentially(jobs, opts);
 }
 
 function getScrollParent(el: HTMLElement): HTMLElement | null {
@@ -26253,7 +26427,8 @@ async function renderExportDataUrl(
   format: 'png' | 'jpg',
   scale: number,
   onProgress?: (p: number) => void,
-  forceProxy?: boolean
+  forceProxy?: boolean,
+  onStage?: (label: string) => void
 ) {
   const exportRoot =
     (art.closest?.('[data-export-root="true"]') as HTMLElement) ||
@@ -26300,6 +26475,7 @@ async function renderExportDataUrl(
     setIsGenerating(true);
     setHideUiForExport(true);
     clearAllSelections();
+    onStage?.("Preparing final render...");
     onProgress?.(8);
 
     (window as any).__HIDE_UI_EXPORT__ = true;
@@ -26432,6 +26608,16 @@ async function renderExportDataUrl(
     }
     onProgress?.(55);
 
+    onStage?.("Baking image layers one at a time...");
+    await preloadDomCanvasImagesSequentially(captureNode, {
+      pauseMs: isMobileExport ? 55 : 16,
+      onStep: (step) => {
+        onStage?.(`Baking ${step.job.label}`);
+        const total = Math.max(1, step.total);
+        onProgress?.(55 + Math.round((step.done / total) * 12));
+      },
+    });
+
     const exportStyle = getComputedStyle(captureNode);
     const exportNodeFilter =
       exportStyle.filter && exportStyle.filter !== "none" ? exportStyle.filter : "";
@@ -26506,9 +26692,11 @@ async function renderExportDataUrl(
         const injectedFonts = await injectGoogleFontsForExport(captureNode, families);
         restoreExportFonts = injectedFonts.restore;
         restoreTextShadowFallback = applyTextShadowFallbackForExport(captureNode);
+        onStage?.("Checking final image layers...");
         await waitForImageUrl(bgUploadUrl || bgUrl);
         await waitForImageUrl(logoUrl);
         if (shouldInlineProxy) {
+          onStage?.("Making mobile-safe image copies...");
           const inlineImgs = await inlineImagesForExport(captureNode, { forceProxy: true });
           restoreInlineImages = inlineImgs.restore;
           missingInline = inlineImgs.missing;
@@ -26519,6 +26707,7 @@ async function renderExportDataUrl(
         }
         await waitForImages(captureNode);
         await waitForBackgroundImages(captureNode);
+        onStage?.("Merging final flyer...");
         onProgress?.(70);
 
         const capture = async () => {
@@ -27343,6 +27532,8 @@ const portraitCanvas = React.useMemo(() => {
                 crossOrigin="anonymous"
                 alt=""
                 draggable={false}
+                decoding="async"
+                loading="eager"
                 onDragStart={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -28058,6 +28249,8 @@ const flareCanvas = React.useMemo(() => {
                   data-hit-source="true"
                   src={runtimeUrl}
                   hue={tintDeg}
+                  decoding="async"
+                  loading="eager"
                   style={{
                     transform: `scale(${p.scale ?? 1}) rotate(${(p as any).rotation ?? 0}deg)`,
                   maxWidth: flareMaxSide,
@@ -28077,6 +28270,8 @@ const flareCanvas = React.useMemo(() => {
                   src={runtimeUrl}
                   alt=""
                   draggable={false}
+                  decoding="async"
+                  loading="eager"
                   style={{
                     transform: `scale(${p.scale ?? 1}) rotate(${(p as any).rotation ?? 0}deg)`,
                   maxWidth: flareMaxSide,
@@ -31450,6 +31645,152 @@ const [hasSavedDesign, setHasSavedDesign] = React.useState(false);
 const [uiMode, setUiMode] = React.useState<"design" | "finish">("design");
 const mobileRenderFxPreviewEnabled = hideUiForExport || !isMobileView || uiMode === "finish";
 const canvasMasterFilterCss = mobileRenderFxPreviewEnabled ? masterFilterCss : "none";
+const canvasPreloadAssets = React.useMemo<CanvasPreloadJob[]>(() => {
+  const jobs: CanvasPreloadJob[] = [];
+  const seen = new Set<string>();
+  const addJob = (
+    src: unknown,
+    label: string,
+    opts?: { kind?: CanvasPreloadJob["kind"]; hue?: number }
+  ) => {
+    const raw = String(src || "").trim();
+    if (!raw) return;
+    const resolved = resolveRuntimeAssetUrl(raw);
+    if (!canPreloadCanvasSource(resolved)) return;
+    const hue = Math.round(Number(opts?.hue || 0));
+    const kind = opts?.kind === "tintedTexture" && hue !== 0 ? "tintedTexture" : "image";
+    const key = buildCanvasPreloadKey(resolved, kind, hue);
+    if (seen.has(key)) return;
+    seen.add(key);
+    jobs.push({ key, src: resolved, label, kind, hue });
+  };
+
+  addJob(bgUploadUrl || bgUrl, "background");
+  addJob(logoUrl, "logo");
+  addJob(portraitUrl, "portrait");
+  addJob(qrImageUrl, "QR code");
+  addJob(textFx.texture, "headline texture");
+
+  ((portraits?.[format] || []) as any[]).forEach((asset, index) => {
+    const label = resolveCanvasAssetName(asset) || `canvas asset ${index + 1}`;
+    const url = (asset as any)?.url;
+    const tint = Number((asset as any)?.tint ?? 0);
+    const isTextureAsset =
+      !!(asset as any)?.isTexture ||
+      /^flare_paint\d+_/i.test(String((asset as any)?.id || "")) ||
+      /^Paint\s/i.test(String((asset as any)?.label || ""));
+    addJob(url, label, {
+      kind: isTextureAsset && tint !== 0 ? "tintedTexture" : "image",
+      hue: tint,
+    });
+  });
+
+  iconList.forEach((icon: any, index: number) => {
+    addJob(icon?.imgUrl, icon?.name || `icon ${index + 1}`);
+  });
+
+  return jobs;
+}, [bgUploadUrl, bgUrl, format, iconList, logoUrl, portraitUrl, portraits, qrImageUrl, textFx.texture]);
+const canvasPreloadAssetsRef = React.useRef<CanvasPreloadJob[]>([]);
+canvasPreloadAssetsRef.current = canvasPreloadAssets;
+const canvasPreloadSignature = React.useMemo(
+  () => `${format}:${canvasSize.w}x${canvasSize.h}:${templateId || "custom"}:${canvasPreloadAssets.map((job) => job.key).join(",")}`,
+  [canvasPreloadAssets, canvasSize.h, canvasSize.w, format, templateId]
+);
+const [canvasPreloadState, setCanvasPreloadState] = React.useState<{
+  signature: string;
+  ready: boolean;
+  total: number;
+  done: number;
+  label: string;
+  problem: string;
+  errors: number;
+}>({
+  signature: "",
+  ready: false,
+  total: 1,
+  done: 0,
+  label: "canvas",
+  problem: CANVAS_PRELOAD_PROBLEM_COPY[0],
+  errors: 0,
+});
+React.useEffect(() => {
+  let cancelled = false;
+  const jobs = canvasPreloadAssetsRef.current;
+  const total = Math.max(1, jobs.length);
+  setCanvasPreloadState({
+    signature: canvasPreloadSignature,
+    ready: false,
+    total,
+    done: 0,
+    label: jobs[0]?.label || "canvas",
+    problem: CANVAS_PRELOAD_PROBLEM_COPY[0],
+    errors: 0,
+  });
+
+  const run = async () => {
+    await waitForCanvasPreloadFrame();
+    if (cancelled) return;
+
+    if (!jobs.length) {
+      setCanvasPreloadState({
+        signature: canvasPreloadSignature,
+        ready: true,
+        total: 1,
+        done: 1,
+        label: "canvas",
+        problem: CANVAS_PRELOAD_PROBLEM_COPY[0],
+        errors: 0,
+      });
+      return;
+    }
+
+    const result = await preloadCanvasJobsSequentially(jobs, {
+      pauseMs: isMobileView ? 70 : 18,
+      shouldCancel: () => cancelled,
+      onStep: (step) => {
+        if (cancelled) return;
+        setCanvasPreloadState({
+          signature: canvasPreloadSignature,
+          ready: false,
+          total: step.total || 1,
+          done: step.done,
+          label: step.job.label,
+          problem: CANVAS_PRELOAD_PROBLEM_COPY[step.index % CANVAS_PRELOAD_PROBLEM_COPY.length],
+          errors: step.errors,
+        });
+      },
+    });
+
+    if (cancelled) return;
+    setCanvasPreloadState({
+      signature: canvasPreloadSignature,
+      ready: true,
+      total,
+      done: total,
+      label: "canvas",
+      problem: CANVAS_PRELOAD_PROBLEM_COPY[(total - 1) % CANVAS_PRELOAD_PROBLEM_COPY.length],
+      errors: result.errors,
+    });
+  };
+
+  void run();
+  return () => {
+    cancelled = true;
+  };
+}, [canvasPreloadSignature, isMobileView]);
+const canvasAssetsReady =
+  canvasPreloadState.signature === canvasPreloadSignature && canvasPreloadState.ready;
+const canvasPreloaderVisible = !hideUiForExport && !canvasAssetsReady;
+const canvasPreloadPercent = canvasAssetsReady
+  ? 100
+  : Math.max(
+      8,
+      Math.min(
+        98,
+        Math.round((canvasPreloadState.done / Math.max(1, canvasPreloadState.total)) * 100)
+      )
+    );
 customizeProductIntentPropertiesRef.current = {
   format,
   mobile: isMobileView,
@@ -38644,7 +38985,10 @@ return (
         {exportProgressActive && (
           <div className="grid place-items-center gap-3 py-8">
             <div className="h-8 w-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
-            <div className="text-sm text-white/90">Merging final flyer…</div>
+            <div className="text-sm text-white/90">{exportProgressLabel}</div>
+            <div className="max-w-xs text-center text-[11px] leading-5 text-neutral-400">
+              {CANVAS_PRELOAD_PROBLEM_COPY[Math.min(CANVAS_PRELOAD_PROBLEM_COPY.length - 1, Math.floor(exportProgress / 24))]}
+            </div>
             <div className="h-2 w-full max-w-xs rounded-full bg-white/10 overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-fuchsia-400 to-indigo-400 transition-all"
@@ -42268,6 +42612,51 @@ style={{ top: STICKY_TOP }}
           }}
         >
           <div data-tour="artboard" id="artboard">
+          {canvasPreloaderVisible ? (
+            <div
+              className="relative grid place-items-center overflow-hidden rounded-2xl border border-white/10 bg-neutral-950 text-white shadow-2xl"
+              style={{
+                width: canvasSize.w,
+                height: canvasSize.h,
+                background:
+                  "linear-gradient(180deg, rgba(16,16,22,0.98), rgba(5,5,8,0.98))",
+              }}
+              aria-live="polite"
+              aria-label="Preparing flyer canvas"
+            >
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 opacity-40"
+                style={{
+                  background:
+                    "radial-gradient(circle at 30% 20%, rgba(34,211,238,0.22), transparent 34%), radial-gradient(circle at 72% 78%, rgba(217,70,239,0.18), transparent 36%)",
+                }}
+              />
+              <div className="relative z-10 w-[78%] max-w-[360px] space-y-4 text-center">
+                <div className="mx-auto h-9 w-9 rounded-full border-2 border-white/20 border-t-cyan-200 animate-spin" />
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-200">
+                    Preparing {format === "story" ? "Story" : "Square"} Canvas
+                  </div>
+                  <div className="mt-2 text-base font-semibold text-white">
+                    Loading {canvasPreloadState.label}
+                  </div>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full bg-gradient-to-r from-cyan-300 via-fuchsia-300 to-indigo-300 transition-[width]"
+                    style={{ width: `${canvasPreloadPercent}%` }}
+                  />
+                </div>
+                <div className="text-[11px] leading-5 text-neutral-300">
+                  {canvasPreloadState.problem}
+                </div>
+                <div className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">
+                  {canvasPreloadState.done}/{Math.max(1, canvasPreloadState.total)} layers ready
+                </div>
+              </div>
+            </div>
+          ) : (
           <Artboard
             /* PASSING ALL PROPS AS BEFORE */
             textureOpacity={textureOpacity}
@@ -42647,6 +43036,7 @@ style={{ top: STICKY_TOP }}
             dateLineHeight={dateLineHeight}
             priceLineHeight={priceLineHeight}
           />
+          )}
           </div>
           
         </motion.div>      
