@@ -628,7 +628,7 @@
         },
         {
           "id": "flare_flareBlack_1779338851580_bc3jx",
-          "url": "/flares/flareBlack.png",
+          "url": "/flares/black-vignette.svg",
           "x": 53.06712962962963,
           "y": 96.75211588541666,
           "scale": 0.8,
@@ -651,47 +651,6 @@
           "label": "Black Flare",
           "showLabel": false,
           "labelBg": true
-        },
-        {
-          "id": "flare_flareBlack_1779478725051_45nkq",
-          "url": "/flares/flareBlack.png",
-          "x": 58.52936921296296,
-          "y": 61.926676432291664,
-          "scale": 0.8,
-          "locked": false,
-          "blendMode": "screen",
-          "opacity": 0.75,
-          "rotation": 0,
-          "isFlare": true,
-          "label": "Black Flare"
-        },
-        {
-          "id": "flare_flareBlack_1779478806468_a79ir",
-          "url": "/flares/flareBlack.png",
-          "x": 21.867766203703702,
-          "y": 100,
-          "scale": 0.8,
-          "locked": true,
-          "blendMode": "screen",
-          "opacity": 0.9,
-          "rotation": 0,
-          "isFlare": true,
-          "label": "Black Flare",
-          "layerOffset": 72
-        },
-        {
-          "id": "flare_flareBlack_1779478835163_z5bjf",
-          "url": "/flares/flareBlack.png",
-          "x": 89.03718171296296,
-          "y": 100,
-          "scale": 0.8,
-          "locked": true,
-          "blendMode": "screen",
-          "opacity": 0.9,
-          "rotation": 0,
-          "isFlare": true,
-          "label": "Black Flare",
-          "layerOffset": 72
         }
       ]
     },
@@ -2322,7 +2281,7 @@
           },
           {
             "id": "flare_flareBlack_1779338851580_bc3jx",
-            "url": "/flares/flareBlack.png",
+            "url": "/flares/black-vignette.svg",
             "x": 52.23017939814815,
             "y": 100,
             "scale": 0.8,
@@ -2690,7 +2649,7 @@
           },
           {
             "id": "flare_flareBlack_1779338851580_bc3jx",
-            "url": "/flares/flareBlack.png",
+            "url": "/flares/black-vignette.svg",
             "x": 53.06712962962963,
             "y": 96.75211588541666,
             "scale": 0.8,
@@ -2713,49 +2672,8 @@
             "label": "Black Flare",
             "showLabel": false,
             "labelBg": true
-          },
-          {
-            "id": "flare_flareBlack_1779478725051_45nkq",
-            "url": "/flares/flareBlack.png",
-            "x": 58.52936921296296,
-            "y": 61.926676432291664,
-            "scale": 0.8,
-            "locked": false,
-            "blendMode": "screen",
-            "opacity": 0.75,
-            "rotation": 0,
-            "isFlare": true,
-            "label": "Black Flare"
-          },
-          {
-            "id": "flare_flareBlack_1779478806468_a79ir",
-            "url": "/flares/flareBlack.png",
-            "x": 21.867766203703702,
-            "y": 100,
-            "scale": 0.8,
-            "locked": true,
-            "blendMode": "screen",
-            "opacity": 0.9,
-            "rotation": 0,
-            "isFlare": true,
-            "label": "Black Flare",
-            "layerOffset": 72
-          },
-          {
-            "id": "flare_flareBlack_1779478835163_z5bjf",
-            "url": "/flares/flareBlack.png",
-            "x": 89.03718171296296,
-            "y": 100,
-            "scale": 0.8,
-            "locked": true,
-            "blendMode": "screen",
-            "opacity": 0.9,
-            "rotation": 0,
-            "isFlare": true,
-            "label": "Black Flare",
-            "layerOffset": 72
-          }
-        ]
+        }
+      ]
       }
     },
     "sessionDirty": {
