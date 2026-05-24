@@ -8615,6 +8615,8 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
                 data-text={headlineText}
                 style={{
                   fontFamily: headlineFamily,
+                  position: "absolute",
+                  inset: 0,
                   fontSize: headDisplayPx,
                   lineHeight: glassSafeLineHeight,
                   whiteSpace: "pre-wrap",

@@ -62,6 +62,61 @@ html, body {
   border-radius: 12px;
 }
 
+.mobile-glass-text {
+  max-width: 100%;
+  overflow: visible;
+  overflow-wrap: break-word;
+  font-family: "Anton", "Bebas Neue", Impact, sans-serif;
+  font-size: clamp(64px, 18vw, 160px);
+  font-weight: 900;
+  line-height: 0.82;
+  letter-spacing: -0.06em;
+  text-transform: uppercase;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  background:
+    linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #ffd8f4 18%,
+      #ff4fc8 38%,
+      #5d123f 55%,
+      #ff7bdd 72%,
+      #ffffff 100%
+    );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-stroke: 1.5px rgba(255, 235, 255, 0.9);
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.75),
+    0 3px 0 rgba(85, 0, 60, 0.55),
+    0 8px 14px rgba(0, 0, 0, 0.55);
+}
+
+.mobile-glass-text::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  white-space: inherit;
+  text-align: inherit;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  background:
+    linear-gradient(
+      105deg,
+      transparent 0%,
+      transparent 36%,
+      rgba(255, 255, 255, 0.9) 46%,
+      rgba(255, 160, 230, 0.65) 50%,
+      transparent 62%,
+      transparent 100%
+    );
+  -webkit-background-clip: text;
+  background-clip: text;
+  opacity: 0.75;
+  pointer-events: none;
+}
+
 @keyframes neonPulse {
   0% {
     box-shadow:
@@ -81,6 +136,12 @@ html, body {
       0 0 12px rgba(255, 0, 180, 0.7),
       0 0 20px rgba(255, 0, 200, 0.6);
   }
+}
+
+.nf-headline-kinetic-motion .nf-headline-kinetic-main,
+.nf-headline-kinetic-motion .nf-headline-kinetic-top,
+.nf-headline-kinetic-motion .nf-headline-kinetic-bottom {
+  transform-origin: 50% 50%;
 }
 
 .nf-export-cta {
@@ -350,7 +411,7 @@ html, body {
 /* --- STABLE PATH: Dear Script (Demo_Font) --- */
 @font-face {
   font-family: "Dear Script (Demo_Font)";
-  src: url("/fonts/dear-script-demo-font.ttf") format("opentype");
+  src: url("/fonts/dear-script-demo-font.ttf") format("truetype");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
