@@ -8631,9 +8631,17 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
                   fontStyle: textFx.italic ? "italic" : "normal",
                   textDecorationLine: textFx.underline ? "underline" : "none",
                   opacity: textFx.alpha,
+                  color: "transparent",
+                  WebkitTextFillColor: "transparent",
+                  background:
+                    "linear-gradient(180deg, #ffffff 0%, #ffd8f4 18%, #ff4fc8 38%, #5d123f 55%, #ff7bdd 72%, #ffffff 100%)",
+                  WebkitBackgroundClip: "text",
+                  backgroundClip: "text",
                   WebkitTextStrokeWidth: `${Math.max(1.1, Math.min(2.2, glassStrokeWidth * 0.34)).toFixed(1)}px`,
                   WebkitTextStrokeColor: "rgba(255,235,255,0.9)",
                   paintOrder: "stroke fill",
+                  textShadow:
+                    "0 1px 0 rgba(255,255,255,.75), 0 3px 0 rgba(85,0,60,.55), 0 8px 14px rgba(0,0,0,.55)",
                   overflow: "visible",
                   ...glassLinePaintBleedStyle,
                 }}
