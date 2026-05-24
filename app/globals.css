@@ -113,14 +113,14 @@ html, body {
       105deg,
       transparent 0%,
       transparent 36%,
-      rgba(255, 255, 255, 0.9) 46%,
-      rgba(255, 160, 230, 0.65) 50%,
+      var(--mobile-glass-shine-highlight, rgba(255, 255, 255, 0.9)) 46%,
+      var(--mobile-glass-shine-tint, rgba(255, 160, 230, 0.65)) 50%,
       transparent 62%,
       transparent 100%
     );
   -webkit-background-clip: text;
   background-clip: text;
-  opacity: 0.75;
+  opacity: var(--mobile-glass-shine-opacity, 0.75);
   pointer-events: none;
   text-shadow: none;
 }

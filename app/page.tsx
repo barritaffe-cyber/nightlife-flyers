@@ -6321,6 +6321,21 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
 	      "linear-gradient(165deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.5) 14%, rgba(255,255,255,0.16) 32%, transparent 56%)";
 	    const glassSweepGradient =
 	      "linear-gradient(110deg, transparent 0%, transparent 35%, rgba(255,255,255,0.92) 48%, rgba(255,255,255,0.25) 54%, transparent 66%, transparent 100%)";
+	    const mobileGlassFillStrength = Math.max(0, Math.min(1, glassFillAlpha / HEADLINE_GLASS_DEFAULTS.fillAlpha));
+	    const mobileGlassAlpha = (min: number, max: number) =>
+	      Math.max(0, Math.min(1, min + (max - min) * mobileGlassFillStrength));
+	    const mobileGlassDarkColor = darkenHex(glassPrimaryColor, 62);
+	    const mobileGlassFillGradient = `linear-gradient(180deg, ${hexToRgba(glassHighlightColor, mobileGlassAlpha(0.18, 0.96))} 0%, ${hexToRgba(glassSecondaryColor, mobileGlassAlpha(0.16, 0.88))} 18%, ${hexToRgba(glassPrimaryColor, mobileGlassAlpha(0.18, 0.96))} 38%, ${hexToRgba(mobileGlassDarkColor, mobileGlassAlpha(0.22, 0.86))} 55%, ${hexToRgba(glassSecondaryColor, mobileGlassAlpha(0.16, 0.84))} 72%, ${hexToRgba(glassHighlightColor, mobileGlassAlpha(0.18, 0.92))} 100%)`;
+	    const mobileGlassStrokeColor = hexToRgba(glassHighlightColor, mobileGlassAlpha(0.42, 0.9));
+	    const mobileGlassTextShadow =
+	      `0 1px 0 ${hexToRgba(glassHighlightColor, mobileGlassAlpha(0.28, 0.75))}, ` +
+	      `0 3px 0 ${hexToRgba(mobileGlassDarkColor, mobileGlassAlpha(0.28, 0.58))}, ` +
+	      "0 8px 14px rgba(0,0,0,.55)";
+	    const mobileGlassCssVars = {
+	      "--mobile-glass-shine-highlight": hexToRgba(glassHighlightColor, mobileGlassAlpha(0.48, 0.9)),
+	      "--mobile-glass-shine-tint": hexToRgba(glassSecondaryColor, mobileGlassAlpha(0.32, 0.65)),
+	      "--mobile-glass-shine-opacity": String(mobileGlassAlpha(0.32, 0.75)),
+	    } as React.CSSProperties;
 	    const glassCssFillAlpha = Math.max(0.01, Math.min(0.045, glassFillAlpha));
 	    const glassRandomSeed = stableStringSeed(
 	      [
@@ -8633,16 +8648,15 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
                   opacity: textFx.alpha,
                   color: "transparent",
                   WebkitTextFillColor: "transparent",
-                  background:
-                    "linear-gradient(180deg, #ffffff 0%, #ffd8f4 18%, #ff4fc8 38%, #5d123f 55%, #ff7bdd 72%, #ffffff 100%)",
+                  background: mobileGlassFillGradient,
                   WebkitBackgroundClip: "text",
                   backgroundClip: "text",
                   WebkitTextStrokeWidth: `${Math.max(1.1, Math.min(2.2, glassStrokeWidth * 0.34)).toFixed(1)}px`,
-                  WebkitTextStrokeColor: "rgba(255,235,255,0.9)",
+                  WebkitTextStrokeColor: mobileGlassStrokeColor,
                   paintOrder: "stroke fill",
-                  textShadow:
-                    "0 1px 0 rgba(255,255,255,.75), 0 3px 0 rgba(85,0,60,.55), 0 8px 14px rgba(0,0,0,.55)",
+                  textShadow: mobileGlassTextShadow,
                   overflow: "visible",
+                  ...mobileGlassCssVars,
                   ...glassLinePaintBleedStyle,
                 }}
               >
