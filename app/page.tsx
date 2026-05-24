@@ -142,6 +142,12 @@ const HEADLINE_GLASS_DEFAULTS = {
 const HEADLINE_GLASS_MIN_LINE_HEIGHT = 0;
 const HEADLINE_GLASS_DEFAULT_LINE_HEIGHT = 0.86;
 const HEADLINE_GLASS_MAX_LINE_HEIGHT = 1.4;
+const mobilePresets = {
+  glass: "Acrylic Poster",
+  frostedGlass: "Glossy Chrome",
+  neonGlass: "Neon Ink",
+  liquidGlass: "Foil Sticker",
+} as const;
 const HEADLINE_KINETIC_DEFAULTS = {
   textColor: "#FFFFFF",
   topColor: "#FF2BD6",
@@ -8602,7 +8608,39 @@ backgroundClip: (textFx.texture || textFx.gradient) ? 'text' : 'border-box',
                 lineStyle: { display: "block", width: "100%" },
               })}
             </h1>
-            {glassCssLayerSpecs.map(({ key, style, lineStyle }) => renderRushTextLayer(key, style, lineStyle))}
+            {isMobileView ? (
+              <h1
+                aria-hidden="true"
+                className="mobile-glass-text pointer-events-none absolute inset-0 font-black select-none"
+                data-text={headlineText}
+                style={{
+                  fontFamily: headlineFamily,
+                  fontSize: headDisplayPx,
+                  lineHeight: glassSafeLineHeight,
+                  whiteSpace: "pre-wrap",
+                  display: "block",
+                  width: "100%",
+                  minWidth: "fit-content",
+                  maxWidth: "100%",
+                  letterSpacing: `${textFx.tracking}em`,
+                  textAlign: headAlign,
+                  textTransform: textFx.uppercase ? "uppercase" : "none",
+                  fontWeight: textFx.bold ? 900 : 700,
+                  fontStyle: textFx.italic ? "italic" : "normal",
+                  textDecorationLine: textFx.underline ? "underline" : "none",
+                  opacity: textFx.alpha,
+                  WebkitTextStrokeWidth: `${Math.max(1.1, Math.min(2.2, glassStrokeWidth * 0.34)).toFixed(1)}px`,
+                  WebkitTextStrokeColor: "rgba(255,235,255,0.9)",
+                  paintOrder: "stroke fill",
+                  overflow: "visible",
+                  ...glassLinePaintBleedStyle,
+                }}
+              >
+                {headlineText}
+              </h1>
+            ) : (
+              glassCssLayerSpecs.map(({ key, style, lineStyle }) => renderRushTextLayer(key, style, lineStyle))
+            )}
             {useLegacyGlassStack && (
               <>
             {renderRushTextLayer(
@@ -43394,7 +43432,7 @@ style={{ top: STICKY_TOP }}
                       }
                     }}
                   >
-                    Pure 3D
+                    {mobilePresets.frostedGlass}
                   </Chip>
                   <Chip
                     small
@@ -43407,7 +43445,7 @@ style={{ top: STICKY_TOP }}
                       }
                     }}
                   >
-                    Gold Block
+                    {mobilePresets.liquidGlass}
                   </Chip>
                   <Chip
                     small
@@ -43444,7 +43482,7 @@ style={{ top: STICKY_TOP }}
                       applyHeadlinePresetPreservingCoordinates(applyHeadlineGlassPreset);
                     }}
                   >
-                    Glass
+                    {mobilePresets.glass}
                   </Chip>
                   <Chip
                     small
@@ -43457,7 +43495,7 @@ style={{ top: STICKY_TOP }}
                       }
                     }}
                   >
-                    Neon Pulse
+                    {mobilePresets.neonGlass}
                   </Chip>
                   <Chip
                     small
