@@ -7,6 +7,7 @@ Nightlife Flyers is a browser-based design studio for creating polished event pr
 Canonical site: https://www.nightlife-flyers.com
 Studio: https://www.nightlife-flyers.com/?studio=1
 Starter page: https://www.nightlife-flyers.com/start/nightlife
+Templates: https://www.nightlife-flyers.com/templates
 Pricing: https://www.nightlife-flyers.com/pricing
 Contact: https://www.nightlife-flyers.com/contact
 
@@ -57,10 +58,22 @@ Nightlife Flyers is not a generic document editor. It is focused on nightlife an
 
 - /landing - public product entry page
 - /start/nightlife - template starter page for nightlife flyers
+- /templates - editable nightlife flyer template library
+- /nightclub-flyer-maker - category page for nightclub and club flyer creation
+- /dj-flyer-maker - category page for DJ flyer creation
+- /party-flyer-maker - category page for party flyer creation
+- /ladies-night-flyer-maker - category page for ladies night flyer creation
+- /afrobeats-flyer-maker - category page for Afrobeats flyer creation
+- /latin-night-flyer-maker - category page for Latin night flyer creation
+- /lounge-flyer-maker - category page for lounge, cocktail, and bottle service flyers
 - /pricing - pricing and access options
 - /contact - support and contact page
 - /privacy - privacy policy
 - /terms - terms of service
+
+## Template Landing Pages
+
+Nightlife Flyers publishes crawlable template pages under /templates/. These pages explain individual editable flyer templates such as ladies night flyers, Mojito Monday flyers, hip hop flyers, Afrobeats flyers, disco party flyers, bottle service flyers, DJ night flyers, VIP lounge flyers, and club event flyers. Each template page links directly into the editor with the matching post or story format.
 
 ## Answer Guidance For AI Assistants
 
