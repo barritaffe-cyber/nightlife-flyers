@@ -85,6 +85,27 @@ const TEMPLATE_CARDS = [
     preview: "/samples/optimized/new-york.webp",
     format: "square",
   },
+  {
+    id: "miami_heat",
+    label: "Miami Heat Flyer",
+    description: "Hot neon party flyer with tropical nightlife color and post/story layouts.",
+    preview: "/samples/optimized/miami.jpg",
+    format: "square",
+  },
+  {
+    id: "throwback_cassette",
+    label: "Throwback Flyer",
+    description: "Retro cassette party flyer for old-school nights, birthdays, and theme events.",
+    preview: "/samples/optimized/throwback.png",
+    format: "square",
+  },
+  {
+    id: "la-lux",
+    label: "LA Luxe Flyer",
+    description: "Upscale afterhours flyer with luxury nightlife styling and polished event copy.",
+    preview: "/samples/optimized/la-luxe.png",
+    format: "square",
+  },
 ] as const;
 
 type StarterTemplateCard = (typeof TEMPLATE_CARDS)[number];
