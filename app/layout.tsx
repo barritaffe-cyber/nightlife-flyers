@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 import AnalyticsTracker from "../components/analytics/AnalyticsTracker";
 import ErrorReporter from "../components/monitoring/ErrorReporter";
+import PwaRuntime from "../components/PwaRuntime";
 import { getPublicSiteUrl, getPublicSupportEmail } from "../lib/publicIdentity";
 
 const siteUrl = getPublicSiteUrl();
@@ -184,6 +185,23 @@ export const metadata: Metadata = {
   creator: "Nightlife Flyers",
   publisher: "Nightlife Flyers",
   manifest: "/site.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Nightlife Flyers",
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  icons: {
+    icon: [
+      { url: "/branding/nf-logo-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/branding/nf-logo-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
   openGraph: {
     type: 'website',
     url: siteUrl,
@@ -270,6 +288,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         <AnalyticsTracker />
         <ErrorReporter />
+        <PwaRuntime />
         {children}
       </body>
     </html>

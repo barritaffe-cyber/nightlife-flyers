@@ -3,7 +3,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Smartphone, Sparkles, Square } from "lucide-react";
+import { MonitorSmartphone, Smartphone, Sparkles, Square } from "lucide-react";
 import { sendClientEventBeacon } from "../../../lib/analytics/client";
 import NightlifePreloader from "../../../components/ui/NightlifePreloader";
 
@@ -424,6 +424,33 @@ export default function NightlifeStarterPage() {
                 >
                   Pick another vibe
                 </a>
+              </div>
+
+              <div className="mt-4 max-w-xl border border-cyan-200/20 bg-cyan-200/[0.06] p-3 sm:p-4">
+                <div className="flex items-start gap-3">
+                  <div className="grid h-10 w-10 shrink-0 place-items-center border border-cyan-200/30 bg-black/35 text-cyan-100">
+                    <MonitorSmartphone className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-100">
+                      Install App Mode
+                    </div>
+                    <p className="mt-1 text-sm leading-6 text-white/72">
+                      Install Nightlife Flyers through your browser for a cleaner Studio workspace. It opens in its own app window, gives the editor more room, keeps the workflow out of crowded tabs, and makes it quicker to return to designs.
+                    </p>
+                    <div className="mt-2 grid gap-2 text-[10px] font-bold uppercase tracking-[0.12em] text-white/55 sm:grid-cols-3">
+                      <span className="border border-white/10 bg-white/[0.035] px-2 py-2">
+                        No app store
+                      </span>
+                      <span className="border border-white/10 bg-white/[0.035] px-2 py-2">
+                        Home screen ready
+                      </span>
+                      <span className="border border-white/10 bg-white/[0.035] px-2 py-2">
+                        Cleaner editor
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="mt-6 grid max-w-xl grid-cols-3 gap-2 text-center text-[10px] font-bold uppercase tracking-[0.13em] text-white/58">

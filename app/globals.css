@@ -19,6 +19,28 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+html[data-pwa-installed="true"],
+body[data-pwa-installed="true"] {
+  min-height: 100dvh;
+  background: #050608;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+body[data-pwa-installed="true"] {
+  padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+@media (display-mode: standalone) {
+  html,
+  body {
+    min-height: 100dvh;
+    background: #050608;
+    overscroll-behavior: none;
+  }
+}
+
 /* Global slim scrollbars (Windows/Android friendly) */
 * {
   scrollbar-width: thin;

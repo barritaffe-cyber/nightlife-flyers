@@ -265,6 +265,23 @@ const SHAPE_GRAPHIC_SCALE_STEP = 0.005;
 const SHAPE_GRAPHIC_LENGTH_UI_MAX = 1600;
 const SHAPE_GRAPHIC_LENGTH_STEP = 1;
 const PROJECT_SAVE_REMINDER_FALLBACK_DELAY_MS = 45 * 1000;
+const PWA_INSTALL_ACK_KEY = "nf:pwa-install-ack:v1";
+
+type PwaBeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{
+    outcome: "accepted" | "dismissed";
+    platform: string;
+  }>;
+};
+
+function isRunningAsInstalledPwa() {
+  if (typeof window === "undefined") return false;
+  return (
+    window.matchMedia?.("(display-mode: standalone)")?.matches === true ||
+    (window.navigator as any).standalone === true
+  );
+}
 
 const COORDINATE_READER_TARGETS = new Set<string>([
   "headline",
@@ -22858,6 +22875,88 @@ const mobileFloatPanelClass =
     };
   }, []);
 
+  const [pwaInstallPrompt, setPwaInstallPrompt] =
+    React.useState<PwaBeforeInstallPromptEvent | null>(null);
+  const [pwaStandalone, setPwaStandalone] = React.useState(false);
+  const [pwaInstallAcknowledged, setPwaInstallAcknowledged] = React.useState(true);
+  const [pwaInstallAttempted, setPwaInstallAttempted] = React.useState(false);
+  const [pwaStudioIntent, setPwaStudioIntent] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setPwaInstallPrompt(event as PwaBeforeInstallPromptEvent);
+    };
+
+    const handleAppInstalled = () => {
+      setPwaStandalone(true);
+      setPwaInstallAcknowledged(true);
+      try {
+        localStorage.setItem(PWA_INSTALL_ACK_KEY, "1");
+      } catch {}
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("appinstalled", handleAppInstalled);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", handleAppInstalled);
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (!hydrated) return;
+
+    const updateStandalone = () => setPwaStandalone(isRunningAsInstalledPwa());
+    updateStandalone();
+
+    try {
+      setPwaInstallAcknowledged(localStorage.getItem(PWA_INSTALL_ACK_KEY) === "1");
+    } catch {
+      setPwaInstallAcknowledged(false);
+    }
+
+    const media = window.matchMedia?.("(display-mode: standalone)");
+    if (!media) return;
+    media.addEventListener?.("change", updateStandalone);
+    return () => media.removeEventListener?.("change", updateStandalone);
+  }, [hydrated]);
+
+  React.useEffect(() => {
+    if (!hydrated || !authSessionChecked) return;
+    if (typeof window === "undefined") return;
+
+    const currentUrl = new URL(window.location.href);
+    const requestedStudio =
+      currentUrl.searchParams.get("studio") === "1" ||
+      currentUrl.searchParams.get("guest") === "1" ||
+      currentUrl.searchParams.get("skipLanding") === "1";
+    setPwaStudioIntent(hasAuthSession || requestedStudio);
+  }, [authSessionChecked, hasAuthSession, hydrated]);
+
+  const acknowledgePwaInstallGate = React.useCallback(() => {
+    setPwaInstallAcknowledged(true);
+    try {
+      localStorage.setItem(PWA_INSTALL_ACK_KEY, "1");
+    } catch {}
+  }, []);
+
+  const handlePwaInstall = React.useCallback(async () => {
+    setPwaInstallAttempted(true);
+    if (!pwaInstallPrompt) return;
+
+    try {
+      await pwaInstallPrompt.prompt();
+      const choice = await pwaInstallPrompt.userChoice;
+      setPwaInstallPrompt(null);
+      if (choice.outcome === "accepted") {
+        acknowledgePwaInstallGate();
+      }
+    } catch {
+      setPwaInstallPrompt(null);
+    }
+  }, [acknowledgePwaInstallGate, pwaInstallPrompt]);
+
   React.useEffect(() => {
     if (!hydrated || !authSessionChecked || hasAuthSession || redirectingToLanding) return;
     if (typeof window === "undefined") return;
@@ -44329,6 +44428,18 @@ const welcomeCoachActionLabel =
     : welcomeHelperStage === "add_assets"
     ? "Open Graphics"
     : "Guide";
+const showPwaInstallGate =
+  pwaStudioIntent &&
+  !pwaStandalone &&
+  !pwaInstallAcknowledged &&
+  !redirectingToLanding;
+const pwaInstallGateBody = isIOS
+  ? "Install Nightlife Flyers from Safari's Share menu, then Add to Home Screen. The Studio opens cleaner, keeps canvas gestures away from browser chrome, and is faster to relaunch."
+  : pwaInstallPrompt
+  ? "Install Nightlife Flyers as a web app for the best Studio experience: cleaner canvas gestures, a dedicated app window, faster relaunch, and fewer browser controls around the editor."
+  : pwaInstallAttempted
+  ? "The browser dismissed the install prompt. You can still install Nightlife Flyers from the browser menu, or continue in the browser for now."
+  : "For the best Studio experience, install Nightlife Flyers as a web app from your browser menu. It opens like an app and keeps editing focused.";
 if (redirectingToLanding) {
   return (
     <main className="min-h-screen bg-[#050608] text-white" aria-label="Opening Nightlife Flyers">
@@ -44353,6 +44464,66 @@ return (
   <>
   <PaletteColorProvider colors={paletteColorChoices}>
   <AuthGate onStatusChange={setSubscriptionStatus} />
+  {showPwaInstallGate && (
+    <div
+      data-nonexport="true"
+      className="fixed inset-0 z-[7000] flex items-center justify-center bg-[#050608]/94 px-4 text-white backdrop-blur-xl"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="pwa-install-title"
+    >
+      <div className="w-full max-w-[440px] border border-cyan-300/25 bg-neutral-950/95 p-5 shadow-[0_26px_90px_rgba(0,0,0,0.65),0_0_42px_rgba(34,211,238,0.12)]">
+        <div className="flex items-center gap-3">
+          <img
+            src="/branding/nf-logo.png"
+            alt=""
+            className="h-12 w-12 rounded-xl border border-cyan-200/25 bg-black object-cover"
+          />
+          <div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-cyan-200">
+              App Mode
+            </div>
+            <h2 id="pwa-install-title" className="mt-1 text-lg font-black uppercase leading-5 tracking-wide text-white">
+              Install Nightlife Flyers
+            </h2>
+          </div>
+        </div>
+        <p className="mt-4 text-sm leading-6 text-neutral-300">
+          {pwaInstallGateBody}
+        </p>
+        <div className="mt-4 grid gap-2 text-[12px] leading-5 text-neutral-400">
+          <div className="border border-white/10 bg-white/[0.04] px-3 py-2">
+            No app store download. This adds the secure website to your home screen or app launcher.
+          </div>
+          <div className="border border-white/10 bg-white/[0.04] px-3 py-2">
+            Your designs and account still stay connected to nightlife-flyers.com.
+          </div>
+        </div>
+        {isIOS && (
+          <div className="mt-4 border border-cyan-300/20 bg-cyan-400/[0.08] px-3 py-2 text-[12px] leading-5 text-cyan-100">
+            iPhone/iPad: tap Share, then Add to Home Screen.
+          </div>
+        )}
+        <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={handlePwaInstall}
+            disabled={isIOS || !pwaInstallPrompt}
+            className="flex-1 border border-cyan-200/70 bg-cyan-400 px-4 py-3 text-xs font-black uppercase tracking-[0.16em] text-black transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/10 disabled:text-white/35"
+          >
+            {isIOS ? "Use Share Menu" : pwaInstallPrompt ? "Install App" : "Install From Browser"}
+          </button>
+          <button
+            type="button"
+            onClick={acknowledgePwaInstallGate}
+            className="border border-white/10 bg-white/[0.06] px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-white/70 transition hover:bg-white/[0.1] hover:text-white"
+          >
+            Continue for now
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
   {/* CONTINUE SESSION MODAL */}
     <AnimatePresence>
       {hasSavedDesign && !showStartup && (
