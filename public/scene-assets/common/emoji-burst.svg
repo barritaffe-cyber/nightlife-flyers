@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
+  <defs>
+    <filter id="emojiGlow" x="-35%" y="-35%" width="170%" height="170%">
+      <feGaussianBlur stdDeviation="8" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <g filter="url(#emojiGlow)" font-family="Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif" font-size="92" text-anchor="middle" dominant-baseline="middle">
+    <text x="164" y="232">&#x1FAA9;</text>
+    <text x="342" y="172">&#x2728;</text>
+    <text x="760" y="210">&#x1F3A7;</text>
+    <text x="914" y="348">&#x1F525;</text>
+    <text x="188" y="724">&#x1F389;</text>
+    <text x="884" y="780">&#x1F37E;</text>
+    <text x="534" y="884">&#x1F483;</text>
+  </g>
+  <g fill="none" stroke-linecap="round" stroke-width="7" opacity=".7">
+    <path d="M252 300c54 46 116 70 188 72" stroke="#00e5ff"/>
+    <path d="M646 320c70 10 134 0 194-32" stroke="#ff2fb3"/>
+    <path d="M286 744c94 52 184 72 270 58" stroke="#f6c76a"/>
+    <path d="M594 790c90-12 160-46 210-102" stroke="#39ff14"/>
+  </g>
+</svg>

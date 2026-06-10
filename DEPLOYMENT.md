@@ -43,6 +43,8 @@ Feature providers used by this repo:
 - `REMOVE_BG_API_KEY`
 - `RESEND_API_KEY`
 - `EMAIL_FROM`
+- `MONITORING_WEBHOOK_URL` for immediate error alerts
+- `MONITORING_WEBHOOK_SECRET` if your alert webhook requires bearer auth
 
 Billing:
 
@@ -74,6 +76,7 @@ Run before sending traffic:
 13. Verify `/billing/portal`
 14. Verify `/api/billing/checkout`
 15. Verify `/api/billing/webhook`
+16. Verify `/api/monitoring/error` logs and forwards a test alert
 
 ## Notes
 

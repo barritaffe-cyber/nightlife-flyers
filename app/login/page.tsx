@@ -151,7 +151,7 @@ function LoginPageInner() {
     isStudioPreviewIntent
       ? "Create your workstation profile to start your preview."
       : offer === "night-pass"
-        ? "Sign in or create an account to get a one-time Night Pass."
+        ? "Sign in or create an account to get a one-time Event Pass."
         : offer === "weekend-pass"
           ? "Sign in or create an account to get a one-time Weekend Pass."
           : next === "/pricing"

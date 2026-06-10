@@ -39,6 +39,39 @@ const SHAPE_GRAPHIC_SCALE_UI_MAX = 3;
 const SHAPE_GRAPHIC_SCALE_STEP = 0.005;
 const SHAPE_GRAPHIC_LENGTH_UI_MAX = 1600;
 const SHAPE_GRAPHIC_LENGTH_STEP = 1;
+const CIRCULAR_TEXT_DEFAULT = 'CIRCULAR TEXT / CIRCULAR TEXT /';
+
+function escapeCircularSvgText(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function normalizeCircularText(value: unknown) {
+  return String(value || '').replace(/\s+/g, ' ').trim() || CIRCULAR_TEXT_DEFAULT;
+}
+
+function buildCircularTextSvgMarkup(text: string, color: string, fontSize = 12) {
+  const chars = Array.from(normalizeCircularText(text).toUpperCase());
+  const size = Math.max(8, Math.min(28, Number(fontSize) || 12));
+  const radius = 46;
+  const arc = Math.min(342, Math.max(160, chars.length * 8.6));
+  const startAngle = -90 - arc / 2;
+  const step = chars.length > 1 ? arc / Math.max(1, chars.length - 1) : 0;
+  const glyphs = chars
+    .map((ch, index) => {
+      const angle = startAngle + step * index;
+      const rad = (angle * Math.PI) / 180;
+      const x = 64 + Math.cos(rad) * radius;
+      const y = 64 + Math.sin(rad) * radius;
+      const escaped = ch === ' ' ? '' : escapeCircularSvgText(ch);
+      return `<text x="${x.toFixed(3)}" y="${y.toFixed(3)}" transform="rotate(${(angle + 90).toFixed(3)} ${x.toFixed(3)} ${y.toFixed(3)})">${escaped}</text>`;
+    })
+    .join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none"><g fill="${color}" font-family="Inter, Arial, sans-serif" font-size="${size}" font-weight="800" text-anchor="middle" dominant-baseline="central">${glyphs}</g></svg>`;
+}
 
 type LibrarySectionProps = {
   title: string;
@@ -46,6 +79,18 @@ type LibrarySectionProps = {
   onToggle: () => void;
   children: React.ReactNode;
 };
+
+type LibrarySectionKey =
+  | 'emoji'
+  | 'uploads'
+  | 'nightlife'
+  | 'designElements'
+  | 'separators'
+  | 'shapes'
+  | 'social'
+  | 'graphics'
+  | 'textures'
+  | 'flares';
 
 const LibrarySection: React.FC<LibrarySectionProps> = ({ title, open, onToggle, children }) => (
   <div className={librarySectionClass}>
@@ -67,6 +112,7 @@ type NightlifeGraphic = {
   label: string;
   paths: ReadonlyArray<string>;
   viewBox?: string;
+  fillRule?: "evenodd" | "nonzero";
   strokeWidth?: number;
   renderMode?: "stroke" | "fill";
 };
@@ -98,6 +144,7 @@ type LibraryPanelProps = {
   socialMediaStickers: ReadonlyArray<GraphicSticker>;
   nightlifeGraphics: ReadonlyArray<NightlifeGraphic>;
   textSeparators: ReadonlyArray<TextSeparatorGraphic>;
+  designElements: ReadonlyArray<GraphicSticker>;
   graphicStickers: ReadonlyArray<GraphicSticker>;
   flareLibrary: ReadonlyArray<FlareItem>;
   textureLibrary: ReadonlyArray<FlareItem>;
@@ -120,6 +167,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
     socialMediaStickers,
     nightlifeGraphics,
     textSeparators,
+    designElements,
     graphicStickers,
     flareLibrary,
     textureLibrary,
@@ -131,17 +179,8 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
     const updatePortraitGeometryRaf = React.useRef<(id: string, patch: any) => void | undefined>(undefined);
     const updateSeparatorRaf = React.useRef<((id: string, kind: string, color: string, width: number, offset: number) => void) | undefined>(undefined);
     const updateEmojiRaf = React.useRef<(id: string, patch: any) => void | undefined>(undefined);
-    const [librarySectionsOpen, setLibrarySectionsOpen] = React.useState(() => ({
-      emoji: false,
-      uploads: false,
-      nightlife: false,
-      separators: false,
-      shapes: false,
-      social: false,
-      graphics: false,
-      textures: false,
-      flares: false,
-    }));
+    const [activeLibrarySection, setActiveLibrarySection] =
+      React.useState<LibrarySectionKey | null>(null);
 
     // set up throttles after store actions are declared
     const makeThrottle = React.useCallback(<T extends (...args: any[]) => void>(fn: T) => {
@@ -220,6 +259,29 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
         window.setTimeout(work, 0);
       });
     }, []);
+    const svgTemplateToDataUrl = React.useCallback((template: string, color: string) => {
+      const svg = template.split('{{COLOR}}').join(color);
+      const svgBase64 = btoa(unescape(encodeURIComponent(svg)));
+      return `data:image/svg+xml;base64,${svgBase64}`;
+    }, []);
+    const loadDesignElementSvgTemplate = React.useCallback(async (src: string) => {
+      const response = await fetch(src, { cache: 'force-cache' });
+      if (!response.ok) throw new Error(`Failed to load design element: ${src}`);
+      const raw = await response.text();
+      const withoutXml = raw.replace(/<\?xml[^>]*>\s*/i, '').trim();
+      const withRootAttrs = withoutXml.replace(/<svg\b([^>]*)>/i, (_match, attrs) => {
+        let nextAttrs = attrs;
+        if (!/\swidth=/i.test(nextAttrs)) nextAttrs += ' width="128"';
+        if (!/\sheight=/i.test(nextAttrs)) nextAttrs += ' height="128"';
+        if (!/\sfill=/i.test(nextAttrs)) nextAttrs += ' fill="{{COLOR}}"';
+        return `<svg${nextAttrs}>`;
+      });
+      return withRootAttrs
+        .replace(/fill:\s*#[0-9a-f]{3,8}\s*;/gi, 'fill: {{COLOR}};')
+        .replace(/stroke:\s*#[0-9a-f]{3,8}\s*;/gi, 'stroke: {{COLOR}};')
+        .replace(/\sfill="(?!none\b|transparent\b)[^"]*"/gi, ' fill="{{COLOR}}"')
+        .replace(/\sstroke="(?!none\b|transparent\b)[^"]*"/gi, ' stroke="{{COLOR}}"');
+    }, []);
 
     const getAssetName = (asset: any) => {
       if (!asset) return null;
@@ -238,9 +300,13 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
       if ((asset as any).isShapeGraphic) {
         return SHAPE_GRAPHICS.find((shape) => shape.id === baseId)?.label || "Shape";
       }
+      if ((asset as any).isCircularText) {
+        return "Circular Text";
+      }
       if (asset.isSticker) {
         return (
           socialMediaStickers.find((s) => s.id === baseId)?.name ||
+          designElements.find((s) => s.id === baseId)?.name ||
           graphicStickers.find((s) => s.id === baseId)?.name ||
           nightlifeGraphics.find((g) => g.id === baseId)?.label ||
           "Graphic"
@@ -256,58 +322,24 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
       },
       [socialMediaStickers]
     );
+    const isDesignElementAsset = React.useCallback(
+      (asset: any) => {
+        const baseId = String(asset?.id || "").split("_")[1] || "";
+        const src = String(asset?.url || "");
+        return (
+          !!asset?.isDesignElement ||
+          designElements.some((item) => item.id === baseId || item.src === src)
+        );
+      },
+      [designElements]
+    );
 
-    // build throttles once store actions are available
+    // Build throttles once store actions are available. Values must land exactly;
+    // input fields should not be eased toward the number the user typed.
     React.useEffect(() => {
-      const lerp = (a: number, b: number, t = 0.35) => a + (b - a) * t;
-
-      const smoothPortrait = (id: string, patch: any) => {
-        const store = useFlyerState.getState();
-        const list = store.portraits?.[format] || [];
-        const cur = list.find((p: any) => p.id === id);
-        if (!cur) return updatePortrait(format, id, patch);
-
-        const out: any = { ...patch };
-        (["scale", "opacity", "rotation", "tint"] as const).forEach((key) => {
-          if (typeof patch[key] === "number") {
-            const curVal =
-              key === "scale"
-                ? cur.scale ?? 1
-                : key === "opacity"
-                ? cur.opacity ?? 1
-                : key === "rotation"
-                ? cur.rotation ?? 0
-                : (cur as any).tint ?? 0;
-            out[key] = lerp(curVal, Number(patch[key]));
-          }
-        });
-        updatePortrait(format, id, out);
-      };
-
-      const smoothEmoji = (id: string, patch: any) => {
-        const store = useFlyerState.getState();
-        const list = store.emojis?.[format] || [];
-        const cur = list.find((e: any) => e.id === id);
-        if (!cur) return updateEmoji(format, id, patch);
-
-        const out: any = { ...patch };
-        (["scale", "opacity", "rotation", "tint"] as const).forEach((key) => {
-          if (typeof patch[key] === "number") {
-            const curVal =
-              key === "scale"
-                ? cur.scale ?? 1
-                : key === "opacity"
-                ? cur.opacity ?? 1
-                : key === "rotation"
-                ? cur.rotation ?? 0
-                : (cur as any).tint ?? 0;
-            out[key] = lerp(curVal, Number(patch[key]));
-          }
-        });
-        updateEmoji(format, id, out);
-      };
-
-      updatePortraitRaf.current = makeThrottle(smoothPortrait);
+      updatePortraitRaf.current = makeThrottle((id: string, patch: any) => {
+        updatePortrait(format, id, patch);
+      });
       updatePortraitGeometryRaf.current = makeThrottle((id: string, patch: any) => {
         updatePortrait(format, id, patch);
       });
@@ -320,7 +352,9 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
           });
         }
       );
-      updateEmojiRaf.current = makeThrottle(smoothEmoji);
+      updateEmojiRaf.current = makeThrottle((id: string, patch: any) => {
+        updateEmoji(format, id, patch);
+      });
     }, [format, updatePortrait, updateEmoji, makeThrottle]);
 
     const downscaleDataUrlIfNeeded = React.useCallback(
@@ -365,13 +399,17 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
       (p: any) => !(p as any)?.isSeparator && !(p as any)?.isShapeGraphic
     );
     const nightlifeGraphicAssets = graphicAssets.filter(
-      (p: any) => typeof (p as any)?.svgTemplate === 'string'
+      (p: any) => typeof (p as any)?.svgTemplate === 'string' && !isDesignElementAsset(p)
     );
     const socialStickerAssets = graphicAssets.filter(
       (p: any) => typeof (p as any)?.svgTemplate !== 'string' && isSocialStickerAsset(p)
     );
+    const designElementAssets = graphicAssets.filter((p: any) => isDesignElementAsset(p));
     const graphicStickerAssets = graphicAssets.filter(
-      (p: any) => typeof (p as any)?.svgTemplate !== 'string' && !isSocialStickerAsset(p)
+      (p: any) =>
+        typeof (p as any)?.svgTemplate !== 'string' &&
+        !isSocialStickerAsset(p) &&
+        !isDesignElementAsset(p)
     );
     const flareAssets = portraitList.filter(
       (p: any) => !!p?.isFlare && !p?.isSticker && !(p as any)?.isTexture
@@ -392,7 +430,9 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
         ? selectedPortrait
         : null;
     const selectedNightlifeGraphic =
-      selectedGraphic && typeof (selectedGraphic as any)?.svgTemplate === 'string'
+      selectedGraphic &&
+      typeof (selectedGraphic as any)?.svgTemplate === 'string' &&
+      !isDesignElementAsset(selectedGraphic)
         ? selectedGraphic
         : null;
     const selectedGraphicSticker =
@@ -403,8 +443,14 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
       selectedGraphicSticker && isSocialStickerAsset(selectedGraphicSticker)
         ? selectedGraphicSticker
         : null;
+    const selectedDesignElement =
+      selectedGraphic && isDesignElementAsset(selectedGraphic)
+        ? selectedGraphic
+        : null;
     const selectedGraphicStickerAsset =
-      selectedGraphicSticker && !isSocialStickerAsset(selectedGraphicSticker)
+      selectedGraphicSticker &&
+      !isSocialStickerAsset(selectedGraphicSticker) &&
+      !isDesignElementAsset(selectedGraphicSticker)
         ? selectedGraphicSticker
         : null;
     const selectedTexture =
@@ -421,12 +467,38 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
       !(selectedPortrait as any)?.isTexture
         ? selectedPortrait
         : null;
-    const toggleLibrarySection = React.useCallback(
-      (key: keyof typeof librarySectionsOpen) => {
-        setLibrarySectionsOpen((prev) => ({ ...prev, [key]: !prev[key] }));
-      },
-      []
+    const selectedLibrarySection: LibrarySectionKey | null = selectedEmoji
+      ? 'emoji'
+      : selectedNightlifeGraphic
+      ? 'nightlife'
+      : selectedDesignElement
+      ? 'designElements'
+      : selectedSeparator
+      ? 'separators'
+      : selectedShape
+      ? 'shapes'
+      : selectedSocialSticker
+      ? 'social'
+      : selectedGraphicStickerAsset
+      ? 'graphics'
+      : selectedTexture
+      ? 'textures'
+      : selectedFlare
+      ? 'flares'
+      : null;
+
+    React.useEffect(() => {
+      if (selectedLibrarySection) setActiveLibrarySection(selectedLibrarySection);
+    }, [selectedLibrarySection]);
+
+    const isLibrarySectionOpen = React.useCallback(
+      (key: LibrarySectionKey) => activeLibrarySection === key,
+      [activeLibrarySection]
     );
+
+    const toggleLibrarySection = React.useCallback((key: LibrarySectionKey) => {
+      setActiveLibrarySection((prev) => (prev === key ? null : key));
+    }, []);
 
     const renderStickerControls = (sel: any, items: any[], title: string, deleteLabel: string) => {
       if (!sel) return null;
@@ -434,6 +506,8 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
       const locked = !!sel.locked;
       const isSeparator = !!(sel as any).isSeparator;
       const isShapeGraphic = !!(sel as any).isShapeGraphic;
+      const isDesignElement = !!(sel as any).isDesignElement;
+      const isCircularText = !!(sel as any).isCircularText;
 
       return (
         <div
@@ -450,12 +524,21 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
           {(typeof (sel as any).svgTemplate === 'string' || isSeparator) && (
             <div className="flex items-center gap-2 text-[11px] text-neutral-300">
               <span className="opacity-80">
-                {isShapeGraphic ? "Shape Color" : isSeparator ? "Separator Color" : "Icon Color"}
+                {isShapeGraphic
+                  ? "Shape Color"
+                  : isSeparator
+                  ? "Separator Color"
+                  : isCircularText
+                  ? "Text Color"
+                  : isDesignElement
+                  ? "Element Color"
+                  : "Icon Color"}
               </span>
               <ColorDot
                 value={(sel as any).iconColor || '#ffffff'}
                 onChange={(value) => {
                   const gradientEnabled = (sel as any).shapeGradient !== false;
+                  let nextSvgTemplate: string | undefined;
                   const nextUrl = isSeparator
                     ? buildSeparatorSvgDataUrl(
                         String((sel as any).separatorKind || ''),
@@ -469,15 +552,20 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                         value,
                         gradientEnabled
                       )
-                    : (() => {
-                        const template = String((sel as any).svgTemplate || '');
-                        const nextSvg = template.replace('{{COLOR}}', value);
-                        const svgBase64 = btoa(unescape(encodeURIComponent(nextSvg)));
-                        return `data:image/svg+xml;base64,${svgBase64}`;
-                      })();
+                    : isCircularText
+                    ? (() => {
+                        nextSvgTemplate = buildCircularTextSvgMarkup(
+                          String((sel as any).label || CIRCULAR_TEXT_DEFAULT),
+                          '{{COLOR}}',
+                          Number((sel as any).labelSize ?? 12)
+                        );
+                        return svgTemplateToDataUrl(nextSvgTemplate, value);
+                      })()
+                    : svgTemplateToDataUrl(String((sel as any).svgTemplate || ''), value);
                   updatePortrait(format, sel.id, {
                     url: nextUrl,
                     iconColor: value,
+                    ...(nextSvgTemplate ? { svgTemplate: nextSvgTemplate } : {}),
                   });
                 }}
               />
@@ -508,7 +596,56 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
               )}
             </div>
           )}
+          {isCircularText && (
+            <div className="space-y-2">
+              <label className="block text-[11px] text-neutral-300">Circular Text</label>
+              <input
+                value={String((sel as any).label ?? CIRCULAR_TEXT_DEFAULT)}
+                onChange={(e) => {
+                  const text = e.target.value;
+                  const color = String((sel as any).iconColor || '#ffffff');
+                  const svgTemplate = buildCircularTextSvgMarkup(
+                    text,
+                    '{{COLOR}}',
+                    Number((sel as any).labelSize ?? 12)
+                  );
+                  updatePortrait(format, sel.id, {
+                    label: text,
+                    svgTemplate,
+                    url: svgTemplateToDataUrl(svgTemplate, color),
+                  });
+                }}
+                className={railFieldClass}
+                placeholder="Circular text"
+              />
+              <InlineSliderInput
+                label="Text Size"
+                value={Number((sel as any).labelSize ?? 12)}
+                min={8}
+                max={28}
+                step={1}
+                precision={0}
+                suffix="px"
+                disabled={locked}
+                onChange={(nextSize) => {
+                  const color = String((sel as any).iconColor || '#ffffff');
+                  const svgTemplate = buildCircularTextSvgMarkup(
+                    String((sel as any).label || CIRCULAR_TEXT_DEFAULT),
+                    '{{COLOR}}',
+                    nextSize
+                  );
+                  updatePortrait(format, sel.id, {
+                    labelSize: nextSize,
+                    svgTemplate,
+                    url: svgTemplateToDataUrl(svgTemplate, color),
+                  });
+                }}
+                rangeClassName="flex-1 h-1 appearance-none cursor-pointer bg-neutral-700 accent-blue-500"
+              />
+            </div>
+          )}
           {(() => {
+            if (isCircularText) return null;
             const showLabel = !!(sel as any).showLabel;
             const labelBg = (sel as any).labelBg ?? true;
             return (
@@ -900,12 +1037,10 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
           item.renderMode === "fill"
             ? `fill="{{COLOR}}" stroke="none"`
             : `fill="none" stroke="{{COLOR}}" stroke-width="${item.strokeWidth ?? 6}" stroke-linecap="round" stroke-linejoin="round"`
-        }>${item.paths
+        }${item.fillRule ? ` fill-rule="${item.fillRule}" clip-rule="${item.fillRule}"` : ""}>${item.paths
           .map((d) => `<path d="${d}"/>`)
           .join('')}</svg>`;
-        const svg = svgTemplate.replace('{{COLOR}}', '#ffffff');
-        const svgBase64 = btoa(unescape(encodeURIComponent(svg)));
-        const url = `data:image/svg+xml;base64,${svgBase64}`;
+        const url = svgTemplateToDataUrl(svgTemplate, '#ffffff');
         const id = `sticker_${item.id}_${Date.now()}_${Math.random()
           .toString(36)
           .slice(2, 7)}`;
@@ -931,8 +1066,103 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
           onPlaceToCanvas?.();
         });
       },
-      [addPortrait, deferLibraryPlacement, format, onPlaceToCanvas, setMoveTarget, setSelectedPanel, setSelectedPortraitId]
+      [addPortrait, deferLibraryPlacement, format, onPlaceToCanvas, setMoveTarget, setSelectedPanel, setSelectedPortraitId, svgTemplateToDataUrl]
     );
+
+    const addDesignElementSticker = React.useCallback(
+      (item: GraphicSticker) => {
+        void (async () => {
+          const iconColor = '#ffffff';
+          let svgTemplate: string;
+          try {
+            svgTemplate = await loadDesignElementSvgTemplate(item.src);
+          } catch {
+            return;
+          }
+          const id = `design_${item.id}_${Date.now()}_${Math.random()
+            .toString(36)
+            .slice(2, 7)}`;
+          const url = svgTemplateToDataUrl(svgTemplate, iconColor);
+          deferLibraryPlacement(() => {
+            addPortrait(format, {
+              id,
+              url,
+              x: 50,
+              y: 50,
+              scale: 1,
+              layerOffset: 55,
+              locked: false,
+              svgTemplate,
+              iconColor,
+              isSticker: true,
+              isDesignElement: true,
+              label: item.name,
+              showLabel: false,
+              hitTestMode: 'alpha-bounds',
+            } as any);
+            setSelectedPortraitId(id);
+            setSelectedPanel('icons');
+            setMoveTarget('icon');
+            onPlaceToCanvas?.();
+          });
+        })();
+      },
+      [
+        addPortrait,
+        deferLibraryPlacement,
+        format,
+        loadDesignElementSvgTemplate,
+        onPlaceToCanvas,
+        setMoveTarget,
+        setSelectedPanel,
+        setSelectedPortraitId,
+        svgTemplateToDataUrl,
+      ]
+    );
+
+    const addCircularTextSticker = React.useCallback(() => {
+      const iconColor = '#ffffff';
+      const text = CIRCULAR_TEXT_DEFAULT;
+      const labelSize = 12;
+      const svgTemplate = buildCircularTextSvgMarkup(text, '{{COLOR}}', labelSize);
+      const id = `circular_text_${Date.now()}_${Math.random()
+        .toString(36)
+        .slice(2, 7)}`;
+      const url = svgTemplateToDataUrl(svgTemplate, iconColor);
+      deferLibraryPlacement(() => {
+        addPortrait(format, {
+          id,
+          url,
+          x: 50,
+          y: 50,
+          scale: 1,
+          layerOffset: 55,
+          locked: false,
+          svgTemplate,
+          iconColor,
+          isSticker: true,
+          isDesignElement: true,
+          isCircularText: true,
+          label: text,
+          showLabel: false,
+          labelSize,
+          hitTestMode: 'alpha-bounds',
+        } as any);
+        setSelectedPortraitId(id);
+        setSelectedPanel('icons');
+        setMoveTarget('icon');
+        onPlaceToCanvas?.();
+      });
+    }, [
+      addPortrait,
+      deferLibraryPlacement,
+      format,
+      onPlaceToCanvas,
+      setMoveTarget,
+      setSelectedPanel,
+      setSelectedPortraitId,
+      svgTemplateToDataUrl,
+    ]);
 
     const addShapeSticker = React.useCallback(
       (shape: { id: string; label: string }) => {
@@ -1192,7 +1422,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
             {showEmojiLibrary && (
               <LibrarySection
                 title="Emoji"
-                open={librarySectionsOpen.emoji || !!selectedEmoji}
+                open={isLibrarySectionOpen('emoji')}
                 onToggle={() => toggleLibrarySection('emoji')}
               >
                 <div className="grid grid-cols-6 gap-2">
@@ -1236,7 +1466,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
 
             <LibrarySection
               title="Uploaded Graphics"
-              open={librarySectionsOpen.uploads}
+              open={isLibrarySectionOpen('uploads')}
               onToggle={() => toggleLibrarySection('uploads')}
             >
               <div className="text-[12px] text-neutral-300 mb-2">
@@ -1498,7 +1728,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
             {nightlifeGraphics.length > 0 && (
               <LibrarySection
                 title="Nightlife Graphics"
-                open={librarySectionsOpen.nightlife || !!selectedNightlifeGraphic}
+                open={isLibrarySectionOpen('nightlife')}
                 onToggle={() => toggleLibrarySection('nightlife')}
               >
                   <div className="grid grid-cols-2 gap-2">
@@ -1519,6 +1749,8 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                           strokeWidth={item.renderMode === "fill" ? undefined : item.strokeWidth ?? 6}
                           strokeLinecap={item.renderMode === "fill" ? undefined : "round"}
                           strokeLinejoin={item.renderMode === "fill" ? undefined : "round"}
+                          fillRule={item.fillRule}
+                          clipRule={item.fillRule}
                           className="text-neutral-200 group-hover:text-white transition-colors"
                         >
                           {item.paths.map((d) => (
@@ -1541,9 +1773,60 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
               </LibrarySection>
             )}
 
+            {designElements.length > 0 && (
+              <LibrarySection
+                title="Design Elements"
+                open={isLibrarySectionOpen('designElements')}
+                onToggle={() => toggleLibrarySection('designElements')}
+              >
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    className="h-12 rounded-md bg-neutral-900/60 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-600 transition-all flex items-center gap-2 px-2 group relative overflow-hidden"
+                    title="Add Circular Text"
+                    onClick={addCircularTextSticker}
+                  >
+                    <span className="relative flex h-[28px] w-[28px] items-center justify-center rounded-full border border-neutral-300 text-[8px] font-black uppercase tracking-[0.1em] text-neutral-100 group-hover:text-white">
+                      Text
+                    </span>
+                    <span className="text-[10px] font-semibold text-neutral-300 group-hover:text-white">
+                      Circular Text
+                    </span>
+                  </button>
+                  {designElements.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className="h-12 rounded-md bg-neutral-900/60 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-600 transition-all flex items-center gap-2 px-2 group relative overflow-hidden"
+                      title={`Add ${item.name}`}
+                      onClick={() => addDesignElementSticker(item)}
+                    >
+                      <img
+                        src={item.src}
+                        alt={item.name}
+                        className="h-[28px] w-[28px] object-contain opacity-90 group-hover:scale-105 transition-transform"
+                        style={{ filter: 'invert(1)' }}
+                        draggable={false}
+                      />
+                      <span className="text-[10px] font-semibold text-neutral-300 group-hover:text-white">
+                        {item.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                {renderStickerControls(
+                  selectedDesignElement,
+                  designElementAssets,
+                  'Selected Design Element',
+                  'Design Element'
+                )}
+              </LibrarySection>
+            )}
+
             <LibrarySection
               title="Text Separators"
-              open={librarySectionsOpen.separators || !!selectedSeparator}
+              open={isLibrarySectionOpen('separators')}
               onToggle={() => toggleLibrarySection('separators')}
             >
               <div className="grid grid-cols-2 gap-2">
@@ -1600,7 +1883,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
 
             <LibrarySection
               title="Shapes"
-              open={librarySectionsOpen.shapes || !!selectedShape}
+              open={isLibrarySectionOpen('shapes')}
               onToggle={() => toggleLibrarySection('shapes')}
             >
               <div className="grid grid-cols-3 gap-2">
@@ -1629,7 +1912,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
 
             <LibrarySection
               title="Social Media"
-              open={librarySectionsOpen.social || !!selectedSocialSticker}
+              open={isLibrarySectionOpen('social')}
               onToggle={() => toggleLibrarySection('social')}
             >
               <div className="grid grid-cols-4 gap-2">
@@ -1681,7 +1964,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
             {graphicStickers.length > 0 && (
               <LibrarySection
                 title="Sticker Graphics"
-                open={librarySectionsOpen.graphics || !!selectedGraphicStickerAsset}
+                open={isLibrarySectionOpen('graphics')}
                 onToggle={() => toggleLibrarySection('graphics')}
               >
                   <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -1735,7 +2018,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
             {textureLibrary.length > 0 && (
               <LibrarySection
                 title="Textures"
-                open={librarySectionsOpen.textures || !!selectedTexture}
+                open={isLibrarySectionOpen('textures')}
                 onToggle={() => toggleLibrarySection('textures')}
               >
                   <div className="grid grid-cols-4 gap-2">
@@ -1790,7 +2073,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
 
             <LibrarySection
               title="Flares & Light Leaks"
-              open={librarySectionsOpen.flares || !!selectedFlare}
+              open={isLibrarySectionOpen('flares')}
               onToggle={() => toggleLibrarySection('flares')}
             >
               <div className="grid grid-cols-4 gap-2">

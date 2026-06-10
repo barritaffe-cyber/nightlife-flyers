@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
+  <defs>
+    <linearGradient id="frameGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#00e5ff"/>
+      <stop offset="36%" stop-color="#ffffff"/>
+      <stop offset="68%" stop-color="#ff2fb3"/>
+      <stop offset="100%" stop-color="#f6c76a"/>
+    </linearGradient>
+    <filter id="glow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="12" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <g filter="url(#glow)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M182 272h716M182 808h716" stroke="url(#frameGrad)" stroke-width="16"/>
+    <path d="M220 310v92M860 310v92M220 678v92M860 678v92" stroke="url(#frameGrad)" stroke-width="14"/>
+    <path d="M282 226h516M282 854h516" stroke="#ffffff" stroke-width="4" opacity=".56"/>
+    <path d="M164 474c92-28 178-28 270 0s180 28 272 0 154-28 210 0" stroke="#00e5ff" stroke-width="6" opacity=".62"/>
+    <path d="M164 606c92 28 178 28 270 0s180-28 272 0 154 28 210 0" stroke="#ff2fb3" stroke-width="6" opacity=".62"/>
+  </g>
+  <g fill="#ffffff" opacity=".82">
+    <circle cx="182" cy="272" r="11"/>
+    <circle cx="898" cy="272" r="11"/>
+    <circle cx="182" cy="808" r="11"/>
+    <circle cx="898" cy="808" r="11"/>
+  </g>
+</svg>

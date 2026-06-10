@@ -13,6 +13,8 @@ import nocturneLayout2Data from './template-data/nocturne-layout-2.json';
 import nocturneStoryData from './template-data/nocturne-story.json';
 import luxeLayout1Data from './template-data/luxe-layout-1.json';
 import luxeLayout2Data from './template-data/luxe-layout-2.json';
+import laLuxeSquareData from './template-data/la-luxe-square.json';
+import laLuxeStoryData from './template-data/la-luxe-story.json';
 import mojitoLayout1Data from './template-data/mojito-layout-1.json';
 import mojitoLayout2Data from './template-data/mojito-layout-2.json';
 import technoStoryData from './template-data/techno-story.json';
@@ -22,6 +24,21 @@ import discoMirrorballData from './template-data/disco-mirrorball.json';
 import afrobeatRooftopData from './template-data/afrobeat-rooftop.json';
 import fantasyData from './template-data/fantasy.json';
 import newYorkData from './template-data/new-york.json';
+import bassPressureSquareData from './template-data/bass-pressure-square.json';
+import bassPressureStoryData from './template-data/bass-pressure-story.json';
+import rnbVelvetData from './template-data/rnb-velvet.json';
+import rnbVelvetStoryData from './template-data/rnb-velvet-story.json';
+import secretFridaySquareData from './template-data/secret-friday-square.json';
+import secretFridayStoryData from './template-data/secret-friday-story.json';
+import miamiHeatSquareData from './template-data/miami-heat-square.json';
+import miamiHeatStoryData from './template-data/miami-heat-story.json';
+import miamiNightsData from './template-data/miami-nights.json';
+import miamiNightsStoryData from './template-data/miami-nights-story.json';
+import mardiGrasData from './template-data/mardi-gras.json';
+import latinStreetTropicalData from './template-data/latin-street-tropical.json';
+import latinStreetTropicalStoryData from './template-data/latin-street-tropical-story.json';
+import throwbackData from './template-data/throwback.json';
+import throwbackStoryData from './template-data/throwback-story.json';
 
 // Quick reference: emoji characters we commonly bake into templates
 export const EMOJI_CHARS: string[] = [
@@ -185,40 +202,6 @@ const MOJITO_CUTOUT_STORY: Emoji = {
 };
 
 const LADIES_NIGHT_STORY_ASSETS: Emoji[] = [
-  {
-    id: "ladies_night_lasers_story",
-    kind: "sticker",
-    char: "",
-    url: "/scene-assets/neon-club/laser-beams.svg",
-    isSticker: true,
-    blendMode: "screen",
-    x: 50,
-    y: 50,
-    scale: 1,
-    rotation: 0,
-    opacity: 0.26,
-    locked: true,
-    layerOffset: -12,
-    showLabel: false,
-    labelBg: true,
-  },
-  {
-    id: "ladies_night_smoke_story",
-    kind: "sticker",
-    char: "",
-    url: "/scene-assets/common/smoke-ribbons.svg",
-    isSticker: true,
-    blendMode: "screen",
-    x: 50,
-    y: 52,
-    scale: 1,
-    rotation: 0,
-    opacity: 0.22,
-    locked: true,
-    layerOffset: -10,
-    showLabel: false,
-    labelBg: true,
-  },
   {
     id: "ladies_night_subject_story",
     kind: "sticker",
@@ -437,25 +420,6 @@ const LADIES_NIGHT_STORY_ASSETS: Emoji[] = [
 ];
 
 const LADIES_NIGHT_SQUARE_ASSETS: Emoji[] = [
-  {
-    id: "ladies_night_lasers_square",
-    kind: "sticker",
-    char: "",
-    url: "/scene-assets/neon-club/laser-beams.svg",
-    isSticker: true,
-    blendMode: "screen",
-    x: 50,
-    y: 50,
-    scale: 1,
-    rotation: 0,
-    opacity: 0.22,
-    locked: true,
-    tint: 0,
-    tintMode: "hue",
-    layerOffset: -12,
-    showLabel: false,
-    labelBg: true,
-  },
   {
     id: "ladies_night_subject_square",
     kind: "sticker",
@@ -1301,6 +1265,11 @@ export type TextFx = {
   strokeColor: string;
   shadow: number;
   glow: number;
+  glowColor?: string;
+  shadowColor?: string;
+  shadowBlur?: number;
+  shadowOffsetX?: number;
+  shadowOffsetY?: number;
   shadowEnabled: boolean;
 };
 
@@ -1412,6 +1381,7 @@ export interface TemplateBase {
   headStrokeWidth?: number;
   headStrokeColor?: string;
   headGradFrom?: string;
+  headGradMid?: string;
   headGradTo?: string;
   headRotate?: number;
   headSkew?: number;
@@ -1496,6 +1466,8 @@ export interface TemplateBase {
   headGlitchRgbSplit?: number;
   headGlitchNoise?: number;
   headGlitchGlow?: number;
+  headNeonGlowEnabled?: boolean;
+  mobileHeadlineStyleFocus?: string | null;
   headGlitchRedColor?: string;
   headGlitchMagentaColor?: string;
   headGlitchBlueColor?: string;
@@ -1511,6 +1483,7 @@ export interface TemplateBase {
   head2Color?: string;
   head2Align?: 'left' | 'center' | 'right';
   head2Size?: number;
+  head2SizePx?: number;
   head2lineHeight?: number;
   head2X?: number;
   head2Y?: number;
@@ -2071,38 +2044,6 @@ export const SQUARE_NIGHTLIFE_LAYOUT_TEMPLATES: TemplateSpec[] = [
             tint: 0,
           },
           {
-            id: 'center_hero_laser_beams',
-            kind: 'sticker',
-            char: '',
-            url: '/scene-assets/neon-club/laser-beams.svg',
-            isSticker: true,
-            blendMode: 'screen',
-            x: 50,
-            y: 35,
-            scale: 1.02,
-            rotation: 0,
-            opacity: 0.22,
-            locked: true,
-            layerOffset: -32,
-            tint: 0,
-          },
-          {
-            id: 'center_hero_smoke_ribbons',
-            kind: 'sticker',
-            char: '',
-            url: '/scene-assets/common/smoke-ribbons.svg',
-            isSticker: true,
-            blendMode: 'screen',
-            x: 50,
-            y: 58,
-            scale: 1.08,
-            rotation: 0,
-            opacity: 0.28,
-            locked: true,
-            layerOffset: -30,
-            tint: 0,
-          },
-          {
             id: 'center_hero_neon_particles',
             kind: 'sticker',
             char: '',
@@ -2501,38 +2442,6 @@ export const SQUARE_NIGHTLIFE_LAYOUT_TEMPLATES: TemplateSpec[] = [
             tint: 0,
           },
           {
-            id: 'center_hero_laser_beams',
-            kind: 'sticker',
-            char: '',
-            url: '/scene-assets/neon-club/laser-beams.svg',
-            isSticker: true,
-            blendMode: 'screen',
-            x: 50,
-            y: 35,
-            scale: 1.02,
-            rotation: 0,
-            opacity: 0.22,
-            locked: true,
-            layerOffset: -32,
-            tint: 0,
-          },
-          {
-            id: 'center_hero_smoke_ribbons',
-            kind: 'sticker',
-            char: '',
-            url: '/scene-assets/common/smoke-ribbons.svg',
-            isSticker: true,
-            blendMode: 'screen',
-            x: 50,
-            y: 58,
-            scale: 1.08,
-            rotation: 0,
-            opacity: 0.28,
-            locked: true,
-            layerOffset: -30,
-            tint: 0,
-          },
-          {
             id: 'center_hero_neon_particles',
             kind: 'sticker',
             char: '',
@@ -2793,7 +2702,7 @@ export const SQUARE_NIGHTLIFE_LAYOUT_TEMPLATES: TemplateSpec[] = [
     tags: ['Square', 'Left Hero', 'Right Text', 'Nightlife'],
     style: 'urban',
     bgPrompt: '',
-    preview: '/templates/miami_heat.jpg',
+    preview: '/templates/new-york-editor.jpg',
     formats: {
       square: {
         headline: 'ELECTRO',
@@ -2916,6 +2825,48 @@ export const SQUARE_NIGHTLIFE_LAYOUT_TEMPLATES: TemplateSpec[] = [
   },
 ];
 
+export const REMOVED_TEMPLATE_ASSET_IDS = new Set<string>([
+  'center_hero_neon_glow_overlay',
+  'center_hero_laser_beams',
+  'center_hero_smoke_ribbons',
+  'center_hero_neon_particles',
+  'ladies_night_lasers_square',
+  'ladies_night_lasers_story',
+  'ladies_night_smoke_story',
+]);
+
+export const REMOVED_TEMPLATE_ASSET_URLS = new Set<string>([
+  '/scene-assets/neon-club/glow-overlay.svg',
+  '/scene-assets/neon-club/laser-beams.svg',
+  '/scene-assets/neon-club/particles.svg',
+  '/scene-assets/common/smoke-ribbons.svg',
+  '/mobile-assets/scene-assets/neon-club/glow-overlay.webp',
+  '/mobile-assets/scene-assets/neon-club/laser-beams.webp',
+  '/mobile-assets/scene-assets/neon-club/particles.webp',
+  '/mobile-assets/scene-assets/common/smoke-ribbons.webp',
+]);
+
+const normalizeTemplateAssetUrl = (value: unknown) => {
+  const raw = String(value || '').trim();
+  if (!raw || raw.startsWith('data:') || raw.startsWith('blob:')) return raw;
+  try {
+    return new URL(raw, 'http://nightlife.local').pathname;
+  } catch {
+    return raw.split(/[?#]/)[0];
+  }
+};
+
+export const isRemovedTemplateAsset = (item: { id?: unknown; url?: unknown } | null | undefined) =>
+  REMOVED_TEMPLATE_ASSET_IDS.has(String(item?.id || '')) ||
+  REMOVED_TEMPLATE_ASSET_URLS.has(normalizeTemplateAssetUrl(item?.url));
+
+const cloneTemplateAssetList = <T extends { id?: unknown }>(
+  items: readonly T[] | undefined
+) =>
+  Array.isArray(items)
+    ? items.filter((item) => !isRemovedTemplateAsset(item)).map((item) => ({ ...item }))
+    : undefined;
+
 const cloneTemplateBase = (base: TemplateBase): TemplateBase => ({
   ...base,
   palette: base.palette ? { ...base.palette } : undefined,
@@ -2935,17 +2886,16 @@ const cloneTemplateBase = (base: TemplateBase): TemplateBase => ({
         Object.entries(base.textZones).map(([key, zone]) => [key, { ...zone }])
       )
     : undefined,
-  emojiList: Array.isArray(base.emojiList)
-    ? base.emojiList.map((item) => ({ ...item }))
-    : undefined,
-  emojis: Array.isArray(base.emojis)
-    ? base.emojis.map((item) => ({ ...item }))
-    : undefined,
+  emojiList: cloneTemplateAssetList(base.emojiList),
+  emojis: cloneTemplateAssetList(base.emojis),
 });
 
 type SavedTemplateStateJson = {
   state?: {
     session?: Partial<Record<Format, TemplateBase>>;
+    emojiList?: Emoji[];
+    portraits?: Partial<Record<Format, Emoji[]>>;
+    emojis?: Partial<Record<Format, Emoji[]>>;
   };
 };
 
@@ -2958,12 +2908,104 @@ const cloneSavedTemplateVariant = (
   const savedPortraits = (source as TemplateBase & { portraits?: Emoji[] }).portraits;
   const next = cloneTemplateBase(source);
   if (Array.isArray(savedPortraits) && savedPortraits.length) {
-    next.emojiList = savedPortraits.map((item) => ({ ...item }));
+    next.emojiList = cloneTemplateAssetList(savedPortraits);
   }
   delete (next as any).portraits;
   delete (next as any).emojis;
   return next;
 };
+
+const cloneSavedTemplateVariantFromPortraitAssets = (
+  data: SavedTemplateStateJson,
+  format: Format
+): TemplateBase => {
+  const source = data.state?.session?.[format] ?? {};
+  const savedPortraits = (source as TemplateBase & { portraits?: Emoji[] }).portraits;
+  const next = cloneTemplateBase(source);
+  next.emojiList = Array.isArray(savedPortraits)
+    ? (cloneTemplateAssetList(savedPortraits) ?? []).map((asset) => ({ ...asset, showLabel: false }))
+    : [];
+  delete (next as any).portraits;
+  delete (next as any).emojis;
+  return next;
+};
+
+const cloneSavedTemplateExactFormat = (
+  data: SavedTemplateStateJson,
+  format: Format
+): TemplateBase => {
+  const source = data.state?.session?.[format] ?? {};
+  const next = cloneTemplateBase(source);
+  next.format = format;
+  delete (next as any).portraits;
+  delete (next as any).emojis;
+  return next;
+};
+
+const cloneFirstSavedTemplateAssetList = (
+  ...items: Array<unknown>
+): Emoji[] | undefined => {
+  for (const item of items) {
+    if (Array.isArray(item) && item.length) {
+      const cloned = cloneTemplateAssetList(item as Emoji[]);
+      if (cloned?.length) return cloned;
+    }
+  }
+  return undefined;
+};
+
+const lockTemplateFlareAssets = (base: TemplateBase): TemplateBase => ({
+  ...base,
+  emojiList: base.emojiList?.map((asset) => {
+    const id = String(asset.id || '').toLowerCase();
+    const url = String((asset as any).url || '').toLowerCase();
+    const isFlareAsset =
+      asset.isFlare || asset.kind === 'flare' || id.includes('flare') || url.includes('/flares/');
+    return isFlareAsset ? { ...asset, locked: true } : asset;
+  }),
+});
+
+const CENTER_HERO_STORY_RESTORED_BLACK_FLARES: Emoji[] = [
+  {
+    id: 'center_hero_story_black_flare_mid_shadow',
+    url: '/flares/flareBlack.png',
+    x: 56.7,
+    y: 100,
+    scale: 0.9,
+    locked: true,
+    blendMode: 'normal',
+    opacity: 0.9,
+    rotation: 0,
+    isFlare: true,
+    label: 'Black Flare',
+    layerOffset: 70,
+  } as Emoji,
+];
+
+const isCenterHeroBlackFlareLayer = (item: Emoji) => {
+  const id = String((item as any)?.id || '').toLowerCase();
+  const url = String((item as any)?.url || '').toLowerCase();
+  return (
+    id.includes('flareblack') ||
+    id.includes('black_flare') ||
+    url.includes('flareblack') ||
+    url.includes('black-vignette')
+  );
+};
+
+const removeCenterHeroStoryStressLayers = (base: TemplateBase): TemplateBase => ({
+  ...base,
+  emojiList: Array.isArray(base.emojiList)
+    ? [
+        ...base.emojiList
+          .filter((item) => !isRemovedTemplateAsset(item))
+          .map((item) => (isCenterHeroBlackFlareLayer(item) ? { ...item, blendMode: 'normal' } : item)),
+        ...CENTER_HERO_STORY_RESTORED_BLACK_FLARES.filter(
+          (flare) => !base.emojiList?.some((item) => String(item.id || '') === String(flare.id || ''))
+        ),
+      ]
+    : base.emojiList,
+});
 
 const EDM_STAGE_CO2_LAYOUT1_SQUARE = cloneSavedTemplateVariant(
   edmStageCo2Layout1Data as unknown as SavedTemplateStateJson,
@@ -2983,10 +3025,12 @@ const SQUARE_CENTER_HERO_LAYOUT1_SQUARE = cloneSavedTemplateVariant(
   squareCenterHeroLayout1Data as unknown as SavedTemplateStateJson,
   'square'
 );
-const SQUARE_CENTER_HERO_LAYOUT1_STORY = cloneSavedTemplateVariant(
-  squareCenterHeroLayout1Data as unknown as SavedTemplateStateJson,
-  'story',
-  SQUARE_CENTER_HERO_LAYOUT1_SQUARE
+const SQUARE_CENTER_HERO_LAYOUT1_STORY = removeCenterHeroStoryStressLayers(
+  cloneSavedTemplateVariant(
+    squareCenterHeroLayout1Data as unknown as SavedTemplateStateJson,
+    'story',
+    SQUARE_CENTER_HERO_LAYOUT1_SQUARE
+  )
 );
 const SQUARE_CENTER_HERO_LAYOUT2_SQUARE = cloneSavedTemplateVariant(
   squareCenterHeroLayout2Data as unknown as SavedTemplateStateJson,
@@ -3039,6 +3083,14 @@ const LUXE_LAYOUT2_STORY = cloneSavedTemplateVariant(
   luxeLayout2Data as unknown as SavedTemplateStateJson,
   'story',
   LUXE_LAYOUT1_STORY
+);
+const LA_LUXE_SQUARE = cloneSavedTemplateVariantFromPortraitAssets(
+  laLuxeSquareData as unknown as SavedTemplateStateJson,
+  'square'
+);
+const LA_LUXE_STORY = cloneSavedTemplateVariantFromPortraitAssets(
+  laLuxeStoryData as unknown as SavedTemplateStateJson,
+  'story'
 );
 const MOJITO_LAYOUT1_SQUARE = cloneSavedTemplateVariant(
   mojitoLayout1Data as unknown as SavedTemplateStateJson,
@@ -3114,6 +3166,138 @@ const NEW_YORK_SQUARE = cloneSavedTemplateVariant(
   newYorkData as unknown as SavedTemplateStateJson,
   'square'
 );
+const DNB_BUNKER_SQUARE = cloneSavedTemplateVariant(
+  bassPressureSquareData as unknown as SavedTemplateStateJson,
+  'square'
+);
+const DNB_BUNKER_STORY = cloneSavedTemplateVariant(
+  bassPressureStoryData as unknown as SavedTemplateStateJson,
+  'story',
+  DNB_BUNKER_SQUARE
+);
+const RNB_VELVET_SQUARE = cloneSavedTemplateVariant(
+  rnbVelvetData as unknown as SavedTemplateStateJson,
+  'square'
+);
+const RNB_VELVET_STORY = cloneSavedTemplateVariant(
+  rnbVelvetStoryData as unknown as SavedTemplateStateJson,
+  'story',
+  RNB_VELVET_SQUARE
+);
+const SECRET_FRIDAY_SQUARE = cloneSavedTemplateVariant(
+  secretFridaySquareData as unknown as SavedTemplateStateJson,
+  'square'
+);
+const SECRET_FRIDAY_STORY = cloneSavedTemplateVariant(
+  secretFridayStoryData as unknown as SavedTemplateStateJson,
+  'story',
+  SECRET_FRIDAY_SQUARE
+);
+const MIAMI_HEAT_SQUARE = cloneSavedTemplateExactFormat(
+  miamiHeatSquareData as unknown as SavedTemplateStateJson,
+  'square'
+);
+const MIAMI_HEAT_STORY = cloneSavedTemplateExactFormat(
+  miamiHeatStoryData as unknown as SavedTemplateStateJson,
+  'story'
+);
+const MIAMI_NIGHTS_SQUARE = (() => {
+  const square = cloneSavedTemplateVariant(
+    miamiNightsData as unknown as SavedTemplateStateJson,
+    'square'
+  );
+  return {
+    ...square,
+    backgroundUrl:
+      square.backgroundUrl ||
+      (square as any).bgUrl ||
+      '/template-previews/900/miami2.webp',
+  } as TemplateBase;
+})();
+const MIAMI_NIGHTS_STORY = (() => {
+  const story = cloneSavedTemplateVariant(
+    miamiNightsStoryData as unknown as SavedTemplateStateJson,
+    'story',
+    MIAMI_NIGHTS_SQUARE
+  );
+  const squareBackground =
+    MIAMI_NIGHTS_SQUARE.backgroundUrl ||
+    (MIAMI_NIGHTS_SQUARE as any).bgUrl ||
+    '/template-previews/900/miami2.webp';
+
+  return {
+    ...story,
+    backgroundUrl: story.backgroundUrl || (story as any).bgUrl || squareBackground,
+  } as TemplateBase;
+})();
+const MARDI_GRAS_SQUARE = cloneSavedTemplateVariant(
+  mardiGrasData as unknown as SavedTemplateStateJson,
+  'square'
+);
+const MARDI_GRAS_STORY = cloneSavedTemplateVariant(
+  mardiGrasData as unknown as SavedTemplateStateJson,
+  'story',
+  MARDI_GRAS_SQUARE
+);
+const LATIN_STREET_TROPICAL_SQUARE = (() => {
+  const square = cloneSavedTemplateVariant(
+    latinStreetTropicalData as unknown as SavedTemplateStateJson,
+    'square'
+  );
+  return {
+    ...square,
+    backgroundUrl:
+      square.backgroundUrl ||
+      (square as any).bgUrl ||
+      '/template-previews/900/latin_street_tropical.webp',
+  } as TemplateBase;
+})();
+const LATIN_STREET_TROPICAL_STORY = (() => {
+  const story = cloneSavedTemplateVariant(
+    latinStreetTropicalStoryData as unknown as SavedTemplateStateJson,
+    'story',
+    LATIN_STREET_TROPICAL_SQUARE
+  );
+  const squareBackground =
+    LATIN_STREET_TROPICAL_SQUARE.backgroundUrl ||
+    (LATIN_STREET_TROPICAL_SQUARE as any).bgUrl ||
+    '/templates/latin_street_tropical.jpg';
+
+  return {
+    ...story,
+    backgroundUrl: story.backgroundUrl || (story as any).bgUrl || squareBackground,
+    bgPosX: story.bgPosX ?? LATIN_STREET_TROPICAL_SQUARE.bgPosX,
+    bgPosY: story.bgPosY ?? LATIN_STREET_TROPICAL_SQUARE.bgPosY,
+    bgScale: story.bgScale ?? LATIN_STREET_TROPICAL_SQUARE.bgScale,
+    bgRotate: story.bgRotate ?? LATIN_STREET_TROPICAL_SQUARE.bgRotate,
+    emojiList:
+      cloneTemplateAssetList(story.emojiList) ??
+      cloneTemplateAssetList(LATIN_STREET_TROPICAL_SQUARE.emojiList) ??
+      [],
+    } as TemplateBase;
+})();
+const THROWBACK_DATA = throwbackData as unknown as SavedTemplateStateJson;
+const THROWBACK_STORY_DATA = throwbackStoryData as unknown as SavedTemplateStateJson;
+const THROWBACK_SQUARE = lockTemplateFlareAssets(
+  cloneSavedTemplateVariant(THROWBACK_DATA, 'square')
+);
+const THROWBACK_STORY = (() => {
+  const story = cloneSavedTemplateVariant(THROWBACK_STORY_DATA, 'story', THROWBACK_SQUARE);
+
+  return {
+    ...story,
+    emojiList:
+      cloneFirstSavedTemplateAssetList(
+        story.emojiList,
+        THROWBACK_STORY_DATA.state?.session?.story?.emojiList,
+        (THROWBACK_STORY_DATA.state?.session?.story as TemplateBase & { portraits?: Emoji[] } | undefined)
+          ?.portraits,
+        THROWBACK_STORY_DATA.state?.emojiList,
+        THROWBACK_STORY_DATA.state?.portraits?.story,
+        THROWBACK_SQUARE.emojiList
+      ) ?? [],
+  } as TemplateBase;
+})();
 
 const squareCenterHeroNightlifeTemplate = SQUARE_NIGHTLIFE_LAYOUT_TEMPLATES.find(
   (template) => template.id === 'square_center_hero_nightlife'
@@ -3955,8 +4139,8 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
         head2Family: 'ChettaVissto',
         head2Color: '#050505',
         head2Size: 80,
-        head2X: -11.83,
-        head2Y: 29.569,
+        head2X: 6.1,
+        head2Y: 30.4,
         head2ColWidth: 56,
         head2Align: 'center',
         head2LineHeight: 0.95,
@@ -4128,6 +4312,10 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
         textColWidth: 58,
         align: 'center',
         textAlign: 'left',
+        textLayerOffset: {
+          headline: 0,
+          headline2: 16,
+        },
 
         portraitX: 72,
         portraitY: 52,
@@ -5835,597 +6023,8 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
     preview: '/templates/friday.jpg',
     recipeSummary: 'Cyber-club fashion background with oversized script, striped Friday wordmark, red date badges, and compact venue footer.',
     formats: {
-      square: {
-        backgroundUrl: '/templates/friday.jpg',
-        palette: {
-          bgFrom: '#22020E',
-          bgTo: '#16040A',
-          secondary: '#22020E',
-          primary: '#F7B58D',
-          neutral: '#F0EDEE',
-          accent: '#31C2F6',
-        },
-
-        headline: 'ladies',
-        headlineHidden: false,
-        headlineFamily: 'Moderniz',
-        headlineSize: 82,
-        headMaxPx: 82,
-        headSizeAuto: false,
-        headlineHeight: 0.72,
-        headlineLineHeight: 0.84,
-        headColor: '#c29800',
-        headX: 6.806,
-        headY: 62.064,
-        headAlign: 'center',
-        headShadow: true,
-        headShadowStrength: 0,
-        headTracking: -0.06,
-        headGlassEnabled: false,
-        headGlitchEnabled: false,
-        headRushEnabled: false,
-        headLineEnabled: false,
-        headSliceEnabled: false,
-        headExtrudeDepth: 0,
-        headExtrudeDistance: 0,
-        textFx: {
-          uppercase: true,
-          bold: true,
-          italic: false,
-          underline: false,
-          alpha: 1,
-          tracking: -0.06,
-          gradient: false,
-          gradFrom: '#ffffff',
-          gradTo: '#ffd166',
-          color: '#c29800',
-          strokeWidth: 0,
-          strokeColor: '#000000',
-          shadow: 0,
-          glow: 0,
-          shadowEnabled: true,
-        },
-
-        head2Enabled: true,
-        head2line: 'ladies',
-        head2Family: 'Moderniz',
-        head2Color: 'transparent',
-        head2Size: 80,
-        head2X: 5.452,
-        head2Y: 76.695,
-        head2ColWidth: 91,
-        head2Align: 'center',
-        head2LineHeight: 0.74,
-        head2Rotate: 0,
-        head2Shadow: true,
-        head2ShadowStrength: 1.25,
-        head2Fx: {
-          uppercase: false,
-          bold: true,
-          italic: false,
-          underline: false,
-          alpha: 1,
-          tracking: -0.02,
-          gradient: false,
-          gradFrom: '#fff200',
-          gradTo: '#fff200',
-          color: '#31C2F6',
-          strokeWidth: 2.2,
-          strokeColor: '#F0EDEE',
-          shadow: 1.25,
-          glow: 0.12,
-          shadowEnabled: true,
-        },
-
-        details: 'HYPE POLICY:\nLASTBORN\nWARRILASTBORN\n\nMUSIC BY:\nDJ WHAXZY\nDJ OMOH\nDJ QUEENCESS',
-        detailsFamily: 'Bebas Neue',
-        detailsSize: 15,
-        detailsX: 15.054,
-        detailsY: 20.374,
-        detailsAlign: 'left',
-        detailsLineHeight: 0.8,
-        detailsTracking: 0.03,
-        detailsUppercase: true,
-        detailsBold: true,
-        bodyColor: '#F0EDEE',
-        detailsColor: '#F0EDEE',
-        detailsShadow: true,
-        detailsShadowStrength: 0.95,
-
-        venue: 'KM 5, IWO/IBADAN EXPRESSWAY, \nBEHIND CALTAD FILLING STATION, OSOGBO',
-        venueFamily: 'LEMONMILK-Regular',
-        venueColor: '#F0EDEE',
-        venueSize: 10,
-        venueX: 29.434317129629626,
-        venueY: 90.626,
-        venueAlign: 'center',
-        venueLineHeight: 0.7,
-        venueShadow: true,
-        venueShadowStrength: 0.75,
-        venueUppercase: true,
-        venueBold: true,
-
-        details2Enabled: true,
-        details2: 'FOR RESERVATIONS: 08102379055',
-        details2Family: 'LEMONMILK-Regular',
-        details2Size: 13,
-        details2X: -16.879,
-        details2Y: 43.786,
-        details2Align: 'center',
-        details2LineHeight: 0.8,
-        details2LetterSpacing: 0.15,
-        details2Color: '#31C2F6',
-        details2Uppercase: true,
-        details2Bold: true,
-        details2Shadow: true,
-        details2ShadowStrength: 0.65,
-        details2Rotate: 270,
-
-        subtagEnabled: true,
-        subtag: 'Night',
-        subtagFamily: 'Octin College Rg',
-        subtagSize: 86,
-        subtagTextColor: '#31C2F6',
-        subtagBgColor: '#22020E',
-        subtagAlpha: 0,
-        pillAlpha: 0,
-        subtagX: 29.253,
-        subtagY: 68.746,
-        subtagAlign: 'center',
-        subtagShadow: true,
-        subtagShadowStrength: 1,
-        subtagUppercase: true,
-        subtagBold: true,
-
-        presenterEnabled: true,
-        presenter: 'nightlife flyers',
-        presenterFamily: 'BTSE PS2',
-        presenterColor: '#F0EDEE',
-        presenterSize: 10,
-        presenterX: 34,
-        presenterY: 6,
-        presenterWidth: 40,
-        presenterAlign: 'center',
-        leftRailEnabled: false,
-        leftRail: '',
-        leftRailX: 3.5,
-        leftRailY: 53,
-        leftRailSize: 10,
-        leftRailFamily: 'Inter',
-        leftRailColor: '#31C2F6',
-        leftRailRotation: -90,
-        rightRailEnabled: false,
-        dateEnabled: true,
-        date: 'DEC 5',
-        dateFamily: 'Bebas Neue',
-        dateColor: '#31C2F6',
-        dateSize: 24,
-        dateX: 11,
-        dateY: 9,
-        dateAlign: 'left',
-        dateRotation: 0,
-        priceEnabled: false,
-        qrEnabled: true,
-        qrX: 86,
-        qrY: 8,
-        qrScale: 0.68,
-
-        bgPosX: 49.63903356481482,
-        bgPosY: 41.52560763888889,
-        bgScale: 1,
-        bgBlur: 0,
-        vignette: true,
-        vignetteStrength: 0.32,
-        haze: 0.03,
-        grade: 0.66,
-        leak: 0.02,
-        grain: 0.12,
-        filmGrade: 0.8,
-        clarity: 0.18,
-        contrast: 1.18,
-        saturation: 1.24,
-        warmth: -0.04,
-        vibrance: 0.34,
-
-        textColWidth: 88,
-        align: 'center',
-        textAlign: 'center',
-        emojiList: [
-          {
-            id: 'secret_friday_red_square_sq',
-            kind: 'sticker',
-            char: '',
-            svgTemplate:
-              '<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" preserveAspectRatio="none" fill="none">' +
-                '<rect x="0" y="0" width="256" height="256" fill="{{COLOR}}"/>' +
-              '</svg>',
-            iconColor: '#f40101',
-            isSticker: true,
-            isShapeGraphic: true,
-            shapeKind: 'shape_square',
-            shapeGradient: false,
-            shapeLength: 160,
-            shapeSkew: 0,
-            blendMode: 'normal',
-            label: 'Square',
-            showLabel: false,
-            labelBg: true,
-            x: 16.206597222222225,
-            y: 10.990306712962962,
-            scale: 0.27500067973178416,
-            rotation: -45.69304350968706,
-            opacity: 1,
-            locked: false,
-            hitTestMode: 'alpha-bounds',
-          },
-          {
-            id: 'secret_friday_drink_specials_sq',
-            kind: 'sticker',
-            char: '',
-            svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.drink,
-            iconColor: '#ffffff',
-            isSticker: true,
-            isNightlifeGraphic: true,
-            blendMode: 'normal',
-            label: 'Drink Specials',
-            showLabel: false,
-            labelBg: false,
-            x: 89.79383680555556,
-            y: 33.20240162037037,
-            scale: 0.22865903644691565,
-            rotation: 0,
-            opacity: 1,
-            locked: false,
-            hitTestMode: 'alpha-bounds',
-          },
-          {
-            id: 'secret_friday_hookah_sq',
-            kind: 'sticker',
-            char: '',
-            svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.hookah,
-            iconColor: '#ffffff',
-            isSticker: true,
-            isNightlifeGraphic: true,
-            blendMode: 'normal',
-            label: 'Hookah',
-            showLabel: false,
-            x: 89.15870949074075,
-            y: 41.68330439814815,
-            scale: 0.293870326504432,
-            rotation: 0,
-            opacity: 1,
-            locked: false,
-            hitTestMode: 'alpha-bounds',
-          },
-          {
-            id: 'secret_friday_bucket_deals_sq',
-            kind: 'sticker',
-            char: '',
-            svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.bucket,
-            iconColor: '#ffffff',
-            isSticker: true,
-            isNightlifeGraphic: true,
-            blendMode: 'normal',
-            label: 'Bucket Deals',
-            showLabel: false,
-            labelBg: false,
-            labelSize: 9,
-            x: 88.87008101851852,
-            y: 51.83015046296296,
-            scale: 0.27618048215189434,
-            rotation: 0,
-            opacity: 1,
-            locked: false,
-            hitTestMode: 'alpha-bounds',
-          },
-        ],
-      },
-      story: {
-        backgroundUrl: '/templates/friday.jpg',
-        palette: {
-          bgFrom: '#22020E',
-          bgTo: '#16040A',
-          secondary: '#22020E',
-          primary: '#F7B58D',
-          neutral: '#F0EDEE',
-          accent: '#31C2F6',
-        },
-
-        headline: 'ladies',
-        headlineHidden: false,
-        headlineFamily: 'Moderniz',
-        headlineSize: 82,
-        headMaxPx: 82,
-        headSizeAuto: false,
-        headlineHeight: 0.72,
-        headlineLineHeight: 0.84,
-        headColor: '#c29800',
-        headX: 6.784,
-        headY: 68.747,
-        headAlign: 'center',
-        headShadow: true,
-        headShadowStrength: 0,
-        headTracking: -0.06,
-        headGlassEnabled: false,
-        headGlitchEnabled: false,
-        headRushEnabled: false,
-        headLineEnabled: false,
-        headSliceEnabled: false,
-        headExtrudeDepth: 0,
-        headExtrudeDistance: 0,
-        textFx: {
-          uppercase: true,
-          bold: true,
-          italic: false,
-          underline: false,
-          alpha: 1,
-          tracking: -0.06,
-          gradient: false,
-          gradFrom: '#ffffff',
-          gradTo: '#ffd166',
-          color: '#c29800',
-          strokeWidth: 0,
-          strokeColor: '#000000',
-          shadow: 0,
-          glow: 0,
-          shadowEnabled: true,
-        },
-
-        head2Enabled: true,
-        head2line: 'ladies',
-        head2Family: 'Moderniz',
-        head2Color: 'transparent',
-        head2Size: 80,
-        head2X: 5.736,
-        head2Y: 76.57,
-        head2ColWidth: 91,
-        head2Align: 'center',
-        head2LineHeight: 0.74,
-        head2Rotate: 0,
-        head2Shadow: true,
-        head2ShadowStrength: 1.25,
-        head2Fx: {
-          uppercase: false,
-          bold: true,
-          italic: false,
-          underline: false,
-          alpha: 1,
-          tracking: -0.02,
-          gradient: false,
-          gradFrom: '#fff200',
-          gradTo: '#fff200',
-          color: '#31C2F6',
-          strokeWidth: 2.2,
-          strokeColor: '#F0EDEE',
-          shadow: 1.25,
-          glow: 0.12,
-          shadowEnabled: true,
-        },
-
-        details: 'HYPE POLICY:\nLASTBORN\nWARRILASTBORN\n\nMUSIC BY:\nDJ WHAXZY\nDJ OMOH\nDJ QUEENCESS',
-        detailsFamily: 'Bebas Neue',
-        detailsSize: 15,
-        detailsX: 15.071,
-        detailsY: 15.311,
-        detailsAlign: 'left',
-        detailsLineHeight: 0.8,
-        detailsTracking: 0.03,
-        detailsUppercase: true,
-        detailsBold: true,
-        bodyColor: '#F0EDEE',
-        detailsColor: '#F0EDEE',
-        detailsShadow: true,
-        detailsShadowStrength: 0.95,
-
-        venue: 'KM 5, IWO/IBADAN EXPRESSWAY, \nBEHIND CALTAD FILLING STATION, OSOGBO',
-        venueFamily: 'LEMONMILK-Regular',
-        venueColor: '#F0EDEE',
-        venueSize: 10,
-        venueX: 29.434317129629626,
-        venueY: 89.021,
-        venueAlign: 'center',
-        venueLineHeight: 0.7,
-        venueShadow: true,
-        venueShadowStrength: 0.75,
-        venueUppercase: true,
-        venueBold: true,
-
-        details2Enabled: true,
-        details2: 'FOR RESERVATIONS: 08102379055',
-        details2Family: 'LEMONMILK-Regular',
-        details2Size: 13,
-        details2X: -14.298,
-        details2Y: 28.616,
-        details2Align: 'center',
-        details2LineHeight: 0.8,
-        details2LetterSpacing: 0.15,
-        details2Color: '#31C2F6',
-        details2Uppercase: true,
-        details2Bold: true,
-        details2Shadow: true,
-        details2ShadowStrength: 0.65,
-        details2Rotate: 270,
-
-        subtagEnabled: true,
-        subtag: 'Night',
-        subtagFamily: 'Octin College Rg',
-        subtagSize: 86,
-        subtagTextColor: '#31C2F6',
-        subtagBgColor: '#22020E',
-        subtagAlpha: 0,
-        pillAlpha: 0,
-        subtagX: 28.777488425925924,
-        subtagY: 72.023,
-        subtagAlign: 'center',
-        subtagShadow: true,
-        subtagShadowStrength: 1,
-        subtagUppercase: true,
-        subtagBold: true,
-
-        presenterEnabled: true,
-        presenter: 'nightlife flyers',
-        presenterFamily: 'BTSE PS2',
-        presenterColor: '#F0EDEE',
-        presenterSize: 10,
-        presenterX: 34,
-        presenterY: 6,
-        presenterWidth: 40,
-        presenterAlign: 'center',
-        leftRailEnabled: true,
-        leftRail: 'Lose control in full color.',
-        leftRailX: 21,
-        leftRailY: 92,
-        leftRailSize: 21,
-        leftRailFamily: 'Octin College Rg',
-        leftRailColor: '#31C2F6',
-        leftRailRotation: 0,
-        rightRailEnabled: false,
-        dateEnabled: true,
-        date: 'DEC 5',
-        dateFamily: 'Bebas Neue',
-        dateColor: '#31C2F6',
-        dateSize: 24,
-        dateX: 11,
-        dateY: 9,
-        dateAlign: 'left',
-        dateRotation: 0,
-        priceEnabled: false,
-        qrEnabled: true,
-        qrX: 86,
-        qrY: 8,
-        qrScale: 0.68,
-
-        bgPosX: 49.70992476851852,
-        bgPosY: 38.11292860243056,
-        bgScale: 1,
-        bgBlur: 0,
-        vignette: true,
-        vignetteStrength: 0.32,
-        haze: 0.03,
-        grade: 0.66,
-        leak: 0.02,
-        grain: 0.12,
-        filmGrade: 0.8,
-        clarity: 0.18,
-        contrast: 1.18,
-        saturation: 1.24,
-        warmth: -0.04,
-        vibrance: 0.34,
-
-        textColWidth: 88,
-        align: 'center',
-        textAlign: 'center',
-        emojiList: [
-          {
-            id: 'secret_friday_red_square_story',
-            kind: 'sticker',
-            char: '',
-            svgTemplate:
-              '<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" preserveAspectRatio="none" fill="none">' +
-                '<rect x="0" y="0" width="256" height="256" fill="{{COLOR}}"/>' +
-              '</svg>',
-            iconColor: '#f40101',
-            isSticker: true,
-            isShapeGraphic: true,
-            shapeKind: 'shape_square',
-            shapeGradient: false,
-            shapeLength: 160,
-            shapeSkew: 0,
-            blendMode: 'normal',
-            label: 'Square',
-            showLabel: false,
-            labelBg: true,
-            x: 16.206597222222225,
-            y: 10.990306712962962,
-            scale: 0.27500067973178416,
-            rotation: -45.69304350968706,
-            opacity: 1,
-            locked: false,
-            hitTestMode: 'alpha-bounds',
-          },
-          {
-            id: 'secret_friday_drink_specials_story',
-            kind: 'sticker',
-            char: '',
-            svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.drink,
-            iconColor: '#ffffff',
-            isSticker: true,
-            isNightlifeGraphic: true,
-            blendMode: 'normal',
-            label: 'Drink Specials',
-            showLabel: false,
-            labelBg: false,
-            x: 93.1691261574074,
-            y: 70.2137134693287,
-            scale: 0.22865903644691565,
-            rotation: 0,
-            opacity: 1,
-            locked: false,
-            hitTestMode: 'alpha-bounds',
-          },
-          {
-            id: 'secret_friday_hookah_story',
-            kind: 'sticker',
-            char: '',
-            svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.hookah,
-            iconColor: '#ffffff',
-            isSticker: true,
-            isNightlifeGraphic: true,
-            blendMode: 'normal',
-            label: 'Hookah',
-            showLabel: false,
-            labelBg: true,
-            x: 92.73871527777779,
-            y: 75.31408239293982,
-            scale: 0.293870326504432,
-            rotation: 0,
-            opacity: 1,
-            locked: false,
-            hitTestMode: 'alpha-bounds',
-          },
-          {
-            id: 'secret_friday_bucket_deals_story',
-            kind: 'sticker',
-            char: '',
-            svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.bucket,
-            iconColor: '#ffffff',
-            isSticker: true,
-            isNightlifeGraphic: true,
-            blendMode: 'normal',
-            label: 'Bucket Deals',
-            showLabel: false,
-            labelBg: false,
-            labelSize: 9,
-            x: 92.94560185185185,
-            y: 81.32355866608795,
-            scale: 0.27618048215189434,
-            rotation: 0,
-            opacity: 1,
-            locked: false,
-            hitTestMode: 'alpha-bounds',
-          },
-          {
-            id: 'secret_friday_venue_story',
-            kind: 'sticker',
-            char: '',
-            svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.venue,
-            iconColor: '#ffffff',
-            isSticker: true,
-            isNightlifeGraphic: true,
-            blendMode: 'normal',
-            label: 'Venue',
-            showLabel: false,
-            labelBg: false,
-            x: 50,
-            y: 86.6943359375,
-            scale: 0.2912549708666199,
-            rotation: 0,
-            opacity: 1,
-            locked: false,
-            hitTestMode: 'alpha-bounds',
-          },
-        ],
-      },
+      square: SECRET_FRIDAY_SQUARE,
+      story: SECRET_FRIDAY_STORY,
     },
   },
   {
@@ -7039,8 +6638,8 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
         headStrokeWidth: 3,
         headStrokeColor: '#240032',
         headGlow: 0.24,
-        headX: 6.867,
-        headY: 14.389,
+        headX: 6.7,
+        headY: 11.7,
         headAlign: 'center',
         headShadow: false,
         headShadowStrength: 0,
@@ -7059,7 +6658,7 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
         headGlassSecondaryColor: '#2AA7FF',
         headGlassHighlightColor: '#7e88cd',
         headGlassBlur: 5,
-        headGlassGlow: 60,
+        headGlassGlow: 21.5,
         headGlassStroke: 0.5,
         headGlassFillAlpha: 0.12,
         headRetroShadowEnabled: true,
@@ -7088,8 +6687,8 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
         head2Color: '#F6FBFF',
         head2Align: 'center',
         head2Size: 26,
-        head2X: 46.404,
-        head2Y: 30.187,
+        head2X: 65.3,
+        head2Y: 28.2,
         head2Shadow: true,
         head2ShadowStrength: 1,
         head2Alpha: 1,
@@ -7269,8 +6868,8 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
         headStrokeWidth: 3,
         headStrokeColor: '#240032',
         headGlow: 0.24,
-        headX: 3.964,
-        headY: 3.678,
+        headX: 5.2,
+        headY: 6.6,
         headAlign: 'center',
         headShadow: false,
         headShadowStrength: 0,
@@ -7289,7 +6888,7 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
         headGlassSecondaryColor: '#2AA7FF',
         headGlassHighlightColor: '#7e88cd',
         headGlassBlur: 5,
-        headGlassGlow: 60,
+        headGlassGlow: 33.5,
         headGlassStroke: 0.5,
         headGlassFillAlpha: 0.12,
         headRetroShadowEnabled: true,
@@ -7317,9 +6916,9 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
         head2Family: 'Dear Script (Demo_Font)',
         head2Color: '#d6d2cd',
         head2Align: 'center',
-        head2Size: 40,
-        head2X: 19.332,
-        head2Y: 34.324,
+        head2Size: 74,
+        head2X: 11.6,
+        head2Y: 33.3,
         head2Shadow: true,
         head2ShadowStrength: 1,
         head2Alpha: 1,
@@ -8160,6 +7759,175 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
     },
   },
   {
+    id: 'throwback_cassette',
+    label: 'Throwback — Cassette Night',
+    tags: ['Throwback', 'Vintage', 'Hip-Hop'],
+    style: 'vintage',
+    bgPrompt:
+      'retro cassette tape flyer background, hot pink and purple paint splashes, 80s and 90s club nostalgia, neon poster texture',
+    preview: '/templates/throwback.jpg',
+    formats: {
+      square: {
+        backgroundUrl: '/templates/throwback.jpg',
+        headline: 'THROW\nBACK',
+        headlineFamily: 'PaybAck',
+        headlineSize: 142,
+        headlineLineHeight: .72,
+        headColor: '#ffe54c',
+        headStrokeWidth: 2,
+        headStrokeColor: '#101018',
+        headGlow: .42,
+        headX: 5.4,
+        headY: 9.2,
+        headAlign: 'left',
+        headShadow: true,
+        headShadowStrength: 1,
+
+        head2Enabled: true,
+        head2line: 'OLD SCHOOL ALL NIGHT',
+        head2Family: 'Azonix',
+        head2Color: '#7efaff',
+        head2Align: 'left',
+        head2Size: 27,
+        head2X: 6.2,
+        head2Y: 40.8,
+        head2Shadow: true,
+        head2ShadowStrength: 1,
+
+        details: 'FRI • 10 PM\n90s • 2000s • R&B\nHIP HOP CLASSICS',
+        detailsLineHeight: .64,
+        detailsX: 6.1,
+        detailsY: 80.9,
+        bodyColor: '#ffffff',
+        detailsAlign: 'left',
+        detailsFamily: 'Nexa-Heavy',
+        detailsSize: 25,
+        detailsShadow: true,
+        detailsShadowStrength: 1,
+
+        venue: 'THE BOOMBOX',
+        venueX: 6.1,
+        venueY: 74.1,
+        venueColor: '#ff7a2f',
+        venueSize: 45,
+        venueFamily: 'Bebas Neue',
+        venueShadow: true,
+        venueShadowStrength: 1,
+
+        subtagEnabled: true,
+        subtag: 'rewind selecta',
+        subtagX: 6.1,
+        subtagY: 6.2,
+        subtagSize: 25,
+        subtagFamily: 'Nexa-Heavy',
+        subtagTextColor: '#ffffff',
+        pillColor: '#101018',
+        pillAlpha: .54,
+        subtagShadow: true,
+        subtagShadowStrength: .8,
+
+        bgPosX: 50,
+        bgPosY: 50,
+        bgScale: 1,
+        bgRotate: 0,
+        vignette: true,
+        vignetteStrength: .38,
+        haze: .08,
+        grade: .24,
+        leak: .14,
+        clarity: .12,
+        contrast: 1.08,
+        saturation: 1.1,
+        warmth: .08,
+        vibrance: .24,
+        filmGrade: .32,
+
+        textColWidth: 100,
+        align: 'left',
+        textAlign: 'left',
+      },
+      story: {
+        backgroundUrl: '/templates/throwback.jpg',
+        headline: 'THROW\nBACK',
+        headlineFamily: 'PaybAck',
+        headlineSize: 148,
+        headlineLineHeight: .72,
+        headColor: '#ffe54c',
+        headStrokeWidth: 2,
+        headStrokeColor: '#101018',
+        headGlow: .42,
+        headX: 6.6,
+        headY: 7.2,
+        headAlign: 'left',
+        headShadow: true,
+        headShadowStrength: 1,
+
+        head2Enabled: true,
+        head2line: 'OLD SCHOOL ALL NIGHT',
+        head2Family: 'Azonix',
+        head2Color: '#7efaff',
+        head2Align: 'left',
+        head2Size: 25,
+        head2X: 7.4,
+        head2Y: 30.4,
+        head2Shadow: true,
+        head2ShadowStrength: 1,
+
+        details: 'FRI • 10 PM\n90s • 2000s • R&B\nHIP HOP CLASSICS',
+        detailsLineHeight: .66,
+        detailsX: 7.1,
+        detailsY: 84.8,
+        bodyColor: '#ffffff',
+        detailsAlign: 'left',
+        detailsFamily: 'Nexa-Heavy',
+        detailsSize: 27,
+        detailsShadow: true,
+        detailsShadowStrength: 1,
+
+        venue: 'THE BOOMBOX',
+        venueX: 7.1,
+        venueY: 79.5,
+        venueColor: '#ff7a2f',
+        venueSize: 48,
+        venueFamily: 'Bebas Neue',
+        venueShadow: true,
+        venueShadowStrength: 1,
+
+        subtagEnabled: true,
+        subtag: 'rewind selecta',
+        subtagX: 7.1,
+        subtagY: 4.5,
+        subtagSize: 25,
+        subtagFamily: 'Nexa-Heavy',
+        subtagTextColor: '#ffffff',
+        pillColor: '#101018',
+        pillAlpha: .54,
+        subtagShadow: true,
+        subtagShadowStrength: .8,
+
+        bgPosX: 50,
+        bgPosY: 50,
+        bgScale: 1.46,
+        bgRotate: 0,
+        vignette: true,
+        vignetteStrength: .44,
+        haze: .08,
+        grade: .24,
+        leak: .14,
+        clarity: .12,
+        contrast: 1.08,
+        saturation: 1.1,
+        warmth: .08,
+        vibrance: .24,
+        filmGrade: .32,
+
+        textColWidth: 100,
+        align: 'left',
+        textAlign: 'left',
+      },
+    },
+  },
+  {
     id: 'dnb_bunker',
     label: 'DNB — Concrete Bunker',
     tags: ['Techno', 'Urban'],
@@ -8167,125 +7935,8 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
     bgPrompt: PRESETS.find((p) => p.key === 'dnb_bunker')!.prompt,
     preview: '/templates/dnb_bunker.jpg',
     formats: {
-      square: {
-        headline: 'BASS',
-        headlineFamily: 'raidercrusader',
-        headlineSize: 94,
-        headlineHeight: 0.8,
-        headColor: '#09f1ed',
-        headX: 24.1,
-        headY: 54.1,
-        headAlign: 'center',
-        headItalic: true,
-
-        details: '174 BPM • Drum & Bass • Jungle\nSecret Location\nCapacity Limited',
-        detailsLineHeight: .62,
-        detailsX: 10,
-        detailsY: 81.5,
-        bodyColor: '#09f1ed',
-        detailsAlign: 'center',
-        detailsFamily: 'Azonix',
-        detailsSize: 18,
-
-        venue: 'CONCRETE',
-        venueX: 37.8,
-        venueY: 7.9,
-        venueColor: '#f7c202',
-        venueSize: 41,
-        venueFamily: 'Bebas Neue',
-
-        head2Enabled: true,
-        head2line: 'PRESSURE',
-        head2Color: '#ffffff',
-        head2Align: 'center',
-        head2Size: 46,
-        head2X: 22.8,
-        head2Y: 70.8,
-        head2Family: 'raidercrusader',
-
-        subtagEnabled: true,
-        subtag: 'PURE CHAOS!',
-        subtagX: 36,
-        subtagY: 13.6,
-        subtagSize: 17,
-        subtagFamily: 'Nexa-Heavy',
-        subtagTextColor: '#f7c202',
-        pillColor: '#131314',
-        pillAlpha: 0,
-
-        bgPosX: 50.5,
-        bgPosY: 35.4,
-        bgScale: 1.3,
-        vignetteStrength:.1,
-        
-
-        textColWidth: 70,
-        align: 'center',
-        textAlign: 'center',
-      },
-      story: {
-        headline: 'BASS',
-        headlineFamily: 'raidercrusader',
-        headlineSize: 148,
-        headlineHeight: 0.8,
-        headColor: '#09f1ed',
-        headX: 12.8,
-        headY: 48,
-        headAlign: 'center',
-        headItalic: true,
-
-        details: '174 BPM • Drum & Bass • Jungle\nSecret Location\nCapacity Limited',
-        detailsLineHeight: .66,
-        detailsX: 5.4,
-        detailsY: 75.1,
-        bodyColor: '#09f1ed',
-        detailsAlign: 'center',
-        detailsFamily: 'Azonix',
-        detailsSize: 21,
-
-        details2Enabled: true,
-        details2Family: 'Designer',
-        details2:'GET YOUR TICKETS NOW',
-        details2Size: 25,
-        details2X: 12.3,
-        details2Y: 83.2,
-        details2Color: '#ffffff',
-        details2Shadow: true,
-        details2ShadowStrength: 1,
-
-
-        venue: 'CONCRETE',
-        venueX: 39.1,
-        venueY: 8.6,
-        venueColor: '#f7c202',
-        venueSize: 41,
-        venueFamily: 'Bebas Neue',
-
-        head2Enabled: true,
-        head2line: 'PRESSURE',
-        head2Color: '#ffffff',
-        head2Align: 'center',
-        head2Size: 72,
-        head2X: 10.2,
-        head2Y: 62.6,
-        head2Family: 'raidercrusader',
-
-        subtagEnabled: true,
-        subtag: 'PURE CHAOS!',
-        subtagX: 36.8,
-        subtagY: 11.9,
-        subtagSize: 17,
-        subtagFamily: 'Nexa-Heavy',
-        subtagTextColor: '#f7c202',
-        pillColor: '#131314',
-        pillAlpha: 0,
-
-        vignetteStrength:.1,
-
-        textColWidth: 80,
-        align: 'center',
-        textAlign: 'center',
-      },
+      square: DNB_BUNKER_SQUARE,
+      story: DNB_BUNKER_STORY,
     },
   },
   {
@@ -8296,120 +7947,8 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
     bgPrompt: PRESETS.find((p) => p.key === 'rnb_velvet')!.prompt,
     preview: '/templates/rnb_velvet.jpg',
     formats: {
-      square: {
-        headline: 'SLOW JAMZ',
-        headlineFamily: 'Atlantis Famingo DEMO VERSION',
-        headlineSize: 104,
-        headlineLineHeight: .76,
-        headColor: '#dcaf09',
-        headX: 34.2,
-        headY: 9.7,
-        headAlign: 'center',
-        headItalic: true,
-        headShadow: true,
-        headShadowStrength: 1,
-
-        details: 'Smooth R&B • Neo-Soul\nCouples Welcome\nDress Code: Casually Elegant',
-        detailsLineHeight: .76,
-        detailsX: 34.1,
-        detailsY: 60.6,
-        bodyColor: '#ffffff',
-        detailsAlign: 'right',
-        detailsFamily: 'Azonix',
-        detailsSize: 15,
-        
-
-        venue: 'VELVET ROOM',
-        venueX: 60.6,
-        venueY: 82.7,
-        venueColor: '#f7c202',
-        venueSize: 41,
-        venueFamily: 'Bebas Neue',
-
-        head2Enabled: true,
-        head2line: 'LOUNGE',
-        head2Color: '#ffffff',
-        head2Align: 'center',
-        head2Size: 24,
-        head2X: 71,
-        head2Y: 77,
-        head2Family: 'Azonix',
-
-        subtagEnabled: true,
-        subtag: 'Nothing rushed,\nEverything felt.',
-        subtagX: 56.1,
-        subtagY: 37.3,
-        subtagSize: 17,
-        subtagFamily: 'Nexa-Heavy',
-        subtagTextColor: '#ffffff',
-        pillColor: '#131314',
-        pillAlpha: 0,
-        subtagShadow: false,
-
-        bgPosX: 80.3,
-        bgPosY: 9.7,        
-        bgScale: 1.5,
-        vignetteStrength:.1,
-
-
-        textColWidth: 70,
-        align: 'center',
-        textAlign: 'center',
-      },
-      story: {
-        headline: 'SLOW JAMZ',
-        headlineFamily: 'Atlantis Famingo DEMO VERSION',
-        headlineSize: 132,
-        headlineHeight: 0.74,
-        headColor: '#dcaf09',
-        headX: 1.4,
-        headY: 55.3,
-        headAlign: 'center',
-        headItalic: true,
-        headShadow: true,
-        headShadowStrength: 1,
-
-        details: 'Smooth R&B • Neo-Soul • Cocktails\nCouples Welcome\nDress Code: Elegant',
-        detailsLineHeight: .68,
-        detailsX: 12.9,
-        detailsY: 83.8,
-        bodyColor: '#D49B44',
-        detailsAlign: 'center',
-        detailsFamily: 'Azonix',
-        detailsSize: 18,
-
-        venue: 'VELVET ROOM',
-        venueX: 34.9,
-        venueY: 95.2,
-        venueColor: '#f7c202',
-        venueSize: 41,
-        venueFamily: 'Bebas Neue',
-
-        head2Enabled: true,
-        head2line: 'LOUNGE',
-        head2Color: '#ffffff',
-        head2Align: 'center',
-        head2Size: 24,
-        head2X: 40.2,
-        head2Y: 92.7,
-        head2Family: 'Azonix',
-
-        subtagEnabled: true,
-        subtag: 'Nothing rushed, Everything felt',
-        subtagX: 17.7,
-        subtagY: 78.3,
-        subtagSize: 17,
-        subtagFamily: 'Nexa-Heavy',
-        subtagTextColor: '#ffffff',
-        pillColor: '#131314',
-        pillAlpha: 0,
-        subtagShadow: false,
-        vignetteStrength:.1,
-
-        textColWidth: 70,
-        align: 'center',
-        textAlign: 'center',
-      },
+      square: RNB_VELVET_SQUARE,
+      story: RNB_VELVET_STORY,
     },
   },
   {
@@ -8819,74 +8358,202 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
     preview: '/templates/atlanta.jpg',
     formats: {
       square: {
+        backgroundUrl: '/template-previews/900/atlanta.webp',
         headline: 'THE\nIN',
-        headlineFamily: 'Bebas Neue',
+        headlineFamily: 'Monoton',
         headlineSize: 96,
         headlineHeight: 0.76,
+        headlineLineHeight: 0.76,
+        lineHeight: 0.76,
         headColor: '#ffffff',
-        headX: 20.6,
-        headY: 16.3,
+        headX: 14.252,
+        headY: 12.294,
         headAlign: 'center',
         headShadow: true,
         headShadowStrength: 1,
+        headSizeAuto: false,
+        headMaxPx: 120,
+        headRotate: 0,
+        headSkew: 0,
 
-        details: 'SAT • 10 PM\nDJ SETS + DRINKS\n21+ ONLY',
+        details: "SAT • 10 PM\nWHERE THE CITY'S MOST STYLISH\nCOME TO SOCIALIZE",
         detailsLineHeight: 0.62,
-        detailsX: 16.8,
-        detailsY: 60.7,
-        bodyColor: '#dbeafe',
+        detailsX: 16.457,
+        detailsY: 58.122,
+        bodyColor: '#fbfbf9',
+        detailsColor: '#fbfbf9',
         detailsAlign: 'center',
-        detailsFamily: 'Inter',
+        detailsFamily: 'Bebas Neue',
         detailsSize: 16,
+        detailsShadow: true,
+        detailsShadowStrength: 1,
+        detailsUppercase: true,
+        detailsBold: true,
+        detailsItalic: false,
+        detailsTracking: 0.04,
+        detailsRotate: 0,
+
+        details2Enabled: true,
+        details2: 'DRESS CODE:\nUPSCALE • ELEGANT • FASHION FORWARD',
+        details2Family: 'Nexa-ExtraLight',
+        details2Color: '#ffffff',
+        details2Size: 12,
+        details2LineHeight: 0.7,
+        details2LetterSpacing: 0,
+        details2Align: 'center',
+        details2Shadow: true,
+        details2ShadowStrength: 1,
+        details2X: 7.812,
+        details2Y: 83.437,
+        details2Rotate: 0,
 
         venue: 'PEACHTREE ROOFTOP',
-        venueX: 15.9,
-        venueY: 80.3,
+        venueX: 15.615,
+        venueY: 79.448,
         venueColor: '#f7c202',
         venueSize: 15,
         venueFamily: 'LEMONMILK-Light',
         venueShadow: true,
         venueShadowStrength: 1,
+        venueLineHeight: 0.7,
+        venueAlign: 'center',
+        venueUppercase: true,
+        venueBold: true,
+        venueItalic: false,
+        venueRotate: 0,
+
+        presenterEnabled: true,
+        presenter: 'nightlife flyers',
+        presenterX: 14.342158564814817,
+        presenterY: 9.019097222222221,
+        presenterWidth: 40,
+        presenterSize: 10,
+        presenterLineHeight: 0.7,
+        presenterFamily: 'Azonix',
+        presenterColor: '#ffffff',
+        presenterAlign: 'center',
+        presenterRotation: 0,
+
+        leftRailEnabled: true,
+        leftRail: 'COCKTAILS • CHAMPAGNE • VIP EXPERIENCE',
+        leftRailX: 66.64525462962963,
+        leftRailY: 43.12659143518518,
+        leftRailSize: 10,
+        leftRailLineHeight: 0.7,
+        leftRailFamily: 'LEMONMILK-Regular',
+        leftRailColor: '#ffffff',
+        leftRailRotation: 90,
+
+        rightRailEnabled: true,
+        rightRail: 'TABLES & VIP RESERVATIONS AVAILABLE',
+        rightRailX: 72.79513888888889,
+        rightRailY: 40.36921296296296,
+        rightRailSize: 10,
+        rightRailLineHeight: 0.7,
+        rightRailFamily: 'LEMONMILK-Regular',
+        rightRailColor: '#ffffff',
+        rightRailRotation: 90,
+
+        dateEnabled: false,
+        date: '',
+        dateX: 8,
+        dateY: 6,
+        dateSize: 24,
+        dateLineHeight: 0.7,
+        dateFamily: 'Bebas Neue',
+        dateColor: '#ffffff',
+        dateAlign: 'left',
+        dateRotation: 0,
+
+        priceEnabled: false,
+        price: '',
+        priceX: 78,
+        priceY: 66,
+        priceSize: 30,
+        priceLineHeight: 0.7,
+        priceScale: 1,
+        priceFamily: 'Bebas Neue',
+        priceColor: '#ffffff',
+        priceAlign: 'center',
+
+        qrEnabled: true,
+        qrX: 90,
+        qrY: 8,
+        qrScale: 0.55,
+        qrImageUrl: null,
 
         head2Enabled: true,
         head2line: 'CROWD',
         head2Color: '#ffffff',
         head2Align: 'center',
         head2Size: 64,
-        head2X: 10.4,
-        head2Y: 47,
-        head2Family: 'chettaVissto',
+        head2SizePx: 64,
+        head2X: 10.694,
+        head2Y: 45.113,
+        head2Family: 'ChettaVissto',
         head2Shadow: true,
         head2ShadowStrength: 1,
+        head2LineHeight: 0.95,
+        head2TrackEm: 0.01,
+        head2ColWidth: 56,
+        head2Alpha: 1,
+        head2Rotate: 0,
+        head2Skew: 0,
 
         subtagEnabled: false,
 
-        bgPosX: 9.6,
-        bgPosY: 5.2,
+        bgPosX: 16.383854166666666,
+        bgPosY: 4.807928240740741,
         bgScale: 1.6,
+        bgBlur: 0,
+        bgRotate: 0,
         vignette: true,
         vignetteStrength: 0.04,
+        haze: 0.5,
+        grade: 0.35,
+        leak: 0.25,
+        textureOpacity: 0,
+        clarity: 0.15,
+        exp: 1,
+        contrast: 1.08,
+        saturation: 1.1,
+        warmth: 0.1,
+        tint: 0,
+        gamma: 1,
+        grain: 0.15,
+        vibrance: 0.15,
+        filmGrade: 0.6,
 
         textColWidth: 58,
         align: 'center',
         textAlign: 'center',
 
         emojiList: [
-          { id: "graphic_venue_sq", 
-            kind: "flare", char: "", 
-            svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.venue, 
-            iconColor: "#ffffff", isFlare: true, 
-            isSticker: true, 
-            blendMode: "normal", 
-            x: 31.2, y: 76.3, scale: 0.28, 
-            rotation: 0, opacity: 1, locked: false,
+          {
+            id: "graphic_venue_sq",
+            kind: "flare",
+            char: "",
+            svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.venue,
+            iconColor: "#ffffff",
+            isFlare: true,
+            isSticker: true,
+            blendMode: "normal",
+            x: 32.42685185185185,
+            y: 75.66921296296294,
+            scale: 0.28,
+            rotation: 0,
+            opacity: 1,
+            locked: false,
             tint: 0,
+            tintMode: "hue",
+            showLabel: false,
+            labelBg: true,
           },
           {
             id: 'mgr_flare_sq_1',
             kind: 'flare',
             char: '',
-            url: '/flares/flare02.png',
+            url: '/flares/optimized/flare02.png',
             isFlare: true,
             blendMode: 'screen',
             x: -23.9,
@@ -8895,13 +8562,16 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
             rotation: 0,
             opacity: 0.85,
             tint: 0,
+            tintMode: "hue",
             locked: true,
+            showLabel: false,
+            labelBg: true,
           },
            {
             id: 'mgr_flare_sq_2',
             kind: 'flare',
             char: '',
-            url: '/flares/flare02.png',
+            url: '/flares/optimized/flare02.png',
             isFlare: true,
             blendMode: 'screen',
             x: 155.3,
@@ -8910,13 +8580,16 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
             rotation: 0,
             opacity: 0.85,
             tint: 0,
+            tintMode: "hue",
             locked: true,
+            showLabel: false,
+            labelBg: true,
           },
            {
             id: 'mgr_flare_sq_3',
             kind: 'flare',
             char: '',
-            url: '/flares/sun01.png',
+            url: '/flares/optimized/sun01.png',
             isFlare: true,
             blendMode: 'screen',
             x: 35.6,
@@ -8925,60 +8598,216 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
             rotation: 0,
             opacity: 0.85,
             tint: 0,
+            tintMode: "hue",
             locked: true,
+            showLabel: false,
+            labelBg: true,
+          },
+          {
+            id: "sticker_twitter_logo_atlanta_square",
+            kind: "sticker",
+            char: "",
+            svgTemplate: SOCIAL_GRAPHIC_TEMPLATES.twitter,
+            iconColor: "#ffffff",
+            label: "Twitter",
+            showLabel: false,
+            hitTestMode: "alpha-bounds",
+            isNightlifeGraphic: true,
+            isSticker: true,
+            x: 94.21151620370371,
+            y: 82.8269675925926,
+            scale: 0.14857144576234635,
+            rotation: 0,
+            opacity: 1,
+            locked: false,
+          },
+          {
+            id: "sticker_instagram_logo_atlanta_square",
+            kind: "sticker",
+            char: "",
+            svgTemplate: SOCIAL_GRAPHIC_TEMPLATES.instagram,
+            iconColor: "#ffffff",
+            label: "Instagram",
+            showLabel: false,
+            hitTestMode: "alpha-bounds",
+            isNightlifeGraphic: true,
+            isSticker: true,
+            x: 94.25853587962963,
+            y: 89.01620370370371,
+            scale: 0.19867008761345833,
+            rotation: 0,
+            opacity: 1,
+            locked: false,
+            labelSize: 9,
           },
         ],
       },
       story: {
+        backgroundUrl: '/template-previews/900/atlanta.webp',
         headline: 'THE\nIN',
-        headlineFamily: 'Bebas Neue',
+        headlineFamily: 'Monoton',
         headlineSize: 140,
         headlineHeight: 0.76,
+        headlineLineHeight: 0.76,
+        lineHeight: 0.76,
         headColor: '#ffffff',
-        headX: 34.5,
-        headY: 38.3,
+        headX: 20.242,
+        headY: 36.263,
         headAlign: 'center',
         headShadow: true,
         headShadowStrength: 1,
+        headSizeAuto: false,
+        headMaxPx: 120,
+        headRotate: 0,
+        headSkew: 0,
 
-        details: 'SAT • 10 PM\nDJ SETS + DRINKS\n21+ ONLY',
-        detailsLineHeight: 0.74,
-        detailsX: 34.1,
-        detailsY: 69,
+        details: "SAT • 10 PM\nWHERE THE CITY'S MOST STYLISH\nCOME TO SOCIALIZE",
+        detailsLineHeight: 0.52,
+        detailsX: 31.505,
+        detailsY: 69.91,
         bodyColor: '#dbeafe',
+        detailsColor: '#dbeafe',
         detailsAlign: 'center',
-        detailsFamily: 'Inter',
+        detailsFamily: 'Bebas Neue',
         detailsSize: 18,
         detailsShadow: true,
         detailsShadowStrength: 1,
+        detailsUppercase: true,
+        detailsBold: true,
+        detailsItalic: false,
+        detailsTracking: 0.04,
+        detailsRotate: 0,
+
+        details2Enabled: true,
+        details2: 'DRESS CODE:\nUPSCALE • ELEGANT • FASHION FORWARD',
+        details2Family: 'Nexa-ExtraLight',
+        details2Color: '#ffffff',
+        details2Size: 12,
+        details2LineHeight: 0.7,
+        details2LetterSpacing: 0,
+        details2Align: 'center',
+        details2Shadow: true,
+        details2ShadowStrength: 1,
+        details2X: 26.383101851851855,
+        details2Y: 84.935,
+        details2Rotate: 0,
 
         venue: 'PEACHTREE ROOFTOP',
-        venueX: 18.7,
-        venueY: 89.9,
+        venueX: 29.150752314814817,
+        venueY: 82.221,
         venueColor: '#f7c202',
-        venueSize: 30,
+        venueSize: 20,
         venueFamily: 'LEMONMILK-Light',
         venueShadow: true,
         venueShadowStrength: 1,
+        venueLineHeight: 0.7,
+        venueAlign: 'center',
+        venueUppercase: true,
+        venueBold: true,
+        venueItalic: false,
+        venueRotate: 0,
+
+        presenterEnabled: false,
+        presenter: '',
+        presenterX: 31.5,
+        presenterY: 7.5,
+        presenterWidth: 40,
+        presenterSize: 10,
+        presenterLineHeight: 0.7,
+        presenterFamily: 'Inter',
+        presenterColor: '#ffffff',
+        presenterAlign: 'center',
+        presenterRotation: 0,
+
+        leftRailEnabled: true,
+        leftRail: '+123 345 7890 to RSVP',
+        leftRailX: 73.23234953703704,
+        leftRailY: 18.401204427083332,
+        leftRailSize: 10,
+        leftRailLineHeight: 0.7,
+        leftRailFamily: 'LEMONMILK-Bold',
+        leftRailColor: '#ffffff',
+        leftRailRotation: 90,
+
+        rightRailEnabled: true,
+        rightRail: 'TABLES & VIP RESERVATIONS AVAILABLE',
+        rightRailX: 68.7896412037037,
+        rightRailY: 22.75496419270834,
+        rightRailSize: 10,
+        rightRailLineHeight: 0.7,
+        rightRailFamily: 'LEMONMILK-Regular',
+        rightRailColor: '#ffffff',
+        rightRailRotation: 90,
+
+        dateEnabled: true,
+        date: 'dec 1\n2026',
+        dateX: 9.213831018518517,
+        dateY: 5.384765625,
+        dateSize: 24,
+        dateLineHeight: 0.7,
+        dateFamily: 'Bebas Neue',
+        dateColor: '#ffffff',
+        dateAlign: 'left',
+        dateRotation: 0,
+
+        priceEnabled: false,
+        price: '',
+        priceX: 78,
+        priceY: 66,
+        priceSize: 30,
+        priceLineHeight: 0.7,
+        priceScale: 1,
+        priceFamily: 'Bebas Neue',
+        priceColor: '#ffffff',
+        priceAlign: 'center',
+
+        qrEnabled: true,
+        qrX: 86.0792824074074,
+        qrY: 5.204996744791671,
+        qrScale: 0.55,
+        qrImageUrl: null,
 
         head2Enabled: true,
         head2line: 'CROWD',
         head2Color: '#ffffff',
         head2Align: 'center',
         head2Size: 102,
-        head2X: 13.5,
-        head2Y: 59.1,
+        head2SizePx: 102,
+        head2X: 13.454,
+        head2Y: 60.575,
         head2Family: 'chettaVissto',
         head2Shadow: true,
-        head2ShadowStrength: 1,
+        head2ShadowStrength: 0.5,
+        head2LineHeight: 0.95,
+        head2TrackEm: 0.01,
+        head2ColWidth: 80,
+        head2Alpha: 1,
+        head2Rotate: 0,
+        head2Skew: 0,
 
         subtagEnabled: false,
 
         bgPosX: 51.5,
         bgPosY: 23,
         bgScale: 1.2,
+        bgBlur: 0,
+        bgRotate: 0,
         vignette: true,
         vignetteStrength: 0.2,
+        haze: 0.5,
+        grade: 0.35,
+        leak: 0.25,
+        textureOpacity: 0,
+        clarity: 0.15,
+        exp: 1,
+        contrast: 1.08,
+        saturation: 1.1,
+        warmth: 0.1,
+        tint: 0,
+        gamma: 1,
+        grain: 0.15,
+        vibrance: 0.15,
+        filmGrade: 0.6,
 
         textColWidth: 60,
         align: 'center',
@@ -8991,15 +8820,18 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
             iconColor: "#ffffff", isFlare: true, 
             isSticker: true, 
             blendMode: "normal", 
-            x: 50, y: 87.1, scale: 0.43, 
+            x: 50, y: 78.51764322916667, scale: 0.43, 
             rotation: 0, opacity: 1, locked: false,
             tint: 0,
+            tintMode: "hue",
+            showLabel: false,
+            labelBg: true,
           },
           {
             id: 'mgr_flare_st_1',
             kind: 'flare',
             char: '',
-            url: '/flares/flare02.png',
+            url: '/flares/optimized/flare02.png',
             isFlare: true,
             blendMode: 'screen',
             x: -31.5,
@@ -9008,13 +8840,16 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
             rotation: 0,
             opacity: 0.85,
             tint: 0,
+            tintMode: "hue",
             locked: true,
+            showLabel: false,
+            labelBg: true,
           },
            {
             id: 'mgr_flare_st_3',
             kind: 'flare',
             char: '',
-            url: '/flares/sun01.png',
+            url: '/flares/optimized/sun01.png',
             isFlare: true,
             blendMode: 'screen',
             x: 49.4,
@@ -9023,7 +8858,48 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
             rotation: 0,
             opacity: 0.85,
             tint: 0,
+            tintMode: "hue",
             locked: true,
+            showLabel: false,
+            labelBg: true,
+          },
+          {
+            id: "sticker_twitter_logo_atlanta_story",
+            kind: "sticker",
+            char: "",
+            svgTemplate: SOCIAL_GRAPHIC_TEMPLATES.twitter,
+            iconColor: "#ffffff",
+            label: "Twitter",
+            showLabel: false,
+            hitTestMode: "alpha-bounds",
+            isNightlifeGraphic: true,
+            isSticker: true,
+            x: 52.7076099537037,
+            y: 90.5078125,
+            scale: 0.1385720420322339,
+            rotation: 0,
+            opacity: 1,
+            locked: false,
+            layerOffset: 24,
+          },
+          {
+            id: "sticker_instagram_logo_atlanta_story",
+            kind: "sticker",
+            char: "",
+            svgTemplate: SOCIAL_GRAPHIC_TEMPLATES.instagram,
+            iconColor: "#ffffff",
+            label: "Instagram",
+            showLabel: false,
+            hitTestMode: "alpha-bounds",
+            isNightlifeGraphic: true,
+            isSticker: true,
+            x: 47.19039351851851,
+            y: 90.491943359375,
+            scale: 0.19434194845290953,
+            rotation: 0,
+            opacity: 1,
+            locked: false,
+            layerOffset: 24,
           },
         ],
       },
@@ -9035,226 +8911,10 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
     tags: ['Luxury', 'Urban'],
     style: 'urban',
     bgPrompt: '',
-    preview: '/templates/la-lux.jpg',
+    preview: '/samples/optimized/la-luxe.png',
     formats: {
-      square: {
-        headline: 'DJ FLIP ⌽ DJ DEX',
-        headlineFamily: 'Bebas Neue',
-        headlineSize: 44,
-        headlineHeight: 0.9,
-        headColor: '#fec600',
-        headX: 8.6,
-        headY: 60,
-        headAlign: 'center',
-        headShadow: true,
-        headShadowStrength: 1,
-
-        head2Enabled: true,
-        head2line: 'skyline',
-        head2Color: '#ffffff',
-        head2Align: 'center',
-        head2Size: 88,
-        head2X: 8.3,
-        head2Y: 45,
-        head2Family: 'galaxia personal used',
-        head2Shadow: true,
-        head2ShadowStrength: 1,
-
-        details: 'FRI • 11 PM\nLATE NIGHT SET\nGUEST LIST OPEN',
-        detailsLineHeight: 0.62,
-        detailsX: 9.6,
-        detailsY: 19.6,
-        bodyColor: '#e5e7eb',
-        detailsAlign: 'left',
-        detailsFamily: 'lemonmilk-regular',
-        detailsSize: 16,
-
-        venue: 'GOLDEN',
-        venueX: 8,
-        venueY: 36.3,
-        venueColor: '#f7c202',
-        venueSize: 42,
-        venueFamily: 'LEMONMILK-Light',
-        venueShadow: true,
-        venueShadowStrength: 1,
-
-       
-        subtagEnabled: false,
-
-        bgPosX: 45.1,
-        bgPosY: 33.4,
-        bgScale: 3.5,
-        vignette: true,
-        vignetteStrength: 0.2,
-
-        textColWidth: 58,
-        align: 'center',
-        textAlign: 'center',
-
-        emojiList: [
-         { id: "graphic_venue_sq", 
-          kind: "flare", char: "", 
-          svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.venue, 
-          iconColor: "#ffffff", 
-          isFlare: true, isSticker: true, 
-          blendMode: "normal", 
-          x: 12.1, y: 13.9, scale: 0.37, 
-          rotation: 0, opacity: 1, locked: false,
-          tint: 0,
-        },
-         { id: "graphic_hookah_sq", 
-          kind: "flare", 
-          char: "VSOP HOOKAH", 
-          svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.hookah, 
-          iconColor: "#ffffff",
-          isFlare: true, isSticker: true, 
-          blendMode: "normal", 
-          x: 61.5, y: 78, scale: 0.6, 
-          rotation: 0, opacity: 1, locked: false,
-          tint: 0,
-          labelBg: false, labelSize: 12, labelColor: "#e5e7eb",
-          },
-         { id: "graphic_bottle_service_sq", 
-          kind: "flare", 
-          char: "BOTTLE SERVICE", 
-          svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.bottle, 
-          iconColor: "#ffffff", 
-          isFlare: true, isSticker: true, 
-          blendMode: "normal", 
-          x: 39, y: 78, scale: 0.60, 
-          labelBg: false, labelSize: 12, labelColor: "#e5e7eb",
-          rotation: 0, opacity: 1, locked: false,
-          tint: 0,
-         },
-        { id: "graphic_drink_specials_sq", 
-          kind: "flare", char: "DRINK SPECIALS", 
-          svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.drink, 
-          iconColor: "#ffffff", 
-          isFlare: true, isSticker: true, 
-          blendMode: "normal", 
-          x: 16, y: 78, scale: 0.60, 
-          rotation: 0, opacity: 1, locked: false,
-          labelBg: false, labelSize: 12, labelColor: "#e5e7eb",
-          tint: 0,
-        },
-        ],
-      },
-      story: {
-        headline: 'DJ FLIP ⌽ DJ DEX',
-        headlineFamily: 'Bebas Neue',
-        headlineSize: 44,
-        headlineHeight: 0.9,
-        headColor: '#fec600',
-        headX: 10.2,
-        headY: 69.4,
-        headAlign: 'left',
-        headShadow: true,
-        headShadowStrength: 1,
-
-        head2Enabled: true,
-        head2line: 'sky\nline',
-        head2Color: '#ffffff',
-        head2Align: 'left',
-        head2Size: 136,
-        head2X: 9.3,
-        head2Y: 50.4,
-        head2LineHeight: 0.38,
-        head2Family: 'galaxia personal used',
-        head2Shadow: true,
-        head2ShadowStrength: 1,
-
-        details: 'FRI • 11 PM\nLATE NIGHT SET\nGUEST LIST OPEN',
-        detailsLineHeight: 0.62,
-        detailsX: 9.6,
-        detailsY: 18.2,
-        bodyColor: '#e5e7eb',
-        detailsAlign: 'left',
-        detailsFamily: 'lemonmilk-regular',
-        detailsSize: 16,
-
-        details2Enabled: true,
-        details2Size: 10,
-        details2Align: 'left',
-        details2: 'Rooftop opens at 9. An elevated night of style, sound, and sophistication.\nWhere refined taste meets the city after dark\nA curated experience for those who expect more.',
-        details2X: 10.2,
-        details2Y: 75.1,
-        details2LineHeight: 0.75,
-        details2Color: '#ffffff',
-        details2Family: 'LEMONMILK-Light',
-        details2Shadow: true,
-        details2ShadowStrength: 1,
-
-        venue: 'GOLDEN',
-        venueX: 9.7,
-        venueY: 41.9,
-        venueColor: '#f7c202',
-        venueSize: 42,
-        venueFamily: 'LEMONMILK-Light',
-        venueShadow: true,
-        venueShadowStrength: 1,
-
-       
-        subtagEnabled: false,
-
-        bgPosX: 50.2,
-        bgPosY: 39.1,
-        bgScale: 2.3,
-        vignette: true,
-        vignetteStrength: 0.2,
-
-        textColWidth: 58,
-        align: 'center',
-        textAlign: 'center',
-
-        emojiList: [
-         { id: "graphic_venue_sq", 
-          kind: "flare", char: "", 
-          svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.venue, 
-          iconColor: "#ffffff", 
-          isFlare: true, isSticker: true, 
-          blendMode: "normal", 
-          x: 12.1, y: 13.9, scale: 0.37, 
-          labelBg: false, labelSize: 12, labelColor: "#e5e7eb",
-          rotation: 0, opacity: 1, locked: false,
-          tint: 0,
-        },
-         { id: "graphic_hookah_sq", 
-          kind: "flare", 
-          char: "VSOP HOOKAH", 
-          svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.hookah, 
-          iconColor: "#ffffff",
-          isFlare: true, isSticker: true, 
-          blendMode: "normal", 
-          x: 62.2, y: 86.2, scale: 0.60, 
-          labelBg: false, labelSize: 12, labelColor: "#e5e7eb",
-          rotation: 0, opacity: 1, locked: false,
-          tint: 0,
-          },
-         { id: "graphic_bottle_service_sq", 
-          kind: "flare", 
-          char: "BOTTLE SERVICE", 
-          svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.bottle, 
-          iconColor: "#ffffff", 
-          isFlare: true, isSticker: true, 
-          blendMode: "normal", 
-          x: 38.6, y: 86.2, scale: 0.60, 
-          labelBg: false, labelSize: 12, labelColor: "#e5e7eb",
-          rotation: 0, opacity: 1, locked: false,
-          tint: 0,
-         },
-        { id: "graphic_drink_specials_sq", 
-          kind: "flare", char: "DRINK SPECIALS", 
-          svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.drink, 
-          iconColor: "#ffffff", 
-          isFlare: true, isSticker: true, 
-          blendMode: "normal", 
-          x: 16, y: 86.2, scale: 0.60,
-          labelBg: false, labelSize: 12, labelColor: "#e5e7eb", 
-          rotation: 0, opacity: 1, locked: false,
-          tint: 0,
-        },
-        ],
-      },
+      square: LA_LUXE_SQUARE,
+      story: LA_LUXE_STORY,
     },
   },
   {
@@ -9636,9 +9296,10 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
     tags: ['Neon', 'Urban'],
     style: 'neon',
     bgPrompt: '',
-    preview: '/templates/karaokee.jpg',
+    preview: '/samples/optimized/karaoke.png',
     formats: {
       square: {
+        backgroundUrl: '/templates/karaokee.jpg',
         headline: 'KARAOKE',
         headlineFamily: 'Bebas Neue',
         headRotate: 90,
@@ -9698,6 +9359,7 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
         ]
       },
       story: {
+        backgroundUrl: '/templates/karaokee.jpg',
         headline: 'KARAOKE',
         headlineFamily: 'Bebas Neue',
         headRotate: 90,
@@ -10207,253 +9869,14 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
   },
   {
     id: 'miami_heat',
-    label: 'Miami Heat — Sunset Run',
-    tags: ['Tropical', 'Beach', 'Sunset'],
+    label: 'Miami Heat',
+    tags: ['Tropical', 'Neon', 'Club'],
     style: 'tropical',
     bgPrompt: '',
-    preview: '/templates/miami_heat.jpg',
+    preview: '/samples/optimized/miami.jpg',
     formats: {
-      square: {
-        backgroundUrl: '/templates/miami_heat.jpg',
-        headline: 'MIAMI',
-        headlineFamily: 'game of squids',
-        headlineSize: 96,
-        headlineHeight: 0.9,
-        headColor: '#ffffff',
-        headX: 7,
-        headY: 43.4,
-        headAlign: 'left',
-        headShadow: true,
-        headShadowStrength: 1,
-
-        head2Enabled: true,
-        head2line: 'HEAT',
-        head2Color: '#ff7a18',
-        head2Align: 'left',
-        head2Size: 68,
-        head2X: 7.6,
-        head2Y: 57.2,
-        head2Family: 'game of squids',
-        head2Shadow: true,
-        head2ShadowStrength: 1,
-
-        details: 'FRI • 10 PM\nSOUTH BEACH\nVIP TABLES',
-        detailsLineHeight: 0.62,
-        detailsX: 8.2,
-        detailsY: 33.8,
-        bodyColor: '#faf205',
-        detailsAlign: 'left',
-        detailsFamily: 'nexa-heavy',
-        detailsSize: 16,
-
-        venue: 'SEASIDE LOUNGE',
-        venueX: 8.6,
-        venueY: 70.6,
-        venueColor: '#faf205',
-        venueSize: 19,
-        venueFamily: 'LEMONMILK-Light',
-        venueShadow: true,
-        venueShadowStrength: 1,
-
-        subtagEnabled: false,
-
-        bgPosX: 50,
-        bgPosY: 50,
-        bgScale: 1.2,
-        vignette: true,
-        vignetteStrength: 0.12,
-
-        textColWidth: 58,
-        align: 'center',
-        textAlign: 'center',
-
-        emojiList: [
-          {
-            id: "graphic_venue_sq",
-            kind: "flare",
-            char: "",
-            svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.venue,
-            iconColor: "#ffffff",
-            isFlare: true,
-            isSticker: true,
-            blendMode: "normal",
-            x: 10.9,
-            y: 28.1,
-            scale: 0.37,
-            rotation: 0,
-            opacity: 1,
-            locked: false,
-            tint: 0,
-          },
-          {
-            id: "graphic_drink_specials_sq",
-            kind: "flare",
-            char: "DRINK SPECIALS",
-            labelBg: false,
-            labelSize: 12,
-            labelColor: "#e5e7eb",
-            svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.drink,
-            iconColor: "#ffffff",
-            isFlare: true,
-            isSticker: true,
-            blendMode: "normal",
-            x: 16,
-            y: 83.5,
-            scale: 0.4,
-            rotation: 0,
-            opacity: 1,
-            locked: false,
-            tint: 0,
-          },
-          {
-            id: "graphic_bottle_service_sq",
-            kind: "flare",
-            char: "BOTTLE\nSERVICE",
-            labelBg: false,
-            labelSize: 12,
-            labelColor: "#e5e7eb",
-            svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.bottle,
-            iconColor: "#ffffff",
-            isFlare: true,
-            isSticker: true,
-            blendMode: "normal",
-            x: 31.3,
-            y: 83.5,
-            scale: 0.4,
-            rotation: 0,
-            opacity: 1,
-            locked: false,
-            tint: 0,
-          },
-        ],
-      },
-      story: {
-        backgroundUrl: '/templates/miami_heat.jpg',
-        headline: 'MIAMI',
-        headlineFamily: 'game of squids',
-        headlineSize: 96,
-        headTracking: 0.23,
-        headlineHeight: 0.9,
-        headColor: '#ffffff',
-        headX: 8.1,
-        headY: 40.3,
-        headAlign: 'left',
-        headShadow: true,
-        headShadowStrength: 1,
-
-        head2Enabled: true,
-        head2line: 'HEAT',
-        head2Color: '#ff7a18',
-        head2Align: 'left',
-        head2Size: 136,
-        head2X: 8.1,
-        head2Y: 47.5,
-        head2Family: 'game of squids',
-        head2Shadow: true,
-        head2ShadowStrength: 1,
-
-        details: 'FRI • 10 PM\nSOUTH BEACH\nVIP TABLES',
-        detailsLineHeight: 0.62,
-        detailsX: 8.1,
-        detailsY: 13.6,
-        bodyColor: '#faf205',
-        detailsAlign: 'left',
-        detailsFamily: 'nexa-heavy',
-        detailsSize: 16,
-
-        details2Enabled: true,
-        details2: 'Custom builds, exotic rides, and Miami heat all in one place.\nEngines loud, paint shining, city watching.',
-        details2X: 9.1,
-        details2Y: 60.4,
-        details2Size: 12,
-        details2LineHeight: 0.68,
-        details2Color: '#f7c202',
-        details2Family: 'LEMONMILK-Light',
-        details2Align: 'left',
-        details2Shadow: true,
-        details2ShadowStrength: 1,
-
-        venue: 'SEASIDE LOUNGE',
-        venueX:8.1,
-        venueY: 19.8,
-        venueColor: '#ffffff',
-        venueSize: 19,
-        venueFamily: 'LEMONMILK-Light',
-        venueShadow: true,
-        venueShadowStrength: 1,
-
-        subtagEnabled: false,
-
-        bgPosX: 69.9,
-        bgPosY: 3.9,
-        bgScale: 1.2,
-        vignette: true,
-        vignetteStrength: 0.12,
-
-        textColWidth: 58,
-        align: 'center',
-        textAlign: 'center',
-
-        emojiList: [
-          {
-            id: "graphic_venue_sq",
-            kind: "flare",
-            char: "",
-            svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.venue,
-            iconColor: "#ffffff",
-            isFlare: true,
-            isSticker: true,
-            blendMode: "normal",
-            x: 11.5,
-            y: 10.2,
-            scale: 0.37,
-            rotation: 0,
-            opacity: 1,
-            locked: false,
-            tint: 0,
-          },
-          {
-            id: "graphic_drink_specials_sq",
-            kind: "flare",
-            char: "DRINK SPECIALS",
-            labelBg: false,
-            labelSize: 12,
-            labelColor: "#e5e7eb",
-            svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.drink,
-            iconColor: "#ffffff",
-            isFlare: true,
-            isSticker: true,
-            blendMode: "normal",
-            x: 17.6,
-            y: 90.2,
-            scale: 0.6,
-            rotation: 0,
-            opacity: 1,
-            locked: false,
-            tint: 0,
-          },
-          {
-            id: "graphic_bottle_service_sq",
-            kind: "flare",
-            char: "BOTTLE\nSERVICE",
-            labelBg: false,
-            labelSize: 12,
-            labelColor: "#e5e7eb",
-            svgTemplate: NIGHTLIFE_GRAPHIC_TEMPLATES.bottle,
-            iconColor: "#ffffff",
-            isFlare: true,
-            isSticker: true,
-            blendMode: "normal",
-            x: 33.2,
-            y: 90.3,
-            scale: 0.6,
-            rotation: 0,
-            opacity: 1,
-            locked: false,
-            tint: 0,
-          },
-        ],
-      },
+      square: MIAMI_HEAT_SQUARE,
+      story: MIAMI_HEAT_STORY,
     },
   },
   {
@@ -12062,12 +11485,19 @@ const STARTER_TEMPLATE_PREVIEWS: Record<string, string> = {
   blk_tie: '/samples/optimized/black-tie.webp',
   luxe: '/samples/optimized/vip-lounge.webp',
   edm_stage_co2: '/samples/optimized/techno.webp',
+  white_minimal: '/samples/optimized/minimal.png',
+  dnb_bunker: '/samples/optimized/dnb.png',
+  disco_mirrorball: '/samples/optimized/disco.png',
+  rnb_velvet: '/samples/optimized/r&b.png',
   afrobeat_rooftop: '/samples/optimized/afro.webp',
   square_center_hero_nightlife: '/samples/optimized/dj-night.webp',
   ladies_night_center_hero: '/samples/optimized/nocturne.webp',
   kpop_pastel_led: '/samples/optimized/mojito.webp',
   fantasy: '/samples/optimized/fantasy.webp',
   'new-york': '/samples/optimized/new-york.webp',
+  atlanta: '/samples/optimized/atlanta.png',
+  secret_friday: '/samples/optimized/secret.png',
+  miami_heat: '/samples/optimized/miami.jpg',
 };
 
 function toOptimizedTemplatePreview(preview: string | undefined) {
@@ -12086,6 +11516,49 @@ Object.entries(STARTER_TEMPLATE_PREVIEWS).forEach(([id, preview]) => {
     template.preview = preview;
   }
 });
+
+const mardiGrasTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'mardi_gras');
+if (mardiGrasTemplate) {
+  mardiGrasTemplate.preview = '/samples/optimized/mardi-gras.png';
+  mardiGrasTemplate.formats = {
+    ...(mardiGrasTemplate.formats ?? {}),
+    square: MARDI_GRAS_SQUARE,
+    story: MARDI_GRAS_STORY,
+  };
+}
+
+const latinStreetTropicalTemplate = RAW_TEMPLATE_GALLERY.find(
+  (template) => template.id === 'latin_street_tropical'
+);
+if (latinStreetTropicalTemplate) {
+  latinStreetTropicalTemplate.preview = '/samples/optimized/latin.png';
+  latinStreetTropicalTemplate.formats = {
+    ...(latinStreetTropicalTemplate.formats ?? {}),
+    square: LATIN_STREET_TROPICAL_SQUARE,
+    story: LATIN_STREET_TROPICAL_STORY,
+  };
+}
+
+const miamiNightsTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'miami2');
+if (miamiNightsTemplate) {
+  miamiNightsTemplate.label = 'Miami Nights';
+  miamiNightsTemplate.preview = '/samples/optimized/miami-nights.png';
+  miamiNightsTemplate.formats = {
+    ...(miamiNightsTemplate.formats ?? {}),
+    square: MIAMI_NIGHTS_SQUARE,
+    story: MIAMI_NIGHTS_STORY,
+  };
+}
+
+const throwbackTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'throwback_cassette');
+if (throwbackTemplate) {
+  throwbackTemplate.preview = '/samples/optimized/throwback.png';
+  throwbackTemplate.formats = {
+    ...(throwbackTemplate.formats ?? {}),
+    square: THROWBACK_SQUARE,
+    story: THROWBACK_STORY,
+  };
+}
 
 const whiteMinimalTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'white_minimal');
 if (whiteMinimalTemplate?.formats?.square) {

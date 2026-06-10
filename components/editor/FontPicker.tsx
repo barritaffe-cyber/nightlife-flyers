@@ -1,7 +1,8 @@
- 'use client';
+'use client';
 
 import * as React from 'react';
 import { createPortal } from 'react-dom';
+import { groupFontsByUseCase } from '../../lib/fonts';
 
 const controlLabelClass = 'text-[11px] uppercase tracking-[0.12em] text-neutral-400';
 const controlFieldClass = 'border border-neutral-700 bg-[#17171b] text-white';
@@ -37,6 +38,15 @@ export function FontPicker({
     width: number;
     maxHeight: number;
   } | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = React.useState<string | null>(null);
+  const groupedOptions = React.useMemo(
+    () => groupFontsByUseCase(options),
+    [options]
+  );
+  const selectedGroup = React.useMemo(
+    () => groupedOptions.find((group) => group.id === selectedGroupId) ?? null,
+    [groupedOptions, selectedGroupId]
+  );
 
   React.useEffect(() => {
     const handle = (e: MouseEvent | TouchEvent) => {
@@ -48,15 +58,16 @@ export function FontPicker({
     };
     document.addEventListener('mousedown', handle);
     document.addEventListener('touchstart', handle, { passive: true });
-     return () => {
-       document.removeEventListener('mousedown', handle);
-       document.removeEventListener('touchstart', handle);
+    return () => {
+      document.removeEventListener('mousedown', handle);
+      document.removeEventListener('touchstart', handle);
     };
   }, []);
 
   React.useEffect(() => {
     if (!open) {
       setMenuPos(null);
+      setSelectedGroupId(null);
       return;
     }
     const update = () => {
@@ -88,6 +99,13 @@ export function FontPicker({
     };
   }, [open]);
 
+  React.useEffect(() => {
+    if (!selectedGroupId) return;
+    if (!groupedOptions.some((group) => group.id === selectedGroupId)) {
+      setSelectedGroupId(null);
+    }
+  }, [groupedOptions, selectedGroupId]);
+
   return (
     <div
       className={`relative ${className ?? ''}`}
@@ -100,7 +118,10 @@ export function FontPicker({
         type="button"
         ref={btnRef}
         disabled={disabled}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          setSelectedGroupId(null);
+          setOpen((v) => !v);
+        }}
         className={`w-full px-2 py-2 text-left flex items-center justify-between gap-2 disabled:opacity-60 ${controlFieldClass} ${buttonClassName ?? ''}`}
       >
         <span className="truncate" style={{ fontFamily: value }}>
@@ -125,24 +146,91 @@ export function FontPicker({
               scrollPaddingBottom: 8,
             }}
           >
-            {options.map((f) => (
-              <button
-                key={f}
-                type="button"
-                onClick={() => {
-                  onChange(f);
-                  setOpen(false);
-                }}
-                className="w-full px-2 py-2 text-left hover:bg-neutral-800/80 border-b border-neutral-800 last:border-b-0"
-              >
-                <div className="text-[12px] text-white" style={{ fontFamily: f }}>
-                  {f}
+            {selectedGroup ? (
+              <div>
+                <div className="sticky top-0 z-10 border-b border-neutral-800 bg-[#121217] px-2 py-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedGroupId(null)}
+                    className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-200 hover:text-cyan-100"
+                  >
+                    Back to categories
+                  </button>
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-300">
+                    {selectedGroup.label}
+                  </div>
+                  <div className="text-[10px] leading-4 text-neutral-500">
+                    {selectedGroup.hint}
+                  </div>
                 </div>
-                <div className="text-[11px] text-neutral-400" style={{ fontFamily: f }}>
-                  {sample}
+                {selectedGroup.fonts.map((f) => {
+                  const active = f === value;
+                  return (
+                    <button
+                      key={f}
+                      type="button"
+                      onClick={() => {
+                        onChange(f);
+                        setOpen(false);
+                      }}
+                      className={`w-full border-b border-neutral-800 px-2 py-2 text-left last:border-b-0 hover:bg-neutral-800/80 ${
+                        active ? 'bg-cyan-400/10 ring-1 ring-inset ring-cyan-300/25' : ''
+                      }`}
+                    >
+                      <div className="text-[12px] text-white" style={{ fontFamily: f }}>
+                        {f}
+                      </div>
+                      <div className="text-[11px] text-neutral-400" style={{ fontFamily: f }}>
+                        {sample}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div>
+                <div className="sticky top-0 z-10 border-b border-neutral-800 bg-[#121217] px-2 py-2">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-300">
+                    Choose Font Category
+                  </div>
+                  <div className="text-[10px] leading-4 text-neutral-500">
+                    Pick the flyer job first, then choose a matching font.
+                  </div>
                 </div>
-              </button>
-            ))}
+                {groupedOptions.map((group) => {
+                  const containsCurrent = group.fonts.includes(value);
+                  return (
+                    <button
+                      key={group.id}
+                      type="button"
+                      onClick={() => setSelectedGroupId(group.id)}
+                      className={`w-full border-b border-neutral-800 px-2 py-2 text-left last:border-b-0 hover:bg-neutral-800/80 ${
+                        containsCurrent ? 'bg-cyan-400/10 ring-1 ring-inset ring-cyan-300/20' : ''
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="text-[12px] font-semibold text-white">
+                            {group.label}
+                          </div>
+                          <div className="text-[11px] leading-4 text-neutral-400">
+                            {group.hint}
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-[10px] uppercase tracking-[0.12em] text-neutral-500">
+                          {group.fonts.length}
+                        </div>
+                      </div>
+                      {containsCurrent && (
+                        <div className="mt-1 text-[10px] text-cyan-200">
+                          Current: <span style={{ fontFamily: value }}>{value}</span>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>,
           document.body
         )}

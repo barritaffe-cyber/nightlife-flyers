@@ -4,7 +4,7 @@ import {
   type BillingCycle,
   type BillingPlanId,
   type BillingSelection,
-} from "./catalog";
+} from "./catalog.ts";
 
 export const FOUNDING_SUBSCRIBER_LIMIT = 50;
 export const FOUNDING_DISCOUNT_PERCENT = 20;

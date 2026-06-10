@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
+  <defs>
+    <linearGradient id="floorFade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#050914" stop-opacity="0"/>
+      <stop offset="62%" stop-color="#020306" stop-opacity=".82"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </linearGradient>
+    <linearGradient id="edgeLight" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#00e5ff"/>
+      <stop offset="52%" stop-color="#ff2fb3"/>
+      <stop offset="100%" stop-color="#f6c76a"/>
+    </linearGradient>
+  </defs>
+  <path d="M0 850C88 820 156 832 220 882c58-62 136-68 210 4 54-58 134-66 210 4 66-64 148-64 220 0 66-58 146-62 220-24v214H0V850Z" fill="url(#floorFade)"/>
+  <g fill="#020306" opacity=".96">
+    <circle cx="112" cy="864" r="32"/>
+    <circle cx="270" cy="844" r="40"/>
+    <circle cx="430" cy="858" r="34"/>
+    <circle cx="584" cy="836" r="40"/>
+    <circle cx="734" cy="862" r="35"/>
+    <circle cx="910" cy="852" r="38"/>
+    <circle cx="1024" cy="874" r="30"/>
+  </g>
+  <g fill="none" stroke="#030509" stroke-linecap="round" stroke-width="18" opacity=".95">
+    <path d="M208 902C188 812 210 744 270 692"/>
+    <path d="M230 820l-72-72"/>
+    <path d="M238 820l78-78"/>
+    <path d="M782 904c4-102 34-178 98-232"/>
+    <path d="M810 812l-70-66"/>
+    <path d="M820 810l82-76"/>
+  </g>
+  <g fill="none" stroke="url(#edgeLight)" stroke-linecap="round" stroke-width="5" opacity=".45">
+    <path d="M208 902C188 812 210 744 270 692"/>
+    <path d="M782 904c4-102 34-178 98-232"/>
+    <path d="M0 858C88 828 156 838 220 882c58-62 136-68 210 4 54-58 134-66 210 4 66-64 148-64 220 0 66-58 146-62 220-24"/>
+  </g>
+</svg>

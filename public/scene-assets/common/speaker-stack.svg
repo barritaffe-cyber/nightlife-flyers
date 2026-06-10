@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
+  <defs>
+    <linearGradient id="cab" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#202638"/>
+      <stop offset="48%" stop-color="#070a12"/>
+      <stop offset="100%" stop-color="#020306"/>
+    </linearGradient>
+    <radialGradient id="cone" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#2ef3ff" stop-opacity=".95"/>
+      <stop offset="28%" stop-color="#111827"/>
+      <stop offset="72%" stop-color="#020306"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <filter id="edgeGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="9" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <g filter="url(#edgeGlow)">
+    <path d="M258 190h564l48 724H210l48-724Z" fill="url(#cab)" stroke="#273447" stroke-width="10"/>
+    <path d="M294 234h492l28 244H266l28-244Z" fill="#070913" stroke="#39465d" stroke-width="7"/>
+    <path d="M262 526h556l24 336H238l24-336Z" fill="#05070e" stroke="#334155" stroke-width="7"/>
+  </g>
+  <g stroke="#3ddcff" stroke-width="5" opacity=".4">
+    <path d="M294 286h492"/>
+    <path d="M284 342h512"/>
+    <path d="M274 398h532"/>
+    <path d="M262 590h556"/>
+    <path d="M256 654h568"/>
+    <path d="M250 718h580"/>
+    <path d="M244 782h592"/>
+  </g>
+  <g>
+    <circle cx="402" cy="360" r="86" fill="url(#cone)" stroke="#85f8ff" stroke-width="6"/>
+    <circle cx="678" cy="360" r="86" fill="url(#cone)" stroke="#ff66d8" stroke-width="6"/>
+    <circle cx="540" cy="690" r="146" fill="url(#cone)" stroke="#f6c76a" stroke-width="8"/>
+    <circle cx="402" cy="360" r="34" fill="#05070b" stroke="#ffffff" stroke-opacity=".42" stroke-width="4"/>
+    <circle cx="678" cy="360" r="34" fill="#05070b" stroke="#ffffff" stroke-opacity=".42" stroke-width="4"/>
+    <circle cx="540" cy="690" r="58" fill="#05070b" stroke="#ffffff" stroke-opacity=".44" stroke-width="5"/>
+  </g>
+  <g fill="#ffffff" opacity=".75">
+    <rect x="326" y="214" width="92" height="14" rx="7"/>
+    <rect x="662" y="214" width="92" height="14" rx="7"/>
+    <rect x="442" y="884" width="196" height="14" rx="7"/>
+  </g>
+</svg>

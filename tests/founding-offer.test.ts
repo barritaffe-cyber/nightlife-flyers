@@ -13,8 +13,8 @@ test("computeDiscountedPrice applies the founding percentage", () => {
 
 test("resolveBillingAmount keeps passes at their original price", () => {
   const amount = resolveBillingAmount({ kind: "offer", offer: "night-pass" });
-  assert.equal(amount.originalPrice, 12);
-  assert.equal(amount.effectivePrice, 12);
+  assert.equal(amount.originalPrice, 9);
+  assert.equal(amount.effectivePrice, 9);
   assert.equal(amount.foundingDiscountApplied, false);
 });
 

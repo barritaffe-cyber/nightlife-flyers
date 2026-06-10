@@ -63,7 +63,9 @@ export async function POST(req: Request) {
       );
     }
 
-    const refBuf = await toBufferFromAnyImage(String(reference));
+    const refBuf = await sharp(await toBufferFromAnyImage(String(reference)))
+      .png()
+      .toBuffer();
     const prompt =
       `Change the text in the image to "${String(text)}". ` +
       "Keep the same style, lighting, materials, and composition. " +

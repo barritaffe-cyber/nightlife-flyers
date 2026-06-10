@@ -262,7 +262,7 @@ export function sendClientEventBeacon(
       },
       body,
       keepalive: true,
-    });
+    }).catch(() => {});
   } catch {}
 }
 

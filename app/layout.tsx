@@ -1,14 +1,38 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import AnalyticsTracker from "../components/analytics/AnalyticsTracker";
-import { getPublicSiteUrl } from "../lib/publicIdentity";
+import ErrorReporter from "../components/monitoring/ErrorReporter";
+import { getPublicSiteUrl, getPublicSupportEmail } from "../lib/publicIdentity";
 
 const siteUrl = getPublicSiteUrl();
+const supportEmail = getPublicSupportEmail();
 const googleAdsTagId = "AW-18139633250";
 const metaPixelId = "1949907151927593";
 const siteDescription =
-  'Nightlife Flyers is an AI flyer maker for nightlife flyers, club flyers, event flyers, DJ flyers, artist promo flyers, and AI flyers with fast templates, backgrounds, and exports.';
+  'Nightlife Flyers is an AI flyer maker for nightlife flyers, club flyers, event flyers, DJ flyers, artist promo flyers, and social promo flyers with editable templates, AI backgrounds, subject cutouts, brand assets, and clean exports.';
 const siteTitle = 'Nightlife Flyers | AI Flyer Maker for Club, Event, DJ, and Artist Promo Flyers';
+const appFeatures = [
+  "AI flyer maker for nightlife, club, event, DJ, and artist promo flyers",
+  "Editable square post and vertical story formats",
+  "Ready-made nightlife flyer templates",
+  "AI-assisted backgrounds and style prompts",
+  "Subject cutout editing with scale, blur, rotation, shadow, and layering controls",
+  "Logo, social icon, design element, flare, and texture libraries",
+  "Palette controls and color grading for fast visual variations",
+  "Project save/load for repeat flyer production",
+  "Clean PNG and JPG exports",
+];
+const targetUseCases = [
+  "nightlife flyers",
+  "club flyers",
+  "event flyers",
+  "DJ flyers",
+  "artist promo flyers",
+  "party flyers",
+  "Instagram story flyers",
+  "Instagram post flyers",
+  "bar and lounge promo flyers",
+];
 const structuredData = [
   {
     "@context": "https://schema.org",
@@ -16,6 +40,12 @@ const structuredData = [
     name: "Nightlife Flyers",
     url: siteUrl,
     logo: `${siteUrl}/branding/nf-logo.png`,
+    contactPoint: {
+      "@type": "ContactPoint",
+      contactType: "customer support",
+      email: supportEmail,
+      availableLanguage: "English",
+    },
   },
   {
     "@context": "https://schema.org",
@@ -29,28 +59,93 @@ const structuredData = [
     ],
     url: siteUrl,
     description: siteDescription,
+    inLanguage: "en-US",
+    potentialAction: {
+      "@type": "UseAction",
+      target: `${siteUrl}/?studio=1`,
+      name: "Open the Nightlife Flyers design studio",
+    },
   },
   {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
+    "@type": ["SoftwareApplication", "WebApplication"],
     name: "Nightlife Flyers",
     applicationCategory: "DesignApplication",
+    applicationSubCategory: "AI flyer maker",
     operatingSystem: "Web",
     url: siteUrl,
+    image: `${siteUrl}/og.svg`,
     description: siteDescription,
-    featureList: [
-      "Nightlife flyer maker",
-      "Club flyer maker",
-      "Event flyer maker",
-      "DJ flyer maker",
-      "Artist promo flyer maker",
-      "AI flyer generation",
+    featureList: appFeatures,
+    keywords: targetUseCases.join(", "),
+    audience: [
+      {
+        "@type": "Audience",
+        audienceType: "DJs",
+      },
+      {
+        "@type": "Audience",
+        audienceType: "event promoters",
+      },
+      {
+        "@type": "Audience",
+        audienceType: "nightclubs, bars, lounges, venues, and artists",
+      },
     ],
     offers: {
-      "@type": "Offer",
-      price: "0",
+      "@type": "AggregateOffer",
       priceCurrency: "USD",
+      lowPrice: "9",
+      highPrice: "390",
+      offerCount: 6,
+      url: `${siteUrl}/pricing`,
     },
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: "What is Nightlife Flyers?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Nightlife Flyers is a web-based AI flyer maker for club flyers, nightlife flyers, event flyers, DJ flyers, artist promo flyers, and social promo flyers.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Who is Nightlife Flyers for?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Nightlife Flyers is built for DJs, party promoters, nightlife venues, bars, lounges, artists, and creators who need polished flyer designs quickly.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Can Nightlife Flyers create both post and story flyers?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Yes. Templates support editable square post layouts and vertical story layouts for social promotion.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "What can users edit in Nightlife Flyers?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Users can edit text, typography, colors, backgrounds, subject cutouts, logos, social icons, effects, design elements, flares, textures, and export settings.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "What makes Nightlife Flyers different from a general flyer maker?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Nightlife Flyers focuses on nightlife-specific flyer design, including club-ready templates, cinematic backgrounds, AI-assisted visual tools, square and story formats, and fast export workflows for event promotion.",
+        },
+      },
+    ],
   },
 ];
 
@@ -75,7 +170,20 @@ export const metadata: Metadata = {
     'nightlife flyer maker',
     'event flyer maker',
     'artist promo flyer maker',
+    'party flyer maker',
+    'Instagram flyer maker',
+    'AI club flyer generator',
+    'nightclub flyer maker',
+    'bar flyer maker',
+    'lounge flyer maker',
   ],
+  alternates: {
+    canonical: siteUrl,
+  },
+  category: "DesignApplication",
+  creator: "Nightlife Flyers",
+  publisher: "Nightlife Flyers",
+  manifest: "/site.webmanifest",
   openGraph: {
     type: 'website',
     url: siteUrl,
@@ -108,11 +216,16 @@ export const metadata: Metadata = {
       'max-video-preview': -1,
     },
   },
+  other: {
+    "ai-purpose": "AI flyer maker for nightlife, club, DJ, event, artist promo, party, and social flyers",
+    "ai-use-cases": targetUseCases.join(", "),
+    "llms-txt": `${siteUrl}/llms.txt`,
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <script
           async
@@ -145,7 +258,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
@@ -156,6 +269,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
         <AnalyticsTracker />
+        <ErrorReporter />
         {children}
       </body>
     </html>

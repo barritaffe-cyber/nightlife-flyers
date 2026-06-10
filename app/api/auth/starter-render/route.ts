@@ -8,7 +8,7 @@ import { supabaseAdmin } from "../../../../lib/supabase/admin";
 export const runtime = "nodejs";
 
 const STARTER_FREE_RENDER_LIMIT = 2;
-const STARTER_RENDER_EVENT = "starter_export_render_used";
+const STARTER_RENDER_EVENT = "starter_export_render_delivered";
 
 function cleanText(value: unknown, max = 160) {
   const text = typeof value === "string" ? value.trim() : "";

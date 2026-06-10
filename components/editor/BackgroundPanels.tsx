@@ -961,10 +961,10 @@ function BackgroundPanels({
             }}
           />
 
-          <div className={`${editorSectionCardClass} mb-3`}>
+          <div id="background-palette-section" className={`${editorSectionCardClass} mb-3`}>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className={editorSectionTitleClass}>Color Palette</div>
+                <div className={editorSectionTitleClass}>Colors</div>
               </div>
               <div
                 className="mt-0.5 flex h-7 w-28 overflow-hidden rounded-md border border-white/10"
@@ -1019,6 +1019,8 @@ function BackgroundPanels({
                 <button
                   key="original-template-palette"
                   type="button"
+                  aria-label="Reset colors to original template colors"
+                  title="Reset colors to original template colors"
                   className="rounded-lg border border-white/10 bg-black/24 p-2 text-left transition hover:border-white/25 hover:bg-white/[0.04]"
                   onClick={resetToOriginalPalette}
                 >
@@ -1033,7 +1035,7 @@ function BackgroundPanels({
                       <span key={swatch.key} className="flex-1" style={{ backgroundColor: swatch.color }} />
                     ))}
                   </div>
-                  <div className="text-[11px] font-medium text-neutral-200">Original</div>
+                  <div className="text-[11px] font-medium text-neutral-200">Reset colors</div>
                 </button>
               ) : null}
               {onGeneratedPaletteApply ? (
@@ -1081,7 +1083,7 @@ function BackgroundPanels({
             </div>
 
             {layoutOptions.length > 0 && (
-              <div className="mt-4 border-t border-white/10 pt-3">
+              <div id="background-layout-section" className="mt-4 border-t border-white/10 pt-3">
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <div className={editorSectionTitleClass}>Layout</div>
                 </div>

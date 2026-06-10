@@ -11,7 +11,7 @@ function clsx(...a: (string | false | null | undefined)[]) {
 
 const controlLabelClass = 'text-[9px] uppercase tracking-[0.14em] text-neutral-400';
 const controlFieldClass = 'border border-neutral-700 bg-[#17171b] text-white';
-const controlInputClass = `${controlFieldClass} px-1.5 py-1 text-[10px] text-center`;
+const controlInputClass = `${controlFieldClass} px-1.5 py-1 text-[12px] text-center sm:text-[10px]`;
 const controlButtonClass = 'border border-neutral-700 bg-neutral-900/70 text-neutral-200 transition-colors';
 const controlRangeClass = 'nf-range min-w-0 flex-1 appearance-none bg-transparent accent-indigo-500';
 
@@ -67,6 +67,58 @@ function numbersEqualForDisplay(a: number, b: number) {
   return Math.abs(a - b) < 0.000001;
 }
 
+function normalizeNumericDraft(raw: string) {
+  return raw.trim().replace(",", ".");
+}
+
+function isIncompleteNumericDraft(value: string) {
+  return value === "" || value === "-" || value === "." || value === "-.";
+}
+
+function numericInputPattern(min: number) {
+  return min < 0 ? "-?[0-9]*[.,]?[0-9]*" : "[0-9]*[.,]?[0-9]*";
+}
+
+function parseNumericDraft(raw: string) {
+  const normalized = normalizeNumericDraft(raw);
+  if (isIncompleteNumericDraft(normalized)) return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function numberIsInsideRange(value: number, min: number, max: number) {
+  return value >= min && value <= max;
+}
+
+function focusMobileNumericInput(input: HTMLInputElement) {
+  if (typeof window === "undefined" || window.innerWidth >= 1024) return;
+
+  window.setTimeout(() => {
+    const floatPanel = input.closest<HTMLElement>("[data-floating-controls]");
+    if (floatPanel) {
+      const inputRect = input.getBoundingClientRect();
+      const panelRect = floatPanel.getBoundingClientRect();
+      const offset =
+        inputRect.top -
+        panelRect.top -
+        panelRect.height / 2 +
+        inputRect.height / 2;
+
+      floatPanel.scrollTo({
+        top: Math.max(0, floatPanel.scrollTop + offset),
+        behavior: "smooth",
+      });
+      return;
+    }
+
+    input.scrollIntoView({
+      block: "center",
+      inline: "center",
+      behavior: "smooth",
+    });
+  }, 90);
+}
+
 function beginSliderDragGate() {
   if (typeof window !== 'undefined' && activeSliderDragEndTimer !== null) {
     window.clearTimeout(activeSliderDragEndTimer);
@@ -101,9 +153,11 @@ export type StepperProps = {
   value: number;
   setValue: (n: number) => void;
   min: number;
-   max: number;
+  max: number;
    step?: number;
   digits?: number;
+  displayScale?: number;
+  suffix?: string;
   disabled?: boolean;
   className?: string;
   layout?: 'stacked' | 'inline';
@@ -117,14 +171,23 @@ export function Stepper({
    max,
    step = 1,
    digits = 0,
+   displayScale: displayScaleProp,
+   suffix,
    disabled = false,
    className = '',
    layout = 'stacked',
 }: StepperProps) {
    const clamp = React.useCallback((n: number) => Math.min(max, Math.max(min, n)), [max, min]);
+  const displayScale = resolveDisplayScale(label || "", min, max, suffix, displayScaleProp);
+  const displaySuffix = resolveDisplaySuffix(suffix);
+  const scaledStepDigits = countDecimals(step * displayScale);
+  const inputDigits =
+    displayScale !== 1
+      ? Math.min(Math.max(0, digits), scaledStepDigits)
+      : Math.max(0, digits);
   const formattedValue = formatNumericValue(
-    Number.isFinite(value) ? value : 0,
-    Math.max(0, digits)
+    (Number.isFinite(value) ? value : 0) * displayScale,
+    inputDigits
   );
   const [draftValue, setDraftValue] = React.useState(formattedValue);
   const [isEditing, setIsEditing] = React.useState(false);
@@ -234,7 +297,7 @@ export function Stepper({
      } else {
        pendingRangeRef.current = null;
        if (!isEditing) {
-         setDraftValue(formatNumericValue(n, Math.max(0, digits)));
+         setDraftValue(formatNumericValue(n * displayScale, inputDigits));
        }
        lastAppliedRangeValueRef.current = n;
        setValueRef.current(n);
@@ -258,9 +321,9 @@ export function Stepper({
       setValueRef.current(next);
     }
     if (!isEditing) {
-      setDraftValue(formatNumericValue(next, Math.max(0, digits)));
+      setDraftValue(formatNumericValue(next * displayScale, inputDigits));
     }
-  }, [digits, isEditing]);
+  }, [displayScale, inputDigits, isEditing]);
 
   const onRangePointerDown = React.useCallback((e: React.PointerEvent<HTMLInputElement>) => {
     e.stopPropagation();
@@ -292,11 +355,10 @@ export function Stepper({
    const onNumber = (e: React.ChangeEvent<HTMLInputElement>) => {
      const raw = e.target.value;
      setDraftValue(raw);
-     const trimmed = raw.trim();
-     if (trimmed === '' || trimmed === '-' || trimmed === '.' || trimmed === '-.') return;
-     const parsed = parseFloat(trimmed);
-     if (Number.isNaN(parsed)) return;
-     const next = clamp(parsed);
+     const parsed = parseNumericDraft(raw);
+     if (parsed == null) return;
+     if (!numberIsInsideRange(parsed, min * displayScale, max * displayScale)) return;
+     const next = parsed / displayScale;
      latestRangeValueRef.current = next;
      lastAppliedRangeValueRef.current = next;
      setValueRef.current(next);
@@ -304,23 +366,20 @@ export function Stepper({
 
    const commitNumber = React.useCallback(
      (raw: string) => {
-       const trimmed = raw.trim();
-       if (trimmed === '' || trimmed === '-' || trimmed === '.' || trimmed === '-.') {
+       const text = raw.trim();
+       const parsed = parseNumericDraft(raw);
+       if (parsed == null) {
          setDraftValue(formattedValue);
          return;
        }
-       const n = clamp(parseFloat(trimmed));
-       if (!Number.isNaN(n)) {
-         const parsed = parseFloat(trimmed);
-         const shouldPreserveDraft = numbersEqualForDisplay(parsed, n);
-         manualDraftRef.current = shouldPreserveDraft ? { value: n, text: trimmed } : null;
-         setValue(n);
-         setDraftValue(shouldPreserveDraft ? trimmed : formatNumericValue(n, Math.max(0, digits)));
-         return;
-       }
-       setDraftValue(formattedValue);
+       const n = clamp(parsed / displayScale);
+       const displayValue = n * displayScale;
+       const shouldPreserveDraft = numbersEqualForDisplay(parsed, displayValue);
+       manualDraftRef.current = shouldPreserveDraft ? { value: n, text } : null;
+       setValue(n);
+       setDraftValue(shouldPreserveDraft ? text : formatNumericValue(displayValue, inputDigits));
      },
-     [clamp, digits, formattedValue, setValue]
+     [clamp, displayScale, formattedValue, inputDigits, setValue]
    );
  
    const onWheel = (e: React.WheelEvent<HTMLInputElement>) => {
@@ -356,33 +415,42 @@ export function Stepper({
         {label && (
           <label className={`${controlLabelClass} min-w-0 whitespace-nowrap`}>{label}</label>
         )}
-        <input
-          type="number"
-          min={min}
-          max={max}
-          step={step}
-          value={draftValue}
-          onChange={onNumber}
-          onFocus={() => setIsEditing(true)}
-          onBlur={(e) => {
-            setIsEditing(false);
-            commitNumber(e.target.value);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.currentTarget.blur();
-              return;
-            }
-            if (e.key === 'Escape') {
+        <div className="flex h-[30px] w-[92px] shrink-0 items-center gap-1">
+          <input
+            type="text"
+            inputMode="decimal"
+            pattern={numericInputPattern(min * displayScale)}
+            enterKeyHint="done"
+            autoComplete="off"
+            autoCorrect="off"
+            data-mobile-numeric-input="true"
+            value={draftValue}
+            onChange={onNumber}
+            onFocus={(e) => {
+              setIsEditing(true);
+              focusMobileNumericInput(e.currentTarget);
+            }}
+            onBlur={(e) => {
               setIsEditing(false);
-              setDraftValue(formattedValue);
-              e.currentTarget.blur();
-              return;
-            }
-          }}
-          disabled={disabled}
-          className={`h-[30px] w-[92px] shrink-0 px-1.5 text-[10px] ${controlFieldClass} text-center`}
-        />
+              commitNumber(e.target.value);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.currentTarget.blur();
+                return;
+              }
+              if (e.key === 'Escape') {
+                setIsEditing(false);
+                setDraftValue(formattedValue);
+                e.currentTarget.blur();
+                return;
+              }
+            }}
+            disabled={disabled}
+            className={`h-full min-w-0 flex-1 px-1.5 text-[12px] sm:text-[10px] ${controlFieldClass} text-center`}
+          />
+          {displaySuffix ? <span className="shrink-0 text-[9px] font-semibold text-white/80">{displaySuffix}</span> : null}
+        </div>
 
         <input
           ref={rangeRef}
@@ -426,13 +494,19 @@ export function Stepper({
  
        <div className="flex items-center gap-2 w-full">
          <input
-           type="number"
-           min={min}
-           max={max}
-           step={step}
+           type="text"
+           inputMode="decimal"
+           pattern={numericInputPattern(min * displayScale)}
+           enterKeyHint="done"
+           autoComplete="off"
+           autoCorrect="off"
+           data-mobile-numeric-input="true"
            value={draftValue}
            onChange={onNumber}
-           onFocus={() => setIsEditing(true)}
+           onFocus={(e) => {
+             setIsEditing(true);
+             focusMobileNumericInput(e.currentTarget);
+           }}
            onBlur={(e) => {
              setIsEditing(false);
              commitNumber(e.target.value);
@@ -450,8 +524,9 @@ export function Stepper({
              }
            }}
            disabled={disabled}
-           className={`h-[30px] w-[50px] shrink-0 px-1.5 text-[10px] ${controlFieldClass} text-center`}
+           className={`h-[30px] w-[50px] shrink-0 px-1.5 text-[12px] sm:text-[10px] ${controlFieldClass} text-center`}
          />
+         {displaySuffix ? <span className="shrink-0 text-[9px] font-semibold text-white/80">{displaySuffix}</span> : null}
  
         <input
           ref={rangeRef}
@@ -631,6 +706,8 @@ export type SliderRowProps = {
   max: number;
   step?: number;
   precision?: number;
+  displayScale?: number;
+  suffix?: string;
   disabled?: boolean;
   onChange: (v: number) => void;
   onCommit?: (v: number) => void;
@@ -647,6 +724,60 @@ function formatNumericValue(value: number, digits: number) {
   if (!Number.isFinite(value)) return "0";
   if (digits <= 0) return String(Math.round(value));
   return value.toFixed(digits);
+}
+
+function labelLooksPercentScaled(label: string, min: number, max: number) {
+  const normalized = label.toLowerCase();
+  const isNormalizedRange = min >= -1 && max <= 1;
+  const isSmallScaleRange = min >= 0 && max <= 5;
+  const isLineRange = normalized.includes("line") && min >= 0 && max <= 3;
+  const isScaleRange =
+    (normalized === "scale" ||
+      normalized.endsWith(" scale") ||
+      normalized.startsWith("scale ") ||
+      normalized.includes("circle scale")) &&
+    isSmallScaleRange;
+  const isPercentConcept =
+    normalized.includes("opacity") ||
+    normalized.includes("alpha") ||
+    normalized.includes("strength") ||
+    normalized.includes("fill") ||
+    normalized.includes("frame") ||
+    normalized.includes("texture") ||
+    normalized.includes("roughness") ||
+    normalized.includes("shadow") ||
+    normalized.includes("glow") ||
+    normalized.includes("scanline") ||
+    normalized.includes("streak") ||
+    normalized.includes("tube") ||
+    normalized.includes("core") ||
+    normalized.includes("ambient") ||
+    normalized.includes("key light") ||
+    normalized.includes("rim light") ||
+    normalized.includes("depth") ||
+    normalized.includes("warmth") ||
+    normalized.includes("contrast") ||
+    normalized.includes("decontaminate");
+
+  return isScaleRange || isLineRange || (isNormalizedRange && isPercentConcept);
+}
+
+function resolveDisplayScale(
+  label: string,
+  min: number,
+  max: number,
+  suffix?: string,
+  displayScale?: number
+) {
+  if (Number.isFinite(Number(displayScale)) && Number(displayScale) > 0) {
+    return Number(displayScale);
+  }
+  if (suffix === "%") return 100;
+  return labelLooksPercentScaled(label, min, max) ? 100 : 1;
+}
+
+function resolveDisplaySuffix(suffix?: string) {
+  return suffix === "%" ? undefined : suffix;
 }
 
 export type InlineSliderInputProps = {
@@ -678,7 +809,7 @@ export function InlineSliderInput({
   disabled = false,
   onChange,
   precision,
-  displayScale = 1,
+  displayScale: displayScaleProp,
   suffix,
   rangeClassName,
   inputClassName,
@@ -693,7 +824,15 @@ export function InlineSliderInput({
     (n: number) => Math.min(max, Math.max(min, n)),
     [max, min]
   );
-  const inputDigits = precision ?? countDecimals(step * displayScale);
+  const displayScale = resolveDisplayScale(label, min, max, suffix, displayScaleProp);
+  const displaySuffix = resolveDisplaySuffix(suffix);
+  const scaledStepDigits = countDecimals(step * displayScale);
+  const inputDigits =
+    precision == null
+      ? scaledStepDigits
+      : displayScale !== 1
+        ? Math.min(Math.max(0, precision), scaledStepDigits)
+        : precision;
   const formattedValue = formatNumericValue(safeValue * displayScale, inputDigits);
   const [draftValue, setDraftValue] = React.useState(formattedValue);
   const [isEditing, setIsEditing] = React.useState(false);
@@ -799,24 +938,20 @@ export function InlineSliderInput({
 
   const commitDraft = React.useCallback(
     (raw: string) => {
-      const trimmed = raw.trim();
-      if (trimmed === "" || trimmed === "-" || trimmed === "." || trimmed === "-.") {
-        setDraftValue(formattedValue);
-        return;
-      }
-      const parsed = Number(trimmed);
-      if (Number.isNaN(parsed)) {
+      const text = raw.trim();
+      const parsed = parseNumericDraft(raw);
+      if (parsed == null) {
         setDraftValue(formattedValue);
         return;
       }
       const next = clamp(parsed / displayScale);
       const displayValue = next * displayScale;
       const shouldPreserveDraft = numbersEqualForDisplay(parsed, displayValue);
-      manualDraftRef.current = shouldPreserveDraft ? { value: next, text: trimmed } : null;
+      manualDraftRef.current = shouldPreserveDraft ? { value: next, text } : null;
       onChangeRef.current(next);
       onCommitRef.current?.(next);
       setDraftValue(
-        shouldPreserveDraft ? trimmed : formatNumericValue(displayValue, inputDigits)
+        shouldPreserveDraft ? text : formatNumericValue(displayValue, inputDigits)
       );
     },
     [clamp, displayScale, formattedValue, inputDigits]
@@ -825,11 +960,12 @@ export function InlineSliderInput({
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
     setDraftValue(raw);
-    const trimmed = raw.trim();
-    if (trimmed === "" || trimmed === "-" || trimmed === "." || trimmed === "-.") return;
-    const parsed = Number(trimmed);
-    if (Number.isNaN(parsed)) return;
-    const next = clamp(parsed / displayScale);
+    const parsed = parseNumericDraft(raw);
+    if (parsed == null) return;
+    const inputMin = min * displayScale;
+    const inputMax = max * displayScale;
+    if (!numberIsInsideRange(parsed, inputMin, inputMax)) return;
+    const next = parsed / displayScale;
     latestRangeValueRef.current = next;
     lastAppliedRangeValueRef.current = next;
     onChangeRef.current(next);
@@ -961,13 +1097,19 @@ export function InlineSliderInput({
         />
         <div className="flex shrink-0 items-center justify-end gap-1">
           <input
-            type="number"
-            min={min * displayScale}
-            max={max * displayScale}
-            step={step * displayScale}
+            type="text"
+            inputMode="decimal"
+            pattern={numericInputPattern(min * displayScale)}
+            enterKeyHint="done"
+            autoComplete="off"
+            autoCorrect="off"
+            data-mobile-numeric-input="true"
             value={draftValue}
             onChange={handleNumberChange}
-            onFocus={() => setIsEditing(true)}
+            onFocus={(e) => {
+              setIsEditing(true);
+              focusMobileNumericInput(e.currentTarget);
+            }}
             onBlur={(e) => {
               setIsEditing(false);
               commitDraft(e.target.value);
@@ -985,11 +1127,10 @@ export function InlineSliderInput({
             disabled={disabled}
             className={
               inputClassName ||
-              `h-[30px] w-[50px] min-w-0 rounded-md px-1.5 ${controlInputClass} text-right text-[10px] font-medium tracking-normal [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`
+              `h-[30px] w-[50px] min-w-0 rounded-md px-1.5 ${controlInputClass} text-right font-medium tracking-normal [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`
             }
-            inputMode="decimal"
           />
-          {suffix ? <span className="shrink-0 text-[9px] font-semibold text-white/80">{suffix}</span> : null}
+          {displaySuffix ? <span className="shrink-0 text-[9px] font-semibold text-white/80">{displaySuffix}</span> : null}
         </div>
       </div>
     </div>
@@ -1003,6 +1144,8 @@ export function SliderRow({
   max,
   step = 0.05,
   precision,
+  displayScale,
+  suffix,
   disabled = false,
   onChange,
   onCommit,
@@ -1022,6 +1165,8 @@ export function SliderRow({
         max={max}
         step={step}
         precision={precision}
+        displayScale={displayScale}
+        suffix={suffix}
         disabled={disabled}
         onChange={onChange}
         onCommit={onCommit}

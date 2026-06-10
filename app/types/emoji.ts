@@ -42,5 +42,6 @@ export type Emoji = {
   layerOffset?: number;  // per-item z-order nudge
   shadowBlur?: number;
   shadowAlpha?: number;
+  blur?: number;
   hitTestMode?: "alpha-bounds";
 };

@@ -62,69 +62,6 @@ html, body {
   border-radius: 12px;
 }
 
-.mobile-glass-text {
-  max-width: 100%;
-  overflow: visible;
-  overflow-wrap: break-word;
-  font-family: "Anton", "Bebas Neue", Impact, sans-serif;
-  font-size: clamp(64px, 18vw, 160px);
-  font-weight: 900;
-  line-height: 0.82;
-  letter-spacing: -0.06em;
-  text-transform: uppercase;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-  background:
-    linear-gradient(
-      180deg,
-      #ffffff 0%,
-      #ffd8f4 18%,
-      #ff4fc8 38%,
-      #5d123f 55%,
-      #ff7bdd 72%,
-      #ffffff 100%
-    );
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-stroke: 1.5px rgba(255, 235, 255, 0.9);
-  text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.75),
-    0 3px 0 rgba(85, 0, 60, 0.55),
-    0 8px 14px rgba(0, 0, 0, 0.55);
-}
-
-.mobile-glass-text::after {
-  content: attr(data-text);
-  position: absolute;
-  inset: 0;
-  box-sizing: border-box;
-  padding: inherit;
-  font: inherit;
-  letter-spacing: inherit;
-  line-height: inherit;
-  text-transform: inherit;
-  white-space: inherit;
-  text-align: inherit;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-  -webkit-text-stroke: 0 transparent;
-  background:
-    linear-gradient(
-      105deg,
-      transparent 0%,
-      transparent 36%,
-      var(--mobile-glass-shine-highlight, rgba(255, 255, 255, 0.9)) 46%,
-      var(--mobile-glass-shine-tint, rgba(255, 160, 230, 0.65)) 50%,
-      transparent 62%,
-      transparent 100%
-    );
-  -webkit-background-clip: text;
-  background-clip: text;
-  opacity: var(--mobile-glass-shine-opacity, 0.75);
-  pointer-events: none;
-  text-shadow: none;
-}
-
 @keyframes neonPulse {
   0% {
     box-shadow:
@@ -503,6 +440,46 @@ html, body {
   font-display: swap;
 }
 
+@font-face {
+  font-family: "Good Brush";
+  src: url("/fonts/script/Good%20Brush.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Road Rage";
+  src: url("/fonts/script/Road_Rage.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Mitshuka";
+  src: url("/fonts/script/Mitshuka.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Bigtimes";
+  src: url("/fonts/script/Bigtimes.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Adelia Alternate";
+  src: url("/fonts/script/adelia%20alternate.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* --- STANDARD FIXED: cubic --- */
 @font-face {
   font-family: "cubic";
@@ -533,6 +510,14 @@ html, body {
 /* --- FIX: Birch (Typo fix: font-family: "Birch" source: "Brich.ttf") --- */
 @font-face {
   font-family: "Birch";
+  src: url("/fonts/Brich.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Brich";
   src: url("/fonts/Brich.ttf") format("truetype");
   font-weight: 100 900;
   font-style: normal;
@@ -570,6 +555,15 @@ html, body {
 @font-face {
   font-family: "Antonio";
   src: url("/fonts/Antonio.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- STABLE PATH: Anton --- */
+@font-face {
+  font-family: "Anton";
+  src: url("/fonts/Anton.ttf") format("truetype");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -780,6 +774,330 @@ html, body {
 @font-face {
   font-family: "Digital Cards Demo";
   src: url("/fonts/Digital%20Cards%20Demo.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "jelani";
+  src: url("/fonts/jelani.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Broken Glass";
+  src: url("/fonts/BrokenGlass.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Monoton";
+  src: url("/fonts/Monoton-Regular.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Magiel Black";
+  src: url("/fonts/Magiel-Black.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore";
+  src: url("/fonts/mandalore/mandalore.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore 3D";
+  src: url("/fonts/mandalore/mandalore3d.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore 3D Italic";
+  src: url("/fonts/mandalore/mandalore3dital.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore Condensed";
+  src: url("/fonts/mandalore/mandalorecond.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore Condensed Italic";
+  src: url("/fonts/mandalore/mandalorecondital.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore Expanded";
+  src: url("/fonts/mandalore/mandalorexpand.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore Expanded Italic";
+  src: url("/fonts/mandalore/mandalorexpandital.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore Gradient";
+  src: url("/fonts/mandalore/mandaloregrad.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore Gradient Italic";
+  src: url("/fonts/mandalore/mandaloregradital.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore Halftone";
+  src: url("/fonts/mandalore/mandalorehalf.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore Halftone Italic";
+  src: url("/fonts/mandalore/mandalorehalfital.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore Italic";
+  src: url("/fonts/mandalore/mandaloreital.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore Laser";
+  src: url("/fonts/mandalore/mandalorelaser.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore Laser Italic";
+  src: url("/fonts/mandalore/mandalorelaserital.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore Laser Leftalic";
+  src: url("/fonts/mandalore/mandalorelaserleft.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore Laser Rough";
+  src: url("/fonts/mandalore/mandalorelaserrough.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore Laser Rough Italic";
+  src: url("/fonts/mandalore/mandalorelaserroughital.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore Laser Semi-Italic";
+  src: url("/fonts/mandalore/mandalorelasersemital.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore Laser Super-Italic";
+  src: url("/fonts/mandalore/mandalorelasersuperital.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore Laser Title";
+  src: url("/fonts/mandalore/mandalorelasertitle.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore Laser Title Italic";
+  src: url("/fonts/mandalore/mandalorelasertitleital.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore Leftalic";
+  src: url("/fonts/mandalore/mandaloreleft.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore Rough";
+  src: url("/fonts/mandalore/mandalorerough.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore Rough Italic";
+  src: url("/fonts/mandalore/mandaloreroughital.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore Semi-Italic";
+  src: url("/fonts/mandalore/mandaloresemital.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore Super-Italic";
+  src: url("/fonts/mandalore/mandaloresuperital.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore Title";
+  src: url("/fonts/mandaloretitle.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mandalore Title Italic";
+  src: url("/fonts/mandalore/mandaloretitleital.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Bad Coma";
+  src: url("/fonts/Bad%20Coma.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "BAD GRUNGE";
+  src: url("/fonts/BAD%20GRUNGE.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Grunge Manifesto";
+  src: url("/fonts/Grunge%20Manifesto.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Nancy Spungen";
+  src: url("/fonts/Nancy%20Spungen.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Nancy Spungen Basic";
+  src: url("/fonts/Nancy%20Spungen%20Basic.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PaybAck";
+  src: url("/fonts/PaybAck.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "SF Hollywood Hills";
+  src: url("/fonts/hollywood_hills/SF%20Hollywood%20Hills.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "SF Hollywood Hills Bold";
+  src: url("/fonts/SF%20Hollywood%20Hills%20Bold.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "SF Hollywood Hills Bold Italic";
+  src: url("/fonts/hollywood_hills/SF%20Hollywood%20Hills%20Bold%20Italic.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "SF Hollywood Hills Condensed";
+  src: url("/fonts/hollywood_hills/SF%20Hollywood%20Hills%20Condensed.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "SF Hollywood Hills Condensed Italic";
+  src: url("/fonts/hollywood_hills/SF%20Hollywood%20Hills%20Condensed%20Italic.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "SF Hollywood Hills Extended";
+  src: url("/fonts/hollywood_hills/SF%20Hollywood%20Hills%20Extended.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "SF Hollywood Hills Extended Italic";
+  src: url("/fonts/hollywood_hills/SF%20Hollywood%20Hills%20Extended%20Italic.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "SF Hollywood Hills Italic";
+  src: url("/fonts/SF%20Hollywood%20Hills%20Italic.ttf") format("truetype");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;

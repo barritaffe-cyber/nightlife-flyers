@@ -75,6 +75,10 @@ export type FlyerDesignV1 = {
 // ============================================
 //
 export type Format = "square" | "story";
+type AssetSessionSyncOptions = {
+  syncSession?: boolean;
+  markDirty?: boolean;
+};
 
 // MOVE TARGET TYPE
 export type MoveTarget =
@@ -210,6 +214,8 @@ type Portrait = {
   };
   isBrandFace?: boolean;
   isShapeGraphic?: boolean;
+  isDesignElement?: boolean;
+  isCircularText?: boolean;
   shapeKind?: string;
   shapeGradient?: boolean;
   tint?: number;          // hue-rotate degrees for tinting overlays/flares
@@ -232,12 +238,62 @@ type Portrait = {
   cleanupBaseUrl?: string;
   shadowBlur?: number;
   shadowAlpha?: number;
+  blur?: number;
   lighting?: PortraitLighting;
   mainFaceFilterPreset?: MainFaceFilterPreset;
   mainFaceFilterStrength?: number;
   filterPreset?: MainFaceFilterPreset;
   filterStrength?: number;
 };
+
+type AssetSessionPatch = Omit<Partial<TemplateBase>, "emojiList"> & {
+  portraits?: Portrait[];
+  emojis?: Emoji[];
+  emojiList?: Array<Portrait | Emoji>;
+};
+
+function cloneAssetForSession<T extends Record<string, any>>(asset: T): T {
+  return { ...asset };
+}
+
+function buildAssetSessionPatch(
+  portraits: Portrait[] | undefined,
+  emojis: Emoji[] | undefined
+): AssetSessionPatch {
+  const portraitList = Array.isArray(portraits) ? portraits.map(cloneAssetForSession) : [];
+  const emojiList = Array.isArray(emojis) ? emojis.map(cloneAssetForSession) : [];
+  return {
+    portraits: portraitList,
+    emojis: emojiList,
+    emojiList: [...emojiList, ...portraitList],
+  };
+}
+
+function buildAssetSessionState(
+  state: FlyerState,
+  fmt: Format,
+  portraits: Portrait[],
+  emojis: Emoji[],
+  opts?: AssetSessionSyncOptions
+) {
+  if (opts?.syncSession === false) return {};
+  return {
+    session: {
+      ...state.session,
+      [fmt]: {
+        ...state.session[fmt],
+        ...buildAssetSessionPatch(portraits, emojis),
+      },
+    },
+    sessionDirty:
+      opts?.markDirty === false
+        ? state.sessionDirty
+        : {
+            ...state.sessionDirty,
+            [fmt]: true,
+          },
+  };
+}
 
 const EXTRACTED_PORTRAIT_SLOT_EVENT = "nf:portrait-slots-changed";
 const MAX_EXTRACTED_PORTRAIT_BACKUP_SLOTS = 4;
@@ -324,10 +380,15 @@ type FlyerState = {
   // PORTRAITS (per format, emoji-style)
   //
   portraits: Record<Format, Portrait[]>;
-  setPortraits: (fmt: Format, list: Portrait[]) => void;
-  addPortrait: (fmt: Format, p: Portrait) => void;
-  updatePortrait: (fmt: Format, id: string, patch: Partial<Portrait>) => void;
-  removePortrait: (fmt: Format, id: string) => void;
+  setPortraits: (fmt: Format, list: Portrait[], opts?: AssetSessionSyncOptions) => void;
+  addPortrait: (fmt: Format, p: Portrait, opts?: AssetSessionSyncOptions) => void;
+  updatePortrait: (
+    fmt: Format,
+    id: string,
+    patch: Partial<Portrait>,
+    opts?: AssetSessionSyncOptions
+  ) => void;
+  removePortrait: (fmt: Format, id: string, opts?: AssetSessionSyncOptions) => void;
 
   selectedPortraitId: string | null;
   setSelectedPortraitId: (id: string | null) => void;
@@ -421,11 +482,22 @@ type FlyerState = {
   // EMOJIS
   //
   emojis: Record<Format, Emoji[]>;
-  setEmojis: (fmt: Format, list: Emoji[]) => void;
-  addEmoji: (fmt: Format, emoji: Emoji) => void;
-  updateEmoji: (fmt: Format, id: string, patch: Partial<Emoji>) => void;
-  removeEmoji: (fmt: Format, id: string) => void;
-  moveEmoji: (fmt: Format, id: string, x: number, y: number) => void;
+  setEmojis: (fmt: Format, list: Emoji[], opts?: AssetSessionSyncOptions) => void;
+  addEmoji: (fmt: Format, emoji: Emoji, opts?: AssetSessionSyncOptions) => void;
+  updateEmoji: (
+    fmt: Format,
+    id: string,
+    patch: Partial<Emoji>,
+    opts?: AssetSessionSyncOptions
+  ) => void;
+  removeEmoji: (fmt: Format, id: string, opts?: AssetSessionSyncOptions) => void;
+  moveEmoji: (
+    fmt: Format,
+    id: string,
+    x: number,
+    y: number,
+    opts?: AssetSessionSyncOptions
+  ) => void;
 
   emojisEnabled: Record<Format, boolean>;
   setEmojisEnabled: (fmt: Format, v: boolean) => void;
@@ -502,22 +574,32 @@ export const useFlyerState = create<FlyerState>((set, get) => ({
   //
   portraits: { square: [], story: [] },
 
-  setPortraits: (fmt, list) =>
-    set((s) => ({ portraits: { ...s.portraits, [fmt]: list } })),
+  setPortraits: (fmt, list, opts) =>
+    set((s) => {
+      const nextPortraits = Array.isArray(list) ? list : [];
+      const nextEmojis = Array.isArray(s.emojis?.[fmt]) ? s.emojis[fmt] : [];
+      return {
+        portraits: { ...s.portraits, [fmt]: nextPortraits },
+        ...buildAssetSessionState(s, fmt, nextPortraits, nextEmojis, opts),
+      };
+    }),
 
-  addPortrait: (fmt, p) =>
-    set((s) => ({
-      portraits: {
-        ...s.portraits,
-        [fmt]: [...(s.portraits[fmt] || []), p],
-      },
-    })),
+  addPortrait: (fmt, p, opts) =>
+    set((s) => {
+      const nextPortraits = [...(s.portraits[fmt] || []), p];
+      const nextEmojis = Array.isArray(s.emojis?.[fmt]) ? s.emojis[fmt] : [];
+      return {
+        portraits: {
+          ...s.portraits,
+          [fmt]: nextPortraits,
+        },
+        ...buildAssetSessionState(s, fmt, nextPortraits, nextEmojis, opts),
+      };
+    }),
 
-  updatePortrait: (fmt, id, patch) =>
-    set((s) => ({
-      portraits: {
-        ...s.portraits,
-        [fmt]: s.portraits[fmt].map((pt) => {
+  updatePortrait: (fmt, id, patch, opts) =>
+    set((s) => {
+      const nextPortraits = s.portraits[fmt].map((pt) => {
           if (pt.id !== id) return pt;
           const next = { ...pt, ...patch };
           const shouldSyncExtractionPlacement =
@@ -559,19 +641,29 @@ export const useFlyerState = create<FlyerState>((set, get) => ({
               },
             },
           };
-        }),
-      },
-    })),
-
-  removePortrait: (fmt, id) =>
-    set((s) => {
-      const current = s.portraits[fmt] || [];
-      backUpExtractedPortraitToSlot(current.find((pt) => pt.id === id));
+        });
+      const nextEmojis = Array.isArray(s.emojis?.[fmt]) ? s.emojis[fmt] : [];
       return {
         portraits: {
           ...s.portraits,
-          [fmt]: current.filter((pt) => pt.id !== id),
+          [fmt]: nextPortraits,
         },
+        ...buildAssetSessionState(s, fmt, nextPortraits, nextEmojis, opts),
+      };
+    }),
+
+  removePortrait: (fmt, id, opts) =>
+    set((s) => {
+      const current = s.portraits[fmt] || [];
+      backUpExtractedPortraitToSlot(current.find((pt) => pt.id === id));
+      const nextPortraits = current.filter((pt) => pt.id !== id);
+      const nextEmojis = Array.isArray(s.emojis?.[fmt]) ? s.emojis[fmt] : [];
+      return {
+        portraits: {
+          ...s.portraits,
+          [fmt]: nextPortraits,
+        },
+        ...buildAssetSessionState(s, fmt, nextPortraits, nextEmojis, opts),
       };
     }),
 
@@ -594,11 +686,14 @@ export const useFlyerState = create<FlyerState>((set, get) => ({
     set((s) => {
       const current = s.portraits[fmt] || [];
       backUpExtractedPortraitToSlot(current.find((pt) => pt.id === id));
+      const nextPortraits = current.filter((pt) => pt.id !== id);
+      const nextEmojis = Array.isArray(s.emojis?.[fmt]) ? s.emojis[fmt] : [];
       return {
         portraits: {
           ...s.portraits,
-          [fmt]: current.filter((pt) => pt.id !== id),
+          [fmt]: nextPortraits,
         },
+        ...buildAssetSessionState(s, fmt, nextPortraits, nextEmojis),
       };
     }),
 
@@ -808,61 +903,83 @@ setFocus: (t: any, panel: any) =>
   //
   emojis: { square: [], story: [] },
 
-  setEmojis: (fmt, list) =>
-    set((s: any) => ({
-      emojis: {
-        ...(s.emojis && typeof s.emojis === "object" ? s.emojis : {}),
-        [fmt]: Array.isArray(list) ? list : [],
-      },
-    })),
-
-  addEmoji: (fmt, emoji) =>
+  setEmojis: (fmt, list, opts) =>
     set((s: any) => {
-      const emojis =
-        s.emojis && typeof s.emojis === "object" && !Array.isArray(s.emojis)
-          ? s.emojis
-          : {};
-      const bucket = Array.isArray(emojis[fmt]) ? emojis[fmt] : [];
-      return { emojis: { ...emojis, [fmt]: [...bucket, emoji] } };
-    }),
-
-  updateEmoji: (fmt, id, patch) =>
-    set((s: any) => {
-      const emojis =
-        s.emojis && typeof s.emojis === "object" && !Array.isArray(s.emojis)
-          ? s.emojis
-          : {};
-      const bucket = Array.isArray(emojis[fmt]) ? emojis[fmt] : [];
+      const emojis = s.emojis && typeof s.emojis === "object" ? s.emojis : {};
+      const nextEmojis = Array.isArray(list) ? list : [];
+      const nextPortraits = Array.isArray(s.portraits?.[fmt]) ? s.portraits[fmt] : [];
       return {
         emojis: {
           ...emojis,
-          [fmt]: bucket.map((e: any) => (e?.id === id ? { ...e, ...patch } : e)),
+          [fmt]: nextEmojis,
         },
+        ...buildAssetSessionState(s, fmt, nextPortraits, nextEmojis, opts),
       };
     }),
 
-  removeEmoji: (fmt, id) =>
+  addEmoji: (fmt, emoji, opts) =>
     set((s: any) => {
       const emojis =
         s.emojis && typeof s.emojis === "object" && !Array.isArray(s.emojis)
           ? s.emojis
           : {};
       const bucket = Array.isArray(emojis[fmt]) ? emojis[fmt] : [];
-      return { emojis: { ...emojis, [fmt]: bucket.filter((e: any) => e?.id !== id) } };
+      const nextEmojis = [...bucket, emoji];
+      const nextPortraits = Array.isArray(s.portraits?.[fmt]) ? s.portraits[fmt] : [];
+      return {
+        emojis: { ...emojis, [fmt]: nextEmojis },
+        ...buildAssetSessionState(s, fmt, nextPortraits, nextEmojis, opts),
+      };
     }),
 
-  moveEmoji: (fmt, id, x, y) =>
+  updateEmoji: (fmt, id, patch, opts) =>
     set((s: any) => {
       const emojis =
         s.emojis && typeof s.emojis === "object" && !Array.isArray(s.emojis)
           ? s.emojis
           : {};
       const bucket = Array.isArray(emojis[fmt]) ? emojis[fmt] : [];
+      const nextEmojis = bucket.map((e: any) => (e?.id === id ? { ...e, ...patch } : e));
+      const nextPortraits = Array.isArray(s.portraits?.[fmt]) ? s.portraits[fmt] : [];
       return {
         emojis: {
           ...emojis,
-          [fmt]: bucket.map((e: any) => (e?.id === id ? { ...e, x, y } : e)),
+          [fmt]: nextEmojis,
         },
+        ...buildAssetSessionState(s, fmt, nextPortraits, nextEmojis, opts),
+      };
+    }),
+
+  removeEmoji: (fmt, id, opts) =>
+    set((s: any) => {
+      const emojis =
+        s.emojis && typeof s.emojis === "object" && !Array.isArray(s.emojis)
+          ? s.emojis
+          : {};
+      const bucket = Array.isArray(emojis[fmt]) ? emojis[fmt] : [];
+      const nextEmojis = bucket.filter((e: any) => e?.id !== id);
+      const nextPortraits = Array.isArray(s.portraits?.[fmt]) ? s.portraits[fmt] : [];
+      return {
+        emojis: { ...emojis, [fmt]: nextEmojis },
+        ...buildAssetSessionState(s, fmt, nextPortraits, nextEmojis, opts),
+      };
+    }),
+
+  moveEmoji: (fmt, id, x, y, opts) =>
+    set((s: any) => {
+      const emojis =
+        s.emojis && typeof s.emojis === "object" && !Array.isArray(s.emojis)
+          ? s.emojis
+          : {};
+      const bucket = Array.isArray(emojis[fmt]) ? emojis[fmt] : [];
+      const nextEmojis = bucket.map((e: any) => (e?.id === id ? { ...e, x, y } : e));
+      const nextPortraits = Array.isArray(s.portraits?.[fmt]) ? s.portraits[fmt] : [];
+      return {
+        emojis: {
+          ...emojis,
+          [fmt]: nextEmojis,
+        },
+        ...buildAssetSessionState(s, fmt, nextPortraits, nextEmojis, opts),
       };
     }),
 

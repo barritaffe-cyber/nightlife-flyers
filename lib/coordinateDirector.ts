@@ -406,41 +406,6 @@ function cloneBaseCoordinates(base: {
   };
 }
 
-function solveSubjectVisibleRect(
-  input: CoordinateDirectorInput,
-  base: ReturnType<typeof getBaseStyleCoordinates>
-): RectPct {
-  let rect = { ...base.subject };
-  const metadataCount = input.textPriority.metadata?.length ?? 0;
-  const suppressedCount = input.textPriority.suppressed?.length ?? 0;
-
-  if (metadataCount >= 4) {
-    rect = scaleRectFromCenterPct(rect, 0.92, 0.92);
-  }
-
-  if (suppressedCount > 0) {
-    rect = scaleRectFromCenterPct(rect, 0.94, 0.94);
-    rect.y -= 1.5;
-  }
-
-  if (input.overlapIntent.scriptAccent === "cross_torso") {
-    rect.y = Math.min(rect.y, 21);
-  }
-
-  return rect;
-}
-
-function solveSubjectSearchAnchor(
-  input: CoordinateDirectorInput,
-  base: ReturnType<typeof getBaseStyleCoordinates>
-): RectPct {
-  let rect = solveSubjectVisibleRect(input, base);
-  rect = applyCropAdjustment(rect, input.subjectCrop, input.flyerStyle);
-  rect = applyOrientationAdjustment(rect, input.subjectOrientation, input.flyerStyle);
-  rect = applyNegativeSpaceAdjustment(rect, input.negativeSpaceNeed, input.flyerStyle);
-  return clampSubjectRect(rect);
-}
-
 function generateSubjectCoordinateCandidates(
   input: CoordinateDirectorInput,
   anchor: RectPct
@@ -591,54 +556,6 @@ function designerBiasCandidates(input: CoordinateDirectorInput, anchor: RectPct)
   return [anchor].map(clampSubjectRect);
 }
 
-function applyCropAdjustment(rect: RectPct, crop: SubjectCrop, style: FlyerStyle): RectPct {
-  let next = { ...rect };
-
-  if (crop === "closeup") next = scaleRectFromCenterPct(next, 0.88, 0.82);
-  if (crop === "half_body") next = scaleRectFromCenterPct(next, 0.96, 0.94);
-  if (crop === "full_body") next = scaleRectFromCenterPct(next, 0.9, 1.08);
-  if (crop === "product") {
-    next = style === "bottle_service"
-      ? { x: 38, y: 22, width: 24, height: 58 }
-      : { x: 39, y: 24, width: 22, height: 54 };
-  }
-
-  return next;
-}
-
-function applyOrientationAdjustment(
-  rect: RectPct,
-  orientation: SubjectOrientation,
-  style: FlyerStyle
-): RectPct {
-  const next = { ...rect };
-  if (style === "red_only_center_hero") return next;
-
-  if (orientation === "facing_right") next.x -= style === "editorial" ? 0 : 3;
-  if (orientation === "facing_left") next.x += style === "editorial" ? 0 : 3;
-  if (orientation === "weight_left") next.x += 2;
-  if (orientation === "weight_right") next.x -= 2;
-
-  return next;
-}
-
-function applyNegativeSpaceAdjustment(
-  rect: RectPct,
-  negativeSpaceNeed: number,
-  style: FlyerStyle
-): RectPct {
-  let next = { ...rect };
-  const air = clamp(negativeSpaceNeed, 0, 1);
-  const shrink = 1 - air * 0.12;
-  next = scaleRectFromCenterPct(next, shrink, shrink);
-
-  if (style === "miami_luxe" || style === "editorial") {
-    next.y += air * 1.5;
-  }
-
-  return next;
-}
-
 function solveTextZones(
   input: CoordinateDirectorInput,
   base: ReturnType<typeof getBaseStyleCoordinates>,
@@ -738,17 +655,6 @@ function scoreCoordinateCandidate(
     pressure,
     failures,
   };
-}
-
-function scoreExploration(rect: RectPct, baseSubject: RectPct): number {
-  const centerDelta = Math.hypot(centerX(rect) - centerX(baseSubject), centerY(rect) - centerY(baseSubject));
-  const sizeDelta = Math.abs(rect.width - baseSubject.width) + Math.abs(rect.height - baseSubject.height);
-  const movement = centerDelta + sizeDelta * 0.35;
-
-  if (movement < 0.8) return 35;
-  if (movement < 2.2) return 72;
-  if (movement < 7) return 100;
-  return clampScore(100 - (movement - 7) * 4);
 }
 
 function scoreTextProtection(subject: RectPct, zones: CoordinatePlan["zones"], failures: string[]): number {
@@ -942,20 +848,6 @@ function placeHeroOnLowerBody(subject: RectPct, fallback?: RectPct): RectPct {
     y: subject.y + subject.height * 0.55,
     width: 92,
     height: fallback?.height ?? 11,
-  };
-}
-
-function scaleRectFromCenterPct(rect: RectPct, sx: number, sy: number): RectPct {
-  const cx = rect.x + rect.width / 2;
-  const cy = rect.y + rect.height / 2;
-  const width = rect.width * sx;
-  const height = rect.height * sy;
-
-  return {
-    x: cx - width / 2,
-    y: cy - height / 2,
-    width,
-    height,
   };
 }
 

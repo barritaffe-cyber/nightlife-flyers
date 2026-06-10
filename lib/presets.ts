@@ -24,10 +24,6 @@ export const PRESETS = [
     prompt: `Massive EDM stage, CO2 jets and pyro, wide LED wall, strobe bursts, festival energy, ${GOD_TIER_BASE}`,
   },
   {
-    key: 'ladies_pinkchrome',
-    prompt: `Glossy pink chrome club interior, mirror reflections, luxe booth seating, glam nightlife vibe, ${GOD_TIER_BASE}`,
-  },
-  {
     key: 'kpop_pastel_led',
     prompt: `Pastel LED stage, soft neon gradients, confetti sparkle, glossy floor reflections, K-pop concert energy, ${GOD_TIER_BASE}`,
   },

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="360" viewBox="0 0 900 360">
+  <defs>
+    <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f8fbff"/>
+      <stop offset="34%" stop-color="#cfd8df"/>
+      <stop offset="50%" stop-color="#ffffff"/>
+      <stop offset="76%" stop-color="#aab5bc"/>
+      <stop offset="100%" stop-color="#edf2f4"/>
+    </linearGradient>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency=".95" numOctaves="4" seed="9"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="table" tableValues=".08 .32"/>
+      </feComponentTransfer>
+    </filter>
+  </defs>
+  <rect width="900" height="360" fill="url(#metal)"/>
+  <rect width="900" height="360" filter="url(#grain)" opacity=".58"/>
+  <g stroke="#111820" stroke-width="3" stroke-opacity=".18">
+    <path d="M-60 96C110 62 276 58 438 84C612 112 758 108 960 60"/>
+    <path d="M-40 172C130 134 306 132 484 166C650 198 794 194 946 150"/>
+    <path d="M-70 268C105 230 292 220 482 254C668 286 802 278 980 222"/>
+  </g>
+  <g stroke="#ffffff" stroke-width="2" stroke-opacity=".35">
+    <path d="M64 36h210"/>
+    <path d="M388 58h156"/>
+    <path d="M620 42h230"/>
+    <path d="M120 318h340"/>
+    <path d="M560 304h260"/>
+  </g>
+  <g stroke="#05080c" stroke-width="1.2" stroke-opacity=".28">
+    <path d="M90 20l-54 314"/>
+    <path d="M246 0l-32 360"/>
+    <path d="M412 18l-74 330"/>
+    <path d="M642 0l-42 360"/>
+    <path d="M806 16l-70 330"/>
+  </g>
+</svg>

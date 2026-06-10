@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="230" viewBox="0 0 1400 230">
+  <defs>
+    <linearGradient id="band" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#40141f"/>
+      <stop offset="45%" stop-color="#9f3245"/>
+      <stop offset="100%" stop-color="#2a0d15"/>
+    </linearGradient>
+    <filter id="rough">
+      <feTurbulence type="fractalNoise" baseFrequency=".055" numOctaves="3" seed="17"/>
+      <feDisplacementMap in="SourceGraphic" scale="18"/>
+    </filter>
+  </defs>
+  <path
+    filter="url(#rough)"
+    d="M-35 112C80 83 181 99 289 76C399 52 487 88 593 72C714 54 790 85 899 66C1035 42 1140 84 1248 64C1322 50 1371 67 1435 52V246H-35V112Z"
+    fill="url(#band)"
+  />
+  <path
+    d="M0 122C140 101 258 119 370 96C500 69 626 94 740 84C882 71 1006 96 1136 75C1240 58 1322 73 1400 66V97C1282 102 1181 98 1074 116C938 139 810 110 690 124C555 139 438 112 303 139C178 163 90 136 0 154V122Z"
+    fill="#ababac"
+    opacity=".14"
+  />
+  <path d="M0 206H1400" stroke="#050506" stroke-opacity=".35" stroke-width="14"/>
+</svg>

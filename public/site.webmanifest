@@ -1,0 +1,19 @@
+{
+  "name": "Nightlife Flyers",
+  "short_name": "Nightlife Flyers",
+  "description": "AI flyer maker for nightlife flyers, club flyers, event flyers, DJ flyers, artist promo flyers, party flyers, and social promo graphics.",
+  "start_url": "/?studio=1",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#050608",
+  "theme_color": "#050608",
+  "categories": ["design", "graphics", "productivity", "photo"],
+  "icons": [
+    {
+      "src": "/branding/nf-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

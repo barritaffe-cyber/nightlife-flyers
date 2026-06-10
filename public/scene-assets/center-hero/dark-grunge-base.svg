@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200">
+  <defs>
+    <radialGradient id="centerGlow" cx="50%" cy="45%" r="58%">
+      <stop offset="0%" stop-color="#1e3034"/>
+      <stop offset="42%" stop-color="#0b171c"/>
+      <stop offset="100%" stop-color="#030509"/>
+    </radialGradient>
+    <linearGradient id="floorFade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#061015" stop-opacity="0"/>
+      <stop offset="70%" stop-color="#071016" stop-opacity=".5"/>
+      <stop offset="100%" stop-color="#020407"/>
+    </linearGradient>
+    <filter id="roughNoise">
+      <feTurbulence type="fractalNoise" baseFrequency=".82" numOctaves="5" seed="41"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="table" tableValues="0 .18"/>
+      </feComponentTransfer>
+    </filter>
+    <filter id="softBlur">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="1200" fill="url(#centerGlow)"/>
+  <rect width="1200" height="1200" fill="#030509" opacity=".35"/>
+  <g opacity=".22" filter="url(#softBlur)">
+    <ellipse cx="600" cy="545" rx="310" ry="270" fill="#19f0d2"/>
+    <ellipse cx="555" cy="640" rx="270" ry="220" fill="#7a1234" opacity=".5"/>
+  </g>
+  <g opacity=".18" stroke="#ffffff" stroke-width="2">
+    <path d="M118 185h102"/>
+    <path d="M930 238h146"/>
+    <path d="M64 992h138"/>
+    <path d="M948 986h180"/>
+    <path d="M205 310l32 32M237 310l-32 32"/>
+    <path d="M980 665l28 28M1008 665l-28 28"/>
+    <path d="M138 718l22 22M160 718l-22 22"/>
+  </g>
+  <g opacity=".11" fill="none" stroke="#c8f6ff" stroke-width="1">
+    <path d="M160 230C295 170 448 155 620 185"/>
+    <path d="M1010 260C845 210 704 205 590 246"/>
+    <path d="M140 825C310 774 500 774 710 830"/>
+    <path d="M1092 820C910 760 745 757 596 812"/>
+  </g>
+  <g opacity=".16" stroke="#ffffff" stroke-width="1">
+    <path d="M210 96l-42 138"/>
+    <path d="M1012 98l-58 172"/>
+    <path d="M106 486l92-44"/>
+    <path d="M1044 478l-116-36"/>
+    <path d="M340 1096l526-32"/>
+  </g>
+  <rect width="1200" height="1200" filter="url(#roughNoise)" opacity=".85"/>
+  <rect y="610" width="1200" height="590" fill="url(#floorFade)"/>
+  <rect width="1200" height="1200" fill="none" stroke="#ffffff" stroke-opacity=".04" stroke-width="36"/>
+</svg>

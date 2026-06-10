@@ -21,6 +21,8 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 Copy the variables in [`.env.example`](./.env.example) into your local `.env.local` and Vercel project settings.
 
+Set `MONITORING_WEBHOOK_URL` in production to mirror client and app error reports to your alerting service. The app also logs structured monitoring events to server logs.
+
 ## Database
 
 Apply the schema in [`supabase/schema.sql`](./supabase/schema.sql) to your Supabase project before testing auth flows.
