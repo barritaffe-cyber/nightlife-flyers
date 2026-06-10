@@ -1,6 +1,7 @@
 'use client';
 
 import React from "react";
+import Link from "next/link";
 import { supabaseBrowser } from "../../lib/supabase/client";
 import { getDeviceType, getOrCreateDeviceId } from "../../lib/auth/device";
 
@@ -127,12 +128,12 @@ export default function AuthGate({
             <div className="text-sm text-neutral-400 mb-4">
               Please log in to access your profile, pass, or subscription.
             </div>
-            <a
+            <Link
               href="/login"
               className="inline-flex items-center justify-center rounded-lg bg-fuchsia-600 px-4 py-2 text-sm font-semibold"
             >
               Go to Login
-            </a>
+            </Link>
           </>
         )}
 

@@ -45081,55 +45081,55 @@ return (
           Quick Links
         </div>
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <a
+          <Link
             href="/login"
             onClick={(event) => void handleStudioNavigation(event, "/login")}
             className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/85 hover:bg-white/10"
           >
             Login
-          </a>
-          <a
+          </Link>
+          <Link
             href="/terms"
             onClick={(event) => void handleStudioNavigation(event, "/terms")}
             className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/85 hover:bg-white/10"
           >
             Terms
-          </a>
-          <a
+          </Link>
+          <Link
             href="/privacy"
             onClick={(event) => void handleStudioNavigation(event, "/privacy")}
             className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/85 hover:bg-white/10"
           >
             Privacy
-          </a>
-          <a
+          </Link>
+          <Link
             href="/terms#billing-refunds"
             onClick={(event) => void handleStudioNavigation(event, "/terms#billing-refunds")}
             className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/85 hover:bg-white/10"
           >
             Refunds & Cancellation
-          </a>
-          <a
+          </Link>
+          <Link
             href="/contact?type=bug"
             onClick={(event) => void handleStudioNavigation(event, "/contact?type=bug")}
             className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/85 hover:bg-white/10"
           >
             Report a Bug
-          </a>
-          <a
+          </Link>
+          <Link
             href="/contact"
             onClick={(event) => void handleStudioNavigation(event, "/contact")}
             className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/85 hover:bg-white/10"
           >
             Contact
-          </a>
+          </Link>
         </div>
         <div className="mt-3 text-[11px] text-white/45">
           Nightlife Flyers is operated by {LEGAL_NAME}.
         </div>
       </div>
       <div className="mt-4 flex items-center gap-2">
-        <a
+        <Link
           href={accountData?.status === "ondemand" ? "/pricing" : "/billing/portal"}
           onClick={(event) =>
             void handleStudioNavigation(event, accountData?.status === "ondemand" ? "/pricing" : "/billing/portal")
@@ -45137,7 +45137,7 @@ return (
           className="rounded-lg border border-fuchsia-400/40 bg-fuchsia-500/20 px-3 py-2 text-xs text-white hover:bg-fuchsia-500/30"
         >
           {accountData?.status === "ondemand" ? "Buy another pass" : "Billing help"}
-        </a>
+        </Link>
         <button
           type="button"
           className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
@@ -45196,13 +45196,13 @@ return (
                 Retry export
               </button>
               {isStarterPlan && starterRenderLimitReached && (
-                <a
+                <Link
                   href="/pricing"
                   onClick={(event) => void handleStudioNavigation(event, "/pricing")}
                   className="rounded-lg border border-fuchsia-400/40 bg-fuchsia-500/20 px-3 py-2 text-xs text-white hover:bg-fuchsia-500/30"
                 >
                   View plans
-                </a>
+                </Link>
               )}
               <button
                 type="button"
@@ -45328,13 +45328,13 @@ return (
                 Re-render
               </button>
               {isStarterPlan && (
-                <a
+                <Link
                   href="/pricing"
                   onClick={(event) => void handleStudioNavigation(event, "/pricing")}
                   className="rounded-lg border border-fuchsia-400/40 bg-fuchsia-500/20 px-3 py-2 text-xs text-white hover:bg-fuchsia-500/30"
                 >
                   View passes
-                </a>
+                </Link>
               )}
               <button
                 type="button"
