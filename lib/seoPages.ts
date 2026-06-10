@@ -339,6 +339,446 @@ export const CATEGORY_LANDING_PAGES: CategoryLandingPage[] = [
       },
     ],
   },
+  {
+    slug: "hip-hop-flyer-maker",
+    title: "Hip Hop Flyer Maker",
+    h1: "Create Hip Hop Flyers for Club Nights, Showcases, and DJ Events",
+    eyebrow: "Hip hop flyer maker",
+    metaDescription:
+      "Make hip hop flyers online for club nights, artist showcases, DJ events, open mics, throwback parties, and urban nightlife promotion.",
+    intro:
+      "Create hip hop flyers with bold type, urban textures, artist-focused layouts, and social-ready formats. Start from nightlife templates built for showcases, DJs, MCs, open mics, and weekly club promotion.",
+    audience:
+      "Built for hip hop promoters, DJs, artists, venues, managers, open mic hosts, and streetwear or nightlife brands.",
+    keywords: [
+      "hip hop flyer maker",
+      "hip hop flyer template",
+      "rap flyer maker",
+      "artist showcase flyer",
+      "urban flyer maker",
+    ],
+    bullets: [
+      "Urban flyer templates for hip hop and rap events",
+      "Editable artist names, lineups, venues, dates, and social handles",
+      "Chrome, graffiti, halftone, and gritty nightlife effects",
+      "Square post and story exports for fast promotion",
+    ],
+    useCases: [
+      "Hip hop club nights",
+      "Artist showcases",
+      "Open mic events",
+      "Throwback and old-school parties",
+    ],
+    templateIds: ["hiphop_graffiti", "hiphop_lowrider", "industrial_muscle_hero", "throwback_cassette", "atlanta"],
+    faqs: [
+      {
+        question: "How do I make a hip hop flyer?",
+        answer:
+          "Choose a hip hop or urban flyer template, add the artist, DJ, venue, date, and ticket details, then export a square post or vertical story.",
+      },
+      {
+        question: "Can I promote an artist showcase with Nightlife Flyers?",
+        answer:
+          "Yes. The editor supports artist names, lineup copy, portrait cutouts, social handles, venue details, and export formats for social promotion.",
+      },
+    ],
+  },
+  {
+    slug: "bottle-service-flyer-maker",
+    title: "Bottle Service Flyer Maker",
+    h1: "Design Bottle Service Flyers for VIP Tables and Club Nights",
+    eyebrow: "Bottle service flyer maker",
+    metaDescription:
+      "Create bottle service flyers online for VIP tables, champagne nights, lounge events, club promos, and upscale nightlife offers.",
+    intro:
+      "Promote VIP tables, bottle packages, champagne nights, and premium lounge events with templates built for luxury nightlife marketing and clean social exports.",
+    audience:
+      "Built for VIP hosts, club promoters, lounges, bars, nightlife teams, and hospitality marketers selling table reservations.",
+    keywords: [
+      "bottle service flyer maker",
+      "bottle service flyer template",
+      "VIP table flyer",
+      "champagne flyer maker",
+      "club table flyer",
+    ],
+    bullets: [
+      "VIP and bottle service flyer templates",
+      "Editable table offers, RSVP details, and venue copy",
+      "Luxury color grading, flares, and typography presets",
+      "Post and story exports for nightlife promotion",
+    ],
+    useCases: [
+      "VIP table reservations",
+      "Champagne nights",
+      "Birthday table packages",
+      "Upscale lounge promotions",
+    ],
+    templateIds: ["bottle_service", "luxe", "martini", "blk_tie", "rnb_velvet"],
+    faqs: [
+      {
+        question: "What should a bottle service flyer include?",
+        answer:
+          "Include the venue, date, VIP table offer, bottle package, host or RSVP contact, music style, and any dress code or arrival details.",
+      },
+      {
+        question: "Can I make a VIP table flyer for Instagram?",
+        answer:
+          "Yes. Nightlife Flyers supports square post and vertical story exports for Instagram and other social platforms.",
+      },
+    ],
+  },
+  {
+    slug: "rooftop-party-flyer-maker",
+    title: "Rooftop Party Flyer Maker",
+    h1: "Make Rooftop Party Flyers for Sunset, Afrobeats, and Lounge Events",
+    eyebrow: "Rooftop flyer maker",
+    metaDescription:
+      "Create rooftop party flyers online for sunset parties, Afrobeats events, lounge nights, day parties, and tropical nightlife promotion.",
+    intro:
+      "Design rooftop party flyers with warm palettes, skyline energy, tropical visuals, and readable event details for social promotion.",
+    audience:
+      "Built for rooftops, lounges, DJs, promoters, brunch parties, sunset sessions, and venue marketers.",
+    keywords: [
+      "rooftop party flyer maker",
+      "rooftop flyer template",
+      "sunset party flyer",
+      "Afrobeats rooftop flyer",
+      "day party flyer maker",
+    ],
+    bullets: [
+      "Rooftop and sunset flyer templates",
+      "Warm tropical backgrounds and skyline-ready layouts",
+      "Editable DJ, venue, RSVP, and date details",
+      "Square and story formats for social promotion",
+    ],
+    useCases: [
+      "Afrobeats rooftop parties",
+      "Sunset sessions",
+      "Rooftop brunch events",
+      "Outdoor lounge nights",
+    ],
+    templateIds: ["afrobeat_rooftop", "day_party", "sunset_yacht", "yacht_escape", "summer_splash"],
+    faqs: [
+      {
+        question: "Can I make a rooftop party flyer quickly?",
+        answer:
+          "Yes. Start from a rooftop or tropical template, replace the event details, and export a finished post or story flyer.",
+      },
+      {
+        question: "What style works for rooftop flyers?",
+        answer:
+          "Rooftop flyers usually work best with warm color, skyline or sunset imagery, clear event details, and a premium social-first layout.",
+      },
+    ],
+  },
+  {
+    slug: "karaoke-flyer-maker",
+    title: "Karaoke Flyer Maker",
+    h1: "Create Karaoke Night Flyers for Bars, Lounges, and Weekly Events",
+    eyebrow: "Karaoke flyer maker",
+    metaDescription:
+      "Make karaoke flyers online for bar nights, open mic events, weekly lounge promos, neon mic nights, and social media promotion.",
+    intro:
+      "Promote karaoke nights with bright, readable templates built for bars, lounges, hosts, DJs, and weekly event schedules.",
+    audience:
+      "Built for bars, lounges, karaoke hosts, DJs, venues, and promoters running recurring karaoke events.",
+    keywords: [
+      "karaoke flyer maker",
+      "karaoke flyer template",
+      "karaoke night flyer",
+      "open mic flyer maker",
+      "bar event flyer",
+    ],
+    bullets: [
+      "Neon karaoke and mic-night flyer templates",
+      "Editable host, venue, time, drink specials, and RSVP copy",
+      "Readable layouts for weekly recurring events",
+      "Fast social exports for bar promotion",
+    ],
+    useCases: [
+      "Karaoke nights",
+      "Open mic events",
+      "Bar weekly promos",
+      "Host and DJ announcements",
+    ],
+    templateIds: ["karaokee", "kpop_pastel_led", "martini", "rnb_velvet", "secret_friday"],
+    faqs: [
+      {
+        question: "Can I make a weekly karaoke flyer?",
+        answer:
+          "Yes. Use a karaoke template, update the weekday, time, host, and venue details, then save or export the design for recurring promotion.",
+      },
+      {
+        question: "Can karaoke flyers include drink specials?",
+        answer:
+          "Yes. You can add or edit drink specials, venue details, social icons, and event rules in the flyer editor.",
+      },
+    ],
+  },
+  {
+    slug: "rave-flyer-maker",
+    title: "Rave Flyer Maker",
+    h1: "Design Rave and EDM Flyers for Warehouse, Club, and Afterhours Events",
+    eyebrow: "Rave flyer maker",
+    metaDescription:
+      "Create rave flyers online for EDM nights, techno events, warehouse parties, afterhours sets, and neon club promotion.",
+    intro:
+      "Make high-energy rave flyers with neon backgrounds, fog, lasers, bold typography, and social-ready layouts for EDM and underground events.",
+    audience:
+      "Built for EDM promoters, DJs, techno crews, warehouse event teams, clubs, and afterhours brands.",
+    keywords: [
+      "rave flyer maker",
+      "EDM flyer template",
+      "techno flyer maker",
+      "warehouse party flyer",
+      "afterhours flyer maker",
+    ],
+    bullets: [
+      "EDM, techno, and warehouse flyer templates",
+      "Neon, fog, tunnel, and stage-inspired visuals",
+      "Editable lineup, DJ, venue, date, and ticket details",
+      "Square post and story exports for social promotion",
+    ],
+    useCases: [
+      "Rave events",
+      "Techno warehouse nights",
+      "EDM club shows",
+      "Afterhours parties",
+    ],
+    templateIds: ["edm_tunnel", "edm_stage_co2", "techno_warehouse", "dnb_bunker", "sugar_rush"],
+    faqs: [
+      {
+        question: "Can I make an EDM flyer online?",
+        answer:
+          "Yes. Pick an EDM, rave, or techno template, edit the lineup and event details, then export the flyer for social promotion.",
+      },
+      {
+        question: "What should a rave flyer include?",
+        answer:
+          "Include the event name, lineup, venue, date, start time, ticket details, age policy if needed, and a visual style that matches the music.",
+      },
+    ],
+  },
+  {
+    slug: "birthday-flyer-maker",
+    title: "Birthday Flyer Maker",
+    h1: "Create Birthday Party Flyers for Club Nights and Private Events",
+    eyebrow: "Birthday flyer maker",
+    metaDescription:
+      "Make birthday flyers online for club birthdays, VIP tables, private parties, brunch events, and social media promotion.",
+    intro:
+      "Create birthday flyers with bold event copy, host details, RSVP info, party visuals, and post plus story formats ready for social platforms.",
+    audience:
+      "Built for birthday hosts, promoters, DJs, clubs, lounges, brunch parties, and VIP table teams.",
+    keywords: [
+      "birthday flyer maker",
+      "birthday flyer template",
+      "club birthday flyer",
+      "birthday bash flyer",
+      "party flyer maker",
+    ],
+    bullets: [
+      "Birthday and party flyer templates",
+      "Editable host, age, venue, date, RSVP, and package details",
+      "Club, lounge, brunch, and private event styles",
+      "Download social-ready post and story graphics",
+    ],
+    useCases: [
+      "Birthday bash flyers",
+      "VIP birthday table promos",
+      "Birthday brunch events",
+      "Private party announcements",
+    ],
+    templateIds: ["sugar_rush", "mardi_gras", "day_party", "bottle_service", "luxe"],
+    faqs: [
+      {
+        question: "Can I make a club birthday flyer?",
+        answer:
+          "Yes. Start from a birthday or VIP nightlife template, add the host name, venue, date, and RSVP details, then export it for social media.",
+      },
+      {
+        question: "Can I include bottle service or table details?",
+        answer:
+          "Yes. You can add table packages, bottle service details, guest list copy, and contact information.",
+      },
+    ],
+  },
+  {
+    slug: "rnb-flyer-maker",
+    title: "R&B Flyer Maker",
+    h1: "Make R&B Flyers for Lounge Nights, Slow Jams, and DJ Events",
+    eyebrow: "R&B flyer maker",
+    metaDescription:
+      "Create R&B flyers online for lounge nights, slow jams, brunch events, DJ sets, and upscale nightlife promotion.",
+    intro:
+      "Design R&B flyers with smooth lounge visuals, premium type, smoky textures, and social-first layouts for DJs, lounges, bars, and promoters.",
+    audience:
+      "Built for R&B promoters, lounges, DJs, bars, brunch teams, and nightlife marketers.",
+    keywords: [
+      "R&B flyer maker",
+      "R&B flyer template",
+      "slow jams flyer",
+      "lounge flyer maker",
+      "RNB night flyer",
+    ],
+    bullets: [
+      "R&B, lounge, and slow-jam flyer templates",
+      "Editable DJ, host, venue, date, and RSVP copy",
+      "Luxury and smoky visual styles for grown nightlife events",
+      "Post and story exports for Instagram promotion",
+    ],
+    useCases: [
+      "R&B lounge nights",
+      "Slow jams events",
+      "Brunch and day parties",
+      "DJ tribute nights",
+    ],
+    templateIds: ["rnb_velvet", "luxe", "bottle_service", "martini", "ladies_night_center_hero"],
+    faqs: [
+      {
+        question: "Can I make a flyer for an R&B night?",
+        answer:
+          "Yes. Use an R&B, lounge, or VIP template, edit the details, and export a polished post or story flyer.",
+      },
+      {
+        question: "What style works for R&B flyers?",
+        answer:
+          "R&B flyers often work well with warm light, smoky backgrounds, elegant typography, clear event details, and a premium lounge feel.",
+      },
+    ],
+  },
+  {
+    slug: "disco-party-flyer-maker",
+    title: "Disco Party Flyer Maker",
+    h1: "Create Disco Party Flyers for Throwback and Theme Nights",
+    eyebrow: "Disco flyer maker",
+    metaDescription:
+      "Make disco party flyers online for throwback nights, funk events, retro club parties, theme nights, and social media promotion.",
+    intro:
+      "Promote disco nights with retro color, mirrorball energy, bold event titles, and social-ready flyer formats.",
+    audience:
+      "Built for promoters, DJs, bars, clubs, lounges, and event teams running retro, funk, soul, and throwback parties.",
+    keywords: [
+      "disco party flyer maker",
+      "disco flyer template",
+      "throwback flyer maker",
+      "retro party flyer",
+      "funk night flyer",
+    ],
+    bullets: [
+      "Disco, retro, and throwback flyer templates",
+      "Editable theme, DJ, venue, date, and ticket copy",
+      "Vintage color and nightlife-ready composition",
+      "Export square posts and vertical stories",
+    ],
+    useCases: [
+      "Disco parties",
+      "Funk and soul nights",
+      "Throwback events",
+      "Retro theme parties",
+    ],
+    templateIds: ["disco_mirrorball", "throwback_cassette", "mardi_gras", "day_party", "secret_friday"],
+    faqs: [
+      {
+        question: "Can I make a disco flyer without design experience?",
+        answer:
+          "Yes. Start from a disco or throwback template, replace the event details, and export a finished flyer.",
+      },
+      {
+        question: "Can I use the flyer for Instagram stories?",
+        answer:
+          "Yes. Supported templates can be opened as square posts or vertical story formats for social promotion.",
+      },
+    ],
+  },
+  {
+    slug: "yacht-party-flyer-maker",
+    title: "Yacht Party Flyer Maker",
+    h1: "Design Yacht Party Flyers for Day Events and Luxury Nightlife",
+    eyebrow: "Yacht flyer maker",
+    metaDescription:
+      "Create yacht party flyers online for boat parties, sunset cruises, day events, luxury socials, and tropical nightlife promotion.",
+    intro:
+      "Make yacht party flyers with ocean color, sunset energy, luxury typography, and clean social formats for boat parties and premium day events.",
+    audience:
+      "Built for yacht party promoters, DJs, day-event brands, lounges, travel hosts, and luxury nightlife marketers.",
+    keywords: [
+      "yacht party flyer maker",
+      "boat party flyer",
+      "yacht flyer template",
+      "sunset cruise flyer",
+      "luxury party flyer",
+    ],
+    bullets: [
+      "Yacht, boat party, and ocean-luxe flyer templates",
+      "Editable ticket, RSVP, dock, date, and host details",
+      "Premium tropical visuals for day and sunset events",
+      "Social-ready post and story exports",
+    ],
+    useCases: [
+      "Yacht parties",
+      "Boat cruises",
+      "Sunset events",
+      "Luxury day parties",
+    ],
+    templateIds: ["yacht_escape", "sunset_yacht", "day_party", "summer_splash", "miami_st"],
+    faqs: [
+      {
+        question: "Can I make a yacht party flyer online?",
+        answer:
+          "Yes. Choose a yacht or tropical event template, add the date, dock, host, and RSVP details, then export the flyer.",
+      },
+      {
+        question: "Can I make both post and story versions?",
+        answer:
+          "Yes. Nightlife Flyers supports square post and vertical story workflows for supported templates.",
+      },
+    ],
+  },
+  {
+    slug: "bar-flyer-maker",
+    title: "Bar Flyer Maker",
+    h1: "Create Bar Flyers for Drink Specials, Weekly Events, and Live DJs",
+    eyebrow: "Bar flyer maker",
+    metaDescription:
+      "Make bar flyers online for drink specials, karaoke nights, happy hours, DJs, cocktail events, and weekly social promotion.",
+    intro:
+      "Design bar flyers for weekly promotions, cocktails, happy hour, karaoke, live DJs, and themed nights without starting from a blank layout.",
+    audience:
+      "Built for bars, pubs, lounges, DJs, hosts, managers, and social media teams promoting recurring nightlife events.",
+    keywords: [
+      "bar flyer maker",
+      "bar flyer template",
+      "happy hour flyer maker",
+      "drink specials flyer",
+      "bar event flyer",
+    ],
+    bullets: [
+      "Bar, cocktail, happy hour, and weekly event templates",
+      "Editable drink specials, venue, DJ, date, and time details",
+      "Fast visuals for recurring promotion",
+      "Clean exports for Instagram posts and stories",
+    ],
+    useCases: [
+      "Happy hour specials",
+      "Karaoke nights",
+      "Live DJ bar events",
+      "Cocktail and theme nights",
+    ],
+    templateIds: ["kpop_pastel_led", "martini", "karaokee", "latin_street_tropical", "miami2"],
+    faqs: [
+      {
+        question: "Can I make a happy hour flyer?",
+        answer:
+          "Yes. Use a bar, cocktail, or lounge template, update the drink specials and event time, then export the flyer.",
+      },
+      {
+        question: "Can I reuse bar flyer designs weekly?",
+        answer:
+          "Yes. You can update the same template for recurring events by changing the date, host, DJ, and offer copy.",
+      },
+    ],
+  },
 ];
 
 const TEMPLATE_SLUG_OVERRIDES: Record<string, string> = {

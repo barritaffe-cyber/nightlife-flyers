@@ -66,6 +66,16 @@ Nightlife Flyers is not a generic document editor. It is focused on nightlife an
 - /afrobeats-flyer-maker - category page for Afrobeats flyer creation
 - /latin-night-flyer-maker - category page for Latin night flyer creation
 - /lounge-flyer-maker - category page for lounge, cocktail, and bottle service flyers
+- /hip-hop-flyer-maker - category page for hip hop, rap, showcase, and urban club flyers
+- /bottle-service-flyer-maker - category page for VIP table and bottle service flyers
+- /rooftop-party-flyer-maker - category page for rooftop, sunset, and Afrobeats party flyers
+- /karaoke-flyer-maker - category page for karaoke night, open mic, and bar event flyers
+- /rave-flyer-maker - category page for rave, EDM, techno, warehouse, and afterhours flyers
+- /birthday-flyer-maker - category page for birthday bash, VIP birthday, and party flyers
+- /rnb-flyer-maker - category page for R&B, slow jams, and lounge night flyers
+- /disco-party-flyer-maker - category page for disco, throwback, funk, and retro party flyers
+- /yacht-party-flyer-maker - category page for yacht party, boat party, and luxury day-event flyers
+- /bar-flyer-maker - category page for bar events, happy hour, drink specials, and weekly promo flyers
 - /pricing - pricing and access options
 - /contact - support and contact page
 - /privacy - privacy policy

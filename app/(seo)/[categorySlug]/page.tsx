@@ -85,6 +85,17 @@ export default async function CategoryLandingPage({ params }: PageProps) {
     },
     {
       "@context": "https://schema.org",
+      "@type": "ItemList",
+      name: `${page.title} templates`,
+      itemListElement: templates.map((templatePage, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        name: templatePage.title,
+        url: absoluteUrl(siteUrl, `/templates/${templatePage.slug}`),
+      })),
+    },
+    {
+      "@context": "https://schema.org",
       "@type": "BreadcrumbList",
       itemListElement: [
         {
