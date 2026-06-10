@@ -15,6 +15,14 @@ https://www.nightlife-flyers.com/start/nightlife
 Template library:
 https://www.nightlife-flyers.com/templates
 
+Template format pages:
+Nightlife Flyers publishes main template pages plus format-specific pages for supported templates.
+Examples include:
+https://www.nightlife-flyers.com/templates/ladies-night-instagram-story-flyer
+https://www.nightlife-flyers.com/templates/ladies-night-square-post-flyer
+https://www.nightlife-flyers.com/templates/bottle-service-instagram-story-flyer
+https://www.nightlife-flyers.com/templates/hip-hop-square-post-flyer
+
 Category pages:
 https://www.nightlife-flyers.com/nightclub-flyer-maker
 https://www.nightlife-flyers.com/dj-flyer-maker

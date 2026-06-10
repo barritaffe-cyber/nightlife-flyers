@@ -28,6 +28,10 @@ export type TemplateLandingPage = {
   keywords: string[];
   useCases: string[];
   template: TemplateSpec;
+  kind: "template" | "format";
+  format?: "square" | "story";
+  formatLabel?: string;
+  parentSlug?: string;
 };
 
 export const CATEGORY_LANDING_PAGES: CategoryLandingPage[] = [
@@ -940,22 +944,137 @@ function defaultTemplateLandingPage(template: TemplateSpec): TemplateLandingPage
       "Club, bar, lounge, and DJ marketing",
     ],
     template,
+    kind: "template",
   };
+}
+
+function cleanLandingPageTitle(page: TemplateLandingPage) {
+  return page.title
+    .replace(/\s+Flyer\s+Template$/i, "")
+    .replace(/\s+Template$/i, "")
+    .replace(/\s+Flyer$/i, "")
+    .trim();
+}
+
+function getSupportedTemplateFormats(template: TemplateSpec) {
+  const formats: Array<"square" | "story"> = [];
+  if (template.formats?.square) formats.push("square");
+  if (template.formats?.story) formats.push("story");
+  return formats;
+}
+
+function formatSlug(baseSlug: string, format: "square" | "story") {
+  const root = baseSlug.replace(/-flyer$/i, "");
+  return format === "story" ? `${root}-instagram-story-flyer` : `${root}-square-post-flyer`;
+}
+
+function formatTemplateLandingPage(parent: TemplateLandingPage, format: "square" | "story"): TemplateLandingPage {
+  const name = cleanLandingPageTitle(parent);
+  const style = stylePhrase(parent.template);
+
+  if (format === "story") {
+    return {
+      ...parent,
+      slug: formatSlug(parent.slug, "story"),
+      title: `${name} Instagram Story Flyer Template`,
+      h1: `${name} Instagram Story Flyer Template for Mobile Promotion`,
+      metaDescription: `Create a vertical ${name} Instagram story flyer template for ${style} events with editable text, mobile-first layout, and clean story exports.`,
+      intro: `This vertical ${name} story flyer page is built for mobile promotion. Open the story format, update the event details, and export a tall social flyer for Instagram, TikTok, and nightlife announcements.`,
+      audience: `${parent.audience} This story version is tuned for vertical mobile placement and fast social sharing.`,
+      keywords: [
+        `${name} Instagram story flyer`,
+        `${name} story flyer template`,
+        `${name} vertical flyer`,
+        "Instagram story flyer template",
+        "nightlife story flyer",
+      ],
+      useCases: [
+        "Instagram story promotion",
+        "TikTok story-style event promotion",
+        "Mobile-first nightlife announcements",
+        ...parent.useCases.slice(0, 2),
+      ],
+      kind: "format",
+      format: "story",
+      formatLabel: "Instagram Story",
+      parentSlug: parent.slug,
+    };
+  }
+
+  return {
+    ...parent,
+    slug: formatSlug(parent.slug, "square"),
+    title: `${name} Square Post Flyer Template`,
+    h1: `${name} Square Post Flyer Template for Feeds and Event Promotion`,
+    metaDescription: `Create a square ${name} flyer template for ${style} events with editable text, post-ready layout, and clean Instagram feed exports.`,
+    intro: `This square ${name} post flyer page is built for feed promotion. Open the square format, edit the event copy and visuals, then export a polished flyer for Instagram posts, venue pages, and promoter feeds.`,
+    audience: `${parent.audience} This square version is tuned for feed posts, venue grids, and promoter announcements.`,
+    keywords: [
+      `${name} square flyer`,
+      `${name} square post flyer`,
+      `${name} Instagram post flyer`,
+      "square flyer template",
+      "nightlife post flyer",
+    ],
+    useCases: [
+      "Instagram feed promotion",
+      "Square event flyer posts",
+      "Venue and promoter grid posts",
+      ...parent.useCases.slice(0, 2),
+    ],
+    kind: "format",
+    format: "square",
+    formatLabel: "Square Post",
+    parentSlug: parent.slug,
+  };
+}
+
+function uniqueSlug(slug: string, seen: Set<string>, fallback: string) {
+  let nextSlug = slug;
+  if (seen.has(nextSlug)) nextSlug = `${nextSlug}-${slugify(fallback)}`;
+  let index = 2;
+  while (seen.has(nextSlug)) {
+    nextSlug = `${slug}-${index}`;
+    index += 1;
+  }
+  seen.add(nextSlug);
+  return nextSlug;
 }
 
 export function getAllTemplateLandingPages() {
   const seen = new Set<string>();
-  return TEMPLATE_GALLERY.filter((template) => !TEMPLATE_PAGE_EXCLUSIONS.has(template.id)).map((template) => {
+  const pages: TemplateLandingPage[] = [];
+
+  TEMPLATE_GALLERY.filter((template) => !TEMPLATE_PAGE_EXCLUSIONS.has(template.id)).forEach((template) => {
     const page = {
       ...defaultTemplateLandingPage(template),
       ...TEMPLATE_COPY_OVERRIDES[template.id],
       template,
     };
-    let slug = page.slug;
-    if (seen.has(slug)) slug = `${slug}-${slugify(template.id)}`;
-    seen.add(slug);
-    return { ...page, slug };
+    const parentPage = { ...page, slug: uniqueSlug(page.slug, seen, template.id), kind: "template" as const };
+    pages.push(parentPage);
+
+    const supportedFormats = getSupportedTemplateFormats(template);
+    if (supportedFormats.length > 1) {
+      supportedFormats.forEach((format) => {
+        const formatPage = formatTemplateLandingPage(parentPage, format);
+        pages.push({
+          ...formatPage,
+          slug: uniqueSlug(formatPage.slug, seen, `${template.id}-${format}`),
+        });
+      });
+    }
   });
+
+  return pages;
+}
+
+export function getPrimaryTemplateLandingPages() {
+  return getAllTemplateLandingPages().filter((page) => page.kind === "template");
+}
+
+export function getTemplateFormatVariantPages(templateId: string) {
+  return getAllTemplateLandingPages().filter((page) => page.template.id === templateId && page.kind === "format");
 }
 
 export function getTemplateLandingPage(slug: string) {
@@ -967,7 +1086,7 @@ export function getCategoryLandingPage(slug: string) {
 }
 
 export function getTemplateLandingPagesByIds(ids: string[]) {
-  const pages = getAllTemplateLandingPages();
+  const pages = getPrimaryTemplateLandingPages();
   return ids
     .map((id) => pages.find((page) => page.template.id === id))
     .filter((page): page is TemplateLandingPage => Boolean(page));
@@ -975,7 +1094,7 @@ export function getTemplateLandingPagesByIds(ids: string[]) {
 
 export function getRelatedTemplateLandingPages(page: TemplateLandingPage, limit = 4) {
   const tagSet = new Set(page.template.tags.map((tag) => tag.toLowerCase()));
-  return getAllTemplateLandingPages()
+  return getPrimaryTemplateLandingPages()
     .filter((candidate) => candidate.template.id !== page.template.id)
     .map((candidate) => {
       const score = candidate.template.tags.reduce(

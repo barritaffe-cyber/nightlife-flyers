@@ -9,6 +9,7 @@ import {
   buildEditorHref,
   getAllTemplateLandingPages,
   getRelatedTemplateLandingPages,
+  getTemplateFormatVariantPages,
   getTemplateLandingPage,
 } from "../../../lib/seoPages";
 import { getPublicSiteUrl } from "../../../lib/publicIdentity";
@@ -67,9 +68,27 @@ export default async function TemplateLandingPage({ params }: PageProps) {
   const siteUrl = getPublicSiteUrl();
   const canonical = absoluteUrl(siteUrl, `/templates/${page.slug}`);
   const relatedTemplates = getRelatedTemplateLandingPages(page, 4);
+  const primaryFormat = page.format ?? "square";
   const squareHref = buildEditorHref(page.template.id, "square");
   const storyHref = buildEditorHref(page.template.id, "story");
+  const primaryEditorHref = buildEditorHref(page.template.id, primaryFormat);
+  const formatVariantPages = getTemplateFormatVariantPages(page.template.id).filter(
+    (formatPage) => formatPage.slug !== page.slug
+  );
+  const parentHref = page.parentSlug ? `/templates/${page.parentSlug}` : null;
   const tags = page.template.tags.filter(Boolean);
+  const eyebrow =
+    page.format === "story"
+      ? "Instagram story flyer template"
+      : page.format === "square"
+        ? "Square post flyer template"
+        : "Editable flyer template";
+  const previewFrameClass =
+    page.format === "story"
+      ? "mx-auto aspect-[9/16] max-w-[360px] overflow-hidden border border-white/10 bg-black shadow-2xl shadow-cyan-950/20"
+      : "mx-auto aspect-square max-w-[520px] overflow-hidden border border-white/10 bg-black shadow-2xl shadow-cyan-950/20";
+  const formatEditLabel =
+    page.format === "story" ? "Edit Story" : page.format === "square" ? "Edit Post" : "Edit Post";
 
   const structuredData = [
     {
@@ -89,6 +108,7 @@ export default async function TemplateLandingPage({ params }: PageProps) {
         name: page.title,
         image: absoluteUrl(siteUrl, page.template.preview),
         keywords: page.keywords.join(", "),
+        creativeWorkStatus: page.format ? `${page.format} format template` : "editable template",
       },
     },
     {
@@ -131,7 +151,7 @@ export default async function TemplateLandingPage({ params }: PageProps) {
               Templates
             </Link>
             <p className="mt-8 text-xs font-black uppercase tracking-[0.24em] text-fuchsia-200/80">
-              Editable flyer template
+              {eyebrow}
             </p>
             <h1 className="mt-4 max-w-3xl text-4xl font-black leading-[0.95] tracking-tight text-white sm:text-6xl">
               {page.h1}
@@ -141,19 +161,61 @@ export default async function TemplateLandingPage({ params }: PageProps) {
             </p>
             <p className="mt-4 max-w-2xl text-sm leading-6 text-white/55">{NIGHTLIFE_FLYERS_IDENTITY}</p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                href={squareHref}
-                className="inline-flex min-h-11 items-center justify-center bg-cyan-200 px-5 text-sm font-black uppercase tracking-[0.14em] text-black transition hover:bg-white"
-              >
-                Edit Post
-              </Link>
-              <Link
-                href={storyHref}
-                className="inline-flex min-h-11 items-center justify-center border border-white/15 bg-white/[0.04] px-5 text-sm font-black uppercase tracking-[0.14em] text-white transition hover:border-cyan-100/50 hover:bg-white/[0.08]"
-              >
-                Edit Story
-              </Link>
+              {page.format ? (
+                <>
+                  <Link
+                    href={primaryEditorHref}
+                    className="inline-flex min-h-11 items-center justify-center bg-cyan-200 px-5 text-sm font-black uppercase tracking-[0.14em] text-black transition hover:bg-white"
+                  >
+                    {formatEditLabel}
+                  </Link>
+                  {parentHref && (
+                    <Link
+                      href={parentHref}
+                      className="inline-flex min-h-11 items-center justify-center border border-white/15 bg-white/[0.04] px-5 text-sm font-black uppercase tracking-[0.14em] text-white transition hover:border-cyan-100/50 hover:bg-white/[0.08]"
+                    >
+                      Main Template
+                    </Link>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Link
+                    href={squareHref}
+                    className="inline-flex min-h-11 items-center justify-center bg-cyan-200 px-5 text-sm font-black uppercase tracking-[0.14em] text-black transition hover:bg-white"
+                  >
+                    Edit Post
+                  </Link>
+                  <Link
+                    href={storyHref}
+                    className="inline-flex min-h-11 items-center justify-center border border-white/15 bg-white/[0.04] px-5 text-sm font-black uppercase tracking-[0.14em] text-white transition hover:border-cyan-100/50 hover:bg-white/[0.08]"
+                  >
+                    Edit Story
+                  </Link>
+                </>
+              )}
             </div>
+            {(formatVariantPages.length > 0 || parentHref) && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {parentHref && (
+                  <Link
+                    href={parentHref}
+                    className="border border-white/10 bg-white/[0.035] px-3 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white/65 hover:border-cyan-100/40 hover:text-cyan-100"
+                  >
+                    All Formats
+                  </Link>
+                )}
+                {formatVariantPages.map((formatPage) => (
+                  <Link
+                    key={formatPage.slug}
+                    href={`/templates/${formatPage.slug}`}
+                    className="border border-white/10 bg-white/[0.035] px-3 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white/65 hover:border-cyan-100/40 hover:text-cyan-100"
+                  >
+                    {formatPage.formatLabel}
+                  </Link>
+                ))}
+              </div>
+            )}
             <div className="mt-6 flex flex-wrap gap-2">
               {tags.map((tag) => (
                 <span key={tag} className="border border-white/10 bg-white/[0.035] px-3 py-2 text-[11px] font-black uppercase tracking-[0.14em] text-white/65">
@@ -164,7 +226,7 @@ export default async function TemplateLandingPage({ params }: PageProps) {
           </div>
 
           <div className="order-1 lg:order-2">
-            <div className="mx-auto max-w-[520px] overflow-hidden border border-white/10 bg-black shadow-2xl shadow-cyan-950/20">
+            <div className={previewFrameClass}>
               <Image
                 src={page.template.preview}
                 alt={`${page.title} preview`}
@@ -189,7 +251,13 @@ export default async function TemplateLandingPage({ params }: PageProps) {
             <ul className="mt-4 space-y-3 text-sm leading-6 text-white/65">
               <li>Headline, date, time, venue, offer copy, and RSVP details.</li>
               <li>Colors, typography, background position, flares, textures, and graphic elements.</li>
-              <li>Square post and vertical story versions where supported by the template.</li>
+              <li>
+                {page.format === "story"
+                  ? "Vertical story format for mobile-first nightlife promotion."
+                  : page.format === "square"
+                    ? "Square post format for feeds, venue grids, and promoter pages."
+                    : "Square post and vertical story versions where supported by the template."}
+              </li>
               <li>PNG or JPG export for social media promotion.</li>
             </ul>
           </div>
@@ -215,7 +283,15 @@ export default async function TemplateLandingPage({ params }: PageProps) {
           <h2 className="text-2xl font-black text-white">How to Customize It</h2>
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             {[
-              ["1", "Open the template", "Choose the post or story version and load it directly in the editor."],
+              [
+                "1",
+                "Open the template",
+                page.format === "story"
+                  ? "Load the vertical story version directly in the editor."
+                  : page.format === "square"
+                    ? "Load the square post version directly in the editor."
+                    : "Choose the post or story version and load it directly in the editor.",
+              ],
               ["2", "Update the event", "Replace the title, date, venue, DJ, offer, social handle, and RSVP copy."],
               ["3", "Export the flyer", "Download a polished PNG or JPG ready for Instagram, TikTok, or event promotion."],
             ].map(([step, title, body]) => (

@@ -8,6 +8,8 @@ import {
   absoluteUrl,
   buildEditorHref,
   getAllTemplateLandingPages,
+  getPrimaryTemplateLandingPages,
+  getTemplateFormatVariantPages,
 } from "../../lib/seoPages";
 import { getPublicSiteUrl } from "../../lib/publicIdentity";
 
@@ -30,7 +32,8 @@ export const metadata: Metadata = {
 
 export default function TemplatesIndexPage() {
   const siteUrl = getPublicSiteUrl();
-  const templates = getAllTemplateLandingPages();
+  const templates = getPrimaryTemplateLandingPages();
+  const allTemplatePages = getAllTemplateLandingPages();
   const structuredData = [
     {
       "@context": "https://schema.org",
@@ -52,6 +55,13 @@ export default function TemplatesIndexPage() {
           url: absoluteUrl(siteUrl, `/templates/${templatePage.slug}`),
         })),
       },
+      hasPart: allTemplatePages
+        .filter((templatePage) => templatePage.kind === "format")
+        .map((templatePage) => ({
+          "@type": "WebPage",
+          name: templatePage.title,
+          url: absoluteUrl(siteUrl, `/templates/${templatePage.slug}`),
+        })),
     },
     {
       "@context": "https://schema.org",
@@ -126,43 +136,60 @@ export default function TemplatesIndexPage() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {templates.map((templatePage) => (
-            <article key={templatePage.slug} className="overflow-hidden border border-white/10 bg-white/[0.03]">
-              <Link href={`/templates/${templatePage.slug}`} className="group block">
-                <div className="aspect-square overflow-hidden bg-black">
-                  <Image
-                    src={templatePage.template.preview}
-                    alt={`${templatePage.title} rendered flyer preview`}
-                    className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-                    width={900}
-                    height={900}
-                    loading="lazy"
-                    sizes="(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 33vw"
-                    decoding="async"
-                  />
-                </div>
-                <div className="min-h-[148px] p-4">
-                  <div className="text-base font-black text-white">{templatePage.title}</div>
-                  <p className="mt-2 line-clamp-3 text-xs leading-5 text-white/58">{templatePage.metaDescription}</p>
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {templatePage.template.tags.slice(0, 3).map((tag) => (
-                      <span key={tag} className="bg-white/[0.06] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white/55">
-                        {tag}
-                      </span>
+          {templates.map((templatePage) => {
+            const formatPages = getTemplateFormatVariantPages(templatePage.template.id);
+
+            return (
+              <article key={templatePage.slug} className="overflow-hidden border border-white/10 bg-white/[0.03]">
+                <Link href={`/templates/${templatePage.slug}`} className="group block">
+                  <div className="aspect-square overflow-hidden bg-black">
+                    <Image
+                      src={templatePage.template.preview}
+                      alt={`${templatePage.title} rendered flyer preview`}
+                      className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                      width={900}
+                      height={900}
+                      loading="lazy"
+                      sizes="(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 33vw"
+                      decoding="async"
+                    />
+                  </div>
+                  <div className="min-h-[176px] p-4">
+                    <div className="text-base font-black text-white">{templatePage.title}</div>
+                    <p className="mt-2 line-clamp-3 text-xs leading-5 text-white/58">{templatePage.metaDescription}</p>
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {templatePage.template.tags.slice(0, 3).map((tag) => (
+                        <span key={tag} className="bg-white/[0.06] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white/55">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </Link>
+                {formatPages.length > 0 && (
+                  <div className="grid grid-cols-2 border-t border-white/10">
+                    {formatPages.map((formatPage) => (
+                      <Link
+                        key={formatPage.slug}
+                        href={`/templates/${formatPage.slug}`}
+                        className="border-white/10 px-3 py-3 text-center text-[11px] font-black uppercase tracking-[0.12em] text-white/72 hover:bg-white/[0.06] first:border-r"
+                      >
+                        {formatPage.format === "story" ? "Story Page" : "Post Page"}
+                      </Link>
                     ))}
                   </div>
+                )}
+                <div className="grid grid-cols-2 border-t border-white/10">
+                  <Link href={buildEditorHref(templatePage.template.id, "square")} className="px-3 py-3 text-center text-xs font-black uppercase tracking-[0.14em] text-cyan-100 hover:bg-white/[0.06]">
+                    Post
+                  </Link>
+                  <Link href={buildEditorHref(templatePage.template.id, "story")} className="border-l border-white/10 px-3 py-3 text-center text-xs font-black uppercase tracking-[0.14em] text-fuchsia-100 hover:bg-white/[0.06]">
+                    Story
+                  </Link>
                 </div>
-              </Link>
-              <div className="grid grid-cols-2 border-t border-white/10">
-                <Link href={buildEditorHref(templatePage.template.id, "square")} className="px-3 py-3 text-center text-xs font-black uppercase tracking-[0.14em] text-cyan-100 hover:bg-white/[0.06]">
-                  Post
-                </Link>
-                <Link href={buildEditorHref(templatePage.template.id, "story")} className="border-l border-white/10 px-3 py-3 text-center text-xs font-black uppercase tracking-[0.14em] text-fuchsia-100 hover:bg-white/[0.06]">
-                  Story
-                </Link>
-              </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </div>
       </section>
 
