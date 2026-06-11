@@ -1,5 +1,13 @@
 import crypto from "node:crypto";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
+import { isTrackableHumanDeviceUserAgent } from "./filters";
+
+export {
+  isAutomatedAnalyticsUserAgent,
+  isSupportedAnalyticsBrowserUserAgent,
+  isSupportedAnalyticsDeviceUserAgent,
+  isTrackableHumanDeviceUserAgent,
+} from "./filters";
 
 export type AnalyticsEventName =
   | "page_view"
@@ -56,8 +64,6 @@ export const IGNORED_ANALYTICS_EMAILS = [
 ] as const;
 
 const IGNORED_ANALYTICS_EMAIL_SET = new Set<string>(IGNORED_ANALYTICS_EMAILS);
-const AUTOMATED_USER_AGENT_RE =
-  /\b(node|vercel|bot|spider|crawler|crawl|curl|wget|python|go-http-client|axios|undici|headless|lighthouse|pagespeed|pingdom|uptime|monitor)\b/i;
 
 function normalizeText(value: unknown, max = 500) {
   const text = typeof value === "string" ? value.trim() : "";
@@ -71,11 +77,6 @@ function normalizeEmail(value: unknown) {
 export function isIgnoredAnalyticsEmail(value: unknown) {
   const email = normalizeEmail(value);
   return email ? IGNORED_ANALYTICS_EMAIL_SET.has(email) : false;
-}
-
-export function isAutomatedAnalyticsUserAgent(value: unknown) {
-  const userAgent = typeof value === "string" ? value.trim() : "";
-  return userAgent ? AUTOMATED_USER_AGENT_RE.test(userAgent) : false;
 }
 
 export function isServerGeneratedTrackingIdentity(anonId?: unknown, sessionId?: unknown) {
@@ -131,16 +132,22 @@ export async function insertAnalyticsEvent(
   admin: SupabaseClient,
   input: AnalyticsEventInsert
 ) {
+  const eventName = normalizeText(input.eventName, 80);
+  const userAgent = normalizeText(input.userAgent, 1000);
+  const userId = normalizeText(input.userId, 120);
+  const email = normalizeText(input.email, 320);
+
   if (isIgnoredAnalyticsEmail(input.email)) return;
-  if (isAutomatedAnalyticsUserAgent(input.userAgent)) return;
+  if (userAgent && !isTrackableHumanDeviceUserAgent(userAgent)) return;
+  if (!userAgent && !userId && !email) return;
   if (isServerGeneratedTrackingIdentity(input.anonId, input.sessionId)) return;
 
   const { error } = await admin.from("analytics_events").insert({
-    event_name: normalizeText(input.eventName, 80),
+    event_name: eventName,
     path: normalizeText(input.path, 300),
     properties: normalizeJsonRecord(input.properties),
-    user_id: normalizeText(input.userId, 120),
-    email: normalizeText(input.email, 320),
+    user_id: userId,
+    email,
     anon_id: normalizeText(input.anonId, 120),
     session_id: normalizeText(input.sessionId, 120),
     referrer: normalizeText(input.referrer, 1000),
@@ -150,7 +157,7 @@ export async function insertAnalyticsEvent(
     utm_term: normalizeText(input.utmTerm, 160),
     utm_content: normalizeText(input.utmContent, 160),
     landing_path: normalizeText(input.landingPath, 300),
-    user_agent: normalizeText(input.userAgent, 1000),
+    user_agent: userAgent,
     ip_hash: normalizeText(input.ipHash, 128),
   });
 

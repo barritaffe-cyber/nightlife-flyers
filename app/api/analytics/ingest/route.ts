@@ -4,9 +4,9 @@ import { supabaseAuth } from "../../../../lib/supabase/auth";
 import {
   extractClientTrackingPayload,
   insertAnalyticsEvent,
-  isAutomatedAnalyticsUserAgent,
   isIgnoredAnalyticsEmail,
   isServerGeneratedTrackingIdentity,
+  isTrackableHumanDeviceUserAgent,
 } from "../../../../lib/analytics/server";
 
 export const runtime = "nodejs";
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
 
     const tracking = extractClientTrackingPayload(req, body);
     if (
-      isAutomatedAnalyticsUserAgent(tracking.userAgent) ||
+      !isTrackableHumanDeviceUserAgent(tracking.userAgent) ||
       isServerGeneratedTrackingIdentity(tracking.anonId, tracking.sessionId)
     ) {
       return NextResponse.json({ ok: true, skipped: true });

@@ -5,6 +5,7 @@ import {
   isAutomatedAnalyticsUserAgent,
   isIgnoredAnalyticsEmail,
   isServerGeneratedTrackingIdentity,
+  isTrackableHumanDeviceUserAgent,
 } from "../../../../lib/analytics/server";
 import { supabaseAdmin } from "../../../../lib/supabase/admin";
 
@@ -82,14 +83,34 @@ function sessionLabel(row: AnalyticsRow) {
 export const runtime = "nodejs";
 const LIVE_SESSION_WINDOW_MS = 2 * 60 * 1000;
 const MIN_ACTIVE_SESSION_SECONDS = 10;
+const TRUSTED_SERVER_OUTCOME_EVENTS = new Set([
+  "checkout_succeeded",
+  "subscription_activated",
+]);
+
+function hasUserIdentity(row: AnalyticsRow) {
+  return Boolean(row.anon_id || row.session_id || row.user_id || row.email);
+}
+
+function isTrustedServerOutcomeRow(row: AnalyticsRow) {
+  const eventName = String(row.event_name || "").trim();
+  return (
+    !row.user_agent &&
+    TRUSTED_SERVER_OUTCOME_EVENTS.has(eventName) &&
+    Boolean(row.user_id || row.email)
+  );
+}
 
 function isHumanAnalyticsRow(row: AnalyticsRow) {
+  const hasTrackableUserAgent = isTrackableHumanDeviceUserAgent(row.user_agent);
   return (
     row &&
     row.created_at &&
+    hasUserIdentity(row) &&
     !isIgnoredAnalyticsEmail(row.email) &&
     !isAutomatedAnalyticsUserAgent(row.user_agent) &&
-    !isServerGeneratedTrackingIdentity(row.anon_id, row.session_id)
+    !isServerGeneratedTrackingIdentity(row.anon_id, row.session_id) &&
+    (hasTrackableUserAgent || isTrustedServerOutcomeRow(row))
   );
 }
 
@@ -135,8 +156,10 @@ export async function GET(req: Request) {
       throw new Error(liveRowsResult.error.message);
     }
 
-    const rows = ((rowsResult.data || []) as AnalyticsRow[]).filter(isHumanAnalyticsRow);
-    const liveRows = ((liveRowsResult.data || []) as AnalyticsRow[]).filter(isHumanAnalyticsRow);
+    const rawRows = (rowsResult.data || []) as AnalyticsRow[];
+    const rawLiveRows = (liveRowsResult.data || []) as AnalyticsRow[];
+    const rows = rawRows.filter(isHumanAnalyticsRow);
+    const liveRows = rawLiveRows.filter(isHumanAnalyticsRow);
     const eventCounts = new Map<string, number>();
     const sourceCounts = new Map<string, number>();
     const pathCounts = new Map<string, number>();
@@ -259,6 +282,8 @@ export async function GET(req: Request) {
       range_start: since,
       total_events: rows.length,
       sampled_events: rows.length,
+      filtered_events: Math.max(0, rawRows.length - rows.length),
+      analytics_filter: "supported_browser_devices_only",
       ignored_emails: IGNORED_ANALYTICS_EMAILS,
       summary: {
         active_sessions: liveSessions.length,
