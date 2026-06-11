@@ -11,6 +11,8 @@ type DashboardPayload = {
   range_start: string;
   total_events: number;
   sampled_events: number;
+  filtered_events: number;
+  analytics_filter: string;
   summary: Record<string, number>;
   top_sources: Array<{ label: string; count: number }>;
   top_paths: Array<{ label: string; count: number }>;
@@ -200,6 +202,10 @@ export default function AdminAnalyticsPage() {
               <div>Range start: {formatDate(payload.range_start)}</div>
               <div>
                 Events loaded: {payload.sampled_events} of {payload.total_events}
+              </div>
+              <div>
+                Filtered noise: {payload.filtered_events || 0} rows
+                {payload.analytics_filter ? ` (${formatMetricLabel(payload.analytics_filter)})` : ""}
               </div>
             </div>
 

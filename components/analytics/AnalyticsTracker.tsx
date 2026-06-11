@@ -40,12 +40,12 @@ export default function AnalyticsTracker() {
     if (window.location.pathname === "/") return;
 
     let stopped = false;
+    const trackedPath = `${window.location.pathname}${window.location.search}`;
 
     const sendHeartbeat = (event = "session_heartbeat") => {
       if (stopped) return;
-      const path = `${window.location.pathname}${window.location.search}`;
       void trackClientEvent(event, {
-        path,
+        path: trackedPath,
         properties: {
           visibility: document.visibilityState,
           viewport_w: window.innerWidth,
@@ -77,7 +77,7 @@ export default function AnalyticsTracker() {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("pagehide", onPageHide);
     };
-  }, []);
+  }, [pathname]);
 
   return null;
 }

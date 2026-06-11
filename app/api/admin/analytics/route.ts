@@ -87,6 +87,10 @@ const TRUSTED_SERVER_OUTCOME_EVENTS = new Set([
   "checkout_succeeded",
   "subscription_activated",
 ]);
+const ROUTINE_RECENT_EVENT_NAMES = new Set([
+  "session_heartbeat",
+  "session_ended",
+]);
 
 function hasUserIdentity(row: AnalyticsRow) {
   return Boolean(row.anon_id || row.session_id || row.user_id || row.email);
@@ -265,15 +269,18 @@ export async function GET(req: Request) {
       increment(activePathCounts, session.path);
     }
 
-    const recentEvents = rows.slice(0, 120).map((row) => ({
-      id: row.id,
-      created_at: row.created_at,
-      event_name: row.event_name,
-      path: row.path,
-      email: row.email,
-      utm_source: row.utm_source,
-      properties: row.properties || {},
-    }));
+    const recentEvents = rows
+      .filter((row) => !ROUTINE_RECENT_EVENT_NAMES.has(String(row.event_name || "")))
+      .slice(0, 120)
+      .map((row) => ({
+        id: row.id,
+        created_at: row.created_at,
+        event_name: row.event_name,
+        path: row.path,
+        email: row.email,
+        utm_source: row.utm_source,
+        properties: row.properties || {},
+      }));
 
     return NextResponse.json({
       ok: true,
