@@ -9,6 +9,9 @@ const siteUrl = getPublicSiteUrl();
 const supportEmail = getPublicSupportEmail();
 const googleAdsTagId = "AW-18139633250";
 const metaPixelId = "1949907151927593";
+const socialPreviewPath = "/og.jpg";
+const socialPreviewSquarePath = "/og-square.jpg";
+const socialPreviewImage = `${siteUrl}${socialPreviewPath}`;
 const siteDescription =
   'Nightlife Flyers is an AI flyer maker for nightlife flyers, club flyers, event flyers, DJ flyers, artist promo flyers, and social promo flyers with editable templates, AI backgrounds, subject cutouts, brand assets, and clean exports.';
 const siteTitle = 'Nightlife Flyers | AI Flyer Maker for Club, Event, DJ, and Artist Promo Flyers';
@@ -75,7 +78,7 @@ const structuredData = [
     applicationSubCategory: "AI flyer maker",
     operatingSystem: "Web",
     url: siteUrl,
-    image: `${siteUrl}/og.svg`,
+    image: socialPreviewImage,
     description: siteDescription,
     featureList: appFeatures,
     keywords: targetUseCases.join(", "),
@@ -210,10 +213,16 @@ export const metadata: Metadata = {
     description: siteDescription,
     images: [
       {
-        url: '/og.svg',
-        width: 1200,
-        height: 630,
-        alt: 'Nightlife Flyers Studio',
+        url: socialPreviewPath,
+        width: 1920,
+        height: 1080,
+        alt: 'Nightlife Flyers pocket-size workstation preview',
+      },
+      {
+        url: socialPreviewSquarePath,
+        width: 1024,
+        height: 1024,
+        alt: 'Nightlife Flyers workstation square preview',
       },
     ],
   },
@@ -221,7 +230,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: siteTitle,
     description: siteDescription,
-    images: ['/og.svg'],
+    images: [socialPreviewPath],
   },
   robots: {
     index: true,

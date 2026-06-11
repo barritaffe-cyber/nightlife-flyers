@@ -5,6 +5,9 @@ import React from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { trackClientEvent } from "../../lib/analytics/client";
 
+const PROJECT_FILE_ACCEPT =
+  ".nflyer,application/vnd.nightlife-flyers.project+json,.json,application/json";
+
 export type StartupBuildPayload = {
   backgroundFile: File;
   currentText: {
@@ -648,7 +651,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
               <label className="mx-auto mt-3 flex w-full max-w-[360px] cursor-pointer items-center justify-center bg-fuchsia-500/[0.06] px-4 py-3 text-sm font-medium text-fuchsia-50 shadow-[0_12px_28px_rgba(0,0,0,0.18)] transition-colors hover:bg-fuchsia-500/[0.10]">
                 <input
                   type="file"
-                  accept=".json,application/json"
+                  accept={PROJECT_FILE_ACCEPT}
                   className="hidden"
                   onClick={(e) => {
                     (e.target as HTMLInputElement).value = "";
@@ -826,7 +829,7 @@ const StartupTemplates: React.FC<StartupTemplatesProps> = ({
                   <label className={advancedUploadClass}>
                     <input
                       type="file"
-                      accept=".json,application/json"
+                      accept={PROJECT_FILE_ACCEPT}
                       className="hidden"
                       onClick={(e) => {
                         (e.target as HTMLInputElement).value = "";

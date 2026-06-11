@@ -64,7 +64,7 @@ Nightlife Flyers is a web-based AI flyer maker for nightlife promoters, DJs, lou
 `public/branding/nf-logo.png`
 
 **Open graph image:**
-`public/og.svg`
+`public/og.jpg`
 
 **Suggested screenshots:**
 - Homepage or studio first screen
@@ -129,7 +129,7 @@ The goal is simple: make it faster to create flyers that feel ready for real clu
 
 **Platform:** Web
 
-**License/pricing:** Commercial
+**License/pricing:** Freemium if available. Otherwise use Commercial / Proprietary / Online.
 
 **Suggested categories:**
 - Graphic Design

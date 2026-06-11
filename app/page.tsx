@@ -265,6 +265,9 @@ const SHAPE_GRAPHIC_SCALE_STEP = 0.005;
 const SHAPE_GRAPHIC_LENGTH_UI_MAX = 1600;
 const SHAPE_GRAPHIC_LENGTH_STEP = 1;
 const PROJECT_SAVE_REMINDER_FALLBACK_DELAY_MS = 45 * 1000;
+const PROJECT_FILE_EXTENSION = ".nflyer";
+const PROJECT_FILE_MIME = "application/vnd.nightlife-flyers.project+json";
+const PROJECT_FILE_ACCEPT = `${PROJECT_FILE_EXTENSION},${PROJECT_FILE_MIME},.json,application/json`;
 const PWA_INSTALL_ACK_KEY = "nf:pwa-install-ack:v1";
 
 type PwaBeforeInstallPromptEvent = Event & {
@@ -34711,12 +34714,12 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       
       // Download
       //const jsonString = JSON.stringify(cleanData, null, 2);
-      const blob = new Blob([jsonString], { type: "application/json" });
+      const blob = new Blob([jsonString], { type: PROJECT_FILE_MIME });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       const dateStr = new Date().toISOString().slice(0,19).replace(/[:T]/g,"-");
       link.href = url;
-      link.download = `flyer-${dateStr}.json`;
+      link.download = `nightlife-flyer-${dateStr}${PROJECT_FILE_EXTENSION}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -34752,7 +34755,7 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
 
     } catch (err) {
 
-      alert("That JSON couldn't be loaded.");
+      alert("That project file couldn't be loaded.");
       return false;
     }
   };
@@ -34767,12 +34770,12 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
         null,
         2
       );
-      const blob = new Blob([json], { type: "application/json" });
+      const blob = new Blob([json], { type: PROJECT_FILE_MIME });
       
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `flyer-design-${new Date().toISOString().slice(0,10)}.json`;
+      link.download = `nightlife-flyer-design-${new Date().toISOString().slice(0,10)}${PROJECT_FILE_EXTENSION}`;
       document.body.appendChild(link);
       link.click();
       
@@ -35242,6 +35245,40 @@ function animateDomMove(el: HTMLElement | null, dx: number, dy: number, duration
       alert("Invalid or corrupted design file.");
     }
   };
+
+
+React.useEffect(() => {
+  if (typeof window === "undefined") return;
+  const launchQueue = (window as any).launchQueue;
+  if (!launchQueue || typeof launchQueue.setConsumer !== "function") return;
+
+  launchQueue.setConsumer(async (launchParams: any) => {
+    const fileHandle = Array.isArray(launchParams?.files) ? launchParams.files[0] : null;
+    if (!fileHandle || typeof fileHandle.getFile !== "function") return;
+
+    setLoadingStartup(true);
+    try {
+      const file = await fileHandle.getFile();
+      const raw = await file.text();
+      importDesignJSON(raw);
+      setProjectFileStatusAndPersist({ kind: "loaded", at: new Date().toISOString() });
+      setShowStartup(false);
+      void trackClientEvent("project_file_opened_from_os", {
+        properties: {
+          file_name: file.name || null,
+          file_type: file.type || null,
+        },
+      });
+      requestAnimationFrame(() => {
+        scrollToArtboard();
+      });
+    } catch {
+      alert("Could not open that Nightlife Flyers project file.");
+    } finally {
+      setLoadingStartup(false);
+    }
+  });
+}, []);
 
 
 // 🧹 Clear large cached items (backgrounds, portraits, etc.)
@@ -44646,7 +44683,7 @@ return (
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold text-amber-200">Save your work</div>
                 <div className="mt-1 text-[12px] text-white/75">
-                  Reloads or browser closes can clear unsaved work. Use Save Project File to download a portable .json backup that works on PC and mobile.
+                  Reloads or browser closes can clear unsaved work. Use Save Project File to download a branded .nflyer backup that works on PC and mobile.
                 </div>
               </div>
               <button
@@ -45004,7 +45041,7 @@ return (
                   "lg:hidden shrink-0 whitespace-nowrap border border-cyan-300/80 bg-cyan-500/15 px-2 py-[3px] text-[11px] font-semibold uppercase tracking-[0.08em] text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.28)] transition-colors hover:bg-cyan-500/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300",
                   shouldShimmerProjectSave && "nf-project-save-shimmer"
                 )}
-                title="Save your project as a portable .json file"
+                title="Save your project as a branded .nflyer file"
               >
                 <span>Save</span>
               </button>
@@ -52883,10 +52920,10 @@ style={{ top: STICKY_TOP }}
                   : "Your current work lives in the browser until you save a project file."}
               </div>
               <div className="mt-2 text-[12px] leading-5 text-cyan-200">
-                <strong className="font-bold text-cyan-300">The .json file works on PC and mobile.</strong>
+                <strong className="font-bold text-cyan-300">The .nflyer project file works on PC and mobile.</strong>
               </div>
             </div>
-            {/* Save to a portable .json file */}
+            {/* Save to a portable .nflyer file */}
             <button
               type="button"
               onClick={() => {
@@ -52901,12 +52938,12 @@ style={{ top: STICKY_TOP }}
               <span>Save Project File</span>
             </button>
 
-            {/* Load from a .json file */}
+            {/* Load from a .nflyer or legacy .json file */}
             <label className="block w-full border border-neutral-700 bg-neutral-900/70 px-3 py-2 text-center text-[12px] hover:bg-neutral-800 cursor-pointer">
               Load Project File
               <input
                 type="file"
-                accept=".json,application/json"
+                accept={PROJECT_FILE_ACCEPT}
                 className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0]; if (!f) return;
@@ -52927,7 +52964,7 @@ style={{ top: STICKY_TOP }}
             </label>
 
             <div className="text-[11px] text-neutral-400">
-              Portable <code>.json</code> project file. Save one before closing the browser.
+              Portable <code>.nflyer</code> project file. Legacy <code>.json</code> backups still load.
             </div>
             <button
               type="button"
@@ -52970,7 +53007,7 @@ style={{ top: STICKY_TOP }}
             Important: Save Your Project
           </div>
           <div className="mt-1 text-sm leading-5 text-neutral-200">
-            <strong className="font-bold text-cyan-300">Tap Save Project File and keep the .json file.</strong> That file reopens this design later on PC or mobile, so save it before closing the browser.
+            <strong className="font-bold text-cyan-300">Tap Save Project File and keep the .nflyer file.</strong> That file reopens this design later on PC or mobile, so save it before closing the browser.
           </div>
           <button
             type="button"
@@ -53160,7 +53197,7 @@ style={{ top: STICKY_TOP }}
         <div className="text-sm uppercase tracking-[0.2em] text-cyan-300">Project Guide</div>
         <div className="mt-1 text-lg font-semibold text-white">Save your design file so you can open it on any device.</div>
         <div className="mt-2 text-sm leading-5 text-neutral-300">
-          <strong className="font-bold text-cyan-300">Very important: the .json project file works on PC and mobile.</strong> Save it before you leave the canvas.
+          <strong className="font-bold text-cyan-300">Very important: the .nflyer project file works on PC and mobile.</strong> Save it before you leave the canvas.
         </div>
       </div>
 
@@ -53168,7 +53205,7 @@ style={{ top: STICKY_TOP }}
         <div className="rounded-lg border border-cyan-300/35 bg-cyan-400/[0.06] p-3 shadow-[0_0_26px_rgba(34,211,238,0.12)]">
           <div className="text-xs font-bold uppercase tracking-wide text-cyan-300 mb-1">1. Save Project File</div>
           <div className="text-neutral-300">
-            <strong className="font-bold text-cyan-300">Download a portable <code>.json</code> file.</strong> This is the file that lets you continue later.
+            <strong className="font-bold text-cyan-300">Download a branded <code>.nflyer</code> file.</strong> This is the file that lets you continue later.
           </div>
           <button
             type="button"
@@ -53191,14 +53228,14 @@ style={{ top: STICKY_TOP }}
         <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
           <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">3. Load Project File</div>
           <div className="text-neutral-300">
-            Reopen the same <code>.json</code> on PC or mobile and continue where you left off.
+            Reopen the same <code>.nflyer</code> file on PC or mobile and continue where you left off.
           </div>
         </div>
 
         <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
           <div className="text-xs uppercase tracking-wide text-cyan-300 mb-1">4. Clear Storage (Optional)</div>
           <div className="text-neutral-300">
-            Clears local cache only. Exported <code>.json</code> files stay untouched.
+            Clears local cache only. Exported project files stay untouched.
           </div>
         </div>
       </div>

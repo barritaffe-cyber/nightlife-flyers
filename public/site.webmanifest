@@ -10,6 +10,15 @@
   "background_color": "#050608",
   "theme_color": "#050608",
   "categories": ["design", "graphics", "productivity", "photo"],
+  "file_handlers": [
+    {
+      "action": "/?studio=1&open=project",
+      "accept": {
+        "application/vnd.nightlife-flyers.project+json": [".nflyer"]
+      },
+      "launch_type": "single-client"
+    }
+  ],
   "icons": [
     {
       "src": "/branding/nf-logo-192.png",

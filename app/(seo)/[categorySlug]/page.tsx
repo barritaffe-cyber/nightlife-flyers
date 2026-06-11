@@ -18,6 +18,7 @@ type PageProps = {
 };
 
 export const dynamicParams = false;
+const socialPreviewPath = "/og.jpg";
 
 export function generateStaticParams() {
   return CATEGORY_LANDING_PAGES.map((page) => ({ categorySlug: page.slug }));
@@ -41,13 +42,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       url: canonical,
       title: `${page.title} | Nightlife Flyers`,
       description: page.metaDescription,
-      images: [{ url: "/og.svg", width: 1200, height: 630, alt: page.title }],
+      images: [{ url: socialPreviewPath, width: 1920, height: 1080, alt: page.title }],
     },
     twitter: {
       card: "summary_large_image",
       title: `${page.title} | Nightlife Flyers`,
       description: page.metaDescription,
-      images: ["/og.svg"],
+      images: [socialPreviewPath],
     },
   };
 }

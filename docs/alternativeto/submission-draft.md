@@ -18,9 +18,9 @@ https://www.nightlife-flyers.com
 Web
 
 **License / pricing:**
-Commercial
+Freemium
 
-If AlternativeTo offers a more specific option for freemium or trial, use that only if free access is live.
+Nightlife Flyers has starter/free access with paid subscriptions and short-term passes. If AlternativeTo does not offer Freemium, use Commercial / Proprietary / Online as the closest truthful option.
 
 **Short description:**
 AI flyer maker for nightlife, club, DJ, event, artist promo, and party flyers.
@@ -100,7 +100,7 @@ AlternativeTo listings are reviewed before they become fully visible. Keep the d
 - Add product name: Nightlife Flyers.
 - Add website: https://www.nightlife-flyers.com.
 - Select Web as the platform.
-- Select Commercial pricing unless a freemium option is available and true.
+- Select Freemium if available. If not, select Commercial / Proprietary / Online.
 - Paste the short and full descriptions above.
 - Add the closest available categories and tags.
 - Add broad competitors as alternatives.
