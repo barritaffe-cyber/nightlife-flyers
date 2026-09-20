@@ -16,7 +16,7 @@ import { describeCssFailure } from '../../../lib/coco/cssFailure';
 import { randomUUID } from 'node:crypto';
 
 export const runtime = 'nodejs';
-export const maxDuration = 900;
+export const maxDuration = 300;
 let busy = false;
 
 export async function POST(request: Request) {
