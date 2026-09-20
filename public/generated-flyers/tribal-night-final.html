@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tribal Night</title>
+  <style>
+    @font-face{font-family:CoolveticaHv;src:url('/fonts/Coolvetica-Hv-Comp.ttf') format('truetype');font-display:block}
+    @font-face{font-family:OpenScript;src:url('/fonts/OpenScript.ttf') format('truetype');font-display:block}
+    @font-face{font-family:LemonBold;src:url('/fonts/LEMONMILK-Bold.ttf') format('truetype');font-display:block}
+    @font-face{font-family:LemonRegular;src:url('/fonts/LEMONMILK-Regular.ttf') format('truetype');font-display:block}
+    *{box-sizing:border-box}
+    html,body{margin:0;width:1080px;height:1350px;overflow:hidden;background:#050403}
+    body{font-family:LemonRegular,Arial,sans-serif}
+    .flyer{position:relative;width:1080px;height:1350px;overflow:hidden;background:#080604;color:#f8f5ee;isolation:isolate}
+    .photo{position:absolute;z-index:0;left:6%;top:0;width:110%;height:100%;object-fit:cover;object-position:50% 37%;filter:saturate(1.08) contrast(1.04) brightness(.82)}
+    .haze{position:absolute;z-index:1;inset:0;background:radial-gradient(circle at 82% 29%,rgba(255,164,32,.36),transparent 31%),radial-gradient(circle at 60% 55%,rgba(198,82,0,.2),transparent 43%);mix-blend-mode:screen}
+    .palms{position:absolute;z-index:2;left:-4%;top:-21%;width:112%;height:61%;object-fit:cover;opacity:.25;filter:sepia(.25) brightness(.48);mix-blend-mode:multiply}
+    .particles{position:absolute;z-index:3;inset:0;width:100%;height:78%;opacity:.28;mix-blend-mode:screen}
+    .shade{position:absolute;z-index:4;inset:0;background:linear-gradient(90deg,rgba(4,3,2,.96) 0%,rgba(5,4,3,.82) 28%,rgba(5,4,3,.42) 47%,rgba(5,4,3,.06) 70%,transparent 84%),linear-gradient(0deg,rgba(3,2,2,.98) 0%,rgba(3,2,2,.84) 18%,rgba(3,2,2,.18) 42%,transparent 61%)}
+    .grain{position:absolute;z-index:5;inset:0;background:url('/textures/paint04.png') center/cover;opacity:.075;mix-blend-mode:soft-light;pointer-events:none}
+    .brand{position:absolute;z-index:10;right:58px;top:34px;width:224px;text-align:center;color:#fff;text-shadow:0 3px 18px rgba(0,0,0,.8)}
+    .brand strong{display:block;font-family:LemonRegular,Arial,sans-serif;font-size:73px;font-weight:400;line-height:.9;letter-spacing:-.08em}
+    .brand span{display:block;margin-top:10px;font-family:LemonBold,Arial,sans-serif;font-size:10px;letter-spacing:.34em}
+    .title{position:absolute;z-index:11;left:66px;top:90px;width:480px;font-family:CoolveticaHv,Impact,sans-serif;font-size:248px;font-weight:900;line-height:.72;letter-spacing:-.025em;text-transform:uppercase;background:linear-gradient(180deg,#f1a10b 0%,#c16c00 52%,#8c4600 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 8px 3px rgba(0,0,0,.8));transform:scaleY(1.08);transform-origin:top left}
+    .friday{position:absolute;z-index:12;left:31px;top:503px;width:560px;font-family:OpenScript,cursive;font-size:168px;line-height:1;color:#ff8b00;letter-spacing:-.02em;transform:rotate(-5deg);text-shadow:0 4px 14px rgba(0,0,0,.75)}
+    .date{position:absolute;z-index:12;left:156px;top:705px;color:#f6a008;font-family:LemonBold,Arial,sans-serif;font-size:45px;line-height:.84;letter-spacing:.015em;text-align:left}
+    .hype{position:absolute;z-index:12;left:67px;top:867px;width:475px;text-shadow:0 2px 12px rgba(0,0,0,.85)}
+    .hype .pill{display:inline-block;padding:8px 13px 6px;background:#f6a008;color:#090604;font-family:LemonBold,Arial,sans-serif;font-size:24px;line-height:1;letter-spacing:.015em}
+    .hype .name{margin-top:13px;font-family:LemonBold,Arial,sans-serif;font-size:28px;line-height:1.05;letter-spacing:.01em;color:#f7f5ef}
+    .footer{position:absolute;z-index:12;left:0;right:0;bottom:54px;height:205px;display:grid;grid-template-columns:238px 258px 254px 190px;gap:20px;align-items:start;padding:15px 62px 0}
+    .footer .block{min-width:0;text-shadow:0 2px 10px #000}
+    .footer .club{font-family:LemonBold,Arial,sans-serif;font-size:47px;line-height:.82;letter-spacing:-.035em;color:#fff}
+    .eyebrow{font-family:LemonRegular,Arial,sans-serif;font-size:18px;line-height:1.1;color:#f7f5ef;letter-spacing:.015em}
+    .value{margin-top:5px;font-family:LemonBold,Arial,sans-serif;font-size:33px;line-height:.92;color:#ed8700;letter-spacing:-.02em}
+    .sponsor .value{font-size:31px;line-height:.96}
+    .qrblock{text-align:center;margin-top:-6px}
+    .qr{display:block;width:100px;height:100px;margin:0 auto;background:#fff;padding:6px;box-shadow:0 4px 16px rgba(0,0,0,.62)}
+    .scan{margin-top:10px;color:#f6a008;font-family:LemonBold,Arial,sans-serif;font-size:14px;letter-spacing:.04em}
+    .accent-line{position:absolute;z-index:11;left:34px;top:582px;width:310px;height:12px;background:#ff8b00;transform:rotate(-8deg);clip-path:polygon(0 38%,82% 0,100% 55%,25% 70%);filter:drop-shadow(0 3px 6px rgba(0,0,0,.45))}
+  </style>
+</head>
+<body>
+  <main class="flyer" aria-label="Tribal Night flyer">
+    <img class="photo" src="/create-with-coco/subjects/subject02.jpg" alt="" />
+    <div class="haze"></div>
+    <img class="palms" src="/scene-assets/common/palm-shadow.svg" alt="" />
+    <img class="particles" src="/scene-assets/afrobeats-night/gold-particles.svg" alt="" />
+    <div class="shade"></div>
+    <div class="grain"></div>
+
+    <div class="brand"><strong>DTL</strong><span>DOWNTOWN LOUNGE</span></div>
+    <div class="title">TRIBAL<br />NIGHT</div>
+    <div class="accent-line"></div>
+    <div class="friday">Friday</div>
+    <div class="date">JULY<br />25TH</div>
+
+    <section class="hype">
+      <div class="pill">HYPEMAN</div>
+      <div class="name">VIBE KING – T BRAINS</div>
+    </section>
+
+    <footer class="footer">
+      <div class="block club">CLUB<br />LOGO</div>
+      <div class="block guest"><div class="eyebrow">SPECIAL GUEST</div><div class="value">DJ MARIE</div></div>
+      <div class="block sponsor"><div class="value">SPONSORS<br />HERE</div></div>
+      <div class="block qrblock">
+        <svg class="qr" viewBox="0 0 29 29" aria-label="Scan me">
+          <rect width="29" height="29" fill="#fff"/><path fill="#111" d="M2 2h7v7H2zM20 2h7v7h-7zM2 20h7v7H2z"/><path fill="#fff" d="M3 3h5v5H3zM21 3h5v5h-5zM3 21h5v5H3z"/><path fill="#111" d="M4 4h3v3H4zM22 4h3v3h-3zM4 22h3v3H4zM12 3h2v2h-2zM15 3h2v2h-2zM12 6h5v2h-5zM11 10h2v2h-2zM15 10h2v2h-2zM19 11h2v2h-2zM23 11h2v2h-2zM10 14h2v2h-2zM13 14h6v2h-6zM22 15h4v2h-4zM11 18h2v2h-2zM16 18h2v2h-2zM20 19h2v2h-2zM24 19h3v2h-3zM12 22h4v2h-4zM18 23h2v4h-2zM22 23h5v2h-5zM12 26h2v2h-2zM22 27h2v2h-2z"/>
+        </svg>
+        <div class="scan">SCAN ME</div>
+      </div>
+    </footer>
+  </main>
+</body>
+</html>

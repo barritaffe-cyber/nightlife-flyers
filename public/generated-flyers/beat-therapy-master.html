@@ -1,0 +1,108 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Beat Therapy — Club Woods</title>
+<style>
+@font-face{font-family:Heavy;src:url('/fonts/Brigends Expanded.otf')}
+@font-face{font-family:Brush;src:url('/fonts/DriftBrushSVG.woff2')}
+@font-face{font-family:Sans;src:url('/fonts/LEMONMILK-Light.ttf')}
+@font-face{font-family:Medium;src:url('/fonts/LEMONMILK-Regular.ttf')}
+@font-face{font-family:Lineup;src:url('/fonts/Nexa-Heavy.ttf')}
+@font-face{font-family:Bold;src:url('/fonts/LEMONMILK-Bold.ttf')}
+*{box-sizing:border-box}body{margin:0;background:#02040b}
+.canvas{position:relative;width:1080px;height:1080px;overflow:hidden}.canvas>*{position:absolute}
+.background{inset:0;width:100%;height:100%;object-fit:cover}
+.footerShade{left:0;top:73%;width:100%;height:27%;background:linear-gradient(180deg,transparent,rgba(0,3,12,.66) 56%,rgba(0,3,12,.78));z-index:1}
+.text{margin:0;white-space:pre;color:#fff9ff;font:15px/1.5 Sans;letter-spacing:.23em;z-index:4;text-shadow:0 2px 5px #02040bb3}
+.presenter{left:220px;top:19px;width:660px;text-align:center;font-size:15px;letter-spacing:.68em}
+.mood{left:56px;top:77px;font-size:13px;line-height:1.95;letter-spacing:.42em}
+.day,.month,.date,.time{left:940px;width:85px;text-align:center;letter-spacing:0}
+.day{top:50px;font-size:28px;line-height:1.1}.month{top:82px;font:32px/1.1 Bold}
+.date{top:119px;font:67px/1.08 Bold;color:#ff36b8;letter-spacing:-.055em}
+.time{top:219px;font:15px/1.65 Medium;letter-spacing:.09em}
+.genres{left:56px;top:320px;font:15px/1.6 Medium;letter-spacing:.13em}
+.headline{left:198px;top:470px;width:835px;font:180px/1 Heavy;letter-spacing:-.035em;transform:rotate(-3deg) skewX(-12deg) scaleY(1.22);transform-origin:left top;z-index:2;color:transparent;background:url('/generated-flyers/assets/beat-therapy-silver-pink.svg') 0 0/835px 180px;background-clip:text;-webkit-background-clip:text;text-shadow:none;filter:drop-shadow(2px 7px 6px #08000bba)}
+.subtitle{left:185px;top:605px;width:870px;font:140px/1 Brush;letter-spacing:-.06em;color:transparent;background:url('/generated-flyers/assets/beat-therapy-pink-brush.svg') 0 0/870px 140px;background-clip:text;-webkit-background-clip:text;transform:rotate(-5deg) scaleY(1.65);transform-origin:left top;z-index:3;text-shadow:none;filter:drop-shadow(2px 6px 5px #08000bba)}
+.tagline{left:215px;top:796px;width:650px;text-align:center;font-size:16px;letter-spacing:.42em}
+.lineupLabel{left:350px;top:837px;width:380px;text-align:center;font-size:13px;letter-spacing:.65em}
+.dj1,.dj2{top:865px;font:36px/1.2 Lineup;letter-spacing:.025em;text-align:center}.dj1{left:242px;width:235px}.dj2{left:554px;width:305px}
+.cocktails,.tables,.dressCode{top:922px;text-align:center;font:14px/1.65 Medium;letter-spacing:.22em}.cocktails{left:162px;width:195px}.tables{left:437px;width:204px}.dressCode{left:700px;width:220px}
+.venue{left:58px;top:988px;font:48px/1 Sans;letter-spacing:-.055em}.venue b{font-family:Bold;font-weight:400}
+.address{left:60px;top:1038px;font:12px/1.3 Medium;letter-spacing:.19em}
+.entry{left:558px;top:995px;font:22px/1.3 Bold;letter-spacing:.015em;color:#ff16b2}
+.contact{left:558px;top:1026px;font-size:20px;letter-spacing:0}
+.motto{left:944px;top:991px;font-size:9px;line-height:1.85;letter-spacing:.34em}
+.rule{background:#ff19b6;z-index:4}.rMood{left:56px;top:194px;width:50px;height:3px}.rDate{left:950px;top:198px;width:65px;height:3px;background:#fff3fc}.rGenres{left:56px;top:452px;width:50px;height:3px}
+.dLineup{left:511px;top:866px;width:4px;height:32px}.dPromo1{left:394px;top:925px;width:3px;height:32px}.dPromo2{left:669px;top:925px;width:3px;height:32px}.dFooter{left:490px;top:996px;width:3px;height:52px}.rMotto{left:944px;top:1054px;width:45px;height:2px}
+.canvas[data-format=story]{height:1920px}
+.canvas[data-format=story] .footerShade{top:76%;height:24%}
+.canvas[data-format=story] .presenter{top:43px;font-size:17px}
+.canvas[data-format=story] .mood{top:125px;font-size:15px;line-height:2}
+.canvas[data-format=story] .rMood{top:266px}
+.canvas[data-format=story] .day{top:110px;font-size:32px}
+.canvas[data-format=story] .month{top:149px;font-size:37px}
+.canvas[data-format=story] .date{top:197px;font-size:78px}
+.canvas[data-format=story] .rDate{top:303px}
+.canvas[data-format=story] .time{top:332px;font-size:18px}
+.canvas[data-format=story] .genres{top:620px;font-size:18px;line-height:1.75}
+.canvas[data-format=story] .rGenres{top:793px}
+.canvas[data-format=story] .headline{left:170px;top:1000px;font-size:195px;background-size:835px 195px}
+.canvas[data-format=story] .subtitle{left:165px;top:1160px;font-size:145px;background-size:870px 145px}
+.canvas[data-format=story] .tagline{top:1410px;font-size:18px}
+.canvas[data-format=story] .lineupLabel{top:1506px;font-size:16px}
+.canvas[data-format=story] .dj1,.canvas[data-format=story] .dj2{top:1553px;font-size:38px}
+.canvas[data-format=story] .dLineup{top:1557px;height:36px}
+.canvas[data-format=story] .cocktails,.canvas[data-format=story] .tables,.canvas[data-format=story] .dressCode{top:1646px;font-size:16px}
+.canvas[data-format=story] .dPromo1,.canvas[data-format=story] .dPromo2{top:1649px;height:42px}
+.canvas[data-format=story] .venue{top:1780px;font-size:52px}
+.canvas[data-format=story] .address{top:1838px;font-size:13px}
+.canvas[data-format=story] .entry{top:1782px;font-size:23px}
+.canvas[data-format=story] .contact{top:1824px;font-size:22px}
+.canvas[data-format=story] .dFooter{top:1782px;height:74px}
+.canvas[data-format=story] .motto{top:1777px;font-size:10px;line-height:2.1}
+.canvas[data-format=story] .rMotto{top:1860px}
+.glint{width:110px;height:32px;z-index:5;opacity:.75;transform:rotate(-5deg)}.glint1{left:424px;top:633px}.glint2{left:772px;top:673px;width:85px;height:25px;opacity:.55}.canvas[data-format=story] .glint1{left:428px;top:1175px}.canvas[data-format=story] .glint2{left:782px;top:1232px}
+</style></head><body><main class="canvas" data-coco-canvas data-format="square">
+<img class="background" data-coco-object="background" data-region="background" src="/generated-flyers/assets/beat-therapy-square.jpg">
+<div class="footerShade" data-coco-object="footerShade" data-region="footerShade"></div>
+<div class="text presenter" data-coco-object="presenter" data-region="presenter" data-coco-editable="true">CLUB WOODS PRESENTS</div>
+<div class="text headline" data-coco-object="headline" data-region="headline" data-coco-editable="true">BEAT</div>
+<div class="text subtitle" data-coco-object="subtitle" data-region="subtitle" data-coco-editable="true">THERAPY</div>
+<div class="text mood" data-coco-object="mood" data-region="mood" data-coco-editable="true">MUSIC
+PEOPLE
+DRINKS
+VIBES</div>
+<div class="text day" data-coco-object="day" data-region="day" data-coco-editable="true">SAT</div>
+<div class="text month" data-coco-object="month" data-region="month" data-coco-editable="true">APR</div>
+<div class="text date" data-coco-object="date" data-region="date" data-coco-editable="true">26</div>
+<div class="text time" data-coco-object="time" data-region="time" data-coco-editable="true">10PM
+TIL LATE</div>
+<div class="text genres" data-coco-object="genres" data-region="genres" data-coco-editable="true">HOUSE
+TECH HOUSE
+AFRO HOUSE
+MELODIC
+OPEN FORMAT</div>
+<div class="text tagline" data-coco-object="tagline" data-region="tagline" data-coco-editable="true">GOOD MUSIC. BETTER PEOPLE</div>
+<div class="text lineupLabel" data-coco-object="lineupLabel" data-region="lineupLabel" data-coco-editable="true">MUSIC BY</div>
+<div class="text dj1" data-coco-object="dj1" data-region="dj1" data-coco-editable="true">DJ SPICE</div>
+<div class="text dj2" data-coco-object="dj2" data-region="dj2" data-coco-editable="true">DJ ELEVATE</div>
+<div class="text cocktails" data-coco-object="cocktails" data-region="cocktails" data-coco-editable="true">COCKTAIL
+SPECIALS</div>
+<div class="text tables" data-coco-object="tables" data-region="tables" data-coco-editable="true">VIP TABLES
+AVAILABLE</div>
+<div class="text dressCode" data-coco-object="dressCode" data-region="dressCode" data-coco-editable="true">DRESS CODE
+STYLISH &amp; CHIC</div>
+<div class="text venue" data-coco-object="venue" data-region="venue" data-coco-editable="true">CLUB<b>WOODS</b></div>
+<div class="text address" data-coco-object="address" data-region="address" data-coco-editable="true">234 WEST AVENUE STREET, CITY</div>
+<div class="text entry" data-coco-object="entry" data-region="entry" data-coco-editable="true">TICKETS $25</div>
+<div class="text contact" data-coco-object="contact" data-region="contact" data-coco-editable="true">R.S.V.P 0088 235 0089</div>
+<div class="text motto" data-coco-object="motto" data-region="motto" data-coco-editable="true">LET
+THE MUSIC
+MOVE YOU</div>
+<div class="rule rMood" data-coco-object="rMood" data-region="rMood"></div>
+<div class="rule rDate" data-coco-object="rDate" data-region="rDate"></div>
+<div class="rule rGenres" data-coco-object="rGenres" data-region="rGenres"></div>
+<div class="rule dLineup" data-coco-object="dLineup" data-region="dLineup"></div>
+<div class="rule dPromo1" data-coco-object="dPromo1" data-region="dPromo1"></div>
+<div class="rule dPromo2" data-coco-object="dPromo2" data-region="dPromo2"></div>
+<div class="rule dFooter" data-coco-object="dFooter" data-region="dFooter"></div>
+<div class="rule rMotto" data-coco-object="rMotto" data-region="rMotto"></div>
+<img class="glint glint1" data-coco-object="glint1" data-region="glint1" src="/generated-flyers/assets/beat-therapy-glint.svg"><img class="glint glint2" data-coco-object="glint2" data-region="glint2" src="/generated-flyers/assets/beat-therapy-glint.svg"></main><script>const format=new URLSearchParams(location.search).get('format')==='story'?'story':'square';document.querySelector('.canvas').dataset.format=format;document.querySelector('.background').src='/generated-flyers/assets/beat-therapy-'+format+'.jpg';</script></body></html>

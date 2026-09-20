@@ -201,9 +201,13 @@ function MagicBlendPanel({
               <label className={`block aspect-[3/4] ${editorThumbClass} border-dashed hover:bg-neutral-800 hover:border-neutral-500 transition-all cursor-pointer relative group`}>
                 {isCuttingOut ? (
                   <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm text-neutral-300">
-                    <div className="w-5 h-5 border-2 border-white/10 border-t-amber-500 rounded-full animate-spin mb-2" />
-                    <span className="text-[8px] uppercase font-bold tracking-widest text-amber-500 animate-pulse">
-                      Cutting...
+                    <div
+                      aria-hidden="true"
+                      className="nf-coco-loader-orb mb-2"
+                      style={{ height: 24, width: 24 }}
+                    />
+                    <span className="text-[8px] uppercase font-bold tracking-widest text-amber-500">
+                      Preparing...
                     </span>
                   </div>
                 ) : blendSubject ? (
@@ -321,7 +325,11 @@ function MagicBlendPanel({
             >
               {isBlending ? (
                 <>
-                  <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                  <span
+                    aria-hidden="true"
+                    className="nf-coco-loader-orb"
+                    style={{ height: 18, width: 18 }}
+                  />
                   <span>Processing...</span>
                 </>
               ) : (

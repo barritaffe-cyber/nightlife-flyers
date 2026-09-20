@@ -1,0 +1,10 @@
+{
+  "source": "public/generated-flyers/summer-sunset.nflyer",
+  "master": "public/generated-flyers/summer-sunset-updated.nflyer",
+  "version": 2,
+  "sha256": "498f43aeffe48ae3f54745502f69d7e9ebc2036400dd20e912c9283c552b2bf3",
+  "overrides": {
+    "square": 9,
+    "story": 3
+  }
+}

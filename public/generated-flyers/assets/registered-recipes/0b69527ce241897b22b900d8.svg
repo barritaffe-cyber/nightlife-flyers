@@ -1,0 +1,4 @@
+<svg class="venue-pin" data-region="venue-pin" data-coco-object="venuePin" data-coco-asset="venuePin" data-coco-kind="svg" data-coco-editable="true" viewBox="0 0 64 82" aria-hidden="true" style="">
+      <path d="M32 2C15.5 2 2 15.5 2 32c0 22 30 48 30 48s30-26 30-48C62 15.5 48.5 2 32 2z" fill="#fff"></path>
+      <circle cx="32" cy="32" r="11" fill="#00320f"></circle>
+    </svg>

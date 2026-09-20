@@ -38,7 +38,7 @@ export function resolveBillingAmount(
   foundingOffer?: FoundingOfferSnapshot | null
 ): ResolvedBillingAmount {
   const item = getBillingCatalogItem(selection);
-  if (selection.kind !== "plan") {
+  if (selection.kind !== "plan" || ["basic", "full"].includes(selection.plan)) {
     return {
       originalPrice: item.price,
       effectivePrice: item.price,

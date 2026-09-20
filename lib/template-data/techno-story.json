@@ -9,7 +9,7 @@
           "color": "#ffffff",
           "sizePx": 100,
           "lineHeight": 1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         },
         "story": {
@@ -25,14 +25,14 @@
           "color": "#ffffff",
           "sizePx": 80,
           "lineHeight": 1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         },
         "story": {
           "color": "#ffffff",
           "sizePx": 24,
           "lineHeight": 1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         }
       },
@@ -41,14 +41,14 @@
           "color": "#ffffff",
           "sizePx": 28,
           "lineHeight": 1.1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         },
         "story": {
           "color": "#ffffff",
           "sizePx": 28,
           "lineHeight": 1.1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         }
       },
@@ -57,14 +57,14 @@
           "color": "#ffffff",
           "sizePx": 22,
           "lineHeight": 1.1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         },
         "story": {
           "color": "#ffffff",
           "sizePx": 22,
           "lineHeight": 1.1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         }
       },
@@ -73,14 +73,14 @@
           "color": "#ffffff",
           "sizePx": 32,
           "lineHeight": 1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         },
         "story": {
           "color": "#ffffff",
           "sizePx": 32,
           "lineHeight": 1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         }
       },
@@ -89,14 +89,14 @@
           "color": "#ffffff",
           "sizePx": 20,
           "lineHeight": 1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         },
         "story": {
           "color": "#ffffff",
           "sizePx": 20,
           "lineHeight": 1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         }
       }

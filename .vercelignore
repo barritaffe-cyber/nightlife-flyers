@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+.env*
+!.env.example
+backup
+saved files
+recipe-file-backups
+screenlog.*
+NEXT_SESSION_CONTEXT.md
+test-results
+playwright-report
+public/generated-flyers/archive

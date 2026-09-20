@@ -1,0 +1,10 @@
+{
+  "source": "public/generated-flyers/rnb-thursdays.nflyer",
+  "master": "public/generated-flyers/rnb-thursdays-updated.nflyer",
+  "version": 2,
+  "sha256": "ed8217f0d5cb7126a1156349da4b01f258c0071ea3b5ba7737c090bc31a0c71b",
+  "overrides": {
+    "square": 14,
+    "story": 14
+  }
+}

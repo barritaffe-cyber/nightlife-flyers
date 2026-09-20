@@ -104,6 +104,16 @@ async function refineCutoutOutput(output: string, cleanup: CleanupParams): Promi
   }
 }
 
+// Segmentation-only path: same local model as removeBackgroundLocal's
+// fallback, but skips the remote remove.bg API call and the cutout-quality
+// cleanup pass - callers here only need the resulting alpha shape to
+// measure a subject bounding box from, not a final user-facing image, so
+// there's no reason to pay for a network round-trip or refinement work
+// that only matters for visual output quality.
+export async function segmentSubjectAlphaLocal(imageSrc: string): Promise<string> {
+  return removeBackgroundWithLocalModel(imageSrc);
+}
+
 export async function removeBackgroundLocal(
   imageSrc: string,
   options?: { cleanup?: CleanupParams }

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="250" viewBox="0 0 900 250" preserveAspectRatio="none">
+  <defs>
+    <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#ffffff"/>
+      <stop offset=".2" stop-color="#f9f7fa"/>
+      <stop offset=".48" stop-color="#dcd5df"/>
+      <stop offset=".68" stop-color="#e6c4df"/>
+      <stop offset=".87" stop-color="#f568d8"/>
+      <stop offset="1" stop-color="#ed009e"/>
+    </linearGradient>
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency=".31" numOctaves="3" seed="19"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComposite in2="SourceGraphic" operator="in"/>
+    </filter>
+  </defs>
+  <path fill="url(#metal)" d="M0 0H900V250H0z"/>
+  <g fill="#fff" opacity=".3"><path d="M0 0H130L78 204z"/><path d="M235 0H400L278 248z"/><path d="M485 0H575L609 250z"/><path d="M766 0H900L828 249z"/></g>
+  <g fill="#5c4464" opacity=".1"><path d="M111 0L213 250H93z"/><path d="M420 0L546 250H374z"/><path d="M679 0L757 250H621z"/></g>
+  <path fill="#fff" filter="url(#grain)" opacity=".15" d="M0 0H900V250H0z"/>
+</svg>

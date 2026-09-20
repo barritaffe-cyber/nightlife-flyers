@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rush Night — reference CSS master</title>
+  <style>
+    @font-face {
+      font-family: "Anton";
+      src: url("../fonts/Anton.ttf") format("truetype");
+      font-display: block;
+    }
+
+    @font-face {
+      font-family: "Bebas Neue";
+      src: url("../fonts/BebasNeue-Regular.ttf") format("truetype");
+      font-display: block;
+    }
+
+    @font-face {
+      font-family: "Bad Grunge";
+      src: url("../fonts/BAD%20GRUNGE.ttf") format("truetype");
+      font-display: block;
+    }
+
+    @font-face {
+      font-family: "Open Script";
+      src: url("../fonts/OpenScript.ttf") format("truetype");
+      font-display: block;
+    }
+
+    @font-face {
+      font-family: "Lemon Milk";
+      src: url("../fonts/LEMONMILK-Regular.ttf") format("truetype");
+      font-display: block;
+    }
+
+    @font-face {
+      font-family: "Lemon Milk";
+      src: url("../fonts/LEMONMILK-Bold.ttf") format("truetype");
+      font-weight: 800;
+      font-display: block;
+    }
+
+    :root {
+      --canvas-width: 900px;
+      --canvas-height: 1600px;
+      --black: #030303;
+      --ink: #f8f5ee;
+      --orange: #ff5a0a;
+      --orange-hot: #ff8a10;
+      --orange-core: #fff2b2;
+
+      --presenter-x: 31%;
+      --presenter-y: 6.8%;
+      --presenter-w: 42%;
+      --presenter-h: 4.4%;
+
+      --date-x: 13%;
+      --date-y: 15.7%;
+      --date-w: 13.5%;
+      --date-h: 15.6%;
+
+      --triangle-x: 11%;
+      --triangle-y: 9%;
+      --triangle-w: 85%;
+      --triangle-h: 52%;
+
+      --headline-x: 19.5%;
+      --headline-y: 46%;
+      --headline-w: 62%;
+      --headline-h: 19%;
+
+      --script-x: 28%;
+      --script-y: 61.2%;
+      --script-w: 52%;
+      --script-h: 8.8%;
+
+      --genre-x: 20.5%;
+      --genre-y: 72.8%;
+      --genre-w: 59%;
+      --genre-h: 3.2%;
+
+      --lineup-x: 18.5%;
+      --lineup-y: 77.1%;
+      --lineup-w: 63%;
+      --lineup-h: 6.7%;
+
+      --entry-x: 32.5%;
+      --entry-y: 84.5%;
+      --entry-w: 35%;
+      --entry-h: 4.4%;
+
+      --venue-x: 22%;
+      --venue-y: 89.5%;
+      --venue-w: 56%;
+      --venue-h: 5.2%;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      width: var(--canvas-width);
+      height: var(--canvas-height);
+      margin: 0;
+      overflow: hidden;
+      background: var(--black);
+    }
+
+    body { font-family: "Lemon Milk", Arial, sans-serif; }
+
+    .flyer {
+      position: relative;
+      isolation: isolate;
+      width: var(--canvas-width);
+      height: var(--canvas-height);
+      overflow: hidden;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 70% 30%, rgba(255, 76, 0, .2), transparent 31%),
+        linear-gradient(145deg, #050403 0%, #110805 46%, #030303 100%);
+    }
+
+    .photo {
+      position: absolute;
+      z-index: 1;
+      left: 8%;
+      top: 16%;
+      width: 84%;
+      height: 84%;
+      object-fit: cover;
+      object-position: 50% 100%;
+      filter: brightness(.78) contrast(1.18) saturate(.78) hue-rotate(-12deg);
+      -webkit-mask-image: radial-gradient(ellipse 72% 78% at 50% 54%, #000 58%, transparent 100%);
+      mask-image: radial-gradient(ellipse 72% 78% at 50% 54%, #000 58%, transparent 100%);
+    }
+
+    .photo-grade {
+      position: absolute;
+      z-index: 2;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 68% 29%, rgba(255, 84, 4, .23), transparent 29%),
+        linear-gradient(90deg, rgba(0, 0, 0, .82) 0%, rgba(0, 0, 0, .52) 19%, rgba(0, 0, 0, .05) 43%, rgba(0, 0, 0, .13) 76%, rgba(0, 0, 0, .62) 100%),
+        linear-gradient(180deg, rgba(0, 0, 0, .3) 0%, transparent 17%, transparent 54%, rgba(0, 0, 0, .42) 66%, rgba(3, 3, 3, .94) 84%, #030303 100%);
+    }
+
+    .texture {
+      position: absolute;
+      z-index: 3;
+      inset: -3%;
+      pointer-events: none;
+      opacity: .14;
+      background:
+        url("../textures/paint02.png") center / cover no-repeat,
+        repeating-linear-gradient(118deg, transparent 0 39px, rgba(255, 255, 255, .026) 40px, transparent 41px 83px);
+      mix-blend-mode: soft-light;
+      filter: grayscale(1) contrast(1.65);
+    }
+
+    .edge-shadow {
+      position: absolute;
+      z-index: 4;
+      inset: 0;
+      pointer-events: none;
+      box-shadow: inset 0 0 138px 38px rgba(0, 0, 0, .9);
+    }
+
+    .triangle {
+      position: absolute;
+      z-index: 5;
+      left: var(--triangle-x);
+      top: var(--triangle-y);
+      width: var(--triangle-w);
+      height: var(--triangle-h);
+      overflow: visible;
+      pointer-events: none;
+      filter: drop-shadow(0 0 8px rgba(255, 90, 0, .95)) drop-shadow(0 0 26px rgba(255, 85, 0, .82));
+      opacity: .93;
+    }
+
+    .presenter {
+      position: absolute;
+      z-index: 8;
+      left: var(--presenter-x);
+      top: var(--presenter-y);
+      width: var(--presenter-w);
+      height: var(--presenter-h);
+      text-align: center;
+      text-transform: uppercase;
+      font-size: 25px;
+      font-weight: 800;
+      line-height: 1.22;
+      letter-spacing: .42em;
+      text-shadow: 0 3px 20px rgba(0, 0, 0, .9);
+    }
+
+    .presenter .accent {
+      display: block;
+      color: var(--orange);
+      letter-spacing: .34em;
+    }
+
+    .date-rail {
+      position: absolute;
+      z-index: 9;
+      left: var(--date-x);
+      top: var(--date-y);
+      width: var(--date-w);
+      height: var(--date-h);
+      text-align: left;
+      text-transform: uppercase;
+      font-family: "Anton", "Bebas Neue", sans-serif;
+      filter: drop-shadow(0 5px 10px rgba(0, 0, 0, .92));
+    }
+
+    .date-rail .weekday,
+    .date-rail .month {
+      display: block;
+      font-size: 48px;
+      line-height: .92;
+      letter-spacing: .01em;
+    }
+
+    .date-rail .day {
+      display: block;
+      margin: 0 0 2px -4px;
+      color: var(--orange);
+      font-size: 104px;
+      line-height: .86;
+      letter-spacing: -.04em;
+    }
+
+    .date-rail .rule {
+      width: 58px;
+      height: 4px;
+      margin: 14px 0 14px 5px;
+      background: var(--orange);
+    }
+
+    .date-rail .open {
+      display: block;
+      color: var(--orange);
+      font-family: "Lemon Milk", sans-serif;
+      font-size: 17px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: .045em;
+      white-space: nowrap;
+    }
+
+    .date-rail .open b { color: var(--ink); }
+
+    .headline {
+      position: absolute;
+      z-index: 7;
+      left: var(--headline-x);
+      top: var(--headline-y);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: var(--headline-w);
+      height: var(--headline-h);
+      overflow: visible;
+      color: var(--orange);
+      font-family: "Bad Grunge", "Anton", Impact, sans-serif;
+      font-size: 455px;
+      font-weight: 400;
+      line-height: .72;
+      letter-spacing: -.055em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      text-shadow: 0 8px 18px rgba(0, 0, 0, .88);
+    }
+
+    .headline span {
+      display: block;
+      transform: scaleY(1.27);
+      transform-origin: 50% 100%;
+    }
+
+    .script {
+      position: absolute;
+      z-index: 10;
+      left: var(--script-x);
+      top: var(--script-y);
+      display: flex;
+      align-items: center;
+      width: var(--script-w);
+      height: var(--script-h);
+      overflow: visible;
+      color: var(--ink);
+      font-family: "Open Script", "Brush Script MT", cursive;
+      font-size: 135px;
+      line-height: .78;
+      letter-spacing: -.05em;
+      transform: rotate(-5deg);
+      transform-origin: center;
+      text-shadow: 0 5px 14px rgba(0, 0, 0, .95);
+      white-space: nowrap;
+    }
+
+    .script::after {
+      content: "";
+      position: absolute;
+      left: 7%;
+      right: 1%;
+      bottom: 14%;
+      height: 6px;
+      background: var(--ink);
+      transform: rotate(1.2deg) skewX(-15deg);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, .7);
+    }
+
+    .genre-strip {
+      position: absolute;
+      z-index: 11;
+      left: var(--genre-x);
+      top: var(--genre-y);
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      width: var(--genre-w);
+      height: var(--genre-h);
+      border: 1.5px solid rgba(248, 245, 238, .9);
+      background: rgba(0, 0, 0, .34);
+      font-size: 17px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .genre-strip b { color: var(--orange); font-size: 23px; }
+
+    .lineup {
+      position: absolute;
+      z-index: 11;
+      left: var(--lineup-x);
+      top: var(--lineup-y);
+      width: var(--lineup-w);
+      height: var(--lineup-h);
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .lineup .eyebrow {
+      display: block;
+      margin-bottom: 11px;
+      color: var(--orange);
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: .08em;
+    }
+
+    .lineup .djs {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      font-family: "Bad Grunge", "Anton", sans-serif;
+      font-size: 52px;
+      line-height: 1;
+      letter-spacing: .01em;
+    }
+
+    .lineup .djs b {
+      color: var(--orange);
+      font-family: "Lemon Milk", sans-serif;
+      font-size: 27px;
+    }
+
+    .entry {
+      position: absolute;
+      z-index: 11;
+      left: var(--entry-x);
+      top: var(--entry-y);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      width: var(--entry-w);
+      height: var(--entry-h);
+      color: var(--ink);
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .entry .primary {
+      border: 1.5px solid var(--ink);
+      padding: 8px 13px 7px;
+      font-size: 21px;
+      font-weight: 800;
+      letter-spacing: .04em;
+      white-space: nowrap;
+    }
+
+    .entry .price {
+      align-self: stretch;
+      display: grid;
+      place-items: center;
+      min-width: 79px;
+      padding: 0 8px;
+      background: var(--orange);
+      color: var(--ink);
+      font-size: 23px;
+      font-weight: 800;
+    }
+
+    .entry .secondary {
+      grid-column: 1 / -1;
+      margin-top: 11px;
+      color: var(--orange);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: .08em;
+    }
+
+    .entry .secondary b { color: var(--ink); }
+
+    .venue {
+      position: absolute;
+      z-index: 11;
+      left: var(--venue-x);
+      top: var(--venue-y);
+      width: var(--venue-w);
+      height: var(--venue-h);
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .venue::before {
+      content: "";
+      display: block;
+      width: 64px;
+      height: 2px;
+      margin: 0 auto 15px;
+      background: var(--orange);
+    }
+
+    .venue .address {
+      display: block;
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1.28;
+      letter-spacing: .24em;
+    }
+
+    .venue .city {
+      display: block;
+      margin-top: 10px;
+      color: var(--orange);
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: .28em;
+    }
+  </style>
+</head>
+<body>
+  <main class="flyer" aria-label="Rush Night CSS reference master">
+    <img class="photo" data-region="photo" src="../create-with-coco/backgrounds/background05.jpg" alt="" />
+    <div class="photo-grade" data-region="photo-grade"></div>
+    <div class="texture" data-region="texture"></div>
+    <div class="edge-shadow" data-region="edge-shadow"></div>
+
+    <svg class="triangle" data-region="neon-triangle" viewBox="0 0 900 900" aria-hidden="true">
+      <defs>
+        <linearGradient id="tube" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#ff5a0a" />
+          <stop offset=".47" stop-color="#fff2b2" />
+          <stop offset=".58" stop-color="#ff9a16" />
+          <stop offset="1" stop-color="#ff4a00" />
+        </linearGradient>
+        <mask id="subject-occlusion">
+          <rect width="900" height="900" fill="white" />
+          <ellipse cx="472" cy="360" rx="222" ry="294" fill="black" />
+          <path d="M210 555 C315 480 650 480 775 625 L820 900 H135 L170 685 Z" fill="black" />
+        </mask>
+      </defs>
+      <path d="M610 62 L92 825 L866 825 Z" fill="none" stroke="rgba(255,70,0,.34)" stroke-width="38" stroke-linejoin="round" mask="url(#subject-occlusion)" />
+      <path d="M610 62 L92 825 L866 825 Z" fill="none" stroke="url(#tube)" stroke-width="12" stroke-linejoin="round" mask="url(#subject-occlusion)" />
+      <path d="M610 62 L92 825 L866 825 Z" fill="none" stroke="#fff2b2" stroke-width="2.5" stroke-linejoin="round" mask="url(#subject-occlusion)" opacity=".96" />
+    </svg>
+
+    <div class="presenter" data-region="presenter">
+      Nova Group
+      <span class="accent">Presents</span>
+    </div>
+
+    <div class="date-rail" data-region="date">
+      <span class="weekday">Sat</span>
+      <span class="day">24</span>
+      <span class="month">May</span>
+      <span class="rule"></span>
+      <span class="open">Open <b>23H</b></span>
+    </div>
+
+    <div class="headline" data-region="headline"><span>Rush</span></div>
+    <div class="script" data-region="script">Night</div>
+
+    <div class="genre-strip" data-region="genres">
+      <span>Tech House</span><b>+</b><span>House</span><b>+</b><span>Afro House</span>
+    </div>
+
+    <div class="lineup" data-region="lineup">
+      <span class="eyebrow">Music by</span>
+      <div class="djs"><span>DJ Nova</span><b>×</b><span>DJ Kairo</span><b>×</b><span>DJ Vybe</span></div>
+    </div>
+
+    <div class="entry" data-region="entry">
+      <span class="primary">Entry until 00H30</span><span class="price">$20</span>
+      <span class="secondary">After 00H30 <b>$30</b></span>
+    </div>
+
+    <div class="venue" data-region="venue">
+      <span class="address">47 Grand Avenue · Downtown</span>
+      <span class="city">Nova Room · New York</span>
+    </div>
+  </main>
+
+  <script type="application/json" id="rush-night-css-master-geometry">
+    {
+      "canvas": { "width": 900, "height": 1600, "ratio": "9:16" },
+      "photo": { "x": 8, "y": 16, "width": 84, "height": 84, "fit": "cover", "positionX": 50, "positionY": 100, "scale": 0.84 },
+      "photoGrade": { "x": 0, "y": 0, "width": 100, "height": 100 },
+      "texture": { "x": 0, "y": 0, "width": 100, "height": 100 },
+      "edgeShadow": { "x": 0, "y": 0, "width": 100, "height": 100 },
+      "presenter": { "x": 31, "y": 6.8, "width": 42, "height": 4.4 },
+      "date": { "x": 13, "y": 15.7, "width": 13.5, "height": 15.6 },
+      "triangle": { "x": 11, "y": 9, "width": 85, "height": 52 },
+      "headline": { "x": 19.5, "y": 46, "width": 62, "height": 19, "font": "Bad Grunge", "fontSizePx": 455, "trackingEm": -0.055, "verticalScale": 1.27 },
+      "script": { "x": 28, "y": 61.2, "width": 52, "height": 8.8, "font": "Open Script", "fontSizePx": 135, "rotationDeg": -5 },
+      "genres": { "x": 20.5, "y": 72.8, "width": 59, "height": 3.2 },
+      "lineup": { "x": 18.5, "y": 77.1, "width": 63, "height": 6.7 },
+      "entry": { "x": 32.5, "y": 84.5, "width": 35, "height": 4.4 },
+      "venue": { "x": 22, "y": 89.5, "width": 56, "height": 5.2 },
+      "zOrder": ["photo", "photo-grade", "texture", "edge-shadow", "neon-triangle", "headline", "presenter", "date", "script", "genres", "lineup", "entry", "venue"]
+    }
+  </script>
+</body>
+</html>

@@ -1,5 +1,9 @@
 # Nightlife Flyers
 
+Template work follows the [Coco recipe workflow](docs/coco-recipe-workflow.md)
+and [editor acceptance requirements](docs/template-editor-acceptance.md).
+Run `npm run coco:verify-editor` against the local server after shared editor changes.
+
 Production stack:
 
 - `Vercel` for the app and API routes

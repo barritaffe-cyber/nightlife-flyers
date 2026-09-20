@@ -1,0 +1,20 @@
+{
+  "source": "public/generated-flyers/zona-de-perreo-updated.nflyer",
+  "master": "public/generated-flyers/zona-de-perreo-updated.nflyer",
+  "version": 3,
+  "sha256": "42e4b25eb1f6ca250101a97286654124f693b00a8acc0207b2093e82c173090b",
+  "previousSave": {
+    "source": "public/generated-flyers/assets/zona-de-perreo.nflyer",
+    "master": "public/generated-flyers/zona-de-perreo-updated.nflyer",
+    "version": 2,
+    "sha256": "a88f4173ec997cc821608394790ea3e49edf470ad8b9f6c6f5af7c93a3450dac",
+    "overrides": {
+      "square": 13,
+      "story": 11
+    }
+  },
+  "overrides": {
+    "square": 13,
+    "story": 11
+  }
+}

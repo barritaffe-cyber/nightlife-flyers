@@ -1,0 +1,93 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Bad Girls — Club Woods</title><style>
+@font-face{font-family:Brush;src:url('/fonts/BadGirlsBrushPNG.woff2?v=3')}@font-face{font-family:Pink;src:url('/fonts/BadGirlsPinkPNG.woff2?v=3')}
+@font-face{font-family:Script;src:url('/fonts/dear-script-demo-font.ttf')}@font-face{font-family:Sans;src:url('/fonts/LEMONMILK-Light.ttf')}@font-face{font-family:Medium;src:url('/fonts/LEMONMILK-Regular.ttf')}@font-face{font-family:Bold;src:url('/fonts/LEMONMILK-Bold.ttf')}@font-face{font-family:Lineup;src:url('/fonts/Nexa-Heavy.ttf')}
+*{box-sizing:border-box}body{margin:0;background:#090101}.canvas{position:relative;width:1080px;height:1080px;overflow:hidden}.canvas>*{position:absolute}
+.background{inset:0;width:100%;height:100%;object-fit:cover;z-index:0}.subject{left:235px;top:209px;width:645px;height:auto;z-index:3}
+.text{margin:0;white-space:pre;color:#fff7f4;font:15px/1.5 Sans;letter-spacing:.19em;z-index:4;text-shadow:0 2px 4px #26000580}
+.presenter{left:270px;top:22px;width:540px;text-align:center;font:20px/1.3 Medium;letter-spacing:.68em}.presents{left:350px;top:62px;width:380px;text-align:center;font-size:13px;letter-spacing:.65em}
+.headline{left:129px;top:61px;width:900px;font:340px/1 Brush;letter-spacing:-.08em;z-index:1;transform:rotate(-6deg) scaleY(1.1);transform-origin:center;filter:drop-shadow(1px 5px 4px #39000560);text-shadow:none}
+.subtitle{left:70px;top:250px;width:1020px;font:255px/1 Pink;letter-spacing:-.11em;z-index:2;transform:rotate(-7deg) scaleY(1.2);transform-origin:center;text-shadow:none;filter:drop-shadow(1px 4px 4px #4e001060)}
+.mood{left:42px;top:33px;font-size:12px;line-height:1.85;letter-spacing:.27em}
+.day,.month,.date,.time{left:951px;width:85px;text-align:center;letter-spacing:0}.day{top:24px;font-size:23px;line-height:1.1}.month{top:53px;font:28px/1 Bold;color:#ff184e}.date{top:89px;font:64px/1 Bold}.time{top:173px;font:14px/1.6 Sans}
+.lineupLabel{left:42px;top:504px;color:#ff2458;font:14px/1.4 Bold;letter-spacing:.09em}.dj1,.dj2{left:42px;font:25px/1.1 Lineup;letter-spacing:0}.dj1{top:531px}.dj2{top:560px}.genres{left:42px;top:611px;font-size:13px;line-height:1.7;letter-spacing:.18em}
+.tagline{left:804px;top:473px;width:238px;font:49px/1.1 Script;letter-spacing:-.04em;transform:rotate(-8deg);text-align:center}.only{left:852px;top:583px;width:160px;font:48px/1.1 Script;color:#ff164b;letter-spacing:0;transform:rotate(-8deg)}
+.motto{left:44px;top:795px;width:150px;font:28px/1.2 Script;letter-spacing:0;transform:rotate(-8deg)}
+.cocktails,.tables,.dressCode,.age{left:825px;width:220px;font:13px/1.6 Medium;letter-spacing:.12em}.cocktails{top:733px}.tables{top:795px}.dressCode{top:857px}.age{top:926px}
+.venue{left:43px;top:992px;font:42px/1 Sans;letter-spacing:-.055em}.venue b{font-family:Bold;font-weight:400}.address{left:45px;top:1040px;font:11px/1.3 Medium;letter-spacing:.20em}.entry{left:763px;top:994px;font:24px/1.3 Bold;color:#ff1d53;letter-spacing:0}.contact{left:763px;top:1031px;font-size:16px;letter-spacing:.06em}
+.rule{background:#ff164f;height:3px;z-index:4}.rMood{left:42px;top:151px;width:50px}.rDate{left:964px;top:158px;width:58px}.rLineup{left:42px;top:598px;width:50px}.rCocktails{left:825px;top:783px;width:30px}.rTables{left:825px;top:845px;width:30px}.rDress{left:825px;top:913px;width:30px}
+.crown{left:458px;top:210px;width:72px;height:60px;z-index:5;transform:rotate(-19deg)}.crownSmall{left:112px;top:938px;width:53px;height:44px;z-index:4;transform:rotate(7deg)}.heart{left:993px;top:439px;width:40px;height:58px;z-index:4;transform:rotate(7deg)}.underline{left:863px;top:641px;width:163px;height:16px;z-index:4;transform:rotate(-13deg)}
+.canvas[data-format=story]{height:1920px}.canvas[data-format=story] .presenter{top:36px;font-size:24px}.canvas[data-format=story] .presents{top:87px;font-size:17px}
+.canvas[data-format=story] .mood{top:51px;font-size:16px}.canvas[data-format=story] .rMood{top:211px}.canvas[data-format=story] .day{top:46px;font-size:29px}.canvas[data-format=story] .month{top:87px;font-size:34px}.canvas[data-format=story] .date{top:133px;font-size:80px}.canvas[data-format=story] .rDate{top:233px}.canvas[data-format=story] .time{top:262px;font-size:18px}
+.canvas[data-format=story] .headline{left:86px;top:203px;font-size:395px;transform:rotate(-6deg) scaleY(1.22)}.canvas[data-format=story] .subtitle{left:35px;top:464px;font-size:280px;transform:rotate(-7deg) scaleY(1.5)}
+.canvas[data-format=story] .subject{left:145px;top:532px;width:920px}.canvas[data-format=story] .crown{left:464px;top:546px;width:80px;height:70px}
+.canvas[data-format=story] .lineupLabel{top:905px;font-size:18px}.canvas[data-format=story] .dj1{top:936px;font-size:29px}.canvas[data-format=story] .dj2{top:971px;font-size:29px}.canvas[data-format=story] .rLineup{top:1018px}.canvas[data-format=story] .genres{top:1041px;font-size:17px;line-height:1.8}
+.canvas[data-format=story] .tagline{left:802px;top:827px;font-size:54px}.canvas[data-format=story] .only{left:859px;top:951px;font-size:53px}.canvas[data-format=story] .underline{top:1012px}.canvas[data-format=story] .heart{left:1003px;top:778px}
+.canvas[data-format=story] .motto{top:1321px;font-size:34px}.canvas[data-format=story] .crownSmall{top:1505px;left:104px;width:65px;height:54px}
+.canvas[data-format=story] .cocktails,.canvas[data-format=story] .tables,.canvas[data-format=story] .dressCode,.canvas[data-format=story] .age{left:760px;width:280px;font-size:17px}.canvas[data-format=story] .cocktails{top:1394px}.canvas[data-format=story] .tables{top:1490px}.canvas[data-format=story] .dressCode{top:1586px}.canvas[data-format=story] .age{top:1686px}
+.canvas[data-format=story] .rCocktails,.canvas[data-format=story] .rTables,.canvas[data-format=story] .rDress{left:760px}.canvas[data-format=story] .rCocktails{top:1467px}.canvas[data-format=story] .rTables{top:1563px}.canvas[data-format=story] .rDress{top:1663px}
+.canvas[data-format=story] .venue{top:1778px;font-size:48px}.canvas[data-format=story] .address{top:1838px;font-size:13px}.canvas[data-format=story] .entry{left:730px;top:1780px;font-size:29px}.canvas[data-format=story] .contact{left:730px;top:1833px;font-size:20px}
+
+.headline{top:167px;transform:rotate(-6deg) scale(1.22,1.05);transform-origin:left center}
+.subtitle{top:326px;transform:rotate(-7deg) scale(1.32,1.13);transform-origin:left center}
+.tagline{font-size:67px;line-height:1.05;top:467px}.only{font-size:65px;top:588px}.motto{font-size:36px;line-height:1.04;width:160px}
+.cocktails,.tables,.dressCode,.age{left:895px;width:165px;font-size:11px}.rCocktails,.rTables,.rDress{left:895px}
+.canvas[data-format=story] .headline{left:48px;transform:rotate(-6deg) scale(1.18,1.15)}
+.canvas[data-format=story] .subtitle{transform:rotate(-7deg) scale(1.30,1.35)}
+.canvas[data-format=story] .subject{left:110px;top:445px;width:960px}.canvas[data-format=story] .crown{top:458px}
+.canvas[data-format=story] .tagline{font-size:71px;top:792px}.canvas[data-format=story] .only{font-size:66px;top:928px}.canvas[data-format=story] .underline{top:1009px}
+.canvas[data-format=story] .motto{font-size:40px;width:170px;line-height:1.08}
+</style></head><body><main class="canvas" data-coco-canvas data-format="square">
+<img class="background" data-coco-object="background" data-region="background" src="/generated-flyers/assets/bad-girl-square.jpg">
+<img class="subject" data-coco-object="subject" data-region="subject" data-coco-editable="true" src="/generated-flyers/assets/bad-g-subject.png">
+<div class="text presenter" data-coco-object="presenter" data-region="presenter" data-coco-editable="true">CLUB WOODS</div>
+<div class="text presents" data-coco-object="presents" data-region="presents" data-coco-editable="true">PRESENTS</div>
+<div class="text headline" data-coco-object="headline" data-region="headline" data-coco-editable="true">BAD</div>
+<div class="text subtitle" data-coco-object="subtitle" data-region="subtitle" data-coco-editable="true">GIRLS</div>
+<div class="text mood" data-coco-object="mood" data-region="mood" data-coco-editable="true">MUSIC
+PEOPLE
+STYLE
+GOOD
+VIBES</div>
+<div class="text day" data-coco-object="day" data-region="day" data-coco-editable="true">FRI</div>
+<div class="text month" data-coco-object="month" data-region="month" data-coco-editable="true">MAY</div>
+<div class="text date" data-coco-object="date" data-region="date" data-coco-editable="true">24</div>
+<div class="text time" data-coco-object="time" data-region="time" data-coco-editable="true">10PM
+TILL LATE</div>
+<div class="text lineupLabel" data-coco-object="lineupLabel" data-region="lineupLabel" data-coco-editable="true">MUSIC BY</div>
+<div class="text dj1" data-coco-object="dj1" data-region="dj1" data-coco-editable="true">DJ SPICE</div>
+<div class="text dj2" data-coco-object="dj2" data-region="dj2" data-coco-editable="true">DJ ELEVATE</div>
+<div class="text genres" data-coco-object="genres" data-region="genres" data-coco-editable="true">AFROBEATS
+HIP HOP
+R&amp;B
+AMAPIANO
+DANCEHALL
+&amp; MORE</div>
+<div class="text tagline" data-coco-object="tagline" data-region="tagline" data-coco-editable="true">Good
+Music</div>
+<div class="text only" data-coco-object="only" data-region="only" data-coco-editable="true">Only</div>
+<div class="text motto" data-coco-object="motto" data-region="motto" data-coco-editable="true">Same
+Energy
+Different
+Level</div>
+<div class="text cocktails" data-coco-object="cocktails" data-region="cocktails" data-coco-editable="true">COCKTAIL
+SPECIALS</div>
+<div class="text tables" data-coco-object="tables" data-region="tables" data-coco-editable="true">VIP TABLES
+AVAILABLE</div>
+<div class="text dressCode" data-coco-object="dressCode" data-region="dressCode" data-coco-editable="true">DRESS CODE:
+STYLISH &amp; BOLD</div>
+<div class="text age" data-coco-object="age" data-region="age" data-coco-editable="true">21+ EVENT</div>
+<div class="text venue" data-coco-object="venue" data-region="venue" data-coco-editable="true">CLUB<b>WOODS</b></div>
+<div class="text address" data-coco-object="address" data-region="address" data-coco-editable="true">234 WEST AVENUE STREET, CITY</div>
+<div class="text entry" data-coco-object="entry" data-region="entry" data-coco-editable="true">TICKETS $25</div>
+<div class="text contact" data-coco-object="contact" data-region="contact" data-coco-editable="true">RSVP 0088 235 0089</div>
+<div class="rule rMood" data-coco-object="rMood" data-region="rMood"></div>
+<div class="rule rDate" data-coco-object="rDate" data-region="rDate"></div>
+<div class="rule rLineup" data-coco-object="rLineup" data-region="rLineup"></div>
+<div class="rule rCocktails" data-coco-object="rCocktails" data-region="rCocktails"></div>
+<div class="rule rTables" data-coco-object="rTables" data-region="rTables"></div>
+<div class="rule rDress" data-coco-object="rDress" data-region="rDress"></div>
+<img class="crown" data-coco-object="crown" data-region="crown" src="/generated-flyers/assets/bad-girls-crown.svg">
+<img class="crownSmall" data-coco-object="crownSmall" data-region="crownSmall" src="/generated-flyers/assets/bad-girls-crown.svg">
+<img class="heart" data-coco-object="heart" data-region="heart" src="/generated-flyers/assets/bad-girls-heart.svg">
+<img class="underline" data-coco-object="underline" data-region="underline" src="/generated-flyers/assets/bad-girls-underline.svg">
+</main><script>const format=new URLSearchParams(location.search).get('format')==='story'?'story':'square';document.querySelector('.canvas').dataset.format=format;document.querySelector('.background').src='/generated-flyers/assets/bad-girl-'+format+'.jpg';</script></body></html>

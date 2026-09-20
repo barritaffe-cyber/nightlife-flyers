@@ -1,6 +1,6 @@
 export type BillingCycle = "monthly" | "yearly";
-export type BillingPlanId = "creator" | "studio";
-export type BillingOfferId = "night-pass" | "weekend-pass";
+export type BillingPlanId = "basic" | "full" | "creator" | "studio";
+export type BillingOfferId = "one-flyer" | "night-pass" | "weekend-pass";
 export type BillingSelection =
   | { kind: "plan"; plan: BillingPlanId; billing: BillingCycle }
   | { kind: "offer"; offer: BillingOfferId };
@@ -17,7 +17,17 @@ export type BillingCatalogItem = {
   durationHours: number;
 };
 
-const PLAN_ITEMS: Record<`${BillingPlanId}:${BillingCycle}`, BillingCatalogItem> = {
+const PLAN_ITEMS: Partial<Record<`${BillingPlanId}:${BillingCycle}`, BillingCatalogItem>> = {
+  "basic:monthly": {
+    key: "basic:monthly", kind: "plan", name: "Coco",
+    description: "20 flyers per month. Flyers in Five, quick editing, logo upload, saved flyers and remembered brand details. Square + Story count together.",
+    price: 10, cadence: "monthly", status: "active", plan: "basic", durationHours: 24 * 30,
+  },
+  "full:monthly": {
+    key: "full:monthly", kind: "plan", name: "Coco + Studio",
+    description: "20 flyers per month. Everything in Coco plus Full Studio, personal photos, backgrounds, subjects, full assets and template requests.",
+    price: 15, cadence: "monthly", status: "active", plan: "full", durationHours: 24 * 30,
+  },
   "creator:monthly": {
     key: "creator:monthly",
     kind: "plan",
@@ -65,6 +75,11 @@ const PLAN_ITEMS: Record<`${BillingPlanId}:${BillingCycle}`, BillingCatalogItem>
 };
 
 const OFFER_ITEMS: Record<BillingOfferId, BillingCatalogItem> = {
+  "one-flyer": {
+    key: "one-flyer", kind: "offer", name: "One Flyer",
+    description: "One flyer with Coco, the full template library, quick edits, your logo and Square + Story. Includes seven days of corrections after first export.",
+    price: 5, cadence: "one-time", status: "one_flyer", plan: "one_flyer", durationHours: 24 * 7,
+  },
   "night-pass": {
     key: "night-pass",
     kind: "offer",
@@ -90,7 +105,7 @@ const OFFER_ITEMS: Record<BillingOfferId, BillingCatalogItem> = {
 };
 
 export function isBillingPlanId(value: string | null | undefined): value is BillingPlanId {
-  return value === "creator" || value === "studio";
+  return value === "basic" || value === "full" || value === "creator" || value === "studio";
 }
 
 export function isBillingCycle(value: string | null | undefined): value is BillingCycle {
@@ -98,7 +113,7 @@ export function isBillingCycle(value: string | null | undefined): value is Billi
 }
 
 export function isBillingOfferId(value: string | null | undefined): value is BillingOfferId {
-  return value === "night-pass" || value === "weekend-pass";
+  return value === "one-flyer" || value === "night-pass" || value === "weekend-pass";
 }
 
 export function resolveBillingSelection(input: {
@@ -110,6 +125,7 @@ export function resolveBillingSelection(input: {
     return { kind: "offer", offer: input.offer };
   }
   if (isBillingPlanId(input.plan)) {
+    if (["basic", "full"].includes(input.plan) && input.billing && input.billing !== "monthly") return null;
     return {
       kind: "plan",
       plan: input.plan,
@@ -123,7 +139,9 @@ export function getBillingCatalogItem(selection: BillingSelection): BillingCatal
   if (selection.kind === "offer") {
     return OFFER_ITEMS[selection.offer];
   }
-  return PLAN_ITEMS[`${selection.plan}:${selection.billing}`];
+  const item = PLAN_ITEMS[`${selection.plan}:${selection.billing}`];
+  if (!item) throw new Error("Unsupported billing cycle.");
+  return item;
 }
 
 export function buildBillingCheckoutHref(selection: BillingSelection): string {
@@ -140,5 +158,21 @@ export function buildBillingLoginHref(selection: BillingSelection): string {
 
 export function computeBillingPeriodEnd(selection: BillingSelection, from = new Date()): string {
   const item = getBillingCatalogItem(selection);
+  // New monthly subscriptions expire on the next calendar billing date, clamped
+  // for shorter months. Keep legacy receipt calculations unchanged.
+  if (selection.kind === "plan" && isPublicBillingSelection(selection)) {
+    const end = new Date(from);
+    const day = end.getUTCDate();
+    end.setUTCDate(1);
+    end.setUTCMonth(end.getUTCMonth() + 1);
+    const lastDay = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() + 1, 0)).getUTCDate();
+    end.setUTCDate(Math.min(day, lastDay));
+    return end.toISOString();
+  }
   return new Date(from.getTime() + item.durationHours * 60 * 60 * 1000).toISOString();
+}
+
+/** Legacy selections remain parseable for existing payments, but cannot start a new sale. */
+export function isPublicBillingSelection(selection: BillingSelection): boolean {
+  return (selection.kind === "offer" && selection.offer === "one-flyer") || selection.kind === "plan" && selection.billing === "monthly" && ["basic", "full"].includes(selection.plan);
 }

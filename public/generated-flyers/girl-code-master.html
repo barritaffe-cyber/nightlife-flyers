@@ -1,0 +1,68 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Girl Code</title><style>
+@font-face{font-family:GoldBrush;src:url('/fonts/DriftBrushSVG.woff2')}@font-face{font-family:Brush;src:url('/fonts/BadGirlsBrushPNG.woff2?v=3')}@font-face{font-family:GirlSerif;src:url('/fonts/Avigea.woff2')}@font-face{font-family:Hand;src:url('/fonts/Northwell-GraphicEx.com/Northwell/Northwell.otf')}@font-face{font-family:Sans;src:url('/fonts/LEMONMILK-Light.ttf')}@font-face{font-family:Medium;src:url('/fonts/LEMONMILK-Regular.ttf')}
+*{box-sizing:border-box}body{margin:0;background:#081611}.canvas{position:relative;width:1080px;height:1080px;overflow:hidden;background:#081611}.canvas>*{position:absolute}.background{inset:0;width:100%;height:100%;object-fit:cover}.text{margin:0;white-space:pre;z-index:5;color:#fff7de;font:17px/1.5 Sans;letter-spacing:.13em;left:62px;width:270px}.gold{color:#f6ce5f}
+.mood{top:55px;font-size:13px;line-height:1.55;width:145px}.motto{left:944px;top:48px;font-size:13px;width:115px;line-height:1.65}
+.headline{left:210px;top:22px;width:850px;font:340px/1 Brush;letter-spacing:-.065em;transform:rotate(-9deg);transform-origin:left top;filter:brightness(.82) sepia(1) saturate(4.5);color:#f6ce5f}
+.subtitle{left:328px;top:195px;width:700px;font:225px/1 Brush;letter-spacing:-.075em;transform:rotate(-9deg);transform-origin:left top}
+.crown{left:434px;top:19px;width:83px;height:68px;z-index:6;transform:rotate(-13deg);filter:brightness(.82) sepia(1) saturate(4.5)}.heart{left:850px;top:260px;width:65px;height:87px;z-index:6;transform:rotate(13deg);filter:brightness(.82) sepia(1) saturate(4.5)}
+.day{top:334px;font:29px/1.1 Medium;letter-spacing:.12em;width:130px}.month{top:373px;font:36px/1 Medium;width:130px}.date{top:404px;font:102px/1 GirlSerif;letter-spacing:-.04em;width:150px}.time{top:523px;font:22px/1.1 Medium;letter-spacing:.1em;width:170px}.endTime{top:553px;font-size:13px;width:170px}
+.tagline{left:847px;top:480px;width:220px;font:63px/1.01 Hand;letter-spacing:0;transform:rotate(-12deg);transform-origin:center}
+.djLabel{top:655px;font-size:12px}.dj1,.dj2,.dj3{font:21px/1.2 Medium;letter-spacing:.14em;width:250px}.dj1{top:683px}.dj2{top:714px}.dj3{top:745px}.genres{top:807px;font-size:12px;line-height:1.7;letter-spacing:.14em;width:260px}
+.venue{top:914px;font:73px/1 GirlSerif;letter-spacing:-.03em;width:460px}.venueCaption{top:987px;font-size:10px;letter-spacing:.28em;width:440px}.address{top:1031px;font:12px/1.25 Medium;letter-spacing:.17em;width:650px}.contactLabel{left:806px;top:996px;font-size:11px;width:245px}.contact{left:806px;top:1020px;font:23px/1.1 Medium;letter-spacing:.03em;width:250px}
+.rule{height:3px;background:#f6ce5f;z-index:4}.rMood{left:62px;top:147px;width:46px}.rMotto{left:944px;top:147px;width:46px}.rDate{left:62px;top:510px;width:91px;background:#fff7de}.rDjs{left:62px;top:784px;width:46px}.rVenue{left:111px;top:1012px;width:92px}
+.canvas[data-format=story]{height:1920px}.canvas[data-format=story] .mood{top:90px;font-size:19px;width:190px}.canvas[data-format=story] .motto{top:84px;left:941px;font-size:17px;width:135px}.canvas[data-format=story] .rMood,.canvas[data-format=story] .rMotto{top:224px}
+.canvas[data-format=story] .headline{left:174px;top:127px;font-size:438px}.canvas[data-format=story] .subtitle{left:259px;top:369px;font-size:300px}.canvas[data-format=story] .crown{left:435px;top:74px;width:111px;height:90px}.canvas[data-format=story] .heart{left:877px;top:458px;width:77px;height:99px}
+.canvas[data-format=story] .day{top:620px;font-size:37px}.canvas[data-format=story] .month{top:668px;font-size:44px}.canvas[data-format=story] .date{top:710px;font-size:126px}.canvas[data-format=story] .rDate{top:841px}.canvas[data-format=story] .time{top:863px;font-size:28px}.canvas[data-format=story] .endTime{top:902px;font-size:17px}
+.canvas[data-format=story] .tagline{left:842px;top:1030px;font-size:73px;width:230px}.canvas[data-format=story] .djLabel{top:1210px;font-size:16px}.canvas[data-format=story] .dj1{top:1246px}.canvas[data-format=story] .dj2{top:1285px}.canvas[data-format=story] .dj3{top:1324px}.canvas[data-format=story] .dj1,.canvas[data-format=story] .dj2,.canvas[data-format=story] .dj3{font-size:27px}.canvas[data-format=story] .rDjs{top:1377px}.canvas[data-format=story] .genres{top:1410px;font-size:16px;width:300px}
+.canvas[data-format=story] .venue{top:1715px;font-size:97px;width:520px}.canvas[data-format=story] .venueCaption{top:1811px;font-size:14px;width:530px}.canvas[data-format=story] .rVenue{top:1847px}.canvas[data-format=story] .address{top:1880px;font-size:13px;width:720px}.canvas[data-format=story] .contactLabel{left:765px;top:1807px;font-size:14px;width:290px}.canvas[data-format=story] .contact{left:765px;top:1840px;font-size:29px;width:305px}
+
+.headline{padding-left:30px;left:185px;top:67px;font-family:GoldBrush;font-size:250px;letter-spacing:-.09em;transform:rotate(-8deg);filter:drop-shadow(0 5px 2px #36200170);color:#e7ae3c;background-image:url('/generated-flyers/assets/girl-code-gold-paint.png');background-size:800px 330px;background-position:0 0;background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{left:320px;top:226px;font-size:190px}.crown{left:430px;top:5px;width:70px;height:57px;filter:none}.heart{left:829px;top:243px;filter:none}.tagline{left:849px;top:480px;font-size:51px}
+.canvas[data-format=story] .headline{left:148px;top:195px;font-size:300px;background-size:850px 400px}.canvas[data-format=story] .subtitle{left:281px;top:425px;font-size:230px}.canvas[data-format=story] .tagline{left:865px;top:1035px;font-size:55px;width:205px}.canvas[data-format=story] .heart{left:852px;top:441px}
+.tagline{filter:drop-shadow(0 2px 3px #0009)}
+/* Keep the left information readable over the bright sunset. */
+.day,.month,.date,.time,.endTime,.djLabel,.dj1,.dj2,.dj3,.genres{filter:drop-shadow(0 2px 3px #000)}
+.legibility{left:0;top:0;width:450px;height:1080px;z-index:1;background:radial-gradient(ellipse at left 60%,rgba(0,0,0,.7),rgba(0,0,0,.4) 40%,transparent 78%)}
+.canvas[data-format=story] .legibility{height:1920px}
+</style></head><body><main class="canvas" data-coco-canvas data-format="square">
+<img class="background" data-coco-object="background" data-region="background" data-coco-role="background" src="/generated-flyers/assets/girl-code-square.jpg">
+<div class="legibility" data-coco-object="legibility" data-region="legibility"></div>
+<div class="text headline" data-region="headline" data-coco-object="headline" data-coco-role="headline" data-coco-editable="true">GIRL</div>
+<div class="text subtitle" data-region="subtitle" data-coco-object="subtitle" data-coco-role="subtitle" data-coco-editable="true">CODE</div>
+<div class="text mood" data-region="mood" data-coco-object="mood" data-coco-role="mood" data-coco-editable="true">GOOD
+MUSIC
+BETTER
+COMPANY</div>
+<div class="text motto" data-region="motto" data-coco-object="motto" data-coco-role="motto" data-coco-editable="true">EAT
+DRINK
+VIBE
+REPEAT</div>
+<div class="text day" data-region="day" data-coco-object="day" data-coco-role="day" data-coco-editable="true">SAT</div>
+<div class="text month gold" data-region="month" data-coco-object="month" data-coco-role="month" data-coco-editable="true">AUG</div>
+<div class="text date" data-region="date" data-coco-object="date" data-coco-role="date" data-coco-editable="true">17</div>
+<div class="text time" data-region="time" data-coco-object="time" data-coco-role="time" data-coco-editable="true">9PM</div>
+<div class="text endTime" data-region="endTime" data-coco-object="endTime" data-coco-role="endTime" data-coco-editable="true">TILL LATE</div>
+<div class="text tagline gold" data-region="tagline" data-coco-object="tagline" data-coco-role="tagline" data-coco-editable="true">Ladies
+Drinks
+Good Vibes
+Only</div>
+<div class="text djLabel" data-region="djLabel" data-coco-object="djLabel" data-coco-role="djLabel" data-coco-editable="true">SOUNDS BY</div>
+<div class="text dj1" data-region="dj1" data-coco-object="dj1" data-coco-role="dj1" data-coco-editable="true">DJ NOVA</div>
+<div class="text dj2" data-region="dj2" data-coco-object="dj2" data-coco-role="dj2" data-coco-editable="true">DJ KAY</div>
+<div class="text dj3" data-region="dj3" data-coco-object="dj3" data-coco-role="dj3" data-coco-editable="true">DJ RELL</div>
+<div class="text genres" data-region="genres" data-coco-object="genres" data-coco-role="genres" data-coco-editable="true">R&amp;B · HIP HOP
+AFROBEATS · AMAPIANO
+REGGAETON</div>
+<div class="text venue" data-region="venue" data-coco-object="venue" data-coco-role="venue" data-coco-editable="true">Flyers HQ</div>
+<div class="text venueCaption gold" data-region="venueCaption" data-coco-object="venueCaption" data-coco-role="venueCaption" data-coco-editable="true">LOUNGE &amp; ROOFTOP</div>
+<div class="text address" data-region="address" data-coco-object="address" data-coco-role="address" data-coco-editable="true">297 GRODIFY ST · NEW YORK · NY 07345</div>
+<div class="text contactLabel" data-region="contactLabel" data-coco-object="contactLabel" data-coco-role="contactLabel" data-coco-editable="true">TABLE RESERVATIONS</div>
+<div class="text contact gold" data-region="contact" data-coco-object="contact" data-coco-role="contact" data-coco-editable="true">978.000.0000</div>
+<div class="rule rMood" data-coco-object="rMood" data-region="rMood"></div>
+<div class="rule rMotto" data-coco-object="rMotto" data-region="rMotto"></div>
+<div class="rule rDate" data-coco-object="rDate" data-region="rDate"></div>
+<div class="rule rDjs" data-coco-object="rDjs" data-region="rDjs"></div>
+<div class="rule rVenue" data-coco-object="rVenue" data-region="rVenue"></div>
+<img class="crown" data-coco-object="crown" data-region="crown" src="/generated-flyers/assets/girl-code-crown.svg">
+<img class="heart" data-coco-object="heart" data-region="heart" src="/generated-flyers/assets/girl-code-heart.svg">
+</main><script>const format=new URLSearchParams(location.search).get("format")==="story"?"story":"square";document.querySelector(".canvas").dataset.format=format;document.querySelector(".background").src="/generated-flyers/assets/girl-code-"+format+".jpg";</script></body></html>

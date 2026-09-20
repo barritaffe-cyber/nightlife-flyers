@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Baddies N Bundles — Coco CSS Measurement Master</title>
+  <!--
+    Code-native reconstruction of the user-supplied 1080 by 1920 reference.
+    Square and Story are independently authored layouts. The supplied flyer is
+    measurement authority only; it is never used as a flattened canvas asset.
+  -->
+  <style>
+    @font-face {
+      font-family: BaddiesDisplay;
+      src: url("/fonts/Anton.ttf") format("truetype");
+      font-weight: 400 900;
+      font-display: block;
+    }
+    @font-face {
+      font-family: BaddiesCondensed;
+      src: url("/fonts/Antonio.ttf") format("truetype");
+      font-weight: 300 800;
+      font-display: block;
+    }
+    @font-face {
+      font-family: BaddiesNarrow;
+      src: url("/fonts/BebasNeue-Regular.ttf") format("truetype");
+      font-weight: 400;
+      font-display: block;
+    }
+    @font-face {
+      font-family: BaddiesSans;
+      src: url("/fonts/LEMONMILK-Bold.ttf") format("truetype");
+      font-weight: 700 900;
+      font-display: block;
+    }
+    @font-face {
+      font-family: BaddiesRegular;
+      src: url("/fonts/LEMONMILK-Regular.ttf") format("truetype");
+      font-weight: 400 600;
+      font-display: block;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #060906; }
+    body { display: grid; place-items: center; padding: 24px; }
+
+    .canvas {
+      --acid: #00ff3c;
+      --acid-soft: #39ff14;
+      --deep-green: #002b0d;
+      --ink: #000501;
+      --paper: #f7faf7;
+      position: relative;
+      width: min(92vw, 540px);
+      aspect-ratio: 9 / 16;
+      overflow: hidden;
+      container-type: inline-size;
+      isolation: isolate;
+      color: var(--paper);
+      background: var(--ink);
+      box-shadow: 0 30px 90px #000e, 0 0 0 1px #00ff3c17;
+      font-family: BaddiesRegular, Arial, sans-serif;
+    }
+    .canvas[data-format="square"] { aspect-ratio: 1; }
+    .canvas[data-format="story"] { aspect-ratio: 9 / 16; }
+
+    .background {
+      position: absolute;
+      inset: 0;
+      z-index: -20;
+      background:
+        radial-gradient(ellipse at 54% 51%, #054516 0%, #00290d 24%, #001407 50%, transparent 69%),
+        radial-gradient(ellipse at 79% 25%, #043f141f 0%, transparent 34%),
+        linear-gradient(167deg, #000 0%, #000a03 48%, #001006 73%, #000 100%);
+    }
+    .green-glow {
+      position: absolute;
+      z-index: -18;
+      left: 11%;
+      top: 28%;
+      width: 83%;
+      height: 62%;
+      border-radius: 48%;
+      background: radial-gradient(ellipse, #00ff3c24 0%, #00c93414 31%, transparent 71%);
+      filter: blur(34px);
+      opacity: .92;
+    }
+    .stripe-left {
+      position: absolute;
+      z-index: -16;
+      left: -10%;
+      top: -2%;
+      width: 19%;
+      height: 54%;
+      opacity: .31;
+      transform: rotate(18deg);
+      background: repeating-linear-gradient(90deg, var(--acid) 0 .28cqw, transparent .28cqw 1.55cqw);
+      filter: drop-shadow(0 0 5px #00ff3c42);
+    }
+    .stripe-orb {
+      position: absolute;
+      z-index: -15;
+      border-radius: 50%;
+      background: repeating-linear-gradient(135deg, #00ff3c 0 1.05cqw, transparent 1.05cqw 2.45cqw);
+      filter: drop-shadow(0 0 10px #00ff3c20);
+    }
+    .stripe-orb-top {
+      left: 18.5%;
+      top: .7%;
+      width: 26.5%;
+      aspect-ratio: 1;
+      opacity: .27;
+    }
+    .stripe-orb-right {
+      right: -25%;
+      top: 16.6%;
+      width: 55%;
+      aspect-ratio: 1;
+      opacity: .22;
+      transform: rotate(9deg);
+    }
+    .stripe-orb-bottom {
+      right: -13%;
+      top: 54%;
+      width: 42%;
+      aspect-ratio: 1;
+      opacity: .18;
+      transform: rotate(-8deg);
+    }
+    .dot-trail {
+      position: absolute;
+      z-index: -10;
+      left: 57%;
+      top: 9.6%;
+      width: 19%;
+      height: 2.2%;
+      opacity: .42;
+      background: radial-gradient(circle, var(--acid) 0 25%, transparent 29%) 0 50% / 12.5% 100% repeat-x;
+    }
+    .accent-plus {
+      position: absolute;
+      z-index: 28;
+      left: .8%;
+      top: 20.7%;
+      width: 3.7%;
+      height: 3.7%;
+      overflow: visible;
+      opacity: .68;
+      filter: drop-shadow(0 0 5px #00ff3c88);
+    }
+    .accent-waves-left {
+      position: absolute;
+      z-index: -8;
+      left: 13.8%;
+      top: 13.4%;
+      width: 3%;
+      height: 8.5%;
+      opacity: .21;
+      overflow: visible;
+    }
+    .accent-waves-right {
+      position: absolute;
+      z-index: 16;
+      right: 2.7%;
+      top: 52.7%;
+      width: 4%;
+      height: 10.5%;
+      opacity: .37;
+      overflow: visible;
+      filter: drop-shadow(0 0 4px #00ff3c44);
+    }
+
+    .logo {
+      position: absolute;
+      z-index: 56;
+      left: 42.2%;
+      top: 5.1%;
+      width: 15.6%;
+      height: 9.6%;
+      object-fit: contain;
+      object-position: center;
+      filter: brightness(1.08) contrast(1.08) drop-shadow(0 3px 7px #000c);
+    }
+    .presenter {
+      position: absolute;
+      z-index: 57;
+      left: 30%;
+      top: 15.5%;
+      width: 40%;
+      font-family: BaddiesRegular, Arial, sans-serif;
+      font-size: 1.45cqw;
+      font-weight: 400;
+      line-height: 1;
+      letter-spacing: .78em;
+      text-align: center;
+      text-transform: uppercase;
+      white-space: nowrap;
+      color: #f3f6f3;
+    }
+
+    .headline {
+      position: absolute;
+      z-index: 10;
+      left: 4.7%;
+      top: 18.4%;
+      width: 90.6%;
+      color: var(--acid);
+      font-family: BaddiesDisplay, Impact, sans-serif;
+      font-size: 31cqw;
+      font-weight: 900;
+      line-height: .74;
+      letter-spacing: -.035em;
+      text-align: center;
+      text-transform: uppercase;
+      white-space: nowrap;
+      transform: scaleX(.87);
+      transform-origin: center top;
+      filter: drop-shadow(0 .35cqw 0 #001b07) drop-shadow(0 0 1.8cqw #00ff3c15);
+    }
+    .headline span { display: inline; }
+
+    .connector-disc {
+      position: absolute;
+      z-index: 48;
+      left: 48.6%;
+      top: 30.35%;
+      width: 9.2%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: radial-gradient(circle at 42% 38%, #07210d 0%, #001407 54%, #000 100%);
+      box-shadow: 0 0 0 .18cqw #00ff3c12, 0 .8cqw 2.3cqw #000b;
+    }
+    .connector {
+      position: absolute;
+      z-index: 52;
+      left: 48.6%;
+      top: 31.2%;
+      width: 9.2%;
+      color: #fff;
+      font-family: BaddiesCondensed, BaddiesDisplay, sans-serif;
+      font-size: 6.4cqw;
+      font-style: italic;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -.06em;
+      text-align: center;
+      text-transform: uppercase;
+      transform: rotate(7deg);
+      transform-origin: center;
+      text-shadow: 0 .35cqw .7cqw #000;
+    }
+
+    .subject {
+      position: absolute;
+      z-index: 40;
+      left: 31%;
+      top: 40.35%;
+      width: 58%;
+      height: 47.8%;
+      object-fit: contain;
+      object-position: center bottom;
+      filter: saturate(1.08) contrast(1.06) brightness(.96) drop-shadow(0 1.4cqw 2.7cqw #000d) drop-shadow(0 0 1.6cqw #00ff3c25);
+    }
+
+    .date-frame {
+      position: absolute;
+      z-index: 43;
+      left: 8.9%;
+      top: 52.8%;
+      width: 18.4%;
+      height: 16.3%;
+      border: .22cqw solid var(--acid);
+      background: linear-gradient(135deg, #00160773, transparent 55%);
+      box-shadow: inset 0 0 1.4cqw #00ff3c0f, 0 0 1.4cqw #0009;
+    }
+    .date {
+      position: absolute;
+      z-index: 46;
+      left: 9.7%;
+      top: 52.35%;
+      width: 16.8%;
+      color: #fff;
+      font-family: BaddiesCondensed, BaddiesDisplay, sans-serif;
+      font-size: 11cqw;
+      font-weight: 300;
+      line-height: .7;
+      text-align: center;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .date .weekday {
+      color: #fff;
+      font-family: BaddiesRegular, Arial, sans-serif;
+      font-size: .24em;
+      font-weight: 400;
+      letter-spacing: .025em;
+      line-height: 1;
+    }
+    .date .day {
+      display: inline-block;
+      color: var(--acid);
+      font-family: BaddiesDisplay, Impact, sans-serif;
+      font-size: 1em;
+      font-weight: 900;
+      line-height: .78;
+      letter-spacing: -.035em;
+      transform: scaleX(.9);
+    }
+    .date .month {
+      display: inline-block;
+      color: #fff;
+      font-family: BaddiesNarrow, BaddiesDisplay, sans-serif;
+      font-size: .5em;
+      font-weight: 400;
+      line-height: .8;
+      letter-spacing: -.02em;
+    }
+
+    .doors {
+      position: absolute;
+      z-index: 58;
+      left: 10.5%;
+      top: 71.4%;
+      width: 18%;
+      color: #fff;
+      font-family: BaddiesDisplay, Impact, sans-serif;
+      font-size: 7.3cqw;
+      font-weight: 900;
+      line-height: .72;
+      letter-spacing: -.02em;
+      text-align: center;
+      text-transform: uppercase;
+      white-space: nowrap;
+      text-shadow: 0 .45cqw .8cqw #000c;
+    }
+    .doors .label {
+      display: inline-block;
+      color: var(--acid);
+      font-family: BaddiesSans, Arial, sans-serif;
+      font-size: .31em;
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -.02em;
+    }
+
+    .support-copy {
+      position: absolute;
+      z-index: 59;
+      left: 9%;
+      width: 22%;
+      color: #fff;
+      font-family: BaddiesSans, Arial, sans-serif;
+      font-size: 2.05cqw;
+      font-weight: 900;
+      line-height: 1.12;
+      letter-spacing: .055em;
+      text-align: center;
+      text-transform: uppercase;
+      white-space: nowrap;
+      text-shadow: 0 .3cqw .7cqw #000e;
+    }
+    .support-copy .label {
+      display: inline-block;
+      color: var(--acid);
+      font-size: .56em;
+      line-height: 1.1;
+      letter-spacing: .02em;
+    }
+    .hype { top: 78.55%; }
+    .dj-lineup { top: 82.2%; }
+
+    .venue-pin {
+      position: absolute;
+      z-index: 61;
+      left: 27.3%;
+      top: 86.6%;
+      width: 2.8%;
+      height: 2.8%;
+      overflow: visible;
+      filter: drop-shadow(0 .25cqw .4cqw #0009);
+    }
+    .venue {
+      position: absolute;
+      z-index: 62;
+      left: 30.8%;
+      top: 86.45%;
+      width: 52.5%;
+      color: #fff;
+      font-family: BaddiesNarrow, BaddiesRegular, Arial, sans-serif;
+      font-size: 4.45cqw;
+      font-weight: 400;
+      line-height: 1;
+      letter-spacing: -.025em;
+      text-align: left;
+      text-transform: uppercase;
+      white-space: nowrap;
+      text-shadow: 0 .4cqw .8cqw #000d;
+    }
+    .venue strong {
+      font-family: BaddiesSans, Arial, sans-serif;
+      font-weight: 900;
+      letter-spacing: -.06em;
+    }
+
+    .address-band {
+      position: absolute;
+      z-index: 64;
+      left: 14.6%;
+      top: 91.35%;
+      width: 70.8%;
+      height: 3.4%;
+      background: linear-gradient(90deg, #00f43a 0%, #00ff45 52%, #00ef36 100%);
+      box-shadow: 0 .45cqw 1.2cqw #0009, inset 0 0 0 .1cqw #75ff942e;
+    }
+    .address {
+      position: absolute;
+      z-index: 65;
+      left: 16.5%;
+      top: 92.22%;
+      width: 67%;
+      color: #001306;
+      font-family: BaddiesSans, Arial, sans-serif;
+      font-size: 1.38cqw;
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: .015em;
+      text-align: center;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .reservation-label,
+    .reservation-value {
+      position: absolute;
+      z-index: 66;
+      top: 95.55%;
+      font-family: BaddiesRegular, Arial, sans-serif;
+      font-size: 1.43cqw;
+      line-height: 1;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .reservation-label {
+      left: 23.7%;
+      width: 31%;
+      color: #f4f7f4;
+      font-weight: 400;
+      letter-spacing: .11em;
+      text-align: right;
+    }
+    .reservation-value {
+      left: 56%;
+      width: 25%;
+      color: #fff;
+      font-family: BaddiesSans, Arial, sans-serif;
+      font-weight: 900;
+      letter-spacing: .025em;
+      text-align: left;
+    }
+
+    .responsible {
+      position: absolute;
+      z-index: 67;
+      left: 5.8%;
+      top: 94%;
+      width: 12.5%;
+      color: #f5f8f5;
+      font-family: BaddiesRegular, Arial, sans-serif;
+      font-size: 1.05cqw;
+      font-weight: 400;
+      line-height: 1;
+      letter-spacing: .13em;
+      text-align: left;
+      text-transform: uppercase;
+      white-space: nowrap;
+      transform: rotate(-90deg);
+      transform-origin: left top;
+    }
+    .age {
+      position: absolute;
+      z-index: 68;
+      left: 4.4%;
+      top: 95.55%;
+      width: 4.4%;
+      height: 1.85%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      background: #f10d18;
+      font-family: BaddiesSans, Arial, sans-serif;
+      font-size: 1.12cqw;
+      font-weight: 900;
+      line-height: 1;
+      text-align: center;
+      white-space: nowrap;
+      box-shadow: 0 .25cqw .6cqw #0009;
+    }
+
+    /* The square is a dedicated editorial adaptation, not a Story crop. */
+    .canvas[data-format="square"] .green-glow { left: 18%; top: 24%; width: 80%; height: 72%; }
+    .canvas[data-format="square"] .stripe-left { left: -8%; top: -10%; width: 20%; height: 75%; }
+    .canvas[data-format="square"] .stripe-orb-top { left: 22%; top: -8%; width: 27%; }
+    .canvas[data-format="square"] .stripe-orb-right { right: -20%; top: 11%; width: 46%; }
+    .canvas[data-format="square"] .stripe-orb-bottom { right: -12%; top: 58%; width: 40%; }
+    .canvas[data-format="square"] .dot-trail { left: 70%; top: 7.5%; width: 20%; height: 2.6%; }
+    .canvas[data-format="square"] .accent-plus { left: 1.5%; top: 28%; width: 4.5%; height: 4.5%; }
+    .canvas[data-format="square"] .accent-waves-left { left: 14%; top: 20%; width: 3.5%; height: 12%; }
+    .canvas[data-format="square"] .accent-waves-right { right: 2.7%; top: 66%; width: 4.5%; height: 12%; }
+    .canvas[data-format="square"] .logo { left: 5%; top: 3%; width: 12.5%; height: 10%; }
+    .canvas[data-format="square"] .presenter { left: 20%; top: 6.2%; width: 31%; font-size: 1.45cqw; text-align: left; }
+    .canvas[data-format="square"] .headline { left: 3.5%; top: 12.5%; width: 93%; font-size: 29cqw; line-height: .73; transform: scaleX(.9); }
+    .canvas[data-format="square"] .connector-disc { left: 47%; top: 29.4%; width: 9.8%; }
+    .canvas[data-format="square"] .connector { left: 47%; top: 30.3%; width: 9.8%; font-size: 6.8cqw; }
+    .canvas[data-format="square"] .subject { left: 41%; top: 30%; width: 56%; height: 62%; }
+    .canvas[data-format="square"] .date-frame { left: 6.2%; top: 49%; width: 20.5%; height: 20.5%; }
+    .canvas[data-format="square"] .date { left: 7%; top: 48.7%; width: 18.9%; font-size: 9cqw; }
+    .canvas[data-format="square"] .doors { left: 7.1%; top: 70%; width: 20%; font-size: 6.2cqw; }
+    .canvas[data-format="square"] .support-copy { left: 6.2%; width: 23%; font-size: 2.15cqw; }
+    .canvas[data-format="square"] .hype { top: 80.7%; }
+    .canvas[data-format="square"] .dj-lineup { top: 85.6%; }
+    .canvas[data-format="square"] .venue-pin { left: 31.2%; top: 88.1%; width: 3.2%; height: 3.2%; }
+    .canvas[data-format="square"] .venue { left: 35%; top: 87.8%; width: 58%; font-size: 4.7cqw; }
+    .canvas[data-format="square"] .address-band { left: 8%; top: 93.1%; width: 84%; height: 3.7%; }
+    .canvas[data-format="square"] .address { left: 10%; top: 94.25%; width: 80%; font-size: 1.43cqw; }
+    .canvas[data-format="square"] .reservation-label,
+    .canvas[data-format="square"] .reservation-value { top: 98%; font-size: 1.35cqw; }
+    .canvas[data-format="square"] .reservation-label { left: 28%; width: 30%; }
+    .canvas[data-format="square"] .reservation-value { left: 59%; width: 30%; }
+    .canvas[data-format="square"] .responsible { left: 3.6%; top: 93%; width: 10%; font-size: 1.05cqw; }
+    .canvas[data-format="square"] .age { left: 2.5%; top: 96%; width: 4.8%; height: 2.7%; font-size: 1.2cqw; }
+
+    /* Story geometry intentionally follows the supplied vertical hierarchy. */
+    .canvas[data-format="story"] .green-glow { left: 11%; top: 28%; width: 83%; height: 62%; }
+    .canvas[data-format="story"] .headline { left: 4.7%; top: 18.4%; width: 90.6%; font-size: 31cqw; line-height: .74; transform: scaleX(.87); }
+    .canvas[data-format="story"] .subject { left: 31%; top: 40.35%; width: 58%; height: 47.8%; }
+  </style>
+</head>
+<body>
+  <main class="canvas" data-coco-canvas data-format="story" aria-label="Baddies N Bundles measurement master">
+    <div class="background" data-region="background" data-coco-object="background" data-coco-asset="background" data-coco-kind="shape" data-coco-editable="true" aria-hidden="true"></div>
+    <div class="green-glow" data-region="green-glow" data-coco-object="greenGlow" data-coco-asset="greenGlow" data-coco-kind="shape" data-coco-editable="true" aria-hidden="true"></div>
+    <div class="stripe-left" data-region="stripe-left" data-coco-object="stripeLeft" data-coco-asset="stripeLeft" data-coco-kind="shape" data-coco-editable="true" aria-hidden="true"></div>
+    <div class="stripe-orb stripe-orb-top" data-region="stripe-orb-top" data-coco-object="stripeOrbTop" data-coco-asset="stripeOrbTop" data-coco-kind="shape" data-coco-editable="true" aria-hidden="true"></div>
+    <div class="stripe-orb stripe-orb-right" data-region="stripe-orb-right" data-coco-object="stripeOrbRight" data-coco-asset="stripeOrbRight" data-coco-kind="shape" data-coco-editable="true" aria-hidden="true"></div>
+    <div class="stripe-orb stripe-orb-bottom" data-region="stripe-orb-bottom" data-coco-object="stripeOrbBottom" data-coco-asset="stripeOrbBottom" data-coco-kind="shape" data-coco-editable="true" aria-hidden="true"></div>
+    <div class="dot-trail" data-region="dot-trail" data-coco-object="dotTrail" data-coco-asset="dotTrail" data-coco-kind="shape" data-coco-editable="true" aria-hidden="true"></div>
+
+    <svg class="accent-plus" data-region="accent-plus" data-coco-object="accentPlus" data-coco-asset="accentPlus" data-coco-kind="svg" data-coco-editable="true" viewBox="0 0 100 100" aria-hidden="true">
+      <path d="M41 0h18v41h41v18H59v41H41V59H0V41h41z" fill="#00ff3c" />
+    </svg>
+    <svg class="accent-waves-left" data-region="accent-waves-left" data-coco-object="accentWavesLeft" data-coco-asset="accentWavesLeft" data-coco-kind="svg" data-coco-editable="true" viewBox="0 0 40 160" aria-hidden="true">
+      <path d="M8 0C-2 14-2 27 8 40s10 27 0 40-10 27 0 40 10 27 0 40M28 0c-10 14-10 27 0 40s10 27 0 40-10 27 0 40 10 27 0 40" fill="none" stroke="#00ff3c" stroke-width="3" />
+    </svg>
+    <svg class="accent-waves-right" data-region="accent-waves-right" data-coco-object="accentWavesRight" data-coco-asset="accentWavesRight" data-coco-kind="svg" data-coco-editable="true" viewBox="0 0 48 190" aria-hidden="true">
+      <path d="M9 0C-2 16-2 31 9 47s11 32 0 48-11 32 0 48 11 31 0 47M37 0c-11 16-11 31 0 47s11 32 0 48-11 32 0 48 11 31 0 47" fill="none" stroke="#00ff3c" stroke-width="3" />
+    </svg>
+
+    <img class="logo" src="/generated-flyers/assets/baddies-n-bundles-logo-v1.png" alt="Classic Bar and Lounge logo" data-region="logo" data-coco-object="logo" data-coco-asset="logo" data-coco-kind="image" data-coco-editable="true" />
+    <div class="presenter" data-region="presenter" data-coco-object="presenter" data-coco-kind="text" data-coco-role="presenter" data-coco-editable="true">Presents</div>
+
+    <div class="headline" data-region="headline" data-coco-object="headline" data-coco-kind="text" data-coco-role="headline" data-coco-editable="true"><span>Baddies</span><br /><span>Bundles</span></div>
+    <div class="connector-disc" data-region="connector-disc" data-coco-object="connectorDisc" data-coco-asset="connectorDisc" data-coco-kind="shape" data-coco-editable="true" aria-hidden="true"></div>
+    <div class="connector" data-region="connector" data-coco-object="connector" data-coco-kind="text" data-coco-role="headline2" data-coco-editable="true">N</div>
+
+    <img class="subject" src="/generated-flyers/assets/baddies-n-bundles-subject-v1.png" alt="Replaceable fashion event subject" data-region="subject" data-coco-object="subject" data-coco-asset="subject" data-coco-kind="image" data-coco-role="subject" data-coco-editable="true" />
+
+    <div class="date-frame" data-region="date-frame" data-coco-object="dateFrame" data-coco-asset="dateFrame" data-coco-kind="shape" data-coco-editable="true" aria-hidden="true"></div>
+    <div class="date" data-region="date" data-coco-object="date" data-coco-kind="text" data-coco-role="date" data-coco-editable="true"><span class="weekday">Saturday</span><br /><span class="day">18</span><br /><span class="month">Jul</span></div>
+    <div class="doors" data-region="doors" data-coco-object="doors" data-coco-kind="text" data-coco-role="time" data-coco-editable="true"><span class="label">Doors Open</span><br />5PM</div>
+    <div class="support-copy hype" data-region="hype" data-coco-object="hype" data-coco-kind="text" data-coco-role="details" data-coco-editable="true"><span class="label">Hyped By</span><br />Hypemanfrosh</div>
+    <div class="support-copy dj-lineup" data-region="dj-lineup" data-coco-object="djLineup" data-coco-kind="text" data-coco-role="djLineup" data-coco-editable="true"><span class="label">Music By</span><br />DJ Pep</div>
+
+    <svg class="venue-pin" data-region="venue-pin" data-coco-object="venuePin" data-coco-asset="venuePin" data-coco-kind="svg" data-coco-editable="true" viewBox="0 0 64 82" aria-hidden="true">
+      <path d="M32 2C15.5 2 2 15.5 2 32c0 22 30 48 30 48s30-26 30-48C62 15.5 48.5 2 32 2z" fill="#fff" />
+      <circle cx="32" cy="32" r="11" fill="#00320f" />
+    </svg>
+    <div class="venue" data-region="venue" data-coco-object="venue" data-coco-kind="text" data-coco-role="venue" data-coco-editable="true">Classic <strong>Lounge</strong></div>
+    <div class="address-band" data-region="address-band" data-coco-object="addressBand" data-coco-asset="addressBand" data-coco-kind="shape" data-coco-editable="true" aria-hidden="true"></div>
+    <div class="address" data-region="address" data-coco-object="address" data-coco-kind="text" data-coco-role="address" data-coco-editable="true">No 3B Oluyole Way, Favours Junction New Bodija, Ibadan.</div>
+    <div class="reservation-label" data-region="reservation-label" data-coco-object="reservationLabel" data-coco-kind="text" data-coco-role="rsvpLabel" data-coco-editable="true">For Info &amp; Reservations:</div>
+    <div class="reservation-value" data-region="reservation-value" data-coco-object="reservationValue" data-coco-kind="text" data-coco-role="rsvp" data-coco-editable="true">+234 814 891 2126</div>
+    <div class="responsible" data-region="responsible" data-coco-object="responsible" data-coco-kind="text" data-coco-role="footerDetails" data-coco-editable="true">Drink Responsibly</div>
+    <div class="age" data-region="age" data-coco-object="age" data-coco-kind="text" data-coco-role="subtag" data-coco-editable="true">18+</div>
+  </main>
+
+  <script>
+    const requestedFormat = new URLSearchParams(location.search).get("format");
+    const format = requestedFormat === "square" || requestedFormat === "story" ? requestedFormat : "story";
+    document.querySelector("[data-coco-canvas]").dataset.format = format;
+  </script>
+</body>
+</html>

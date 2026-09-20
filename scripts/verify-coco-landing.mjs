@@ -1,0 +1,57 @@
+import {chromium} from 'playwright';
+import {expect} from '@playwright/test';
+import assert from 'node:assert/strict';
+import {mkdirSync,readFileSync,writeFileSync} from 'node:fs';
+const out='/tmp/coco-landing';mkdirSync(out,{recursive:true});
+const base=process.env.NF_BASE_URL||'http://localhost:3000';
+const browser=await chromium.launch({headless:true});
+const errors=[];
+try {
+ const context=await browser.newContext({viewport:{width:1440,height:1050},reducedMotion:'reduce'});
+ await context.route('**/api/analytics/**',r=>r.fulfill({json:{ok:true}}));
+ const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(`${base}/landing?utm_source=landing-test`,{waitUntil:'networkidle',timeout:120000});
+ await expect(page.getByRole('heading',{level:1})).toHaveCount(1);
+ await expect(page.getByRole('heading',{name:'Your next flyer. Ready in five.'})).toBeVisible();
+ for(const [id,price] of [['one-flyer',5],['basic',10],['full',15]])await expect(page.getByTestId(`pricing-${id}`)).toContainText(`$${price}`);
+ for(const image of await page.locator('main img').all())await image.evaluate(async el=>{await el.decode();if(!el.naturalWidth)throw Error('missing image')});
+ await page.screenshot({path:`${out}/desktop.png`,fullPage:true});
+ await page.getByLabel('Your event name',{exact:true}).fill('AFTER DARK');
+ const flyer=page.frameLocator('iframe[title="Live editable Girl Code Rose flyer"]');
+ await expect(flyer.locator('.headline')).toHaveText('AFTER');
+ await page.getByRole('button',{name:'Story',exact:true}).click();
+ await expect(flyer.locator('.canvas')).toHaveAttribute('data-format','story');
+ await page.locator('#walkthrough').screenshot({path:`${out}/walkthrough-story.png`});
+ await page.setViewportSize({width:390,height:844});await page.goto(`${base}/landing`,{waitUntil:'networkidle'});
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'no page overflow');
+ await page.screenshot({path:`${out}/mobile.png`,fullPage:true});
+ await page.getByRole('link',{name:'Create with Coco',exact:true}).first().click();
+ await expect(page.getByRole('textbox',{name:'Event name',exact:true})).toBeVisible({timeout:120000});
+ await expect(page.getByRole('heading',{name:'App mode available.'})).toHaveCount(0);
+ await page.screenshot({path:`${out}/direct-coco.png`});
+ await page.getByRole('textbox',{name:'Event name',exact:true}).fill('My Friday');
+ await page.getByRole('button',{name:'Urban',exact:true}).click();
+ await expect(page.getByTestId('coco-build-event-next')).toBeEnabled();
+ await context.close();
+ // A signed-out My flyers visitor gets sign-in with the return destination intact.
+ const signedOut=await browser.newPage();
+ await signedOut.goto(`${base}/?studio=1&flyers=1`,{waitUntil:'domcontentloaded',timeout:120000});
+ await signedOut.waitForURL('**/login?next=**',{timeout:120000});
+ assert.equal(new URL(signedOut.url()).searchParams.get('next'),'/?studio=1&flyers=1');await signedOut.close();
+ // A returning customer can open the library without the landing/startup/install gates.
+ const env=readFileSync('.env.local','utf8');const url=env.match(/^NEXT_PUBLIC_SUPABASE_URL=["']?([^\s"']+)/m)?.[1];
+ const key=`sb-${new URL(url).hostname.split('.')[0]}-auth-token`;
+ const returning=await browser.newContext({viewport:{width:1280,height:900},reducedMotion:'reduce'});
+ await returning.addInitScript(key=>localStorage.setItem(key,JSON.stringify({access_token:'local-landing-test',refresh_token:'local-landing-test',expires_at:Math.floor(Date.now()/1000)+3600,token_type:'bearer',user:{id:'local-landing-test',email:'local-landing@example.test',aud:'authenticated',role:'authenticated',app_metadata:{},user_metadata:{}}})),key);
+ await returning.route('**/auth/v1/**',r=>r.fulfill({json:{id:'local-landing-test',email:'local-landing@example.test'}}));
+ await returning.route('**/api/auth/status',r=>r.fulfill({json:{status:'active',plan:'basic',email:'local-landing@example.test'}}));
+ await returning.route('**/api/auth/profile-bootstrap',r=>r.fulfill({json:{ok:true}}));
+ await returning.route('**/api/analytics/**',r=>r.fulfill({json:{ok:true}}));
+ const user=await returning.newPage();user.on('pageerror',e=>errors.push(e.message));
+ await user.goto(`${base}/?studio=1&flyers=1`,{waitUntil:'domcontentloaded',timeout:120000});
+ await expect(user.getByRole('dialog',{name:'My flyers',exact:true})).toBeVisible({timeout:120000});
+ await expect(user.getByRole('heading',{name:'App mode available.'})).toHaveCount(0);
+ await user.screenshot({path:`${out}/returning.png`});
+ await returning.close();assert.deepEqual(errors,[]);writeFileSync(`${out}/results.json`,JSON.stringify({landing:true,pricing:true,walkthrough:true,mobile:true,directCoco:true,myFlyers:true,errors},null,2));
+ console.log('PASS landing, actual previews, walkthrough, pricing, mobile, direct Coco, returning users; zero page errors');
+}finally{await browser.close();}

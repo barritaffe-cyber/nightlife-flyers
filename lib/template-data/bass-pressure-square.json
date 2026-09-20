@@ -25,14 +25,14 @@
           "color": "#ffffff",
           "sizePx": 80,
           "lineHeight": 1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         },
         "story": {
           "color": "#ffffff",
           "sizePx": 56,
           "lineHeight": 1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         }
       },
@@ -41,14 +41,14 @@
           "color": "#ffffff",
           "sizePx": 28,
           "lineHeight": 1.1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         },
         "story": {
           "color": "#ffffff",
           "sizePx": 28,
           "lineHeight": 1.1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         }
       },
@@ -57,14 +57,14 @@
           "color": "#ffffff",
           "sizePx": 22,
           "lineHeight": 1.1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         },
         "story": {
           "color": "#ffffff",
           "sizePx": 22,
           "lineHeight": 1.1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         }
       },
@@ -73,14 +73,14 @@
           "color": "#ffffff",
           "sizePx": 32,
           "lineHeight": 1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         },
         "story": {
           "color": "#ffffff",
           "sizePx": 32,
           "lineHeight": 1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         }
       },
@@ -89,14 +89,14 @@
           "color": "#ffffff",
           "sizePx": 20,
           "lineHeight": 1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         },
         "story": {
           "color": "#ffffff",
           "sizePx": 20,
           "lineHeight": 1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         }
       }
@@ -739,7 +739,7 @@
         "detailsRotate": 0,
         "details2Enabled": false,
         "details2": "",
-        "details2Family": "Inter",
+        "details2Family": "LEMONMILK-Regular",
         "details2Size": 12,
         "details2LineHeight": 0.7,
         "details2LetterSpacing": 0,
@@ -1981,7 +1981,7 @@
     "detailsTracking": 0.04,
     "detailsRotate": 0,
     "details2": "",
-    "details2Family": "Inter",
+    "details2Family": "LEMONMILK-Regular",
     "details2Size": 12,
     "details2LineHeight": 0.7,
     "details2LetterSpacing": 0,

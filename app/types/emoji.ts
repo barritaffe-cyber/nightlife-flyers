@@ -2,6 +2,8 @@
 
 export type Emoji = {
   id: string;
+  cocoCompiledObjectId?: string;
+  cocoAssetRole?: string;
   kind: 'emoji' | 'flare' | 'sticker';
   char: string;
   x: number;
@@ -24,6 +26,10 @@ export type Emoji = {
   isFlare?: boolean;     // treat as flare (screen blend, no cleanup)
   isSticker?: boolean;   // treat as sticker/graphic
   isTexture?: boolean;   // treat as palette-tintable texture/strip
+  isDesignElement?: boolean; // code-native recipe asset, not a replaceable subject
+  isCircularText?: boolean; // editable circular text SVG
+  circularTextGeometryVersion?: number;
+  circularTextScaleVersion?: number;
   isNightlifeGraphic?: boolean; // use alpha-bounds and editor behavior for app vector graphics
   isExtracted?: boolean;  // treat as an extracted foreground subject/cutout
   isShapeGraphic?: boolean;
@@ -39,9 +45,10 @@ export type Emoji = {
   separatorWidth?: number;
   separatorOffset?: number;
   paletteRole?: 'base' | 'primary' | 'secondary' | 'accent' | 'neutral';
+  cocoContrastRole?: 'shadow';
   layerOffset?: number;  // per-item z-order nudge
   shadowBlur?: number;
   shadowAlpha?: number;
   blur?: number;
-  hitTestMode?: "alpha-bounds";
+  hitTestMode?: "alpha-bounds" | "alpha-envelope";
 };

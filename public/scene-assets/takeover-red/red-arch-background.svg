@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
+  <defs>
+    <radialGradient id="redCore" cx="50%" cy="29%" r="62%">
+      <stop offset="0%" stop-color="#ff2a18" stop-opacity="1"/>
+      <stop offset="38%" stop-color="#b00008" stop-opacity=".86"/>
+      <stop offset="74%" stop-color="#210000" stop-opacity=".72"/>
+      <stop offset="100%" stop-color="#030000" stop-opacity="1"/>
+    </radialGradient>
+    <radialGradient id="sideGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff7a22" stop-opacity=".7"/>
+      <stop offset="62%" stop-color="#ff1a0f" stop-opacity=".18"/>
+      <stop offset="100%" stop-color="#ff1a0f" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="vignette" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#000" stop-opacity=".2"/>
+      <stop offset="55%" stop-color="#000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000" stop-opacity=".92"/>
+    </linearGradient>
+    <filter id="softBlur">
+      <feGaussianBlur stdDeviation="15"/>
+    </filter>
+  </defs>
+  <rect width="1080" height="1080" fill="#020000"/>
+  <rect width="1080" height="1080" fill="url(#redCore)"/>
+  <circle cx="540" cy="330" r="300" fill="url(#sideGlow)" filter="url(#softBlur)"/>
+  <circle cx="260" cy="430" r="170" fill="#ff4a16" opacity=".22" filter="url(#softBlur)"/>
+  <circle cx="820" cy="430" r="190" fill="#ff6a1a" opacity=".18" filter="url(#softBlur)"/>
+  <g fill="none" opacity=".22" stroke-linecap="round">
+    <path d="M170 430C225 170 855 170 910 430" stroke="#ff6a1a" stroke-width="34"/>
+    <path d="M220 425C270 225 810 225 860 425" stroke="#ffbd7a" stroke-width="10" opacity=".45"/>
+    <path d="M120 505C185 220 895 220 960 505" stroke="#7b0004" stroke-width="55" opacity=".55"/>
+  </g>
+  <g opacity=".15">
+    <path d="M86 560C132 454 194 370 272 307" stroke="#ffb070" stroke-width="8" fill="none"/>
+    <path d="M994 560C948 454 886 370 808 307" stroke="#ffb070" stroke-width="8" fill="none"/>
+    <path d="M150 812C228 764 348 740 540 740C732 740 852 764 930 812" stroke="#ff351e" stroke-width="12" fill="none"/>
+  </g>
+  <g opacity=".5" filter="url(#softBlur)">
+    <rect x="416" y="222" width="248" height="210" fill="#ff1f0f" opacity=".24"/>
+    <rect x="488" y="120" width="104" height="520" fill="#ff2e16" opacity=".13"/>
+  </g>
+  <path d="M-60 700C110 650 250 682 404 640C553 600 671 631 812 594C918 566 1020 594 1140 542V1140H-60Z" fill="#020000" opacity=".6"/>
+  <rect width="1080" height="1080" fill="url(#vignette)"/>
+  <rect width="1080" height="1080" fill="#000" opacity=".08"/>
+</svg>

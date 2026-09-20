@@ -40,6 +40,22 @@ const SHAPE_GRAPHIC_SCALE_STEP = 0.005;
 const SHAPE_GRAPHIC_LENGTH_UI_MAX = 1600;
 const SHAPE_GRAPHIC_LENGTH_STEP = 1;
 const CIRCULAR_TEXT_DEFAULT = 'CIRCULAR TEXT / CIRCULAR TEXT /';
+const SOCIAL_ICON_DEFAULT_SCALE = 0.15;
+const SOCIAL_ICON_TOP_LAYER_OFFSET = 180;
+// Only these six platform marks participate in Coco's center-footer social
+// gallery. Every other Graphics & FX asset remains a freely placed object.
+const COCO_CENTER_SOCIAL_PLATFORM_BY_GRAPHIC_ID: Record<string, string> = {
+  instagram_logo: 'instagram',
+  tiktok_logo: 'tiktok',
+  twitter_logo: 'x',
+  whatsapp_logo: 'whatsapp',
+  facebook_logo: 'facebook',
+  youtube_logo: 'youtube',
+};
+
+function cocoCenterSocialPlatformForGraphic(id: string): string | null {
+  return COCO_CENTER_SOCIAL_PLATFORM_BY_GRAPHIC_ID[String(id || '').toLowerCase()] ?? null;
+}
 
 function escapeCircularSvgText(value: string) {
   return value
@@ -49,15 +65,14 @@ function escapeCircularSvgText(value: string) {
     .replace(/"/g, '&quot;');
 }
 
-function normalizeCircularText(value: unknown) {
-  return String(value || '').replace(/\s+/g, ' ').trim() || CIRCULAR_TEXT_DEFAULT;
-}
-
 function buildCircularTextSvgMarkup(text: string, color: string, fontSize = 12) {
-  const chars = Array.from(normalizeCircularText(text).toUpperCase());
+  // The editor must use the same full-circumference geometry as Coco's
+  // generated compliance asset. A smaller legacy radius here made the ring
+  // visibly shrink as soon as its text was edited.
+  const chars = Array.from(String(text ?? '').toUpperCase());
   const size = Math.max(8, Math.min(28, Number(fontSize) || 12));
-  const radius = 46;
-  const arc = Math.min(342, Math.max(160, chars.length * 8.6));
+  const radius = 51;
+  const arc = Math.min(348, Math.max(250, chars.length * 11));
   const startAngle = -90 - arc / 2;
   const step = chars.length > 1 ? arc / Math.max(1, chars.length - 1) : 0;
   const glyphs = chars
@@ -70,7 +85,7 @@ function buildCircularTextSvgMarkup(text: string, color: string, fontSize = 12) 
       return `<text x="${x.toFixed(3)}" y="${y.toFixed(3)}" transform="rotate(${(angle + 90).toFixed(3)} ${x.toFixed(3)} ${y.toFixed(3)})">${escaped}</text>`;
     })
     .join('');
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none"><g fill="${color}" font-family="Inter, Arial, sans-serif" font-size="${size}" font-weight="800" text-anchor="middle" dominant-baseline="central">${glyphs}</g></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none"><g fill="${color}" font-family="LEMONMILK-Medium, BebasNeue-Regular, Arial, sans-serif" font-size="${size}" font-weight="900" text-anchor="middle" dominant-baseline="central">${glyphs}</g></svg>`;
 }
 
 type LibrarySectionProps = {
@@ -81,6 +96,7 @@ type LibrarySectionProps = {
 };
 
 type LibrarySectionKey =
+  | 'compiledLayers'
   | 'emoji'
   | 'uploads'
   | 'nightlife'
@@ -112,6 +128,7 @@ type NightlifeGraphic = {
   label: string;
   paths: ReadonlyArray<string>;
   viewBox?: string;
+  opticalViewBox?: string;
   fillRule?: "evenodd" | "nonzero";
   strokeWidth?: number;
   renderMode?: "stroke" | "fill";
@@ -121,6 +138,8 @@ type GraphicSticker = {
   id: string;
   name: string;
   src: string;
+  kind?: "svg" | "raster";
+  defaultScale?: number;
 };
 
 type FlareItem = {
@@ -210,7 +229,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
     const removeEmoji = useFlyerState((s) => s.removeEmoji);
     const ASSET_LAYER_STEP = 8;
     const ASSET_LAYER_MIN = -120;
-    const ASSET_LAYER_MAX = 160;
+    const ASSET_LAYER_MAX = 180;
     const nudgeAssetLayerOffset = React.useCallback(
       (current: number | undefined, direction: "up" | "down") => {
         const delta = direction === "up" ? ASSET_LAYER_STEP : -ASSET_LAYER_STEP;
@@ -317,8 +336,12 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
 
     const isSocialStickerAsset = React.useCallback(
       (asset: any) => {
+        if (asset?.isSocialIcon) return true;
         const baseId = String(asset?.id || "").split("_")[1] || "";
-        return socialMediaStickers.some((sticker) => sticker.id === baseId);
+        const platform = String(asset?.socialPlatform || "").toLowerCase();
+        return socialMediaStickers.some(
+          (sticker) => sticker.id === baseId || sticker.id === platform
+        );
       },
       [socialMediaStickers]
     );
@@ -392,6 +415,11 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
     const selectedEmoji = emojiList.find((e: any) => e.id === selectedEmojiId) || null;
 
     const portraitList = Array.isArray((portraits as any)?.[format]) ? portraits[format] : [];
+    const compiledLayerAssets = portraitList.filter(
+      (p: any) =>
+        typeof (p as any)?.cocoCompiledObjectId === 'string' &&
+        Boolean(String((p as any).cocoCompiledObjectId).trim())
+    );
     const stickerAssets = portraitList.filter((p: any) => !!p?.isSticker);
     const separatorAssets = stickerAssets.filter((p: any) => !!(p as any)?.isSeparator);
     const shapeAssets = stickerAssets.filter((p: any) => !!(p as any)?.isShapeGraphic);
@@ -399,11 +427,12 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
       (p: any) => !(p as any)?.isSeparator && !(p as any)?.isShapeGraphic
     );
     const nightlifeGraphicAssets = graphicAssets.filter(
-      (p: any) => typeof (p as any)?.svgTemplate === 'string' && !isDesignElementAsset(p)
+      (p: any) =>
+        typeof (p as any)?.svgTemplate === 'string' &&
+        !isDesignElementAsset(p) &&
+        !isSocialStickerAsset(p)
     );
-    const socialStickerAssets = graphicAssets.filter(
-      (p: any) => typeof (p as any)?.svgTemplate !== 'string' && isSocialStickerAsset(p)
-    );
+    const socialStickerAssets = graphicAssets.filter((p: any) => isSocialStickerAsset(p));
     const designElementAssets = graphicAssets.filter((p: any) => isDesignElementAsset(p));
     const graphicStickerAssets = graphicAssets.filter(
       (p: any) =>
@@ -418,6 +447,12 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
       (p: any) => !!p?.isFlare && !p?.isSticker && !!(p as any)?.isTexture
     );
     const selectedPortrait = portraitList.find((p: any) => p.id === selectedPortraitId) || null;
+    const selectedCompiledLayer =
+      selectedPortrait &&
+      typeof (selectedPortrait as any)?.cocoCompiledObjectId === 'string' &&
+      Boolean(String((selectedPortrait as any).cocoCompiledObjectId).trim())
+        ? selectedPortrait
+        : null;
     const selectedSeparator =
       selectedPortrait && !!(selectedPortrait as any)?.isSeparator ? selectedPortrait : null;
     const selectedShape =
@@ -432,7 +467,8 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
     const selectedNightlifeGraphic =
       selectedGraphic &&
       typeof (selectedGraphic as any)?.svgTemplate === 'string' &&
-      !isDesignElementAsset(selectedGraphic)
+      !isDesignElementAsset(selectedGraphic) &&
+      !isSocialStickerAsset(selectedGraphic)
         ? selectedGraphic
         : null;
     const selectedGraphicSticker =
@@ -440,9 +476,8 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
         ? selectedGraphic
         : null;
     const selectedSocialSticker =
-      selectedGraphicSticker && isSocialStickerAsset(selectedGraphicSticker)
-        ? selectedGraphicSticker
-        : null;
+      selectedGraphic && isSocialStickerAsset(selectedGraphic) ? selectedGraphic : null;
+    const selectedSocialControlsRef = React.useRef<HTMLDivElement | null>(null);
     const selectedDesignElement =
       selectedGraphic && isDesignElementAsset(selectedGraphic)
         ? selectedGraphic
@@ -467,7 +502,9 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
       !(selectedPortrait as any)?.isTexture
         ? selectedPortrait
         : null;
-    const selectedLibrarySection: LibrarySectionKey | null = selectedEmoji
+    const selectedLibrarySection: LibrarySectionKey | null = selectedCompiledLayer
+      ? 'compiledLayers'
+      : selectedEmoji
       ? 'emoji'
       : selectedNightlifeGraphic
       ? 'nightlife'
@@ -491,6 +528,18 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
       if (selectedLibrarySection) setActiveLibrarySection(selectedLibrarySection);
     }, [selectedLibrarySection]);
 
+    React.useEffect(() => {
+      if (!selectedSocialSticker) return;
+      const frame = window.requestAnimationFrame(() => {
+        selectedSocialControlsRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'nearest',
+        });
+      });
+      return () => window.cancelAnimationFrame(frame);
+    }, [selectedSocialSticker?.id]);
+
     const isLibrarySectionOpen = React.useCallback(
       (key: LibrarySectionKey) => activeLibrarySection === key,
       [activeLibrarySection]
@@ -499,6 +548,210 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
     const toggleLibrarySection = React.useCallback((key: LibrarySectionKey) => {
       setActiveLibrarySection((prev) => (prev === key ? null : key));
     }, []);
+
+    const compiledLayerDisplayName = React.useCallback((asset: any) => {
+      const raw = String(
+        asset?.label ||
+          asset?.cocoAssetRole ||
+          asset?.cocoCompiledObjectId ||
+          'Canvas layer'
+      ).trim();
+      return raw
+        .replace(/^coco[_-]css[_-]/i, '')
+        .replace(/[_-]+/g, ' ')
+        .replace(/\b\w/g, (character) => character.toUpperCase());
+    }, []);
+
+    const selectCompiledLayer = React.useCallback(
+      (id: string) => {
+        setSelectedEmojiId(null);
+        setSelectedPortraitId(id);
+        setSelectedPanel('icons');
+        setMoveTarget('icon');
+      },
+      [setMoveTarget, setSelectedEmojiId, setSelectedPanel, setSelectedPortraitId]
+    );
+
+    const renderCompiledLayerControls = (sel: any) => {
+      if (!sel) return null;
+      const locked = !!sel.locked;
+      const objectId = String((sel as any).cocoCompiledObjectId || 'layer');
+
+      return (
+        <div
+          className={railCardClass}
+          data-compiled-layer-controls={objectId}
+          data-portrait-area="true"
+          onMouseDown={(event) => event.stopPropagation()}
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          <div className={railHeaderClass}>
+            <span className={railTitleClass}>Selected Canvas Layer</span>
+            <span className={railMetaClass}>{locked ? 'Locked' : 'Editable'}</span>
+          </div>
+
+          <select
+            aria-label="Selected compiled canvas layer"
+            className={railFieldClass}
+            value={sel.id}
+            onChange={(event) => selectCompiledLayer(event.target.value)}
+          >
+            {compiledLayerAssets.map((asset: any) => (
+              <option key={asset.id} value={asset.id}>
+                {compiledLayerDisplayName(asset)}
+                {asset.locked ? ' (locked)' : ''}
+              </option>
+            ))}
+          </select>
+
+          <div className="grid grid-cols-2 gap-2">
+            <InlineSliderInput
+              label="X"
+              value={Number(sel.x ?? 50)}
+              min={-120}
+              max={220}
+              step={0.1}
+              precision={1}
+              disabled={locked}
+              onChange={(next) =>
+                updatePortraitRaf.current?.(sel.id, { x: next })
+              }
+              rangeClassName="flex-1 h-1 appearance-none cursor-pointer bg-neutral-700 accent-emerald-500"
+            />
+            <InlineSliderInput
+              label="Y"
+              value={Number(sel.y ?? 50)}
+              min={-120}
+              max={220}
+              step={0.1}
+              precision={1}
+              disabled={locked}
+              onChange={(next) =>
+                updatePortraitRaf.current?.(sel.id, { y: next })
+              }
+              rangeClassName="flex-1 h-1 appearance-none cursor-pointer bg-neutral-700 accent-teal-500"
+            />
+          </div>
+
+          <InlineSliderInput
+            label="Scale"
+            value={Number(sel.scale ?? 1)}
+            min={0.01}
+            max={5}
+            step={0.01}
+            displayScale={100}
+            precision={0}
+            suffix="%"
+            disabled={locked}
+            onChange={(next) =>
+              updatePortraitRaf.current?.(sel.id, { scale: next })
+            }
+            rangeClassName="flex-1 h-1 appearance-none cursor-pointer bg-neutral-700 accent-blue-500"
+          />
+
+          <InlineSliderInput
+            label="Opacity"
+            value={Number((sel as any).opacity ?? 1)}
+            min={0}
+            max={1}
+            step={0.05}
+            displayScale={100}
+            precision={0}
+            suffix="%"
+            disabled={locked}
+            onChange={(next) =>
+              updatePortraitRaf.current?.(sel.id, { opacity: next })
+            }
+            rangeClassName="flex-1 h-1 appearance-none cursor-pointer bg-neutral-700 accent-indigo-500"
+          />
+
+          <div className="grid grid-cols-2 gap-2">
+            <InlineSliderInput
+              label="Rotation"
+              value={Number((sel as any).rotation ?? 0)}
+              min={-180}
+              max={180}
+              step={1}
+              precision={0}
+              suffix="°"
+              disabled={locked}
+              onChange={(next) =>
+                updatePortraitRaf.current?.(sel.id, { rotation: next })
+              }
+              rangeClassName="flex-1 h-1 appearance-none cursor-pointer bg-neutral-700 accent-violet-500"
+            />
+            <InlineSliderInput
+              label="Tint"
+              value={Number((sel as any).tint ?? 0)}
+              min={-180}
+              max={180}
+              step={5}
+              precision={0}
+              suffix="°"
+              disabled={locked}
+              onChange={(next) =>
+                updatePortraitRaf.current?.(sel.id, { tint: next })
+              }
+              rangeClassName="flex-1 h-1 appearance-none cursor-pointer bg-neutral-700 accent-fuchsia-500"
+            />
+          </div>
+
+          <InlineSliderInput
+            label="Blur"
+            value={Number((sel as any).blur ?? 0)}
+            min={0}
+            max={30}
+            step={1}
+            precision={0}
+            suffix="px"
+            disabled={locked}
+            onChange={(next) =>
+              updatePortraitRaf.current?.(sel.id, { blur: next })
+            }
+            rangeClassName="flex-1 h-1 appearance-none cursor-pointer bg-neutral-700 accent-cyan-500"
+          />
+
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              className={railActionTallClass}
+              onClick={() => nudgePortraitLayer(sel.id, 'up')}
+            >
+              Layer Up
+            </button>
+            <button
+              type="button"
+              className={railActionTallClass}
+              onClick={() => nudgePortraitLayer(sel.id, 'down')}
+            >
+              Layer Down
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              aria-label={locked ? `Unlock ${objectId} layer` : `Lock ${objectId} layer`}
+              className={railActionTallClass}
+              onClick={() => updatePortrait(format, sel.id, { locked: !locked })}
+            >
+              {locked ? 'Unlock' : 'Lock'}
+            </button>
+            <button
+              type="button"
+              aria-label={`Delete ${objectId} layer`}
+              className={railDangerClass}
+              onClick={() => {
+                removePortrait(format, sel.id);
+                setSelectedPortraitId(null);
+              }}
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      );
+    };
 
     const renderStickerControls = (sel: any, items: any[], title: string, deleteLabel: string) => {
       if (!sel) return null;
@@ -1033,7 +1286,8 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
 
     const addVectorSticker = React.useCallback(
       (item: NightlifeGraphic) => {
-        const svgTemplate = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="${item.viewBox || "0 0 128 128"}" ${
+        const socialPlatform = cocoCenterSocialPlatformForGraphic(item.id);
+        const svgTemplate = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="${item.opticalViewBox || item.viewBox || "0 0 128 128"}" ${
           item.renderMode === "fill"
             ? `fill="{{COLOR}}" stroke="none"`
             : `fill="none" stroke="{{COLOR}}" stroke-width="${item.strokeWidth ?? 6}" stroke-linecap="round" stroke-linejoin="round"`
@@ -1050,7 +1304,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
             url,
             x: 50,
             y: 50,
-            scale: 0.6,
+            scale: socialPlatform ? SOCIAL_ICON_DEFAULT_SCALE : 0.6,
             locked: false,
             svgTemplate,
             iconColor: '#ffffff',
@@ -1059,11 +1313,18 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
             hitTestMode: 'alpha-bounds',
             isNightlifeGraphic: true,
             isSticker: true,
+            ...(socialPlatform
+              ? {
+                  isSocialIcon: true,
+                  socialPlatform,
+                  layerOffset: SOCIAL_ICON_TOP_LAYER_OFFSET,
+                }
+              : {}),
           } as any);
           setSelectedPortraitId(id);
           setSelectedPanel('icons');
           setMoveTarget('icon');
-          onPlaceToCanvas?.();
+          if (!socialPlatform) onPlaceToCanvas?.();
         });
       },
       [addPortrait, deferLibraryPlacement, format, onPlaceToCanvas, setMoveTarget, setSelectedPanel, setSelectedPortraitId, svgTemplateToDataUrl]
@@ -1073,32 +1334,35 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
       (item: GraphicSticker) => {
         void (async () => {
           const iconColor = '#ffffff';
-          let svgTemplate: string;
-          try {
-            svgTemplate = await loadDesignElementSvgTemplate(item.src);
-          } catch {
-            return;
+          const isRaster = item.kind === 'raster' || !/\.svg(?:$|[?#])/i.test(item.src);
+          let svgTemplate: string | undefined;
+          let url = item.src;
+          if (!isRaster) {
+            try {
+              svgTemplate = await loadDesignElementSvgTemplate(item.src);
+              url = svgTemplateToDataUrl(svgTemplate, iconColor);
+            } catch {
+              return;
+            }
           }
           const id = `design_${item.id}_${Date.now()}_${Math.random()
             .toString(36)
             .slice(2, 7)}`;
-          const url = svgTemplateToDataUrl(svgTemplate, iconColor);
           deferLibraryPlacement(() => {
             addPortrait(format, {
               id,
               url,
               x: 50,
               y: 50,
-              scale: 1,
+              scale: item.defaultScale ?? 1,
               layerOffset: 55,
               locked: false,
-              svgTemplate,
-              iconColor,
               isSticker: true,
               isDesignElement: true,
               label: item.name,
               showLabel: false,
               hitTestMode: 'alpha-bounds',
+              ...(svgTemplate ? { svgTemplate, iconColor } : {}),
             } as any);
             setSelectedPortraitId(id);
             setSelectedPanel('icons');
@@ -1419,6 +1683,46 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
             <div className="mb-3 text-[12px] leading-5 text-neutral-400">
               Add graphics, separators, textures, light leaks, or uploaded logos.
             </div>
+            {compiledLayerAssets.length > 0 && (
+              <LibrarySection
+                title="Compiled Canvas Layers"
+                open={isLibrarySectionOpen('compiledLayers')}
+                onToggle={() => toggleLibrarySection('compiledLayers')}
+              >
+                <div
+                  className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+                  data-compiled-layer-picker="true"
+                >
+                  {compiledLayerAssets.map((asset: any) => {
+                    const objectId = String(asset.cocoCompiledObjectId || asset.id);
+                    const selected = asset.id === selectedPortraitId;
+                    return (
+                      <button
+                        key={asset.id}
+                        type="button"
+                        aria-label={`Select ${objectId} layer`}
+                        aria-pressed={selected}
+                        onClick={() => selectCompiledLayer(asset.id)}
+                        className={[
+                          'flex min-h-[42px] min-w-0 items-center justify-between gap-2 border px-2.5 py-2 text-left transition',
+                          selected
+                            ? 'border-cyan-300/70 bg-cyan-400/10 text-cyan-50'
+                            : 'border-neutral-800 bg-neutral-950/60 text-neutral-300 hover:border-neutral-600 hover:bg-neutral-900',
+                        ].join(' ')}
+                      >
+                        <span className="min-w-0 truncate text-[11px] font-semibold">
+                          {compiledLayerDisplayName(asset)}
+                        </span>
+                        <span className="shrink-0 text-[9px] uppercase tracking-[0.08em] text-neutral-500">
+                          {asset.locked ? 'Locked' : 'Edit'}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {renderCompiledLayerControls(selectedCompiledLayer)}
+              </LibrarySection>
+            )}
             {showEmojiLibrary && (
               <LibrarySection
                 title="Emoji"
@@ -1915,6 +2219,14 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
               open={isLibrarySectionOpen('social')}
               onToggle={() => toggleLibrarySection('social')}
             >
+              <div ref={selectedSocialControlsRef} data-selected-social-controls="true">
+                {renderStickerControls(
+                  selectedSocialSticker,
+                  socialStickerAssets,
+                  'Selected Social Icon',
+                  'Social Icon'
+                )}
+              </div>
               <div className="grid grid-cols-4 gap-2">
                 {socialMediaStickers.map((sticker) => (
                   <button
@@ -1923,22 +2235,39 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                     className="aspect-square rounded-md bg-neutral-900/60 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-600 transition-all flex items-center justify-center p-2 group relative overflow-hidden"
                     title={`Add ${sticker.name}`}
                     onClick={() => {
+                      const socialPlatform = sticker.id === 'twitter' ? 'x' : sticker.id;
+                      const graphicId = socialPlatform === 'x'
+                        ? 'twitter_logo'
+                        : `${socialPlatform}_logo`;
+                      const opticalGraphic = nightlifeGraphics.find(
+                        (graphic) => graphic.id === graphicId
+                      );
+                      if (opticalGraphic) {
+                        addVectorSticker(opticalGraphic);
+                        return;
+                      }
+                      const isCenterFooterSocial = Boolean(
+                        COCO_CENTER_SOCIAL_PLATFORM_BY_GRAPHIC_ID[graphicId]
+                      );
                       const id = `sticker_${sticker.id}_${Date.now()}`;
                       addPortrait(format, {
                         id,
                         url: sticker.src,
                         x: 50,
                         y: 50,
-                        scale: 0.5,
+                        scale: SOCIAL_ICON_DEFAULT_SCALE,
+                        layerOffset: SOCIAL_ICON_TOP_LAYER_OFFSET,
                         locked: false,
                         isSticker: true,
+                        ...(isCenterFooterSocial
+                          ? { isSocialIcon: true, socialPlatform }
+                          : {}),
                         tintMode: 'colorize',
                         label: sticker.name,
                       } as any);
                       setSelectedPortraitId(id);
                       setSelectedPanel('icons');
                       setMoveTarget('icon');
-                      onPlaceToCanvas?.();
                     }}
                   >
                     <img
@@ -1953,12 +2282,6 @@ const LibraryPanel: React.FC<LibraryPanelProps> = React.memo(
                   </button>
                 ))}
               </div>
-              {renderStickerControls(
-                selectedSocialSticker,
-                socialStickerAssets,
-                'Selected Social Icon',
-                'Social Icon'
-              )}
             </LibrarySection>
 
             {graphicStickers.length > 0 && (

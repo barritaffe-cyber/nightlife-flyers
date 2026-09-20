@@ -274,7 +274,7 @@ export const ART_DIRECTION_PRESETS: Record<Vibe, ArtDirectionPreset> = {
     palette: ["#030014", "#00E5FF", "#FF2BD6", "#FFFFFF"],
     typography: {
       displayFont: "Bebas Neue",
-      supportFont: "Inter",
+      supportFont: "LEMONMILK-Regular",
       scriptFont: "Dear Script (Demo_Font)",
       headlineCase: "uppercase",
       headlineTracking: -5,

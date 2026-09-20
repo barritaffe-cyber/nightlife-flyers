@@ -1,0 +1,117 @@
+import {chromium} from 'playwright';
+import assert from 'node:assert/strict';
+import {readFile,writeFile} from 'node:fs/promises';
+const browser=await chromium.launch({headless:true});
+const context=await browser.newContext({viewport:{width:1500,height:1200},acceptDownloads:true});
+await context.addInitScript(()=>{
+ for(const k of ['nf:pwa-install-ack:v1','nf:onboarded:v1','nf:saveNoticeDismissed','nightlife-flyers:coco-dismissed:v2','nightlife-flyers:coco-seen:v1'])localStorage.setItem(k,'1');
+ sessionStorage.setItem('nightlife-flyers:coco-startup-intro:v1','1');
+});
+const page=await context.newPage();const errors=[];let sentBrief;
+page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
+// Exercise the real browser flow without AI calls or account mutations.
+await page.route('**/api/coco-copy',async r=>{sentBrief=r.request().postDataJSON().eventBrief;await r.fulfill({json:{copy:{headline:'UNTRUSTED SAMPLE TITLE',venue:'SAMPLE VENUE',price:'$999'}}});});
+await page.route('**/api/coco-style',r=>r.fulfill({json:{}}));
+const facts={date:'Dec 1 2026',startTime:'9 PM',endTime:'2 AM',venueName:'Nova Room',address:'47 Grand Avenue',djs:'DJ Ana\nDJ Bea',presenterName:'Nova Events',hosts:'MC Joy',musicPolicy:'R&B / Afro House',entryFee:'£15.50',ageRequirement:'All ages',rsvpContact:'+1 212 555 0100',bookingContact:'+1 212 555 0200',dressCode:'White on jeans',mainPromotion:'Two for one',qrDestination:'https://example.com/scan',socials:'@clubwoods'};
+try{
+ await page.goto((process.env.NF_BASE_URL||'http://127.0.0.1:3001')+'/?guest=1',{waitUntil:'domcontentloaded',timeout:120000});
+ await page.getByRole('button').filter({hasText:'Create with Coco'}).click({timeout:120000});
+ await page.getByLabel('Event name',{exact:true}).fill('Ladies Night');
+ await page.getByTestId('coco-composer-event-description').fill('Rose gold Ladies Night at a lounge, pink script lettering and stylish guests.');
+ await page.getByTestId('coco-composer-image-upload').setInputFiles('public/create-with-coco/backgrounds/background05.jpg');
+ await page.getByTestId('coco-composer-fields').locator('details').evaluateAll(nodes=>nodes.forEach(n=>n.open=true));
+ for(const [key,value] of Object.entries(facts))await page.getByTestId('coco-composer-'+key).fill(value);
+ for(const platform of ['instagram','tiktok'])await page.getByTestId('coco-composer-fields').getByRole('button',{name:platform,exact:true}).click();
+ await page.getByRole('button',{name:'Create 5 options',exact:true}).click();
+ const chooser=page.getByTestId('coco-direction-chooser');await chooser.waitFor({timeout:180000});
+ assert.ok(sentBrief,'form submitted to copy API');for(const [key,value] of Object.entries(facts))assert.equal(sentBrief[key],value,key);
+ console.log('FORM facts preserved',Object.keys(facts).length);
+ const ids=await chooser.locator('[data-coco-direction-id]').evaluateAll(nodes=>nodes.map(n=>n.dataset.cocoDirectionId));console.log('DIRECTIONS',ids);assert.equal(ids.length,5);assert.equal(new Set(ids).size,5);assert.ok(ids.every(id=>['summer-sunset','como-una-boa','brunch-saturday','brunch-vibes','dodge-night-rides','city-nights','mojito-monday','yacht-escape'].includes(id)));
+ const card=chooser.locator('[data-coco-direction-id]').first();
+ await card.getByRole('button',{name:'Use this direction',exact:true}).click();
+ await page.getByTestId('coco-quick-brief-fields').waitFor({timeout:180000});
+ await page.getByTestId('coco-quick-brief-fields').locator('details').evaluateAll(nodes=>nodes.forEach(n=>n.open=true));
+ for(const [key,value] of Object.entries(facts))assert.equal(await page.getByTestId('coco-quick-brief-'+key).inputValue(),value,key);
+ console.log('EDITOR values match');
+ const icon=(platform)=>page.locator(`#artboard [data-coco-compiled-object="coco-form-social-${platform}"]`);
+ await icon('instagram').waitFor();await icon('tiktok').waitFor();
+ await page.getByTestId('coco-quick-brief-fields').getByRole('button',{name:'tiktok',exact:true}).click();
+ await icon('tiktok').waitFor({state:'detached'});
+ await page.getByTestId('coco-quick-brief-fields').getByRole('button',{name:'whatsapp',exact:true}).click();
+ await icon('whatsapp').waitFor();
+ console.log('SOCIAL selections update immediately');
+ await page.getByTestId('coco-quick-brief-venueName').fill('Edited Lounge');
+ await page.getByTestId('coco-quick-brief-entryFee').fill('Free');
+ await page.getByTestId('coco-quick-brief-djs').fill('DJ One\nDJ Two\nDJ Three\nDJ Four');
+ await page.getByTestId('coco-quick-brief-dressCode').fill('');
+ await page.waitForTimeout(2500);
+ for(const format of ['story','square']){
+  await page.getByTestId('coco-quick-format-'+format).click();
+  await page.waitForTimeout(3000);
+  assert.equal(await page.getByTestId('coco-quick-brief-venueName').inputValue(),'Edited Lounge');
+  assert.equal(await page.getByTestId('coco-quick-brief-entryFee').inputValue(),'Free');
+  assert.equal(await page.getByTestId('coco-quick-brief-dressCode').inputValue(),'');
+  assert.equal(await page.getByTestId('coco-quick-brief-djs').inputValue(),'DJ One\nDJ Two\nDJ Three\nDJ Four');
+  await icon('instagram').waitFor();await icon('whatsapp').waitFor();assert.equal(await icon('tiktok').count(),0);
+  for(const platform of ['instagram','whatsapp']){
+   const box=await icon(platform).boundingBox();const canvasBox=await page.locator('#artboard').boundingBox();assert.ok(Math.abs(box.width-box.height)<1,'square icon proportions');assert.ok(box.y>canvasBox.y+canvasBox.height*.7,'icons stay in the footer, not the generic center layout');
+   assert.ok(await icon(platform).locator('img').evaluate(img=>img.complete&&img.naturalWidth>0),'SVG loads');
+  }
+  const ink=await page.locator('#artboard').innerText();assert.ok(ink.includes('@clubwoods'),'social handle visible');
+  const handleNode=page.locator('#artboard [data-coco-compiled-object="coco-form-social-handle"]');
+  const handleBox=await handleNode.boundingBox(), instagramBox=await icon('instagram').boundingBox(), whatsappBox=await icon('whatsapp').boundingBox();
+  assert.ok(handleBox.y>=Math.max(instagramBox.y+instagramBox.height,whatsappBox.y+whatsappBox.height),'handle stays below icons');
+  const canvasBox=await page.locator('#artboard').boundingBox();
+  const groupLeft=Math.min(instagramBox.x,whatsappBox.x), groupRight=Math.max(instagramBox.x+instagramBox.width,whatsappBox.x+whatsappBox.width);
+  const groupCenter=((groupLeft+groupRight)/2-canvasBox.x)/canvasBox.width;
+  const alignment=groupCenter<1/3?'left':groupCenter>2/3?'right':'center';
+  assert.equal(await handleNode.getAttribute('data-coco-compiled-align'),alignment);
+  const handleAnchor=alignment==='left'?handleBox.x:alignment==='right'?handleBox.x+handleBox.width:handleBox.x+handleBox.width/2;
+  const groupAnchor=alignment==='left'?groupLeft:alignment==='right'?groupRight:(groupLeft+groupRight)/2;
+  assert.ok(Math.abs(handleAnchor-groupAnchor)<1,'handle alignment matches icon group');assert.ok(!ink.includes('SAMPLE VENUE')&&!ink.includes('$999'));
+  await page.locator('#artboard').screenshot({path:`/tmp/coco-form-${format}.png`});console.log('FORMAT',format,'synced');
+ }
+ await page.getByTestId('coco-quick-fine-tune').click();
+ const beforeDrag=await icon('instagram').boundingBox();
+ const start={x:beforeDrag.x+beforeDrag.width*.5,y:beforeDrag.y+beforeDrag.height*.13};
+ await page.mouse.move(start.x,start.y);await page.mouse.down();await page.mouse.move(start.x-25,start.y-20,{steps:8});await page.mouse.up();
+ await page.waitForTimeout(500);
+ const afterDrag=await icon('instagram').boundingBox();const dragCanvas=await page.locator('#artboard').boundingBox();assert.ok(afterDrag.x<beforeDrag.x-15,'icon independently draggable');
+ await page.getByRole('button',{name:'Quick Edit',exact:true}).click();
+ const xToggle=page.getByTestId('coco-quick-brief-fields').getByRole('button',{name:'x',exact:true});
+ await xToggle.click();await icon('x').waitFor();await xToggle.click();await icon('x').waitFor({state:'detached'});
+ await page.waitForTimeout(1500);
+ const afterToggle=await icon('instagram').boundingBox();const toggleCanvas=await page.locator('#artboard').boundingBox();
+ const movedPosition=[(afterDrag.x-dragCanvas.x)/dragCanvas.width,(afterDrag.y-dragCanvas.y)/dragCanvas.height];
+ const preservedPosition=[(afterToggle.x-toggleCanvas.x)/toggleCanvas.width,(afterToggle.y-toggleCanvas.y)/toggleCanvas.height];
+ assert.ok(movedPosition.every((value,i)=>Math.abs(value-preservedPosition[i])<.002),'manual icon position survives platform changes: '+JSON.stringify({movedPosition,preservedPosition}));
+ console.log('FINE TUNE position preserved through Quick Edit');
+ const downloadEvent=page.waitForEvent('download');
+ await page.getByTestId('coco-quick-save').click();
+ const download=await downloadEvent;const savedPath='/tmp/coco-form-roundtrip.nflyer';await download.saveAs(savedPath);
+ const saved=JSON.parse(await readFile(savedPath,'utf8'));
+ for(const format of ['square','story']){
+  const v=saved.state.session[format];assert.equal(v.cocoFormMappingVersion,1);
+  assert.deepEqual(v.cocoEventBrief.socialPlatforms,['instagram','whatsapp']);
+  assert.equal(v.portraits.filter(a=>a.id.startsWith('coco-form-social-')).length,2);
+  for(const a of v.portraits.filter(a=>a.id.startsWith('coco-form-social-')))assert.ok(a.isSocialIcon&&a.editorGraphicId&&a.cocoSocialAutoPosition,'editable metadata survives');
+  assert.equal(v.cocoEventBrief.venueName,'Edited Lounge');assert.equal(v.cocoEventBrief.entryFee,'Free');
+  assert.equal(v.cocoEventBrief.bookingContact,facts.bookingContact);assert.equal(v.cocoEventBrief.dressCode,'');
+ }
+ await page.getByTestId('coco-quick-fine-tune').click();
+ const project=page.getByRole('button',{name:'▸ Project',exact:true});
+ if(await page.locator('input[type=file][accept*=json]').count()===0)await project.click();
+ await page.locator('input[type=file][accept*=json]').setInputFiles(savedPath);await page.waitForTimeout(3000);
+ // The saved draft is the authority even when reopening in Fine Tune.
+ if(await page.getByTestId('coco-quick-fine-tune').isVisible())await page.getByTestId('coco-quick-fine-tune').click();
+ const save=page.getByRole('button',{name:'Save Project File',exact:true});
+ if(!await save.isVisible())await project.evaluate(el=>el.click());
+ const [secondDownload]=await Promise.all([page.waitForEvent('download',{timeout:60000}),save.click()]);
+ await secondDownload.saveAs('/tmp/coco-form-reopened.nflyer');
+ const reopened=JSON.parse(await readFile('/tmp/coco-form-reopened.nflyer','utf8'));
+ for(const format of ['square','story']){assert.deepEqual(reopened.state.session[format].cocoEventBrief,saved.state.session[format].cocoEventBrief);assert.deepEqual(reopened.state.session[format].portraits.filter(a=>a.id.startsWith('coco-form-social-')),saved.state.session[format].portraits.filter(a=>a.id.startsWith('coco-form-social-')));}
+ console.log('SAVE / REOPEN preserved both drafts');
+ assert.equal(errors.length,0,errors.join('\n'));
+ await writeFile('/tmp/coco-form-browser-result.json',JSON.stringify({facts:Object.keys(facts),directions:ids,errors},null,2));
+ console.log('PASS form → direction → editor → both formats');
+}catch(e){console.log('FAIL URL',page.url());console.log((await page.locator('body').innerText({timeout:3000}).catch(()=>'' )).slice(-2200));await page.screenshot({path:'/tmp/coco-form-failure.png'});throw e;}finally{await browser.close();}

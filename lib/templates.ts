@@ -1,3 +1,35 @@
+import registeredRecipeTemplates from './template-data/registered-recipes.json';
+import { REMOVED_COCO_RECIPE_IDS } from './coco/removedRecipes';
+import { GALLERY_TEMPLATE_RECIPE_IDS } from './recipes/galleryTemplateRecipes';
+import oneLoveReggaeV2Data from './template-data/one-love-reggae-v2.json';
+import branchHappyHourV2Data from './template-data/branch-happy-hour-v2.json';
+import soireeDreamHouseV2Data from './template-data/soiree-dream-house-v2.json';
+import miamiOceanNightsV2Data from './template-data/miami-ocean-nights-v2.json';
+import karaokeNightV2Data from './template-data/karaoke-night-v2.json';
+import electricSunsetV2Data from './template-data/electric-sunset-v2.json';
+import salsaNocheV2Data from './template-data/salsa-noche-v2.json';
+import sipAndPaintV2Data from './template-data/sip-and-paint-v2.json';
+import afroSunsetV2Data from './template-data/afro-sunset-v2.json';
+import euphoriaV2Data from './template-data/euphoria-v2.json';
+import mojitoMondayV2Data from './template-data/mojito-monday-v2.json';
+import tacoTuesdayV2Data from './template-data/taco-tuesday-v2.json';
+import sugarRushV2Data from './template-data/sugar-rush-v2.json';
+import ladiesSecretV2Data from './template-data/ladies-secret-v2.json';
+import martiniNightV2Data from './template-data/martini-night-v2.json';
+import bassPressureV2Data from './template-data/bass-pressure-v2.json';
+import nocturneMuseV2Data from './template-data/nocturne-muse-v2.json';
+import driftKingzV2Data from './template-data/drift-kingz-v2.json';
+import inCrowdV2Data from './template-data/in-crowd-v2.json';
+import enBlancV2Data from './template-data/en-blanc-v2.json';
+import auraV2Data from './template-data/aura-v2.json';
+import slowJamzV2Data from './template-data/slow-jamz-v2.json';
+import mindStateV2Data from './template-data/mind-state-v2.json';
+import mardiGrasV2Data from './template-data/mardi-gras-v2.json';
+import miamiStreetV2Data from './template-data/miami-street-v2.json';
+import miamiNightsV2Data from './template-data/miami-nights-v2.json';
+import yachtEscapeV2Data from './template-data/yacht-escape-v2.json';
+import sunsetYachtV2Data from './template-data/sunset-yacht-v2.json';
+import afrobeatRooftopV2Data from './template-data/afrobeat-rooftop-v2.json';
 import { PRESETS } from '../lib/presets';
 import type { Emoji } from "../app/types/emoji";
 import { buildShapeSvgMarkup } from './shapeGraphics';
@@ -23,7 +55,12 @@ import blackTieLayout2Data from './template-data/black-tie-layout-2.json';
 import discoMirrorballData from './template-data/disco-mirrorball.json';
 import afrobeatRooftopData from './template-data/afrobeat-rooftop.json';
 import fantasyData from './template-data/fantasy.json';
+import fantasyV2Data from './template-data/fantasy-v2.json';
+import discoV2Data from './template-data/disco-v2.json';
+import blackTieV2Data from './template-data/black-tie-v2.json';
+import dayPartyV2Data from './template-data/day-party-v2.json';
 import newYorkData from './template-data/new-york.json';
+import newYorkV2Data from './template-data/new-york-v2.json';
 import bassPressureSquareData from './template-data/bass-pressure-square.json';
 import bassPressureStoryData from './template-data/bass-pressure-story.json';
 import rnbVelvetData from './template-data/rnb-velvet.json';
@@ -38,6 +75,7 @@ import mardiGrasData from './template-data/mardi-gras.json';
 import latinStreetTropicalData from './template-data/latin-street-tropical.json';
 import latinStreetTropicalStoryData from './template-data/latin-street-tropical-story.json';
 import throwbackData from './template-data/throwback.json';
+import throwbackV2Data from './template-data/throwback-v2.json';
 import throwbackStoryData from './template-data/throwback-story.json';
 
 // Quick reference: emoji characters we commonly bake into templates
@@ -1280,6 +1318,20 @@ export type RectPct = {
   height: number;
 };
 
+export type CocoHeadlinePlan = {
+  version: 1;
+  source: 'image-safe-zone';
+  format: 'square' | 'story';
+  /** Includes the center-layout option so zones cannot leak between grammars. */
+  layoutId: string;
+  text: string;
+  lines: string[];
+  lineCount: number;
+  fontSize: number;
+  reason?: string;
+  zone: RectPct & { align?: 'left' | 'center' | 'right' };
+};
+
 export type TemplatePalette = {
   bgFrom: string;
   bgTo: string;
@@ -1287,6 +1339,63 @@ export type TemplatePalette = {
   secondary?: string;
   accent?: string;
   neutral?: string;
+};
+
+export type TemplateCompositionRole = {
+  id: string;
+  kind:
+    | 'background'
+    | 'badge'
+    | 'copy'
+    | 'footer'
+    | 'headline'
+    | 'subject'
+    | 'texture'
+    | 'utility';
+  purpose: string;
+  required?: boolean;
+  editable?: boolean;
+  bounds?: RectPct;
+  layer: 'background' | 'behindSubject' | 'subject' | 'foreground' | 'utility';
+  notes?: string[];
+};
+
+export type TemplateOverlapRule = {
+  objects: string[];
+  allowed: boolean;
+  maxCoveragePercent?: number;
+  response: string;
+};
+
+export type TemplateCompositionRecipe = {
+  referenceMode?: 'measurement-only' | 'visual-inheritance';
+  referenceTemplateId?: string;
+  referenceUses?: string[];
+  deniedReferenceUses?: string[];
+  canvas: {
+    format: Format;
+    safeArea: RectPct;
+  };
+  roles: TemplateCompositionRole[];
+  layoutRules: string[];
+  overlapRules: TemplateOverlapRule[];
+  generationSteps: string[];
+};
+
+export type TemplateMeasurementReference = {
+  mode: 'measurement-only';
+  sourceTemplateId: string;
+  allowedUses: string[];
+  deniedUses: string[];
+  measurements: Record<string, RectPct | { x: number; y: number; scale: number } | number | string>;
+};
+
+export type TemplateTargetAssets = {
+  backgroundUrl?: string;
+  subjectUrl?: string;
+  footerUrl?: string;
+  dateBadgeUrl?: string;
+  notes?: string[];
 };
 
 // === TemplateSpec unified interface ======================================
@@ -1304,6 +1413,41 @@ export interface TemplateBase {
   textFx?: TextFx;
   textLayerOffset?: Partial<Record<'headline' | 'headline2' | 'details' | 'details2' | 'venue' | 'subtag', number>>;
   subjectVisibleRect?: RectPct;
+  subjectSideVisibleRect?: RectPct;
+  subjectFaceRect?: RectPct;
+  subjectSideFaceRect?: RectPct;
+  cocoCompositionMap?: unknown;
+  cocoCompositionSystem?: unknown;
+  cocoRenderPlan?: unknown;
+  cocoTypographyStack?: unknown;
+  /** Shared campaign choices that both Square and Story must consume. */
+  cocoCampaignId?: string;
+  cocoCampaignDirectionId?: string;
+  /** Curated visual recipe that authored this editable Coco construction. */
+  cocoVisualRecipeId?: string;
+  cocoVisualRecipeSummary?: string;
+  cocoVisualRecipeVersion?: number;
+  /** Recipe version that actually materialized this editable canvas. */
+  cocoVisualRecipeMaterializedVersion?: number;
+  cocoSubjectLayoutId?: 'subject-center' | 'subject-left' | 'subject-right';
+  cocoColorSelection?: unknown;
+  /** Persistent editable grouping used by Coco-authored compositions. */
+  cocoObjectGroups?: unknown;
+  cocoTextReferenceTemplateId?: string;
+  cocoTextReferenceScore?: number;
+  cocoGeneratedCopy?: unknown;
+  /** The measured line lockup selected for this format's image-safe title zone. */
+  cocoHeadlineVariant?: string;
+  /** Versioned image-analysis authority used by preview, save, and export. */
+  cocoHeadlinePlan?: CocoHeadlinePlan | null;
+  cocoBackgroundOnlyHero?: boolean;
+  /** User-subject quality and explicit recipe-fallback consent. */
+  cocoSubjectDecision?: unknown;
+  cocoHeroImageFace?: unknown;
+  cocoHeroImageFit?: unknown;
+  subjectScaleBoost?: number;
+  headlineSizeBoost?: number;
+  sideScriptY?: number;
   mainTitleRect?: RectPct;
   ghostTitleRect?: RectPct;
   scriptRect?: RectPct;
@@ -1322,6 +1466,8 @@ export interface TemplateBase {
   bgY?: number;
   bgScale?: number;
   bgRotate?: number;
+  bgUrl?: string | null;
+  bgUploadUrl?: string | null;
   backgroundUrl?: string;
   palette?: TemplatePalette;
   bgBlur?: number;
@@ -1418,6 +1564,9 @@ export interface TemplateBase {
   headGlassHighlightColor?: string;
   headGlassBlur?: number;
   headGlassGlow?: number;
+  headGlassSpecular?: number;
+  headMetalBlur?: number;
+  headPremiumPreset?: import("../headline-presets/collection").HeadlinePresetId | null;
   headGlassStroke?: number;
   headGlassFillAlpha?: number;
   headKineticEnabled?: boolean;
@@ -1508,6 +1657,7 @@ export interface TemplateBase {
   // DETAILS 1
   // -----------------------------------------------------
   details?: string;
+  detailsLabel?: string;
   detailsFamily?: string;
   detailsAlign?: 'left' | 'center' | 'right';
   detailsX?: number;
@@ -1521,6 +1671,7 @@ export interface TemplateBase {
   detailsShadow?: boolean;
   detailsShadowStrength?: number;
   detailsTracking?: number;
+  bodyTracking?: number;
   detailsUppercase?: boolean;
   detailsRotate?: number;
   detailsLineHeight?: number;
@@ -1530,6 +1681,11 @@ export interface TemplateBase {
   // -----------------------------------------------------
   details2Enabled?: boolean;
   details2?: string;
+  djLineupLabel?: string;
+  djLineupLabelFamily?: string;
+  djLineupLabelSize?: number;
+  djLineupLabelColor?: string;
+  djLineupLabelBgColor?: string;
   details2Family?: string;
   details2X?: number;
   details2Y?: number;
@@ -1672,6 +1828,7 @@ export interface TemplateBase {
   leftRailLineHeight?: number;
   leftRailFamily?: string;
   leftRailColor?: string;
+  leftRailAlign?: 'left' | 'center' | 'right';
   leftRailRotation?: number;
 
   rightRailEnabled?: boolean;
@@ -1682,7 +1839,11 @@ export interface TemplateBase {
   rightRailLineHeight?: number;
   rightRailFamily?: string;
   rightRailColor?: string;
+  rightRailAlign?: 'left' | 'center' | 'right';
   rightRailRotation?: number;
+
+  cocoSocialHandleFamily?: string;
+  cocoSocialHandleAlign?: 'left' | 'center' | 'right';
 
   dateEnabled?: boolean;
   date?: string;
@@ -1694,17 +1855,72 @@ export interface TemplateBase {
   dateColor?: string;
   dateAlign?: 'left' | 'center' | 'right';
   dateRotation?: number;
+  timeLabel?: string;
+  timeLabelSize?: number;
+  timeLabelColor?: string;
+  timeLabelBgColor?: string;
+  time?: string;
+  timeSize?: number;
+  timeLineHeight?: number;
+  timeX?: number;
+  timeY?: number;
+  /** Rush Night's editable compound date-rail typography. */
+  cocoRushDateStyles?: {
+    metaSize: number;
+    daySize: number;
+    openingSize: number;
+    monthSize?: number;
+    timeLabelSize?: number;
+    timeSize?: number;
+    metaColor: string;
+    dayColor: string;
+    openingColor: string;
+    monthColor?: string;
+    timeLabelColor?: string;
+    timeColor?: string;
+    ruleColor: string;
+  };
+  /** Rush Night's editable two-line venue lockup typography. */
+  cocoRushVenueStyles?: {
+    venueNameSize: number;
+    addressSize: number;
+    gap: number;
+    venueNameColor: string;
+    addressColor: string;
+  };
 
   priceEnabled?: boolean;
   price?: string;
+  priceLabel?: string;
+  priceLabelSize?: number;
+  priceLabelColor?: string;
+  priceLabelBgColor?: string;
   priceX?: number;
   priceY?: number;
   priceSize?: number;
   priceLineHeight?: number;
   priceScale?: number;
+  /** Controls the optional circular frame without hiding the price text. */
+  priceRingEnabled?: boolean;
+  /** Opacity of the optional circular price frame, from 0 to 1. */
+  priceRingAlpha?: number;
   priceFamily?: string;
   priceColor?: string;
   priceAlign?: 'left' | 'center' | 'right';
+
+  complianceEnabled?: boolean;
+  compliance?: string;
+  complianceLabel?: string;
+  complianceLabelSize?: number;
+  complianceLabelColor?: string;
+  complianceLabelBgColor?: string;
+  complianceX?: number;
+  complianceY?: number;
+  complianceSize?: number;
+  complianceLineHeight?: number;
+  complianceFamily?: string;
+  complianceColor?: string;
+  complianceAlign?: 'left' | 'center' | 'right';
 
   qrEnabled?: boolean;
   qrX?: number;
@@ -1741,9 +1957,16 @@ export interface TemplateSpec {
   style?: string;
   bgPrompt?: string;
   preview: string;
+  referenceMode?: 'measurement-only' | 'visual-inheritance';
+  referenceTemplateId?: string;
+  referenceUses?: string[];
+  deniedReferenceUses?: string[];
+  measurementReference?: TemplateMeasurementReference;
+  targetAssets?: TemplateTargetAssets;
   recipeId?: string;
   recipeSummary?: string;
   compositionGuardrails?: string[];
+  compositionRecipe?: TemplateCompositionRecipe;
 
   // Root-level emojis (applied before format-level)
   emojis?: Emoji[];
@@ -1758,13 +1981,611 @@ export interface TemplateSpec {
 
 export const SQUARE_NIGHTLIFE_LAYOUT_TEMPLATES: TemplateSpec[] = [
   {
+    id: 'triple_hero_takeover_red',
+    label: 'Sunday Takeover Flyer',
+    tags: ['Club', 'Takeover', 'Subject', 'Nightlife', 'Square'],
+    style: 'urban',
+    bgPrompt:
+      'Create a premium red nightclub takeover flyer background: deep black edges, hot red central glow, subtle arch/venue depth, warm orange highlights, smoke, dark lower vignette, and open center space for one main subject. Background only: no people, no text, no logos, no watermark.',
+    preview: '/scene-assets/takeover-red/preview.svg',
+    referenceMode: 'measurement-only',
+    referenceTemplateId: 'square_center_hero_nightlife',
+    referenceUses: [
+      'subject size relative to the square canvas',
+      'subject anchor and visible safe zone',
+      'headline placement and safe bounds',
+      'support text placement and safe bounds',
+      'layer-order measurements',
+      'overlap rules',
+    ],
+    deniedReferenceUses: [
+      'background asset',
+      'subject/cutout asset',
+      'icons and stickers',
+      'color palette',
+      'font styling',
+      'finished visual look',
+    ],
+    measurementReference: {
+      mode: 'measurement-only',
+      sourceTemplateId: 'square_center_hero_nightlife',
+      allowedUses: [
+        'subject size relative to the square canvas',
+        'subject anchor and visible safe zone',
+        'headline placement and safe bounds',
+        'support text placement and safe bounds',
+        'layer-order measurements',
+        'overlap rules',
+      ],
+      deniedUses: [
+        'background asset',
+        'subject/cutout asset',
+        'icons and stickers',
+        'color palette',
+        'font styling',
+        'finished visual look',
+      ],
+      measurements: {
+        portrait: { x: 55.3, y: 70.2, scale: 0.39 },
+        subjectVisibleRect: { x: 21.8, y: 15.2, width: 56, height: 84.8 },
+        subjectSideVisibleRect: { x: 0, y: 8.5, width: 36.8, height: 91.5 },
+        subjectFaceRect: { x: 39.4, y: 19.3, width: 25.35, height: 25.35 },
+        subjectSideFaceRect: { x: 7.25, y: 19.3, width: 25.35, height: 25.35 },
+        subjectScaleBoost: 1.146,
+        headlineSizeBoost: 3,
+        sideScriptY: 36.8,
+        mainTitleRect: { x: 5.9, y: 64.1, width: 86, height: 22 },
+        scriptRect: { x: 20, y: 55.6, width: 54, height: 10 },
+        leftMetaRect: { x: 5, y: 41, width: 25, height: 13 },
+        rightMetaRect: { x: 73, y: 34, width: 18, height: 21 },
+        priceRect: { x: 75, y: 35, width: 14, height: 9 },
+        footerRect: { x: 30, y: 92.5, width: 56, height: 6 },
+      },
+    },
+    targetAssets: {
+      backgroundUrl: '/scene-assets/takeover-red/red-arch-background.svg',
+      subjectUrl: '/dj-templates/club01/subject.png',
+      footerUrl: '/scene-assets/takeover-red/torn-paper-band.svg',
+      dateBadgeUrl: '/scene-assets/takeover-red/red-date-badge.svg',
+      notes: [
+        'These are Sunday Takeover target assets, not reference-template assets.',
+        'The subject asset is a placeholder until the user uploads a portrait.',
+      ],
+    },
+    recipeSummary:
+      'Sunday Takeover red club design using square_center_hero_nightlife only as a measurement reference for subject scale, title zones, support text lanes, and layer order.',
+    compositionGuardrails: [
+      'Use the reference template for measurements only.',
+      'Do not inherit the reference background, cutout, colors, icons, or finished look.',
+      'Keep the Sunday Takeover red club art direction.',
+      'Scale the subject to the measured center-hero zone before placing text.',
+      'Keep headline, side copy, date, price, and footer lanes inside their measured safe zones.',
+    ],
+    compositionRecipe: {
+      referenceMode: 'measurement-only',
+      referenceTemplateId: 'square_center_hero_nightlife',
+      referenceUses: [
+        'subject size relative to the square canvas',
+        'subject anchor and visible safe zone',
+        'headline placement and safe bounds',
+        'support text placement and safe bounds',
+        'layer-order measurements',
+        'overlap rules',
+      ],
+      deniedReferenceUses: [
+        'background asset',
+        'subject/cutout asset',
+        'icons and stickers',
+        'color palette',
+        'font styling',
+        'finished visual look',
+      ],
+      canvas: {
+        format: 'square',
+        safeArea: { x: 4, y: 4, width: 92, height: 92 },
+      },
+      roles: [
+        {
+          id: 'background',
+          kind: 'background',
+          purpose: 'Sunday Takeover red club background owned by this template.',
+          required: true,
+          editable: false,
+          bounds: { x: 0, y: 0, width: 100, height: 100 },
+          layer: 'background',
+        },
+        {
+          id: 'subjectPrimary',
+          kind: 'subject',
+          purpose: 'Hero subject fitted to the measured center-hero cutout zone.',
+          required: true,
+          editable: true,
+          bounds: { x: 21.8, y: 15.2, width: 56, height: 84.8 },
+          layer: 'subject',
+          notes: [
+            'Measurement source: square_center_hero_nightlife subjectVisibleRect.',
+            'Use the zone size, not the reference cutout asset.',
+            'If replaced, fit the visible silhouette into this same hero zone before moving text.',
+          ],
+        },
+        {
+          id: 'mainHeadline',
+          kind: 'headline',
+          purpose: 'Main TAKE OVER title placed in the measured lower headline zone.',
+          required: true,
+          editable: true,
+          bounds: { x: 5.9, y: 64.1, width: 86, height: 22 },
+          layer: 'foreground',
+          notes: ['Measurement source: square_center_hero_nightlife mainTitleRect.'],
+        },
+        {
+          id: 'scriptHeadline',
+          kind: 'headline',
+          purpose: 'Sunday hook attached to the top edge of the lower headline zone.',
+          required: true,
+          editable: true,
+          bounds: { x: 20, y: 55.6, width: 54, height: 10 },
+          layer: 'foreground',
+        },
+        {
+          id: 'leftInfo',
+          kind: 'copy',
+          purpose: 'Music and DJ billing in the left side lane.',
+          required: true,
+          editable: true,
+          bounds: { x: 5, y: 41, width: 25, height: 13 },
+          layer: 'foreground',
+        },
+        {
+          id: 'rightInfo',
+          kind: 'copy',
+          purpose: 'Entry and promo rules in the right side lane.',
+          required: true,
+          editable: true,
+          bounds: { x: 73, y: 34, width: 18, height: 21 },
+          layer: 'foreground',
+        },
+        {
+          id: 'date',
+          kind: 'badge',
+          purpose: 'Date and time in the lower-left utility lane.',
+          required: true,
+          editable: true,
+          bounds: { x: 8, y: 87, width: 16, height: 11 },
+          layer: 'utility',
+        },
+        {
+          id: 'price',
+          kind: 'utility',
+          purpose: 'Entry price in the right promo lane.',
+          required: true,
+          editable: true,
+          bounds: { x: 75, y: 35, width: 14, height: 9 },
+          layer: 'foreground',
+        },
+        {
+          id: 'venue',
+          kind: 'footer',
+          purpose: 'Venue and amenities in the bottom footer lane.',
+          required: true,
+          editable: true,
+          bounds: { x: 30, y: 92.5, width: 56, height: 6 },
+          layer: 'utility',
+        },
+      ],
+      layoutRules: [
+        'Read the reference template as measurement data only.',
+        'Place the Sunday Takeover subject in the measured center-hero visible zone.',
+        'Place TAKE OVER in the measured lower headline zone.',
+        'Attach the Sunday script hook to the upper edge of the headline zone.',
+        'Keep left and right support copy outside the measured subject zone.',
+        'Keep date, price, and footer utility copy in their dedicated lanes.',
+      ],
+      overlapRules: [
+        {
+          objects: ['subjectPrimary', 'mainHeadline'],
+          allowed: true,
+          maxCoveragePercent: 10,
+          response: 'Hero combo. Ask the user if they want to keep it.',
+        },
+        {
+          objects: ['subjectPrimary', 'leftInfo'],
+          allowed: false,
+          response: 'Move the side copy away from the subject.',
+        },
+        {
+          objects: ['subjectPrimary', 'rightInfo'],
+          allowed: false,
+          response: 'Move the promo lane away from the subject.',
+        },
+      ],
+      generationSteps: [
+        'Load the Sunday Takeover red background plate.',
+        'Place the subject by reference measurements, not by copying the reference subject.',
+        'Place TAKE OVER and Sunday into the target headline stack.',
+        'Place DJ, entry, date, venue, and utility copy into the target support lanes.',
+        'Run overlap and contrast checks before polish.',
+      ],
+    },
+    formats: {
+      square: {
+        backgroundUrl: '/scene-assets/takeover-red/red-arch-background.svg',
+        palette: {
+          bgFrom: '#160000',
+          bgTo: '#020000',
+          primary: '#ffffff',
+          secondary: '#ff1a10',
+          accent: '#ff7a18',
+          neutral: '#f6f2e8',
+        },
+        headline: 'TAKE\nOVER',
+        headlineFamily: 'Bebas Neue',
+        headlineSize: 104,
+        headlineHeight: 0.76,
+        headlineLineHeight: 0.76,
+        lineHeight: 0.76,
+        headSizeAuto: false,
+        headMaxPx: 104,
+        headColor: '#ffffff',
+        headStrokeWidth: 0,
+        headStrokeColor: '#ffffff',
+        headGlow: 0.08,
+        headX: 16,
+        headY: 61.8,
+        headAlign: 'center',
+        headShadow: true,
+        headShadowStrength: 0.62,
+        headBehindPortrait: false,
+        headTracking: -0.045,
+        headItalic: false,
+        headlineItalic: false,
+        headlineBold: true,
+        headlineUppercase: true,
+        headlineHidden: false,
+        headRotate: 0,
+        headSkew: 0,
+        headGradient: false,
+        headGlassEnabled: false,
+        headGlassPaletteLinked: false,
+        headGlassPrimaryColor: '#FF4FDB',
+        headGlassSecondaryColor: '#2AA7FF',
+        headGlassHighlightColor: '#7e88cd',
+        headGlassBlur: 5,
+        headGlassGlow: 21.5,
+        headGlassStroke: 0.5,
+        headGlassFillAlpha: 0.12,
+        headRetroShadowEnabled: true,
+        headRetroShadowAlpha: 1,
+        textFx: {
+          uppercase: true,
+          bold: true,
+          italic: false,
+          underline: false,
+          alpha: 1,
+          tracking: -0.045,
+          gradient: false,
+          gradFrom: '#ffffff',
+          gradTo: '#ffffff',
+          color: '#ffffff',
+          strokeWidth: 0,
+          strokeColor: '#ffffff',
+          shadow: 0.62,
+          glow: 0.08,
+          shadowEnabled: true,
+        },
+
+        head2Enabled: true,
+        head2line: 'Sunday',
+        head2Family: 'OpenScript',
+        head2Color: '#fff6df',
+        head2Align: 'center',
+        head2Size: 72,
+        head2X: 18,
+        head2Y: 55.6,
+        head2Shadow: true,
+        head2ShadowStrength: 1,
+        head2Alpha: 1,
+        head2LineHeight: 0.86,
+        head2TrackEm: -0.02,
+        head2ColWidth: 58,
+        head2Rotate: -8,
+        head2Skew: 0,
+        head2Fx: {
+          uppercase: false,
+          bold: true,
+          italic: false,
+          underline: false,
+          alpha: 1,
+          tracking: 0,
+          gradient: false,
+          gradFrom: '#fff6df',
+          gradTo: '#ff9a25',
+          color: '#fff6df',
+          strokeWidth: 0,
+          strokeColor: '#000000',
+          shadow: 1,
+          glow: 0.25,
+          shadowEnabled: true,
+        },
+
+        details: 'MUSIC\nDJ SYNTH\nDJ MAGIX',
+        detailsLineHeight: 0.72,
+        detailsX: 6.2,
+        detailsY: 43.2,
+        bodyColor: '#ffffff',
+        detailsColor: '#ffffff',
+        detailsAlign: 'left',
+        detailsFamily: 'Bebas Neue',
+        bodyFamily: 'Bebas Neue',
+        detailsSize: 18,
+        detailsTracking: 0.02,
+        detailsShadow: true,
+        detailsShadowStrength: 1,
+        detailsUppercase: true,
+        detailsBold: true,
+        detailsItalic: false,
+        detailsUnderline: false,
+        detailsRotate: 0,
+
+        details2Enabled: true,
+        details2: 'GIRLS FREE\nBEFORE\n10PM',
+        details2Family: 'Bebas Neue',
+        details2Size: 15,
+        details2X: 78.6,
+        details2Y: 49.7,
+        details2Color: '#ffffff',
+        details2Align: 'center',
+        details2LineHeight: 0.75,
+        details2LetterSpacing: 0.01,
+        details2Shadow: true,
+        details2ShadowStrength: 1,
+        details2Uppercase: true,
+        details2Bold: true,
+        details2Italic: false,
+        details2Underline: false,
+        details2Rotate: 0,
+
+        venue: 'CLUB ZERO\n1029 BOULEVARD AVENUE,\nLANDMARK NEW YORK, 3677\nDRINKS | HOOKAH |',
+        venueX: 38.8,
+        venueY: 93.6,
+        venueColor: '#111111',
+        venueSize: 9,
+        venueFamily: 'Bebas Neue',
+        venueAlign: 'left',
+        venueLineHeight: 0.72,
+        venueShadow: false,
+        venueShadowStrength: 0,
+        venueUppercase: true,
+        venueBold: true,
+        venueItalic: false,
+        venueRotate: 0,
+
+        subtagEnabled: true,
+        subtag: '18+',
+        subtagX: 83.4,
+        subtagY: 94.9,
+        subtagSize: 15,
+        subtagFamily: 'Bebas Neue',
+        subtagTextColor: '#ffffff',
+        subtagBgColor: '#ff1410',
+        subtagAlpha: 1,
+        subtagAlign: 'center',
+        subtagUppercase: true,
+        subtagBold: true,
+        subtagItalic: false,
+        subtagUnderline: false,
+        subtagShadow: true,
+        subtagShadowStrength: 1,
+        subtagRotate: 0,
+        pillAlpha: 0,
+
+        presenterEnabled: true,
+        presenter: 'GALAXI ENT\nPRESENTS',
+        presenterX: 32,
+        presenterY: 5.7,
+        presenterWidth: 36,
+        presenterSize: 15,
+        presenterLineHeight: 0.72,
+        presenterFamily: 'Bebas Neue',
+        presenterColor: '#ffffff',
+        presenterAlign: 'center',
+        presenterRotation: 0,
+
+        dateEnabled: true,
+        date: '24TH\nAPRIL\n10PM',
+        dateX: 12.6,
+        dateY: 93,
+        dateSize: 17,
+        dateLineHeight: 0.72,
+        dateFamily: 'Bebas Neue',
+        dateColor: '#ffffff',
+        dateAlign: 'center',
+        dateRotation: 0,
+
+        priceEnabled: true,
+        price: 'ENTRY\n$50',
+        priceX: 80.7,
+        priceY: 38.3,
+        priceSize: 21,
+        priceLineHeight: 0.74,
+        priceFamily: 'Bebas Neue',
+        priceColor: '#ffffff',
+        priceAlign: 'center',
+
+        rightRailEnabled: true,
+        rightRail: 'DRINK\nRESPONSIBLY',
+        rightRailX: 89.8,
+        rightRailY: 76.5,
+        rightRailSize: 10,
+        rightRailLineHeight: 0.75,
+        rightRailFamily: 'Bebas Neue',
+        rightRailColor: '#ffffff',
+        rightRailRotation: 90,
+
+        qrEnabled: false,
+        qrX: 90,
+        qrY: 8,
+        qrScale: 0.55,
+
+        bgPosX: 50,
+        bgPosY: 50,
+        bgScale: 1,
+        vignette: true,
+        vignetteStrength: 0.72,
+        haze: 0.24,
+        grade: 0.52,
+        leak: 0.14,
+        hue: 0,
+        clarity: 0.16,
+        contrast: 1.16,
+        saturation: 1.14,
+        warmth: 0.18,
+        vibrance: 0.16,
+        filmGrade: 0.74,
+        exp: 1.05,
+        tint: 0,
+        gamma: 1,
+        grain: 0.2,
+        bgBlur: 0,
+        bgRotate: 0,
+        textureOpacity: 0.12,
+
+        textColWidth: 82,
+        align: 'center',
+        textAlign: 'center',
+        portraitX: 55.3,
+        portraitY: 70.2,
+        portraitScale: 0.39,
+        portraitLocked: false,
+        subjectVisibleRect: { x: 21.8, y: 15.2, width: 56, height: 84.8 },
+        mainTitleRect: { x: 5.9, y: 64.1, width: 86, height: 22 },
+        scriptRect: { x: 20, y: 55.6, width: 54, height: 10 },
+        leftMetaRect: { x: 5, y: 41, width: 25, height: 13 },
+        rightMetaRect: { x: 73, y: 34, width: 18, height: 21 },
+        footerRect: { x: 30, y: 92.5, width: 56, height: 6 },
+        priceRect: { x: 75, y: 35, width: 14, height: 9 },
+        textZones: {
+          promoter: { x: 32, y: 5.7, width: 36, height: 7, align: 'center' },
+          centerSubject: { x: 21.8, y: 15.2, width: 56, height: 84.8, align: 'center' },
+          sideSupportLeft: { x: 7.5, y: 18, width: 35, height: 42, align: 'center' },
+          sideSupportRight: { x: 58, y: 18, width: 34, height: 42, align: 'center' },
+          leftDjLane: { x: 5, y: 41, width: 25, height: 13, align: 'left' },
+          rightPriceLane: { x: 73, y: 34, width: 18, height: 21, align: 'center' },
+          scriptTitle: { x: 20, y: 55.6, width: 54, height: 10, align: 'center' },
+          blockHeadline: { x: 5.9, y: 64.1, width: 86, height: 22, align: 'center' },
+          dateBadge: { x: 8.4, y: 88.8, width: 16, height: 10.5, align: 'center' },
+          footerInfo: { x: 30, y: 92.5, width: 56, height: 6, align: 'left' },
+          rightUtility: { x: 83, y: 76, width: 10, height: 21, align: 'center' },
+        },
+        textLayerOffset: {
+          headline: 116,
+          headline2: 118,
+          details: 116,
+          details2: 116,
+          venue: 118,
+          subtag: 120,
+        },
+        emojiList: [
+          {
+            id: 'takeover_red_subject_center',
+            kind: 'sticker',
+            char: '',
+            url: '/dj-templates/club01/subject.png',
+            isExtracted: true,
+            blendMode: 'normal',
+            x: 55.3,
+            y: 70.2,
+            scale: 0.39,
+            rotation: 0,
+            opacity: 1,
+            locked: false,
+            tint: 0,
+            tintMode: 'hue',
+            layerOffset: 68,
+            shadowBlur: 22,
+            shadowAlpha: 0.44,
+            showLabel: false,
+            labelBg: true,
+          },
+          {
+            id: 'takeover_red_footer_paper',
+            kind: 'sticker',
+            char: '',
+            url: '/scene-assets/takeover-red/torn-paper-band.svg',
+            isSticker: true,
+            blendMode: 'normal',
+            x: 55,
+            y: 96,
+            scale: 0.43,
+            rotation: -1,
+            opacity: 0.98,
+            locked: false,
+            layerOffset: 55,
+            tint: 0,
+          },
+          {
+            id: 'takeover_red_date_badge',
+            kind: 'sticker',
+            char: '',
+            url: '/scene-assets/takeover-red/red-date-badge.svg',
+            isSticker: true,
+            blendMode: 'normal',
+            x: 14.2,
+            y: 94.1,
+            scale: 0.28,
+            rotation: 0,
+            opacity: 1,
+            locked: false,
+            layerOffset: 56,
+            tint: 0,
+          },
+          {
+            id: 'takeover_red_age_badge',
+            kind: 'sticker',
+            char: '',
+            svgTemplate: buildShapeSvgMarkup('shape_circle', '{{COLOR}}', false),
+            iconColor: '#ff1410',
+            isSticker: true,
+            isShapeGraphic: true,
+            shapeKind: 'shape_circle',
+            shapeGradient: false,
+            blendMode: 'normal',
+            x: 84.2,
+            y: 95,
+            scale: 0.14,
+            rotation: 0,
+            opacity: 1,
+            locked: false,
+            layerOffset: 57,
+            tint: 0,
+          },
+          {
+            id: 'takeover_red_center_glow',
+            kind: 'flare',
+            char: '',
+            url: '/scene-assets/neon-club/glow-overlay.svg',
+            isFlare: true,
+            blendMode: 'screen',
+            x: 50,
+            y: 42,
+            scale: 1.05,
+            rotation: 0,
+            opacity: 0.38,
+            locked: true,
+            layerOffset: -24,
+            tint: 0,
+          },
+        ],
+      },
+    },
+  },
+  {
     id: 'square_center_hero_nightlife',
     label: 'DJ Night Flyer',
     tags: ['Square', 'Center', 'Hero', 'Nightlife'],
     style: 'urban',
     bgPrompt: 'Create a premium cinematic nightclub background plate for an event flyer. The center must stay open for a cutout portrait, with a soft crimson volumetric glow behind that subject area. Use deep black edges, rich red atmosphere, subtle fog layers, faint red particles, gentle film grain, and barely visible city-light texture for depth. Keep the left and right side lanes darker so typography remains readable. The mood should feel polished, expensive, editorial, and high contrast, like a luxury club poster background. Background only: no people, no faces, no silhouettes, no text, no logos, no signage, no watermark, no foreground objects.',
     preview: '/scene-assets/center-hero/background-editor.jpg',
-    recipeId: 'center-hero-subject-title-system',
     recipeSummary: 'Subject-first center hero: huge title behind the cutout, ghost title depth, script accent, and metadata locked to lanes.',
     compositionGuardrails: [
       'Use one extracted hero subject only.',
@@ -2613,7 +3434,7 @@ export const SQUARE_NIGHTLIFE_LAYOUT_TEMPLATES: TemplateSpec[] = [
         details2Y: 65,
         details2Size: 18,
         details2Color: '#FFFFFF',
-        details2Family: 'Inter',
+        details2Family: 'LEMONMILK-Regular',
         details2Align: 'left',
         details2Shadow: true,
 
@@ -2622,7 +3443,7 @@ export const SQUARE_NIGHTLIFE_LAYOUT_TEMPLATES: TemplateSpec[] = [
         venueY: 89,
         venueColor: '#FFFFFF',
         venueSize: 18,
-        venueFamily: 'Inter',
+        venueFamily: 'LEMONMILK-Light',
         venueAlign: 'left',
         venueShadow: true,
 
@@ -2631,7 +3452,7 @@ export const SQUARE_NIGHTLIFE_LAYOUT_TEMPLATES: TemplateSpec[] = [
         dateX: 89,
         dateY: 17,
         dateSize: 16,
-        dateFamily: 'Inter',
+        dateFamily: 'Bebas Neue',
         dateColor: '#FFFFFF',
         dateAlign: 'center',
         dateRotation: 90,
@@ -2735,7 +3556,7 @@ export const SQUARE_NIGHTLIFE_LAYOUT_TEMPLATES: TemplateSpec[] = [
         detailsY: 17,
         bodyColor: '#FFFFFF',
         detailsAlign: 'center',
-        detailsFamily: 'Inter',
+        detailsFamily: 'Bebas Neue',
         detailsShadow: true,
 
         details2Enabled: true,
@@ -2744,7 +3565,7 @@ export const SQUARE_NIGHTLIFE_LAYOUT_TEMPLATES: TemplateSpec[] = [
         details2Y: 48,
         details2Size: 18,
         details2Color: '#FFFFFF',
-        details2Family: 'Inter',
+        details2Family: 'LEMONMILK-Regular',
         details2Align: 'center',
         details2Shadow: true,
         details2Rotate: 90,
@@ -2754,7 +3575,7 @@ export const SQUARE_NIGHTLIFE_LAYOUT_TEMPLATES: TemplateSpec[] = [
         venueY: 92,
         venueColor: '#F5EA23',
         venueSize: 16,
-        venueFamily: 'Inter',
+        venueFamily: 'LEMONMILK-Light',
         venueShadow: true,
 
         dateEnabled: true,
@@ -2762,7 +3583,7 @@ export const SQUARE_NIGHTLIFE_LAYOUT_TEMPLATES: TemplateSpec[] = [
         dateX: 10,
         dateY: 50,
         dateSize: 18,
-        dateFamily: 'Inter',
+        dateFamily: 'Bebas Neue',
         dateColor: '#FFFFFF',
         dateAlign: 'center',
         dateRotation: 90,
@@ -2874,6 +3695,15 @@ const cloneTemplateBase = (base: TemplateBase): TemplateBase => ({
   head2Fx: base.head2Fx ? { ...base.head2Fx } : undefined,
   textLayerOffset: base.textLayerOffset ? { ...base.textLayerOffset } : undefined,
   subjectVisibleRect: base.subjectVisibleRect ? { ...base.subjectVisibleRect } : undefined,
+  subjectSideVisibleRect: base.subjectSideVisibleRect ? { ...base.subjectSideVisibleRect } : undefined,
+  subjectFaceRect: base.subjectFaceRect ? { ...base.subjectFaceRect } : undefined,
+  subjectSideFaceRect: base.subjectSideFaceRect ? { ...base.subjectSideFaceRect } : undefined,
+  cocoCompositionMap: base.cocoCompositionMap,
+  cocoCompositionSystem: base.cocoCompositionSystem,
+  cocoRenderPlan: base.cocoRenderPlan,
+  cocoTypographyStack: base.cocoTypographyStack,
+  cocoTextReferenceTemplateId: base.cocoTextReferenceTemplateId,
+  cocoTextReferenceScore: base.cocoTextReferenceScore,
   mainTitleRect: base.mainTitleRect ? { ...base.mainTitleRect } : undefined,
   ghostTitleRect: base.ghostTitleRect ? { ...base.ghostTitleRect } : undefined,
   scriptRect: base.scriptRect ? { ...base.scriptRect } : undefined,
@@ -3425,7 +4255,7 @@ const createEdmTunnelSquareLayout2 = (base: TemplateBase): TemplateBase => {
     detailsShadowStrength: 0.7,
     details2Enabled: false,
     details2: '',
-    details2Family: 'Inter',
+    details2Family: 'LEMONMILK-Regular',
     details2Size: 12,
     details2LineHeight: 0.7,
     details2LetterSpacing: 0,
@@ -3813,6 +4643,16 @@ const HIDDEN_TEMPLATE_IDS = new Set([
   'square_right_hero_left_text',
   'square_left_hero_right_text',
   'industrial_muscle_hero',
+  // User-selected delete batch. Preserve definitions/assets for existing projects.
+  'ladies_night_center_hero',
+  'triple_hero_takeover_red',
+  'red_velvet_editorial',
+  'hiphop_graffiti',
+  'bottle_service',
+  'summer_splash',
+  'techno_warehouse',
+  'luau_tiki',
+  'hiphop_lowrider',
 ]);
 
 const WHITE_MINIMAL_SQUARE_ASSETS: Emoji[] = [
@@ -4048,9 +4888,230 @@ const WHITE_MINIMAL_STORY_ASSETS: Emoji[] = WHITE_MINIMAL_SQUARE_ASSETS.map((ite
   return { ...item };
 });
 
+const buildRedVelvetEditorialVariant = (format: Format): TemplateBase => {
+  const story = format === 'story';
+  const ivory = '#F7F1E8';
+  const accent = '#E6BF55';
+
+  return {
+    format,
+    cocoSubjectLayoutId: 'subject-left',
+    backgroundUrl: '/create-with-coco/red-velvet-editorial-hero.png',
+    bgUrl: '/create-with-coco/red-velvet-editorial-hero.png',
+    bgPosX: 50,
+    bgPosY: story ? 50 : 49,
+    bgScale: 1,
+    bgRotate: 0,
+    bgBlur: 0,
+    vignette: true,
+    vignetteStrength: story ? 0.25 : 0.22,
+    textureOpacity: 0,
+    haze: 0,
+    grade: 0,
+    leak: 0,
+    clarity: 0,
+    exp: 1,
+    contrast: 1.06,
+    saturation: 0.92,
+    warmth: 0.04,
+    tint: 0,
+    gamma: 1,
+    grain: 0.035,
+    vibrance: 0,
+    filmGrade: 0,
+    palette: {
+      bgFrom: '#030303',
+      bgTo: '#120706',
+      primary: ivory,
+      secondary: '#8E261F',
+      accent,
+      neutral: '#B9B2AA',
+    },
+
+    headline: 'RED\nVELVET',
+    headlineFamily: 'LEMONMILK-Bold',
+    headlineSize: story ? 112 : 88,
+    headMaxPx: story ? 112 : 88,
+    headSizeAuto: false,
+    headlineLineHeight: 0.76,
+    lineHeight: 0.76,
+    textColWidth: story ? 72 : 66,
+    headColor: ivory,
+    headX: story ? 14 : 20,
+    headY: story ? 47 : 46,
+    headAlign: 'center',
+    textAlign: 'center',
+    align: 'center',
+    headBold: true,
+    headlineBold: true,
+    headUppercase: true,
+    headlineUppercase: true,
+    headTracking: -0.055,
+    headShadow: true,
+    headShadowStrength: story ? 0.42 : 0.38,
+    headGradient: false,
+    headGlow: 0,
+    headStrokeWidth: 0,
+    headRotate: 0,
+    headSkew: 0,
+    textFx: {
+      uppercase: true,
+      bold: true,
+      italic: false,
+      underline: false,
+      alpha: 1,
+      tracking: -0.055,
+      gradient: false,
+      gradFrom: ivory,
+      gradTo: ivory,
+      color: ivory,
+      strokeWidth: 0,
+      strokeColor: '#000000',
+      shadow: story ? 0.42 : 0.38,
+      glow: 0,
+      shadowColor: '#000000',
+      shadowBlur: story ? 10 : 8,
+      shadowOffsetX: 0,
+      shadowOffsetY: story ? 4 : 3,
+      shadowEnabled: true,
+    },
+    head2Enabled: false,
+
+    presenterEnabled: true,
+    presenter: 'LEVEL 47',
+    presenterX: 50,
+    presenterY: story ? 5 : 6.5,
+    presenterWidth: story ? 34 : 32,
+    presenterSize: story ? 14 : 12,
+    presenterLineHeight: 1,
+    presenterFamily: 'LEMONMILK-Light',
+    presenterColor: ivory,
+    presenterAlign: 'center',
+
+    dateEnabled: true,
+    date: 'THUR\nDEC 10\n10PM',
+    dateX: story ? 9 : 10,
+    dateY: story ? 15 : 16,
+    dateSize: story ? 28 : 24,
+    dateLineHeight: 0.9,
+    dateFamily: 'LEMONMILK-Light',
+    dateColor: ivory,
+    dateAlign: 'left',
+
+    subtagEnabled: true,
+    subtag: 'CHAMPAGNE AFTER DARK',
+    subtagX: story ? 37.5 : 39.5,
+    subtagY: story ? 69 : 75.5,
+    subtagSize: story ? 15 : 12,
+    subtagFamily: 'Bebas Neue',
+    subtagTextColor: accent,
+    subtagBgColor: 'rgba(0,0,0,0)',
+    subtagAlign: 'center',
+    subtagUppercase: true,
+    subtagBold: false,
+    subtagShadow: false,
+    subtagAlpha: 1,
+    pillAlpha: 0,
+
+    details: 'MUSIC BY\nDJ FLIP\nDJ FLOP',
+    detailsX: 14,
+    detailsY: story ? 77 : 82,
+    detailsSize: story ? 18 : 15,
+    detailsLineHeight: 0.92,
+    detailsFamily: 'Bebas Neue',
+    detailsColor: ivory,
+    detailsAlign: 'left',
+    detailsUppercase: true,
+    detailsBold: true,
+    detailsTracking: 0.015,
+    detailsShadow: true,
+    detailsShadowStrength: 0.28,
+
+    details2Enabled: true,
+    details2: 'HIP HOP • AFROBEATS\nOPEN FORMAT',
+    details2X: story ? 67 : 70,
+    details2Y: story ? 77 : 82,
+    details2Size: story ? 16 : 13,
+    details2LineHeight: 0.96,
+    details2Family: 'Bebas Neue',
+    details2Color: ivory,
+    details2Align: 'right',
+    details2Uppercase: true,
+    details2Bold: true,
+    details2Shadow: true,
+    details2ShadowStrength: 0.28,
+
+    venueEnabled: true,
+    venue: '3712 EAST INDUSTRIAL WAY  •  @LEVEL47',
+    venueX: story ? 25 : 31,
+    venueY: story ? 92.5 : 95,
+    venueSize: story ? 13 : 10,
+    venueLineHeight: 1,
+    venueFamily: 'LEMONMILK-Light',
+    venueColor: '#D6D0C8',
+    venueAlign: 'center',
+    venueUppercase: true,
+    venueShadow: true,
+    venueShadowStrength: 0.22,
+
+    priceEnabled: false,
+    complianceEnabled: false,
+    qrEnabled: false,
+    portraitEnabled: false,
+    emojisEnabled: false,
+    emojiList: [],
+    mainTitleRect: { x: 11, y: story ? 46 : 43, width: 78, height: story ? 23 : 25 },
+    scriptRect: { x: 34, y: story ? 69 : 68, width: 32, height: 5 },
+    leftMetaRect: { x: 14, y: 75, width: 32, height: story ? 14 : 15 },
+    rightMetaRect: { x: 54, y: 75, width: 32, height: story ? 14 : 15 },
+    footerRect: { x: 17, y: story ? 90.5 : 91, width: 66, height: 7 },
+    subjectVisibleRect: { x: story ? 14 : 17, y: story ? 18 : 20, width: story ? 72 : 66, height: story ? 82 : 80 },
+    subjectFaceRect: { x: 39, y: story ? 25 : 24, width: 22, height: story ? 21 : 22 },
+  };
+};
+
+const RED_VELVET_EDITORIAL_TEMPLATE: TemplateSpec = {
+  id: 'red_velvet_editorial',
+  label: 'Editorial Hero — Red Velvet',
+  tags: ['Editorial', 'Luxury', 'Minimal', 'R&B', 'Portrait'],
+  style: 'luxury',
+  bgPrompt:
+    'Create a near-black fashion editorial portrait with one fully clothed subject, restrained oxblood accents, generous negative space, and a clean lower field for oversized white typography. No text, logos, borders, badges, neon, or crowd.',
+  preview: '/create-with-coco/red-velvet-editorial-hero.png',
+  referenceMode: 'visual-inheritance',
+  referenceTemplateId: 'center-07-geometric-title',
+  referenceUses: [
+    'one dominant geometric headline lockup',
+    'restrained black, ivory, and single-accent palette',
+    'date and identity in the upper field',
+    'two compact supporting information columns',
+    'quiet venue footer',
+  ],
+  deniedReferenceUses: [
+    'reference person identity',
+    'reference venue branding',
+    'reference event copy',
+    'baked text',
+  ],
+  recipeSummary:
+    'A sparse fashion-editorial poster with one hero image/title relationship and progressively quieter supporting information.',
+  compositionGuardrails: [
+    'The photograph and event title own most of the visual attention.',
+    'Use one geometric title treatment and one restrained accent color.',
+    'Never add cards, diagonal slabs, decorative badges, or filler copy.',
+    'Show the venue or address once.',
+    'Keep supporting copy in two compact columns below the hero lockup.',
+  ],
+  formats: {
+    square: buildRedVelvetEditorialVariant('square'),
+    story: buildRedVelvetEditorialVariant('story'),
+  },
+};
+
 
 const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
   ...SQUARE_NIGHTLIFE_LAYOUT_TEMPLATES.filter((template) => !HIDDEN_TEMPLATE_IDS.has(template.id)),
+  RED_VELVET_EDITORIAL_TEMPLATE,
   {
     id: 'white_minimal',
     label: 'White Minimal — Clean Event',
@@ -4244,7 +5305,7 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
         presenterY: 7.5,
         presenterWidth: 40,
         presenterSize: 10,
-        presenterFamily: 'Inter',
+        presenterFamily: 'Bebas Neue',
         presenterColor: '#ffffff',
         presenterAlign: 'center',
         presenterRotation: 0,
@@ -4253,7 +5314,7 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
         leftRailX: 3.5,
         leftRailY: 53,
         leftRailSize: 10,
-        leftRailFamily: 'Inter',
+        leftRailFamily: 'LEMONMILK-Regular',
         leftRailColor: '#ffffff',
         leftRailRotation: -90,
         rightRailEnabled: true,
@@ -4444,7 +5505,7 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
         bodyColor: '#222222',
         detailsColor: '#222222',
         detailsAlign: 'center',
-        detailsFamily: 'Inter',
+        detailsFamily: 'Bebas Neue',
         detailsSize: 16,
         detailsUppercase: true,
         detailsBold: true,
@@ -4490,7 +5551,7 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
 
         subtagEnabled: false,
         subtag: 'Subtag',
-        subtagFamily: 'Inter',
+        subtagFamily: 'LEMONMILK-Regular',
         subtagSize: 12,
         subtagTextColor: '#31C2F6',
         subtagBgColor: '#1F0505',
@@ -4513,7 +5574,7 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
         presenterY: 7.5,
         presenterWidth: 40,
         presenterSize: 10,
-        presenterFamily: 'Inter',
+        presenterFamily: 'Bebas Neue',
         presenterColor: '#F0EDED',
         presenterAlign: 'center',
         presenterRotation: 0,
@@ -4522,7 +5583,7 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
         leftRailX: 3.5,
         leftRailY: 53,
         leftRailSize: 10,
-        leftRailFamily: 'Inter',
+        leftRailFamily: 'LEMONMILK-Regular',
         leftRailColor: '#31C2F6',
         leftRailRotation: -90,
         rightRailEnabled: false,
@@ -4530,7 +5591,7 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
         rightRailX: 86.8,
         rightRailY: 36,
         rightRailSize: 10,
-        rightRailFamily: 'Inter',
+        rightRailFamily: 'LEMONMILK-Regular',
         rightRailColor: '#31C2F6',
         rightRailRotation: 90,
         dateEnabled: false,
@@ -4752,7 +5813,7 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
 
         details2Enabled: false,
         details2: '',
-        details2Family: 'Inter',
+        details2Family: 'LEMONMILK-Regular',
         details2X: 50,
         details2Y: 85,
         details2Size: 12,
@@ -4954,7 +6015,7 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
 
         details2Enabled: true,
         details2: '21+ Event',
-        details2Family: 'Inter',
+        details2Family: 'Bebas Neue',
         details2X: 35.6,
         details2Y: 94.4,
         details2Size: 36,
@@ -6235,7 +7296,7 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
         presenterY: 7.5,
         presenterWidth: 40,
         presenterSize: 10,
-        presenterFamily: 'Inter',
+        presenterFamily: 'Bebas Neue',
         presenterColor: '#E6DBDE',
         presenterAlign: 'center',
         presenterRotation: 0,
@@ -6520,7 +7581,7 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
         presenterY: 7.5,
         presenterWidth: 40,
         presenterSize: 10,
-        presenterFamily: 'Inter',
+        presenterFamily: 'Bebas Neue',
         presenterColor: '#E6DBDE',
         presenterAlign: 'center',
         presenterRotation: 0,
@@ -8714,7 +9775,7 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
         presenterWidth: 40,
         presenterSize: 10,
         presenterLineHeight: 0.7,
-        presenterFamily: 'Inter',
+        presenterFamily: 'Bebas Neue',
         presenterColor: '#ffffff',
         presenterAlign: 'center',
         presenterRotation: 0,
@@ -9181,7 +10242,7 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
         detailsY: 71.2,
         bodyColor: '#dbeafe',
         detailsAlign: 'center',
-        detailsFamily: 'Inter',
+        detailsFamily: 'Bebas Neue',
         detailsSize: 16,
 
         venue: 'SOHO LOUNGE',
@@ -9249,7 +10310,7 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
         detailsY: 58.2,
         bodyColor: '#dbeafe',
         detailsAlign: 'center',
-        detailsFamily: 'Inter',
+        detailsFamily: 'Bebas Neue',
         detailsSize: 16,
 
         venue: 'SOHO LOUNGE',
@@ -9736,7 +10797,7 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
         head2ShadowStrength: 1,
 
         details: 'FEB 25 • 9 PM\nCOSTUMES WELCOME\nOPEN BAR',
-        detailsFamily: 'Inter',
+        detailsFamily: 'Bebas Neue',
         detailsSize: 18,
         detailsLineHeight: 0.75,
         detailsColor: '#e5e7eb',
@@ -9818,7 +10879,7 @@ const RAW_TEMPLATE_GALLERY: TemplateSpec[] = [
         head2ShadowStrength: 1,
 
         details: 'FEB 25 • 9 PM\nCOSTUMES WELCOME\nOPEN BAR',
-        detailsFamily: 'Inter',
+        detailsFamily: 'Bebas Neue',
         detailsSize: 18,
         detailsLineHeight: 0.75,
         detailsColor: '#e5e7eb',
@@ -11424,6 +12485,7 @@ if (blackTieTemplate) {
 }
 
 const discoMirrorballTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'disco_mirrorball');
+
 if (discoMirrorballTemplate) {
   discoMirrorballTemplate.formats = {
     ...(discoMirrorballTemplate.formats ?? {}),
@@ -11434,10 +12496,11 @@ if (discoMirrorballTemplate) {
 
 const afrobeatRooftopTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'afrobeat_rooftop');
 if (afrobeatRooftopTemplate) {
+  afrobeatRooftopTemplate.label = 'Afrobeat — Rooftop Sessions';
   afrobeatRooftopTemplate.formats = {
     ...(afrobeatRooftopTemplate.formats ?? {}),
-    square: AFROBEAT_ROOFTOP_SQUARE,
-    story: AFROBEAT_ROOFTOP_STORY,
+    square: afrobeatRooftopV2Data.square as unknown as TemplateBase,
+    story: afrobeatRooftopV2Data.story as unknown as TemplateBase,
   };
 }
 
@@ -11489,7 +12552,7 @@ const STARTER_TEMPLATE_PREVIEWS: Record<string, string> = {
   dnb_bunker: '/samples/optimized/dnb.png',
   disco_mirrorball: '/samples/optimized/disco.png',
   rnb_velvet: '/samples/optimized/r&b.png',
-  afrobeat_rooftop: '/samples/optimized/afro.webp',
+  afrobeat_rooftop: '/generated-flyers/afrobeat-rooftop-square-preview.png',
   square_center_hero_nightlife: '/samples/optimized/dj-night.webp',
   ladies_night_center_hero: '/samples/optimized/nocturne.webp',
   kpop_pastel_led: '/samples/optimized/mojito.webp',
@@ -11517,13 +12580,44 @@ Object.entries(STARTER_TEMPLATE_PREVIEWS).forEach(([id, preview]) => {
   }
 });
 
+// User-authorized replacement restores this previously hidden gallery slot.
+const mindStateTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'edm_stage_co2');
+if (mindStateTemplate) {
+  mindStateTemplate.label = 'Mind State — Arctic Metal';
+  mindStateTemplate.preview = '/generated-flyers/mind-state-square-preview.png';
+  mindStateTemplate.formats = {
+    square: mindStateV2Data.square as unknown as TemplateBase,
+    story: mindStateV2Data.story as unknown as TemplateBase,
+  };
+}
+
+const slowJamzTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'rnb_velvet');
+if (slowJamzTemplate) {
+  slowJamzTemplate.label = 'Slow Jamz — Velvet Room';
+  slowJamzTemplate.preview = '/generated-flyers/slow-jamz-square-preview.png';
+  slowJamzTemplate.formats = {
+    square: slowJamzV2Data.square as unknown as TemplateBase,
+    story: slowJamzV2Data.story as unknown as TemplateBase,
+  };
+}
+
+const auraTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'square_center_hero_nightlife');
+if (auraTemplate) {
+  auraTemplate.label = 'Aura — Elevated Nightlife';
+  auraTemplate.preview = '/generated-flyers/aura-square-preview.png';
+  auraTemplate.formats = {
+    square: auraV2Data.square as unknown as TemplateBase,
+    story: auraV2Data.story as unknown as TemplateBase,
+  };
+}
+
 const mardiGrasTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'mardi_gras');
 if (mardiGrasTemplate) {
-  mardiGrasTemplate.preview = '/samples/optimized/mardi-gras.png';
+  mardiGrasTemplate.label = 'Mardi Gras — Carnival of Colors';
+  mardiGrasTemplate.preview = '/generated-flyers/mardi-gras-square-preview.png';
   mardiGrasTemplate.formats = {
-    ...(mardiGrasTemplate.formats ?? {}),
-    square: MARDI_GRAS_SQUARE,
-    story: MARDI_GRAS_STORY,
+    square: mardiGrasV2Data.square as unknown as TemplateBase,
+    story: mardiGrasV2Data.story as unknown as TemplateBase,
   };
 }
 
@@ -11541,22 +12635,84 @@ if (latinStreetTropicalTemplate) {
 
 const miamiNightsTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'miami2');
 if (miamiNightsTemplate) {
-  miamiNightsTemplate.label = 'Miami Nights';
-  miamiNightsTemplate.preview = '/samples/optimized/miami-nights.png';
+  miamiNightsTemplate.label = 'Miami Nights — Sunset Sessions';
+  miamiNightsTemplate.preview = '/generated-flyers/miami-nights-square-preview.png';
   miamiNightsTemplate.formats = {
-    ...(miamiNightsTemplate.formats ?? {}),
-    square: MIAMI_NIGHTS_SQUARE,
-    story: MIAMI_NIGHTS_STORY,
+    square: miamiNightsV2Data.square as unknown as TemplateBase,
+    story: miamiNightsV2Data.story as unknown as TemplateBase,
+  };
+}
+
+const dayPartyTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'day_party');
+if (dayPartyTemplate) {
+  dayPartyTemplate.label = 'Day Party — Offshore';
+  dayPartyTemplate.preview = '/generated-flyers/day-party-square-preview.png';
+  dayPartyTemplate.formats = {
+    square: dayPartyV2Data.square as unknown as TemplateBase,
+    story: dayPartyV2Data.story as unknown as TemplateBase,
+  };
+}
+
+if (blackTieTemplate) {
+  blackTieTemplate.label = 'Black Tie — Maison';
+  blackTieTemplate.preview = '/generated-flyers/black-tie-square-preview.png';
+  blackTieTemplate.formats = {
+    square: blackTieV2Data.square as unknown as TemplateBase,
+    story: blackTieV2Data.story as unknown as TemplateBase,
+  };
+}
+
+
+if (discoMirrorballTemplate) {
+  discoMirrorballTemplate.label = 'Disco — Y2K';
+  discoMirrorballTemplate.preview = '/generated-flyers/disco-square-preview.png';
+  discoMirrorballTemplate.formats = {
+    square: discoV2Data.square as unknown as TemplateBase,
+    story: discoV2Data.story as unknown as TemplateBase,
+  };
+}
+
+if (fantasyTemplate) {
+  fantasyTemplate.label = 'Fantasy — Euphoria';
+  fantasyTemplate.preview = '/generated-flyers/fantasy-square-preview.png';
+  fantasyTemplate.formats = {
+    square: fantasyV2Data.square as unknown as TemplateBase,
+    story: fantasyV2Data.story as unknown as TemplateBase,
+  };
+}
+
+// The rebuilt gallery entry owns independent authored Square and Story layouts.
+if (newYorkTemplate) {
+  newYorkTemplate.preview = '/generated-flyers/new-york-square-preview.png';
+  newYorkTemplate.formats = {
+    square: newYorkV2Data.square as unknown as TemplateBase,
+    story: newYorkV2Data.story as unknown as TemplateBase,
+  };
+}
+
+const yachtEscapeTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'yacht_escape');
+if (yachtEscapeTemplate) {
+  yachtEscapeTemplate.preview = '/generated-flyers/yacht-escape-square-preview.png';
+  yachtEscapeTemplate.formats = {square:yachtEscapeV2Data.square as unknown as TemplateBase,story:yachtEscapeV2Data.story as unknown as TemplateBase};
+}
+
+const sunsetYachtTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'sunset_yacht');
+if (sunsetYachtTemplate) {
+  sunsetYachtTemplate.label = 'Sunset Yacht — Sunset Sessions';
+  sunsetYachtTemplate.preview = '/generated-flyers/sunset-yacht-square-preview.png';
+  sunsetYachtTemplate.formats = {
+    square: sunsetYachtV2Data.square as unknown as TemplateBase,
+    story: sunsetYachtV2Data.story as unknown as TemplateBase,
   };
 }
 
 const throwbackTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'throwback_cassette');
 if (throwbackTemplate) {
-  throwbackTemplate.preview = '/samples/optimized/throwback.png';
+  throwbackTemplate.preview = '/generated-flyers/throwback-saturdays-square-preview.png';
   throwbackTemplate.formats = {
     ...(throwbackTemplate.formats ?? {}),
-    square: THROWBACK_SQUARE,
-    story: THROWBACK_STORY,
+    square: throwbackV2Data.square as unknown as TemplateBase,
+    story: throwbackV2Data.story as unknown as TemplateBase,
   };
 }
 
@@ -11838,7 +12994,7 @@ if (edmTunnelTemplate?.formats?.story) {
     pillAlpha: 0,
     details2Enabled: false,
     details2: '',
-    details2Family: 'Inter',
+    details2Family: 'LEMONMILK-Regular',
     details2X: 50,
     details2Y: 85,
     details2Size: 12,
@@ -12128,6 +13284,155 @@ if (edmTunnelTemplate?.formats?.story) {
   } as TemplateBase;
 }
 
+const miamiStreetTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'miami_st');
+if (miamiStreetTemplate) {
+  miamiStreetTemplate.label = 'Miami Street — Nights';
+  miamiStreetTemplate.preview = '/generated-flyers/miami-street-square-preview.png';
+  miamiStreetTemplate.formats = {
+    square: miamiStreetV2Data.square as unknown as TemplateBase,
+    story: miamiStreetV2Data.story as unknown as TemplateBase,
+  };
+}
+
+const enBlancTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'white_minimal');
+if (enBlancTemplate) {
+  enBlancTemplate.label = 'En Blanc — The Rooftop';
+  enBlancTemplate.preview = '/generated-flyers/en-blanc-square-preview.png';
+  enBlancTemplate.formats = {
+    square: enBlancV2Data.square as unknown as TemplateBase,
+    story: enBlancV2Data.story as unknown as TemplateBase,
+  };
+}
+
+const inCrowdTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'atlanta');
+if (inCrowdTemplate) {
+  inCrowdTemplate.label = 'The In Crowd — Peachtree Rooftop';
+  inCrowdTemplate.preview = '/generated-flyers/in-crowd-square-preview.png';
+  inCrowdTemplate.formats = {
+    square: inCrowdV2Data.square as unknown as TemplateBase,
+    story: inCrowdV2Data.story as unknown as TemplateBase,
+  };
+}
+
+const driftKingzTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'miami_heat');
+if (driftKingzTemplate) {
+  driftKingzTemplate.label = 'Miami — Drift Kingz';
+  driftKingzTemplate.preview = '/generated-flyers/drift-kingz-square-preview.png';
+  driftKingzTemplate.formats = {
+    square: driftKingzV2Data.square as unknown as TemplateBase,
+    story: driftKingzV2Data.story as unknown as TemplateBase,
+  };
+}
+
+RAW_TEMPLATE_GALLERY.push({
+  id: 'nocturne_midnight_muse',
+  label: 'Nocturne — Midnight Muse',
+  tags: ['Nocturne', 'Midnight Muse', 'Nightlife', 'Fashion', 'Square', 'Story'],
+  style: 'neon',
+  preview: '/generated-flyers/nocturne-muse-square-preview.png',
+  recipeId: 'nocturne-muse',
+  formats: {
+    square: nocturneMuseV2Data.square as unknown as TemplateBase,
+    story: nocturneMuseV2Data.story as unknown as TemplateBase,
+  },
+});
+
+const bassPressureTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'dnb_bunker');
+if (bassPressureTemplate) {
+  bassPressureTemplate.label = 'Bass Pressure — Concrete';
+  bassPressureTemplate.preview = '/generated-flyers/bass-pressure-square-preview.png';
+  bassPressureTemplate.formats = {
+    square: bassPressureV2Data.square as unknown as TemplateBase,
+    story: bassPressureV2Data.story as unknown as TemplateBase,
+  };
+}
+
+const martiniNightTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'martini');
+if (martiniNightTemplate) {
+  martiniNightTemplate.label = 'Martini Night — Velvet Room';
+  martiniNightTemplate.preview = '/generated-flyers/martini-night-square-preview.png';
+  martiniNightTemplate.formats = {square: martiniNightV2Data.square as unknown as TemplateBase, story: martiniNightV2Data.story as unknown as TemplateBase};
+}
+
+const ladiesSecretTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'secret_friday');
+if (ladiesSecretTemplate) {
+ ladiesSecretTemplate.label = 'Ladies Night — Neon Chrome';
+ ladiesSecretTemplate.preview = '/generated-flyers/ladies-secret-square-preview.png';
+ ladiesSecretTemplate.formats = {square: ladiesSecretV2Data.square as unknown as TemplateBase, story: ladiesSecretV2Data.story as unknown as TemplateBase};
+}
+
+const sugarRushRebuiltTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'sugar_rush');
+if (sugarRushRebuiltTemplate) {
+ sugarRushRebuiltTemplate.label = 'Sugar Rush — Suite 5';
+ sugarRushRebuiltTemplate.preview = '/generated-flyers/sugar-rush-square-preview.png';
+ sugarRushRebuiltTemplate.formats = {square: sugarRushV2Data.square as unknown as TemplateBase, story: sugarRushV2Data.story as unknown as TemplateBase};
+}
+
+RAW_TEMPLATE_GALLERY.push({id:'taco_tuesday',label:'Taco Tuesday — Velvet Room',tags:['Tacos','Food','Drinks','Gold','Square','Story'],style:'luxury',preview:'/generated-flyers/taco-tuesday-square-preview.png',recipeId:'taco-tuesday',formats:{square:tacoTuesdayV2Data.square as unknown as TemplateBase,story:tacoTuesdayV2Data.story as unknown as TemplateBase}});
+
+const mojitoMondayRebuiltTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'kpop_pastel_led');
+if (mojitoMondayRebuiltTemplate) {
+ mojitoMondayRebuiltTemplate.label = 'Mojito Monday — Mint Lounge';
+ mojitoMondayRebuiltTemplate.preview = '/generated-flyers/mojito-monday-square-preview.png';
+ mojitoMondayRebuiltTemplate.formats = {square: mojitoMondayV2Data.square as unknown as TemplateBase, story: mojitoMondayV2Data.story as unknown as TemplateBase};
+}
+
+const euphoriaRebuiltTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'edm_tunnel');
+if (euphoriaRebuiltTemplate) {
+ euphoriaRebuiltTemplate.label = 'Euphoria — The Underground';
+ euphoriaRebuiltTemplate.preview = '/generated-flyers/euphoria-square-preview.png';
+ euphoriaRebuiltTemplate.formats = {square: euphoriaV2Data.square as unknown as TemplateBase, story: euphoriaV2Data.story as unknown as TemplateBase};
+}
+
+const afroSunsetRebuiltTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'luxe');
+if (afroSunsetRebuiltTemplate) {
+ afroSunsetRebuiltTemplate.label = 'Afro Sunset — Skyline Rooftop';
+ afroSunsetRebuiltTemplate.preview = '/generated-flyers/afro-sunset-square-preview.png';
+ afroSunsetRebuiltTemplate.formats = {square: afroSunsetV2Data.square as unknown as TemplateBase, story: afroSunsetV2Data.story as unknown as TemplateBase};
+}
+
+RAW_TEMPLATE_GALLERY.push({id:'sip_and_paint',label:'Sip and Paint — The Social Lounge',tags:['Art','Painting','Drinks','Square','Story'],style:'luxury',preview:'/generated-flyers/sip-and-paint-square-preview.png',recipeId:'sip-and-paint',formats:{square:sipAndPaintV2Data.square as unknown as TemplateBase,story:sipAndPaintV2Data.story as unknown as TemplateBase}});
+
+const salsaNocheRebuiltTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'latin_street_tropical');
+if (salsaNocheRebuiltTemplate) {
+ salsaNocheRebuiltTemplate.label = 'Salsa Noche — La Fiesta';
+ salsaNocheRebuiltTemplate.preview = '/generated-flyers/salsa-noche-square-preview.png';
+ salsaNocheRebuiltTemplate.formats = {square:salsaNocheV2Data.square as unknown as TemplateBase,story:salsaNocheV2Data.story as unknown as TemplateBase};
+}
+
+const electricSunsetRebuiltTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'la-lux');
+if (electricSunsetRebuiltTemplate) {
+ electricSunsetRebuiltTemplate.label = 'Electric Sunset — Golden Sky';
+ electricSunsetRebuiltTemplate.preview = '/generated-flyers/electric-sunset-square-preview.png';
+ electricSunsetRebuiltTemplate.formats = {square:electricSunsetV2Data.square as unknown as TemplateBase,story:electricSunsetV2Data.story as unknown as TemplateBase};
+}
+
+const karaokeNightRebuiltTemplate = RAW_TEMPLATE_GALLERY.find((template) => template.id === 'karaokee');
+if (karaokeNightRebuiltTemplate) {
+ karaokeNightRebuiltTemplate.label = 'Karaoke Night — Neon Lounge';
+ karaokeNightRebuiltTemplate.preview = '/generated-flyers/karaoke-night-square-preview.png';
+ karaokeNightRebuiltTemplate.formats = {square:karaokeNightV2Data.square as unknown as TemplateBase,story:karaokeNightV2Data.story as unknown as TemplateBase};
+}
+
+RAW_TEMPLATE_GALLERY.push({id:'miami_ocean_nights',label:'Miami Nights — Ocean Drive',tags:['Miami','Nightlife','Luxury','Square','Story'],style:'luxury',preview:'/generated-flyers/miami-ocean-nights-square-preview.png',recipeId:'miami-ocean-nights',formats:{square:miamiOceanNightsV2Data.square as unknown as TemplateBase,story:miamiOceanNightsV2Data.story as unknown as TemplateBase}});
+
+RAW_TEMPLATE_GALLERY.push({id:'soiree_dream_house',label:'Soiree — Dream House',tags:['Elegance','Nightlife','Teal','Square','Story'],style:'luxury',preview:'/generated-flyers/soiree-dream-house-square-preview.png',recipeId:'soiree-dream-house',formats:{square:soireeDreamHouseV2Data.square as unknown as TemplateBase,story:soireeDreamHouseV2Data.story as unknown as TemplateBase}});
+
+RAW_TEMPLATE_GALLERY.push({id:'branch_happy_hour',label:'Happy Hour — The Branch Rathskeller',tags:['Happy Hour','Cocktails','Luxury','Square','Story'],style:'luxury',preview:'/generated-flyers/branch-happy-hour-square-preview.png',recipeId:'branch-happy-hour',formats:{square:branchHappyHourV2Data.square as unknown as TemplateBase,story:branchHappyHourV2Data.story as unknown as TemplateBase}});
+
+RAW_TEMPLATE_GALLERY.push({id:'one_love_reggae',label:'One Love — Reggae Night',tags:['Reggae','Caribbean','Drinks','Square','Story'],style:'luxury',preview:'/generated-flyers/one-love-reggae-square-preview.png?v=4',recipeId:'one-love-reggae',formats:{square:oneLoveReggaeV2Data.square as unknown as TemplateBase,story:oneLoveReggaeV2Data.story as unknown as TemplateBase}});
+
+for (const template of RAW_TEMPLATE_GALLERY) {
+  template.recipeId ??= GALLERY_TEMPLATE_RECIPE_IDS[template.id];
+}
+
+// Registered recipes retain their own saved layouts; never replace a curated template.
+for (const recipeTemplate of registeredRecipeTemplates) {
+  if (!RAW_TEMPLATE_GALLERY.some((template) =>
+    template.recipeId === recipeTemplate.recipeId && !HIDDEN_TEMPLATE_IDS.has(template.id)
+  )) RAW_TEMPLATE_GALLERY.push(recipeTemplate as unknown as TemplateSpec);
+}
+
 export const TEMPLATE_GALLERY: TemplateSpec[] = RAW_TEMPLATE_GALLERY.filter(
-  (template) => !HIDDEN_TEMPLATE_IDS.has(template.id)
+  (template) => !HIDDEN_TEMPLATE_IDS.has(template.id) && !REMOVED_COCO_RECIPE_IDS.has(template.recipeId ?? '')
 );

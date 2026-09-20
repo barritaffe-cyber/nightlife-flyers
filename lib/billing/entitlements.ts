@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { computeBillingPeriodEnd, getBillingCatalogItem, type BillingSelection } from "./catalog";
+import { computeBillingPeriodEnd, getBillingCatalogItem, type BillingSelection } from "./catalog.ts";
 
 export async function applyBillingSelectionToProfile(
   admin: SupabaseClient,
@@ -29,6 +29,17 @@ export async function applyBillingSelectionToProfile(
 
   if (!user?.email) {
     throw new Error("User not found. Please log in once to create a profile.");
+  }
+
+  if (selection.kind === "offer" && selection.offer === "one-flyer") {
+    const paymentId = options?.providerTransactionId || options?.orderIdentifier;
+    if (!paymentId) throw new Error("One Flyer requires a verified payment reference.");
+    // Separate credits never replace a subscription. Retries grant exactly once.
+    const {error} = await admin.from("coco_flyer_credits").upsert(
+      {payment_id: paymentId, user_id: user.id}, {onConflict:"payment_id", ignoreDuplicates:true}
+    );
+    if (error) throw new Error("Could not grant the flyer purchase.");
+    return {currentPeriodEnd: null, item};
   }
 
   const nextFoundingDiscountPercent =

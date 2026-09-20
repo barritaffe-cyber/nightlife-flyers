@@ -1,0 +1,214 @@
+{
+  "width": 1024,
+  "height": 1536,
+  "notes": "Visible-element check before revising: all text blocks and the three thin rules are already present and readable; no missing copy, frames, boxes, or decorative shapes needed for this pass. The reviewer only flagged the main title cluster composition. Repair focuses only on BRUNCH and Vibes. BRUNCH was visually too far right and a bit too narrow in ink; Vibes sat slightly too far left/lower and ended early on the right. I adjusted headline placement using ink-vs-CSS offset logic, widened it via tracking only, and kept the tall Didot treatment. I nudged the brush word up/right and added forward slant with skew while preserving the existing brush height scaling. LocalDidot still depends on a local Didot installation, so serif silhouette portability remains environment-dependent; GeorgiaBrush remains the supplied brush asset.\nAI visual checklist passed; manual approval still required.\nDidot uses the installed Mac font; export requires that font on the viewing machine.",
+  "visualReview": {
+    "passed": true,
+    "checks": [
+      {
+        "category": "copy",
+        "pass": true,
+        "evidence": "Compared top-to-bottom: presenter 'THE TERRACE', 'PRESENTS', date stack 'SUN / 02 / JUN', right-side six-line features list, time stack '12PM / TO / 6PM', lower venue 'THE TERRACE', 'ROOFTOP LOUNGE', address, and footer 'FOOD • COCKTAILS • DAY PARTY'. All reference words are present, spelled correctly, and grouped into the same blocks and line breaks as the original. No missing dividers or dropped lines are visible.",
+        "repair": ""
+      },
+      {
+        "category": "readability",
+        "pass": true,
+        "evidence": "All text blocks remain readable against the photo: the top presenter/presents lines are crisp on the pale sky, the date stack is clear, BRUNCH and Vibes are fully legible with no clipped ascenders/descenders, the six feature lines stay readable beside the script, the time stack reads clearly despite darker foliage behind it, and the venue/address/footer text is intact above the table. Thin rules are faint but still visibly painted. No letters are cut off or lost in the background.",
+        "repair": ""
+      },
+      {
+        "category": "hierarchy",
+        "pass": true,
+        "evidence": "Compared the same block order and ink proportions: small presenter/presents at top, compact date stack at upper left, very large BRUNCH headline, oversized overlapping Vibes script, smaller right-side features, then time block and restrained footer stack. The focal title cluster is preserved: BRUNCH remains the dominant tall serif and Vibes overlaps its lower portion rather than sitting in a separate gap. Optional polish only: BRUNCH ink sits about 27 px right of the measured reference and Vibes starts about 30 px left with a slightly shorter right reach, but both stay within close-enough positional/scale tolerance and the overall composition reads like the reference.",
+        "repair": ""
+      },
+      {
+        "category": "typography",
+        "pass": true,
+        "evidence": "Visible type categories match the reference well. 'BRUNCH' uses a thin high-contrast Didot-style serif with tall proportions and a gold-to-dark-olive gradient rather than a flat fill; 'Vibes' is a brush script in dark olive with forward slant and preserved swashes; weekday/month are light regular sans and compact; the day numeral and 12PM/6PM are medium rather than heavy black; 'TO' is smaller and regular; the right-side features and bottom footer copy are light, tracked sans. Letter spacing and line breaks in presenter, footer, venue, and address are close to the original. Minor silhouette differences from font asset/environment remain acceptable.",
+        "repair": ""
+      },
+      {
+        "category": "decorations",
+        "pass": true,
+        "evidence": "Compared the three divider rules only: the date divider under JUN, the time divider under 6PM, and the footer rule under the bottom line. All three are present as thin painted pixels in the render; they read as warm brown/gold lines from the rendered backgroundColor, not missing black text. Their lengths and placements are close to the reference, with only small tolerance-level variation. No required frames, boxes, or underlines are absent.",
+        "repair": ""
+      },
+      {
+        "category": "imagery",
+        "pass": true,
+        "evidence": "The background imagery is not pixel-identical, but the overall rooftop-brunch scene is matched closely enough: central mimosa flute with orange slice, palms framing left/right, skyline in the distance, sunglasses at lower left, and food/table elements at lower right. Aspect ratio and crop are consistent with the reference, and the text has been composed over the image in the same general regions. The remaining differences are background-asset/focus variations rather than CSS text/layout failures.",
+        "repair": ""
+      }
+    ],
+    "history": [
+      {
+        "iteration": 0,
+        "checks": [
+          {
+            "category": "copy",
+            "pass": true,
+            "evidence": "Compared every text block from top to bottom: \"THE TERRACE,\" \"PRESENTS,\" the left date stack \"SUN / 02 / JUN,\" headline \"BRUNCH,\" script \"Vibes,\" the six-line features list \"GOOD / MUSIC / DELICIOUS / FOOD / BEAUTIFUL / PEOPLE,\" time stack \"12PM / TO / 6PM,\" bottom venue stack \"THE TERRACE / ROOFTOP LOUNGE / 123 OCEAN DRIVE, MIAMI, FL,\" and footer \"FOOD • COCKTAILS • DAY PARTY.\" All words, line breaks, and bullets are present; no missing copy was found.",
+            "repair": ""
+          },
+          {
+            "category": "readability",
+            "pass": true,
+            "evidence": "Compared visible lettering and rules in the full render plus the supplied crops for presenter, date stack, features, time stack, venue stack, footer, and footer rule. All text remains readable, with no clipped ascenders/descenders or chopped swashes; the BRUNCH serif forms, the Vibes brush strokes, the six feature lines, the smaller \"TO,\" and the bottom address/footer all remain legible. The thin dividers under JUN, under 6PM, and below the footer are faint but still paint visible pixels. Optional polish only: the current background is slightly busier/darker behind the time stack than the reference, so contrast there is a bit lower even though it remains readable.",
+            "repair": ""
+          },
+          {
+            "category": "hierarchy",
+            "pass": false,
+            "evidence": "Compared the main title cluster and its relation to the side blocks. BRUNCH ink is about 821×225 in the render versus roughly 894×220 in the reference, so it is slightly too narrow, and its left ink edge sits around x=104 instead of about x=43; this shifts the headline materially to the right even though the right edge ends close. Vibes keeps the intended overlap, but its ink sits around x=115–818 and y=425–835 versus the reference cluster around x=135–929 and y=399–782, so the script starts a bit left/lower and ends too early on the right. That changes the overall headline/script composition: the left flourish hangs closer to the time column while the word does not reach as far toward the right-side features as in the reference.",
+            "repair": "Adjust the title cluster, not the supporting text. Move the BRUNCH text left by about 55–60 px and increase its ink width about 8–10% using font-size and/or slightly less negative letter-spacing, while keeping the current tall Didot proportions and light stroke weight. Then nudge Vibes up about 20–30 px and right about 15–25 px so the overlap matches the reference more closely; if needed, extend its ink width modestly on the right without squashing the brush font, so the script reaches farther toward the features block but still leaves it readable."
+          },
+          {
+            "category": "typography",
+            "pass": true,
+            "evidence": "Compared visible type style, stroke weight, tracking, and fills for all text blocks. The supporting text uses the correct light/regular sans look for presenter, presents, weekday, month, features, venue lines, address, and footer; the day numeral and times read as medium rather than heavy black; \"TO\" is smaller and lighter than 12PM/6PM as in the reference. BRUNCH reads as a thin high-contrast Didot-style serif with tall proportions and a gold-to-dark brown gradient rather than a flat solid fill. Vibes uses a dark olive brush script with an upward slant and preserved overlap. Minor silhouette differences remain in the brush texture and some sans glyph shapes, but they are asset/font-level compromises rather than material font-category mismatches.",
+            "repair": ""
+          },
+          {
+            "category": "decorations",
+            "pass": true,
+            "evidence": "Compared the non-photographic decorative elements: the divider under JUN, the divider under 6PM, the bottom footer rule, and the BRUNCH gradient treatment. All three thin rules are present and rasterize visible gold-brown pixels in the current render; none are missing. The footer still leaves room for its bottom rule, and the headline retains a gradient rather than dropping to a plain solid color.",
+            "repair": ""
+          },
+          {
+            "category": "imagery",
+            "pass": true,
+            "evidence": "Compared the photographic/background composition: rooftop setting, palms, centered flute, orange slice, skyline, tabletop, sunglasses, and brunch plate. The current render keeps the same overall brunch-lounge composition and correct aspect ratio, with the drink centered and not distorted or clipped. The background artwork is not identical to the reference—sky, palm placement, roof geometry, and table details differ, and the current image is a bit bluer/busier—but those are image-asset differences rather than a CSS text/layout failure.",
+            "repair": ""
+          }
+        ]
+      },
+      {
+        "iteration": 1,
+        "checks": [
+          {
+            "category": "copy",
+            "pass": true,
+            "evidence": "Compared every text block from top to bottom against the reference: presenter \"THE TERRACE\", \"PRESENTS\", date stack \"SUN / 02 / JUN\", headline \"BRUNCH\", script \"Vibes\", right details stack \"GOOD / MUSIC / DELICIOUS / FOOD / BEAUTIFUL / PEOPLE\", time stack \"12PM / TO / 6PM\", venue \"THE TERRACE\", \"ROOFTOP LOUNGE\", address \"123 OCEAN DRIVE, MIAMI, FL\", footer \"FOOD • COCKTAILS • DAY PARTY\", plus the date, time, and footer divider rules. No words or divider elements are missing, and the six-line grouping on the features stack is intact.",
+            "repair": ""
+          },
+          {
+            "category": "readability",
+            "pass": false,
+            "evidence": "Most blocks remain readable: the top presenter/presents/date stack, the time stack, and the full bottom venue/footer stack all have legible contrast and no clipped letters. The material readability issue is at the right features block around x≈800-945, y≈555-730, where the heavy olive brush stroke from \"Vibes\" intrudes into the left edge of the column; the first line \"GOOD\" is partially covered and the whole stack reads more cramped than in the reference, which leaves that copy cleanly separated from the script.",
+            "repair": "Keep the features column in place and fix the script interference instead: pull the right side of \"Vibes\" slightly left/up so no olive pixels overlap the features block, targeting a clear gap of roughly 15-25px between the script ink and the leftmost letters of \"GOOD\". If needed, reduce the visible brush heaviness on \"Vibes\" by using a lighter brush rendering or by removing any extra transform/faux-bold effect rather than shrinking the features text."
+          },
+          {
+            "category": "hierarchy",
+            "pass": false,
+            "evidence": "Compared the central title cluster and surrounding blocks. The support hierarchy above and below is close: presenter/presents, the left date stack, the left time stack, and the bottom venue/footer group all sit near the reference. The mismatch is in the main BRUNCH/Vibes composition: \"BRUNCH\" is still slightly too far right and a bit high relative to the reference ink, while \"Vibes\" rides too aggressively through the middle-right area and crowds the features column. The intended overlap is present, but the current cluster changes the composition by making the script dominate farther into the right side than the reference, where the script ends just left of the features stack.",
+            "repair": "Adjust the title cluster, not the supporting text. Move \"BRUNCH\" about 20-30px left and about 10-20px down, and increase its uniform scale about 4-6% so the tall serif word fills the original width without getting heavier; keep the gold gradient similar to the current multi-stop gold-to-dark blend. For \"Vibes\", keep the left entry large and overlapping BRUNCH, but shorten/pull back the far-right reach so the terminal swash stops just before the features column around x≈790-805 instead of intruding into it; do this by easing the script transform/skew and repositioning the word slightly, not by flattening the brush script."
+          },
+          {
+            "category": "typography",
+            "pass": true,
+            "evidence": "Compared visible type categories and weight distinctions block by block. \"BRUNCH\" is rendered as a thin high-contrast Didot-like serif with a gold-to-dark gradient rather than a solid fill; minor serif silhouette differences are acceptable. \"Vibes\" is in the correct brush-script category with an upward slant and overlap. Supporting text keeps the intended light/medium hierarchy: weekday and month read as regular/light sans, the day numeral and 12PM/6PM are medium rather than black, \"TO\" is smaller and regular, the right features stack is a small light sans in six lines, and the bottom venue/address/footer remain tracked light sans rather than bold.",
+            "repair": ""
+          },
+          {
+            "category": "decorations",
+            "pass": true,
+            "evidence": "Compared the non-photographic decorative elements: the thin date divider under \"JUN\", the time divider under \"6PM\", the footer rule, and the BRUNCH fill treatment. All three rules visibly paint pixels in the rendered crop, so they are present rather than missing, and BRUNCH keeps a gradient fill instead of a flat color. Optional polish only: the date/time rules read a touch longer than the reference, but the decoration inventory and overall alignment are intact.",
+            "repair": ""
+          },
+          {
+            "category": "imagery",
+            "pass": true,
+            "evidence": "Compared the full background composition from the top palms and sky, through the central drink/orange garnish, to the lower table, sunglasses, seating, and plate. The current draft preserves the same overall brunch-on-rooftop scene with a central mimosa glass and similar left/right foreground objects. Background photo detail and crop are not pixel-identical, but the overall composition remains close enough and does not break the flyer structure.",
+            "repair": ""
+          }
+        ]
+      },
+      {
+        "iteration": 2,
+        "checks": [
+          {
+            "category": "copy",
+            "pass": true,
+            "evidence": "Compared every text block top to bottom: 'THE TERRACE', 'PRESENTS', the full date stack 'SUN / 02 / JUN', headline 'BRUNCH', script 'Vibes', the six-line features list 'GOOD / MUSIC / DELICIOUS / FOOD / BEAUTIFUL / PEOPLE', time stack '12PM / TO / 6PM', lower 'THE TERRACE', 'ROOFTOP LOUNGE', '123 OCEAN DRIVE, MIAMI, FL', and footer 'FOOD • COCKTAILS • DAY PARTY'. All copy is present, line grouping matches the reference, and all three divider rules are present.",
+            "repair": ""
+          },
+          {
+            "category": "readability",
+            "pass": false,
+            "evidence": "Most text remains readable: presenter/presents, the date stack, time stack, and bottom venue/footer lines all have adequate contrast and no clipping. The material readability problem is on the right-side features block: in the current render the terminal part of 'Vibes' intrudes into that column, with the olive script overlapping the left side of 'GOOD' and crowding the upper lines more than in the reference. The intended BRUNCH/Vibes overlap is preserved, but the script-to-features collision is not.",
+            "repair": "Keep the features block where it is (it is already near the reference at roughly x 802, y 560). Instead adjust the 'Vibes' layer so its right-side ink clears the features column by about 20-30 px: use a lighter/narrower brush rendering for 'Vibes', and slightly raise the terminal end of the word about 12-20 px or rotate it a touch more upward so the last letters no longer paint over the area of 'GOOD'/'MUSIC'."
+          },
+          {
+            "category": "hierarchy",
+            "pass": true,
+            "evidence": "Compared the full title cluster plus surrounding support copy. The overall composition still matches the reference: small presenter/date information at top, very large 'BRUNCH' as the dominant headline, 'Vibes' overlapping beneath it, small right-side features, left-side time block, and restrained venue/footer at the bottom. 'BRUNCH' remains larger than the script and the support copy stays appropriately subordinate. Optional polish only: the script feels a bit more visually forceful than the reference because of stroke texture, but the block-to-block hierarchy is still recognizably the same.",
+            "repair": ""
+          },
+          {
+            "category": "typography",
+            "pass": false,
+            "evidence": "Supporting typography is close: weekday/month read as light regular sans, the day numeral and 12PM/6PM read as medium rather than black, 'TO' is smaller regular, and the footer stays light and tracked. 'BRUNCH' keeps the tall high-contrast Didot-style serif and the gold left-to-right gradient instead of a flat solid fill. The main mismatch is 'Vibes': the current Georgia Brush rendering is visibly heavier and rougher than the reference, with thicker distressed strokes and more vertical bulk, especially in the initial 'V' and terminal 's'. This changes the script texture even where size and placement are near the reference.",
+            "repair": "Do not just shrink 'Vibes'—its width is already not larger than the reference, and shrinking would not fix the stroke-to-height ratio. Keep its approximate ink start around x 135 / y 396 and its upward slant, but switch to a lighter brush cut of Georgia Brush or a lighter compatible brush face, avoid any faux-bold appearance, and keep the script's rightward reach while reducing stroke mass so the swashes are thinner like the reference. Keep the 'BRUNCH' gradient as a gold-to-dark blend similar to the current 96deg transition; no change needed there unless the font fallback loses the thin Didot contrast."
+          },
+          {
+            "category": "decorations",
+            "pass": true,
+            "evidence": "Compared the date divider under 'JUN', the time divider under '6PM', and the bottom footer rule. All three thin brown rules paint visible pixels in the current render and are not missing. The footer still leaves space for its bottom rule, and the 'BRUNCH' fill remains a gradient rather than incorrectly dropping to a solid color. Minor length/placement differences are small enough to count as optional polish.",
+            "repair": ""
+          },
+          {
+            "category": "imagery",
+            "pass": true,
+            "evidence": "Compared the photographic background and crop: the centered champagne flute, orange garnish, left foliage, sunglasses at lower left, skyline/water background, and right-side seating/plate arrangement are all retained with the same overall aspect and composition. Any slight differences in blur/sharpness or background rendering are minor asset-level variation rather than a CSS layout failure. The extra coverage over the drink and fruit comes from the oversized script layer, not from a bad image crop.",
+            "repair": ""
+          }
+        ]
+      },
+      {
+        "iteration": 3,
+        "checks": [
+          {
+            "category": "copy",
+            "pass": true,
+            "evidence": "Compared top-to-bottom: presenter 'THE TERRACE', 'PRESENTS', date stack 'SUN / 02 / JUN', right-side six-line features list, time stack '12PM / TO / 6PM', lower venue 'THE TERRACE', 'ROOFTOP LOUNGE', address, and footer 'FOOD • COCKTAILS • DAY PARTY'. All reference words are present, spelled correctly, and grouped into the same blocks and line breaks as the original. No missing dividers or dropped lines are visible.",
+            "repair": ""
+          },
+          {
+            "category": "readability",
+            "pass": true,
+            "evidence": "All text blocks remain readable against the photo: the top presenter/presents lines are crisp on the pale sky, the date stack is clear, BRUNCH and Vibes are fully legible with no clipped ascenders/descenders, the six feature lines stay readable beside the script, the time stack reads clearly despite darker foliage behind it, and the venue/address/footer text is intact above the table. Thin rules are faint but still visibly painted. No letters are cut off or lost in the background.",
+            "repair": ""
+          },
+          {
+            "category": "hierarchy",
+            "pass": true,
+            "evidence": "Compared the same block order and ink proportions: small presenter/presents at top, compact date stack at upper left, very large BRUNCH headline, oversized overlapping Vibes script, smaller right-side features, then time block and restrained footer stack. The focal title cluster is preserved: BRUNCH remains the dominant tall serif and Vibes overlaps its lower portion rather than sitting in a separate gap. Optional polish only: BRUNCH ink sits about 27 px right of the measured reference and Vibes starts about 30 px left with a slightly shorter right reach, but both stay within close-enough positional/scale tolerance and the overall composition reads like the reference.",
+            "repair": ""
+          },
+          {
+            "category": "typography",
+            "pass": true,
+            "evidence": "Visible type categories match the reference well. 'BRUNCH' uses a thin high-contrast Didot-style serif with tall proportions and a gold-to-dark-olive gradient rather than a flat fill; 'Vibes' is a brush script in dark olive with forward slant and preserved swashes; weekday/month are light regular sans and compact; the day numeral and 12PM/6PM are medium rather than heavy black; 'TO' is smaller and regular; the right-side features and bottom footer copy are light, tracked sans. Letter spacing and line breaks in presenter, footer, venue, and address are close to the original. Minor silhouette differences from font asset/environment remain acceptable.",
+            "repair": ""
+          },
+          {
+            "category": "decorations",
+            "pass": true,
+            "evidence": "Compared the three divider rules only: the date divider under JUN, the time divider under 6PM, and the footer rule under the bottom line. All three are present as thin painted pixels in the render; they read as warm brown/gold lines from the rendered backgroundColor, not missing black text. Their lengths and placements are close to the reference, with only small tolerance-level variation. No required frames, boxes, or underlines are absent.",
+            "repair": ""
+          },
+          {
+            "category": "imagery",
+            "pass": true,
+            "evidence": "The background imagery is not pixel-identical, but the overall rooftop-brunch scene is matched closely enough: central mimosa flute with orange slice, palms framing left/right, skyline in the distance, sunglasses at lower left, and food/table elements at lower right. Aspect ratio and crop are consistent with the reference, and the text has been composed over the image in the same general regions. The remaining differences are background-asset/focus variations rather than CSS text/layout failures.",
+            "repair": ""
+          }
+        ]
+      }
+    ],
+    "selectedIteration": 3,
+    "model": "gpt-5.4"
+  }
+}

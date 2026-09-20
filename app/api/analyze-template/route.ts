@@ -11,8 +11,8 @@ import {
 } from "../../../lib/accessQuota";
 import {
   BODY_FONTS_LOCAL,
+  COCO_HEADLINE_FONTS_LOCAL,
   HEADLINE2_FONTS_LOCAL,
-  HEADLINE_FONTS_LOCAL,
   SUBTAG_FONTS_LOCAL,
   VENUE_FONTS_LOCAL,
 } from "../../../lib/fonts";
@@ -50,7 +50,7 @@ export const runtime = "nodejs";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_LAYOUT_MODEL = process.env.OPENAI_LAYOUT_MODEL || "gpt-4o-2024-08-06";
 
-const HEADLINE_FONT_CHOICES = [...HEADLINE_FONTS_LOCAL];
+const HEADLINE_FONT_CHOICES = [...COCO_HEADLINE_FONTS_LOCAL];
 const HEAD2_FONT_CHOICES = [...HEADLINE2_FONTS_LOCAL];
 const BODY_FONT_CHOICES = [...BODY_FONTS_LOCAL];
 const VENUE_FONT_CHOICES = [...VENUE_FONTS_LOCAL];
@@ -583,8 +583,8 @@ function buildTypographyPreset(
       subtag: ["Coolvetica Hv Comp", "Nexa-Heavy", "LEMONMILK-Regular"],
     },
     urban: {
-      headline: ["Designer", "Bebas Neue", "Antonio", "Octin College Rg", "Nexa-Heavy"],
-      head2: ["OpenScript", "Antonio", "Bebas Neue", "Nexa-Heavy"],
+      headline: ["Designer", "Bebas Neue", "Anton", "Octin College Rg", "Nexa-Heavy"],
+      head2: ["OpenScript", "Bebas Neue", "Nexa-Heavy"],
       body: ["LEMONMILK-Regular", "Nexa-Heavy", "LEMONMILK-Light", "Coolvetica Hv Comp"],
       venue: ["Bebas Neue", "LEMONMILK-Light", "Nexa-Heavy"],
       subtag: ["Nexa-Heavy", "Coolvetica Hv Comp", "LEMONMILK-Regular"],
@@ -612,15 +612,15 @@ function buildTypographyPreset(
 
   const readableHeadlinePool =
     style === "neon"
-      ? ["Bebas Neue", "Designer", "Antonio", "Nexa-Heavy", ...pools.headline]
+      ? ["Bebas Neue", "Designer", "Nexa-Heavy", ...pools.headline]
       : style === "tropical"
       ? ["Bebas Neue", "ChettaVissto", "Azonix", "Nexa-Heavy", ...pools.headline]
       : style === "vintage"
       ? ["Bebas Neue", "Maglisto", "Brich", "Nexa-Heavy", ...pools.headline]
-      : ["Bebas Neue", "Antonio", "Nexa-Heavy", "Designer", ...pools.headline];
+      : ["Bebas Neue", "Nexa-Heavy", "Designer", ...pools.headline];
   const readableHead2Pool =
     compactHead2
-      ? ["Bebas Neue", "Antonio", "Nexa-Heavy", ...pools.head2]
+      ? ["Bebas Neue", "Nexa-Heavy", ...pools.head2]
       : pools.head2;
   const readableBodyPool =
     denseDetails
@@ -673,7 +673,7 @@ function buildTypographyPreset(
     headlineHeight:
       headlineFamily === "African" || headlineFamily === "ChettaVissto"
         ? (headlineLines > 1 ? 0.9 : 0.94)
-        : headlineFamily === "Bebas Neue" || headlineFamily === "Antonio"
+        : headlineFamily === "Bebas Neue"
         ? (headlineLines > 1 ? 0.88 : 0.92)
         : headlineLines > 1
         ? 0.92
@@ -1249,7 +1249,7 @@ function buildSubjectPosterPatch(
     base.head2Family || HEAD2_FONT_CHOICES[0] || "Bebas Neue"
   );
   const headlineFamily = pickFirstAvailable(
-    ["Bebas Neue", "Antonio", "Designer", "Nexa-Heavy", "Doctor Glitch"],
+    ["Bebas Neue", "Designer", "Nexa-Heavy", "Doctor Glitch"],
     HEADLINE_FONT_CHOICES,
     base.headlineFamily || HEADLINE_FONT_CHOICES[0] || "Bebas Neue"
   );
@@ -1819,7 +1819,7 @@ function sanitizeLayout(
     "#0F172A"
   );
   const headlineTracking =
-    typePreset.headlineFamily === "Bebas Neue" || typePreset.headlineFamily === "Antonio"
+    typePreset.headlineFamily === "Bebas Neue"
       ? 0.012
       : typePreset.headlineFamily === "African" || typePreset.headlineFamily === "ChettaVissto"
       ? 0.004
@@ -2030,7 +2030,7 @@ export async function POST(req: Request) {
     }
 
     const normalizedPlan = String(snapshot.profile.plan || "").trim().toLowerCase();
-    if (normalizedPlan !== "creator" && normalizedPlan !== "studio") {
+    if (normalizedPlan !== "creator" && normalizedPlan !== "studio" && normalizedPlan !== "full") {
       return NextResponse.json(
         { error: "Creator subscription required for Auto Layout." },
         { status: 403 }

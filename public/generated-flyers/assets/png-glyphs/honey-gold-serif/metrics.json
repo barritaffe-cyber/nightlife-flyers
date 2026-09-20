@@ -1,0 +1,1902 @@
+{
+  "family": "Honey Gold Serif PNG",
+  "version": 1,
+  "bitmapPpem": 600,
+  "sources": [
+    {
+      "path": "public/generated-flyers/assets/png-glyphs/honey01.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "154a1518b2e8b96deea3f1d5393e7d01022cfbcb2ea48c463e1c9327ceeadc7b"
+    },
+    {
+      "path": "public/generated-flyers/assets/png-glyphs/honey02.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "3e7a806bb95f731ecf6dbf615692ad262a97eca5e02e6c4384443a4a6a8297c8"
+    },
+    {
+      "path": "public/generated-flyers/assets/png-glyphs/honey03.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "c4d8c273da70f11ebef21ce4ee8db25b4a254345b560ed7e754e7ac54f3e4d6e"
+    },
+    {
+      "path": "public/generated-flyers/assets/png-glyphs/honey04.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "3e6906b5fa067ba0fa7a915b1706fb8ab19907ab76d0c83a27305dba2acc2155"
+    }
+  ],
+  "glyphs": {
+    "A": {
+      "sheet": 1,
+      "cell": 0,
+      "sourceBounds": [
+        46,
+        62,
+        315,
+        323
+      ],
+      "coreBounds": [
+        47,
+        65,
+        313,
+        322
+      ],
+      "sourceSize": [
+        269,
+        261
+      ],
+      "sourceScale": 1.7509727626459144,
+      "advance": 810,
+      "bitmapSize": [
+        499,
+        485
+      ],
+      "bitmapOffsetX": -1,
+      "bitmapOffsetY": 224,
+      "componentCount": 1,
+      "nativeGlyph": "u0041.png"
+    },
+    "B": {
+      "sheet": 1,
+      "cell": 1,
+      "sourceBounds": [
+        368,
+        64,
+        602,
+        321
+      ],
+      "coreBounds": [
+        370,
+        66,
+        600,
+        319
+      ],
+      "sourceSize": [
+        234,
+        257
+      ],
+      "sourceScale": 1.7786561264822134,
+      "advance": 716,
+      "bitmapSize": [
+        445,
+        486
+      ],
+      "bitmapOffsetX": -3,
+      "bitmapOffsetY": 222,
+      "componentCount": 1,
+      "nativeGlyph": "u0042.png"
+    },
+    "C": {
+      "sheet": 1,
+      "cell": 2,
+      "sourceBounds": [
+        653,
+        63,
+        894,
+        322
+      ],
+      "coreBounds": [
+        655,
+        64,
+        893,
+        321
+      ],
+      "sourceSize": [
+        241,
+        259
+      ],
+      "sourceScale": 1.7509727626459144,
+      "advance": 729,
+      "bitmapSize": [
+        450,
+        482
+      ],
+      "bitmapOffsetX": -3,
+      "bitmapOffsetY": 224,
+      "componentCount": 1,
+      "nativeGlyph": "u0043.png"
+    },
+    "D": {
+      "sheet": 1,
+      "cell": 3,
+      "sourceBounds": [
+        964,
+        62,
+        1209,
+        321
+      ],
+      "coreBounds": [
+        966,
+        65,
+        1207,
+        319
+      ],
+      "sourceSize": [
+        245,
+        259
+      ],
+      "sourceScale": 1.7716535433070866,
+      "advance": 746,
+      "bitmapSize": [
+        462,
+        487
+      ],
+      "bitmapOffsetX": -3,
+      "bitmapOffsetY": 222,
+      "componentCount": 1,
+      "nativeGlyph": "u0044.png"
+    },
+    "E": {
+      "sheet": 1,
+      "cell": 4,
+      "sourceBounds": [
+        63,
+        355,
+        290,
+        614
+      ],
+      "coreBounds": [
+        65,
+        358,
+        288,
+        612
+      ],
+      "sourceSize": [
+        227,
+        259
+      ],
+      "sourceScale": 1.7716535433070866,
+      "advance": 692,
+      "bitmapSize": [
+        431,
+        487
+      ],
+      "bitmapOffsetX": -3,
+      "bitmapOffsetY": 222,
+      "componentCount": 1,
+      "nativeGlyph": "u0045.png"
+    },
+    "F": {
+      "sheet": 1,
+      "cell": 5,
+      "sourceBounds": [
+        359,
+        356,
+        584,
+        615
+      ],
+      "coreBounds": [
+        362,
+        359,
+        582,
+        613
+      ],
+      "sourceSize": [
+        225,
+        259
+      ],
+      "sourceScale": 1.7716535433070866,
+      "advance": 684,
+      "bitmapSize": [
+        427,
+        487
+      ],
+      "bitmapOffsetX": -4,
+      "bitmapOffsetY": 222,
+      "componentCount": 1,
+      "nativeGlyph": "u0046.png"
+    },
+    "G": {
+      "sheet": 1,
+      "cell": 6,
+      "sourceBounds": [
+        647,
+        353,
+        896,
+        631
+      ],
+      "coreBounds": [
+        649,
+        355,
+        895,
+        629
+      ],
+      "sourceSize": [
+        249,
+        278
+      ],
+      "sourceScale": 1.7737226277372262,
+      "advance": 761,
+      "bitmapSize": [
+        470,
+        521
+      ],
+      "bitmapOffsetX": -3,
+      "bitmapOffsetY": 186,
+      "componentCount": 1,
+      "nativeGlyph": "u0047.png"
+    },
+    "H": {
+      "sheet": 1,
+      "cell": 7,
+      "sourceBounds": [
+        956,
+        357,
+        1208,
+        615
+      ],
+      "coreBounds": [
+        959,
+        360,
+        1206,
+        613
+      ],
+      "sourceSize": [
+        252,
+        258
+      ],
+      "sourceScale": 1.7786561264822134,
+      "advance": 766,
+      "bitmapSize": [
+        477,
+        487
+      ],
+      "bitmapOffsetX": -5,
+      "bitmapOffsetY": 222,
+      "componentCount": 1,
+      "nativeGlyph": "u0048.png"
+    },
+    "I": {
+      "sheet": 1,
+      "cell": 8,
+      "sourceBounds": [
+        112,
+        644,
+        240,
+        896
+      ],
+      "coreBounds": [
+        113,
+        647,
+        238,
+        894
+      ],
+      "sourceSize": [
+        128,
+        252
+      ],
+      "sourceScale": 1.8218623481781377,
+      "advance": 414,
+      "bitmapSize": [
+        262,
+        488
+      ],
+      "bitmapOffsetX": -1,
+      "bitmapOffsetY": 222,
+      "componentCount": 1,
+      "nativeGlyph": "u0049.png"
+    },
+    "J": {
+      "sheet": 1,
+      "cell": 9,
+      "sourceBounds": [
+        366,
+        643,
+        566,
+        917
+      ],
+      "coreBounds": [
+        368,
+        646,
+        564,
+        915
+      ],
+      "sourceSize": [
+        200,
+        274
+      ],
+      "sourceScale": 1.962825278810409,
+      "advance": 675,
+      "bitmapSize": [
+        424,
+        569
+      ],
+      "bitmapOffsetX": -5,
+      "bitmapOffsetY": 142,
+      "componentCount": 1,
+      "nativeGlyph": "u004A.png"
+    },
+    "K": {
+      "sheet": 1,
+      "cell": 10,
+      "sourceBounds": [
+        639,
+        645,
+        917,
+        896
+      ],
+      "coreBounds": [
+        642,
+        647,
+        916,
+        894
+      ],
+      "sourceSize": [
+        278,
+        251
+      ],
+      "sourceScale": 1.8218623481781377,
+      "advance": 866,
+      "bitmapSize": [
+        536,
+        486
+      ],
+      "bitmapOffsetX": -5,
+      "bitmapOffsetY": 222,
+      "componentCount": 1,
+      "nativeGlyph": "u004B.png"
+    },
+    "L": {
+      "sheet": 1,
+      "cell": 11,
+      "sourceBounds": [
+        970,
+        641,
+        1200,
+        899
+      ],
+      "coreBounds": [
+        971,
+        644,
+        1198,
+        897
+      ],
+      "sourceSize": [
+        230,
+        258
+      ],
+      "sourceScale": 1.7786561264822134,
+      "advance": 707,
+      "bitmapSize": [
+        438,
+        487
+      ],
+      "bitmapOffsetX": -1,
+      "bitmapOffsetY": 222,
+      "componentCount": 1,
+      "nativeGlyph": "u004C.png"
+    },
+    "M": {
+      "sheet": 1,
+      "cell": 12,
+      "sourceBounds": [
+        37,
+        934,
+        323,
+        1190
+      ],
+      "coreBounds": [
+        39,
+        936,
+        321,
+        1188
+      ],
+      "sourceSize": [
+        286,
+        256
+      ],
+      "sourceScale": 1.7857142857142858,
+      "advance": 873,
+      "bitmapSize": [
+        539,
+        486
+      ],
+      "bitmapOffsetX": -3,
+      "bitmapOffsetY": 222,
+      "componentCount": 1,
+      "nativeGlyph": "u004D.png"
+    },
+    "N": {
+      "sheet": 1,
+      "cell": 13,
+      "sourceBounds": [
+        356,
+        930,
+        610,
+        1185
+      ],
+      "coreBounds": [
+        358,
+        933,
+        607,
+        1183
+      ],
+      "sourceSize": [
+        254,
+        255
+      ],
+      "sourceScale": 1.8,
+      "advance": 781,
+      "bitmapSize": [
+        486,
+        488
+      ],
+      "bitmapOffsetX": -3,
+      "bitmapOffsetY": 222,
+      "componentCount": 1,
+      "nativeGlyph": "u004E.png"
+    },
+    "O": {
+      "sheet": 1,
+      "cell": 14,
+      "sourceBounds": [
+        645,
+        926,
+        919,
+        1189
+      ],
+      "coreBounds": [
+        647,
+        928,
+        917,
+        1187
+      ],
+      "sourceSize": [
+        274,
+        263
+      ],
+      "sourceScale": 1.7374517374517375,
+      "advance": 816,
+      "bitmapSize": [
+        504,
+        485
+      ],
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 223,
+      "componentCount": 1,
+      "nativeGlyph": "u004F.png"
+    },
+    "P": {
+      "sheet": 1,
+      "cell": 15,
+      "sourceBounds": [
+        967,
+        925,
+        1205,
+        1183
+      ],
+      "coreBounds": [
+        970,
+        928,
+        1204,
+        1181
+      ],
+      "sourceSize": [
+        238,
+        258
+      ],
+      "sourceScale": 1.7786561264822134,
+      "advance": 728,
+      "bitmapSize": [
+        452,
+        487
+      ],
+      "bitmapOffsetX": -5,
+      "bitmapOffsetY": 222,
+      "componentCount": 1,
+      "nativeGlyph": "u0050.png"
+    },
+    "Q": {
+      "sheet": 2,
+      "cell": 0,
+      "sourceBounds": [
+        24,
+        25,
+        309,
+        321
+      ],
+      "coreBounds": [
+        26,
+        27,
+        308,
+        319
+      ],
+      "sourceSize": [
+        285,
+        296
+      ],
+      "sourceScale": 1.5410958904109588,
+      "advance": 758,
+      "bitmapSize": [
+        464,
+        481
+      ],
+      "bitmapOffsetX": 0,
+      "bitmapOffsetY": 225,
+      "componentCount": 1,
+      "nativeGlyph": "u0051.png"
+    },
+    "R": {
+      "sheet": 2,
+      "cell": 1,
+      "sourceBounds": [
+        352,
+        29,
+        619,
+        296
+      ],
+      "coreBounds": [
+        354,
+        31,
+        616,
+        294
+      ],
+      "sourceSize": [
+        267,
+        267
+      ],
+      "sourceScale": 1.7110266159695817,
+      "advance": 781,
+      "bitmapSize": [
+        484,
+        484
+      ],
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 223,
+      "componentCount": 1,
+      "nativeGlyph": "u0052.png"
+    },
+    "S": {
+      "sheet": 2,
+      "cell": 2,
+      "sourceBounds": [
+        670,
+        28,
+        892,
+        300
+      ],
+      "coreBounds": [
+        672,
+        30,
+        890,
+        298
+      ],
+      "sourceSize": [
+        222,
+        272
+      ],
+      "sourceScale": 1.6791044776119404,
+      "advance": 644,
+      "bitmapSize": [
+        400,
+        484
+      ],
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 223,
+      "componentCount": 1,
+      "nativeGlyph": "u0053.png"
+    },
+    "T": {
+      "sheet": 2,
+      "cell": 3,
+      "sourceBounds": [
+        955,
+        29,
+        1219,
+        297
+      ],
+      "coreBounds": [
+        957,
+        31,
+        1217,
+        295
+      ],
+      "sourceSize": [
+        264,
+        268
+      ],
+      "sourceScale": 1.7045454545454546,
+      "advance": 773,
+      "bitmapSize": [
+        477,
+        484
+      ],
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 223,
+      "componentCount": 1,
+      "nativeGlyph": "u0054.png"
+    },
+    "U": {
+      "sheet": 2,
+      "cell": 4,
+      "sourceBounds": [
+        25,
+        330,
+        288,
+        601
+      ],
+      "coreBounds": [
+        28,
+        333,
+        286,
+        599
+      ],
+      "sourceSize": [
+        263,
+        271
+      ],
+      "sourceScale": 1.6917293233082706,
+      "advance": 761,
+      "bitmapSize": [
+        472,
+        486
+      ],
+      "bitmapOffsetX": -4,
+      "bitmapOffsetY": 223,
+      "componentCount": 1,
+      "nativeGlyph": "u0055.png"
+    },
+    "V": {
+      "sheet": 2,
+      "cell": 5,
+      "sourceBounds": [
+        329,
+        332,
+        610,
+        604
+      ],
+      "coreBounds": [
+        332,
+        335,
+        608,
+        602
+      ],
+      "sourceSize": [
+        281,
+        272
+      ],
+      "sourceScale": 1.6853932584269662,
+      "advance": 809,
+      "bitmapSize": [
+        501,
+        485
+      ],
+      "bitmapOffsetX": -4,
+      "bitmapOffsetY": 223,
+      "componentCount": 1,
+      "nativeGlyph": "u0056.png"
+    },
+    "W": {
+      "sheet": 2,
+      "cell": 6,
+      "sourceBounds": [
+        627,
+        332,
+        940,
+        605
+      ],
+      "coreBounds": [
+        629,
+        334,
+        938,
+        603
+      ],
+      "sourceSize": [
+        313,
+        273
+      ],
+      "sourceScale": 1.6728624535315986,
+      "advance": 896,
+      "bitmapSize": [
+        550,
+        483
+      ],
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 223,
+      "componentCount": 1,
+      "nativeGlyph": "u0057.png"
+    },
+    "X": {
+      "sheet": 2,
+      "cell": 7,
+      "sourceBounds": [
+        942,
+        331,
+        1231,
+        597
+      ],
+      "coreBounds": [
+        945,
+        334,
+        1229,
+        595
+      ],
+      "sourceSize": [
+        289,
+        266
+      ],
+      "sourceScale": 1.7241379310344827,
+      "advance": 850,
+      "bitmapSize": [
+        526,
+        486
+      ],
+      "bitmapOffsetX": -4,
+      "bitmapOffsetY": 223,
+      "componentCount": 1,
+      "nativeGlyph": "u0058.png"
+    },
+    "Y": {
+      "sheet": 2,
+      "cell": 8,
+      "sourceBounds": [
+        25,
+        629,
+        302,
+        912
+      ],
+      "coreBounds": [
+        28,
+        631,
+        300,
+        910
+      ],
+      "sourceSize": [
+        277,
+        283
+      ],
+      "sourceScale": 2.0,
+      "advance": 941,
+      "bitmapSize": [
+        586,
+        598
+      ],
+      "bitmapOffsetX": -7,
+      "bitmapOffsetY": 112,
+      "componentCount": 1,
+      "nativeGlyph": "u0059.png"
+    },
+    "Z": {
+      "sheet": 2,
+      "cell": 9,
+      "sourceBounds": [
+        334,
+        627,
+        593,
+        898
+      ],
+      "coreBounds": [
+        336,
+        629,
+        591,
+        897
+      ],
+      "sourceSize": [
+        259,
+        271
+      ],
+      "sourceScale": 1.6791044776119404,
+      "advance": 748,
+      "bitmapSize": [
+        462,
+        482
+      ],
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 225,
+      "componentCount": 1,
+      "nativeGlyph": "u005A.png"
+    },
+    "a": {
+      "sheet": 2,
+      "cell": 10,
+      "sourceBounds": [
+        672,
+        698,
+        899,
+        899
+      ],
+      "coreBounds": [
+        674,
+        700,
+        897,
+        897
+      ],
+      "sourceSize": [
+        227,
+        201
+      ],
+      "sourceScale": 1.6446700507614214,
+      "advance": 645,
+      "bitmapSize": [
+        400,
+        357
+      ],
+      "bitmapOffsetX": -1,
+      "bitmapOffsetY": 224,
+      "componentCount": 1,
+      "nativeGlyph": "u0061.png"
+    },
+    "b": {
+      "sheet": 2,
+      "cell": 11,
+      "sourceBounds": [
+        985,
+        631,
+        1206,
+        899
+      ],
+      "coreBounds": [
+        987,
+        633,
+        1204,
+        898
+      ],
+      "sourceSize": [
+        221,
+        268
+      ],
+      "sourceScale": 1.6981132075471699,
+      "advance": 648,
+      "bitmapSize": [
+        402,
+        482
+      ],
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 225,
+      "componentCount": 1,
+      "nativeGlyph": "u0062.png"
+    },
+    "c": {
+      "sheet": 2,
+      "cell": 12,
+      "sourceBounds": [
+        53,
+        993,
+        266,
+        1204
+      ],
+      "coreBounds": [
+        54,
+        996,
+        263,
+        1202
+      ],
+      "sourceSize": [
+        213,
+        211
+      ],
+      "sourceScale": 1.5728155339805825,
+      "advance": 582,
+      "bitmapSize": [
+        360,
+        357
+      ],
+      "bitmapOffsetX": 1,
+      "bitmapOffsetY": 224,
+      "componentCount": 1,
+      "nativeGlyph": "u0063.png"
+    },
+    "d": {
+      "sheet": 2,
+      "cell": 13,
+      "sourceBounds": [
+        347,
+        927,
+        569,
+        1205
+      ],
+      "coreBounds": [
+        349,
+        929,
+        567,
+        1204
+      ],
+      "sourceSize": [
+        222,
+        278
+      ],
+      "sourceScale": 1.6363636363636365,
+      "advance": 629,
+      "bitmapSize": [
+        389,
+        481
+      ],
+      "bitmapOffsetX": -1,
+      "bitmapOffsetY": 225,
+      "componentCount": 1,
+      "nativeGlyph": "u0064.png"
+    },
+    "e": {
+      "sheet": 2,
+      "cell": 14,
+      "sourceBounds": [
+        662,
+        995,
+        892,
+        1209
+      ],
+      "coreBounds": [
+        664,
+        997,
+        891,
+        1207
+      ],
+      "sourceSize": [
+        230,
+        214
+      ],
+      "sourceScale": 1.542857142857143,
+      "advance": 618,
+      "bitmapSize": [
+        380,
+        355
+      ],
+      "bitmapOffsetX": 0,
+      "bitmapOffsetY": 225,
+      "componentCount": 1,
+      "nativeGlyph": "u0065.png"
+    },
+    "f": {
+      "sheet": 2,
+      "cell": 15,
+      "sourceBounds": [
+        1000,
+        919,
+        1198,
+        1206
+      ],
+      "coreBounds": [
+        1001,
+        921,
+        1196,
+        1205
+      ],
+      "sourceSize": [
+        198,
+        287
+      ],
+      "sourceScale": 1.732394366197183,
+      "advance": 597,
+      "bitmapSize": [
+        371,
+        525
+      ],
+      "bitmapOffsetX": -1,
+      "bitmapOffsetY": 182,
+      "componentCount": 1,
+      "nativeGlyph": "u0066.png"
+    },
+    "g": {
+      "sheet": 3,
+      "cell": 0,
+      "sourceBounds": [
+        64,
+        60,
+        301,
+        355
+      ],
+      "coreBounds": [
+        65,
+        62,
+        300,
+        353
+      ],
+      "sourceSize": [
+        237,
+        295
+      ],
+      "sourceScale": 1.5257731958762886,
+      "advance": 632,
+      "bitmapSize": [
+        386,
+        475
+      ],
+      "bitmapOffsetX": 1,
+      "bitmapOffsetY": 105,
+      "componentCount": 1,
+      "nativeGlyph": "u0067.png"
+    },
+    "h": {
+      "sheet": 3,
+      "cell": 1,
+      "sourceBounds": [
+        372,
+        38,
+        598,
+        320
+      ],
+      "coreBounds": [
+        375,
+        40,
+        596,
+        318
+      ],
+      "sourceSize": [
+        226,
+        282
+      ],
+      "sourceScale": 1.618705035971223,
+      "advance": 630,
+      "bitmapSize": [
+        392,
+        482
+      ],
+      "bitmapOffsetX": -3,
+      "bitmapOffsetY": 224,
+      "componentCount": 1,
+      "nativeGlyph": "u0068.png"
+    },
+    "i": {
+      "sheet": 3,
+      "cell": 2,
+      "sourceBounds": [
+        738,
+        27,
+        853,
+        317
+      ],
+      "coreBounds": [
+        740,
+        29,
+        852,
+        315
+      ],
+      "sourceSize": [
+        115,
+        290
+      ],
+      "sourceScale": 1.5734265734265733,
+      "advance": 328,
+      "bitmapSize": [
+        206,
+        481
+      ],
+      "bitmapOffsetX": -1,
+      "bitmapOffsetY": 224,
+      "componentCount": 2,
+      "nativeGlyph": "u0069.png"
+    },
+    "j": {
+      "sheet": 3,
+      "cell": 3,
+      "sourceBounds": [
+        1012,
+        29,
+        1166,
+        359
+      ],
+      "coreBounds": [
+        1013,
+        30,
+        1164,
+        358
+      ],
+      "sourceSize": [
+        154,
+        330
+      ],
+      "sourceScale": 1.7378048780487805,
+      "advance": 471,
+      "bitmapSize": [
+        295,
+        601
+      ],
+      "bitmapOffsetX": -1,
+      "bitmapOffsetY": 104,
+      "componentCount": 2,
+      "nativeGlyph": "u006A.png"
+    },
+    "k": {
+      "sheet": 3,
+      "cell": 4,
+      "sourceBounds": [
+        58,
+        380,
+        311,
+        632
+      ],
+      "coreBounds": [
+        60,
+        383,
+        308,
+        630
+      ],
+      "sourceSize": [
+        253,
+        252
+      ],
+      "sourceScale": 1.8218623481781377,
+      "advance": 787,
+      "bitmapSize": [
+        490,
+        488
+      ],
+      "bitmapOffsetX": -3,
+      "bitmapOffsetY": 222,
+      "componentCount": 1,
+      "nativeGlyph": "u006B.png"
+    },
+    "l": {
+      "sheet": 3,
+      "cell": 5,
+      "sourceBounds": [
+        410,
+        354,
+        519,
+        625
+      ],
+      "coreBounds": [
+        412,
+        355,
+        518,
+        622
+      ],
+      "sourceSize": [
+        109,
+        271
+      ],
+      "sourceScale": 1.6853932584269662,
+      "advance": 332,
+      "bitmapSize": [
+        211,
+        484
+      ],
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 221,
+      "componentCount": 1,
+      "nativeGlyph": "u006C.png"
+    },
+    "m": {
+      "sheet": 3,
+      "cell": 6,
+      "sourceBounds": [
+        644,
+        418,
+        955,
+        619
+      ],
+      "coreBounds": [
+        646,
+        419,
+        952,
+        617
+      ],
+      "sourceSize": [
+        311,
+        201
+      ],
+      "sourceScale": 1.6363636363636365,
+      "advance": 869,
+      "bitmapSize": [
+        535,
+        355
+      ],
+      "bitmapOffsetX": -1,
+      "bitmapOffsetY": 224,
+      "componentCount": 1,
+      "nativeGlyph": "u006D.png"
+    },
+    "n": {
+      "sheet": 3,
+      "cell": 7,
+      "sourceBounds": [
+        980,
+        418,
+        1225,
+        624
+      ],
+      "coreBounds": [
+        982,
+        420,
+        1224,
+        622
+      ],
+      "sourceSize": [
+        245,
+        206
+      ],
+      "sourceScale": 1.603960396039604,
+      "advance": 681,
+      "bitmapSize": [
+        419,
+        356
+      ],
+      "bitmapOffsetX": -1,
+      "bitmapOffsetY": 224,
+      "componentCount": 1,
+      "nativeGlyph": "u006E.png"
+    },
+    "o": {
+      "sheet": 3,
+      "cell": 8,
+      "sourceBounds": [
+        50,
+        694,
+        281,
+        913
+      ],
+      "coreBounds": [
+        52,
+        696,
+        279,
+        911
+      ],
+      "sourceSize": [
+        231,
+        219
+      ],
+      "sourceScale": 1.5069767441860464,
+      "advance": 604,
+      "bitmapSize": [
+        372,
+        354
+      ],
+      "bitmapOffsetX": 0,
+      "bitmapOffsetY": 225,
+      "componentCount": 1,
+      "nativeGlyph": "u006F.png"
+    },
+    "p": {
+      "sheet": 3,
+      "cell": 9,
+      "sourceBounds": [
+        379,
+        665,
+        597,
+        920
+      ],
+      "coreBounds": [
+        382,
+        667,
+        596,
+        919
+      ],
+      "sourceSize": [
+        218,
+        255
+      ],
+      "sourceScale": 1.7619047619047619,
+      "advance": 662,
+      "bitmapSize": [
+        412,
+        477
+      ],
+      "bitmapOffsetX": -4,
+      "bitmapOffsetY": 104,
+      "componentCount": 1,
+      "nativeGlyph": "u0070.png"
+    },
+    "q": {
+      "sheet": 3,
+      "cell": 10,
+      "sourceBounds": [
+        681,
+        665,
+        910,
+        934
+      ],
+      "coreBounds": [
+        683,
+        666,
+        908,
+        932
+      ],
+      "sourceSize": [
+        229,
+        269
+      ],
+      "sourceScale": 1.669172932330827,
+      "advance": 660,
+      "bitmapSize": [
+        409,
+        476
+      ],
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 103,
+      "componentCount": 1,
+      "nativeGlyph": "u0071.png"
+    },
+    "r": {
+      "sheet": 3,
+      "cell": 11,
+      "sourceBounds": [
+        1011,
+        697,
+        1209,
+        916
+      ],
+      "coreBounds": [
+        1012,
+        698,
+        1207,
+        915
+      ],
+      "sourceSize": [
+        198,
+        219
+      ],
+      "sourceScale": 1.4930875576036866,
+      "advance": 519,
+      "bitmapSize": [
+        320,
+        351
+      ],
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 227,
+      "componentCount": 1,
+      "nativeGlyph": "u0072.png"
+    },
+    "s": {
+      "sheet": 3,
+      "cell": 12,
+      "sourceBounds": [
+        77,
+        997,
+        265,
+        1204
+      ],
+      "coreBounds": [
+        79,
+        999,
+        263,
+        1202
+      ],
+      "sourceSize": [
+        188,
+        207
+      ],
+      "sourceScale": 1.5960591133004927,
+      "advance": 523,
+      "bitmapSize": [
+        326,
+        356
+      ],
+      "bitmapOffsetX": -1,
+      "bitmapOffsetY": 224,
+      "componentCount": 1,
+      "nativeGlyph": "u0073.png"
+    },
+    "t": {
+      "sheet": 3,
+      "cell": 13,
+      "sourceBounds": [
+        396,
+        940,
+        549,
+        1203
+      ],
+      "coreBounds": [
+        399,
+        942,
+        547,
+        1202
+      ],
+      "sourceSize": [
+        153,
+        263
+      ],
+      "sourceScale": 1.7307692307692308,
+      "advance": 461,
+      "bitmapSize": [
+        292,
+        483
+      ],
+      "bitmapOffsetX": -4,
+      "bitmapOffsetY": 224,
+      "componentCount": 1,
+      "nativeGlyph": "u0074.png"
+    },
+    "u": {
+      "sheet": 3,
+      "cell": 14,
+      "sourceBounds": [
+        664,
+        996,
+        897,
+        1197
+      ],
+      "coreBounds": [
+        666,
+        998,
+        895,
+        1195
+      ],
+      "sourceSize": [
+        233,
+        201
+      ],
+      "sourceScale": 1.6446700507614214,
+      "advance": 662,
+      "bitmapSize": [
+        410,
+        357
+      ],
+      "bitmapOffsetX": -1,
+      "bitmapOffsetY": 224,
+      "componentCount": 1,
+      "nativeGlyph": "u0075.png"
+    },
+    "v": {
+      "sheet": 3,
+      "cell": 15,
+      "sourceBounds": [
+        979,
+        997,
+        1217,
+        1195
+      ],
+      "coreBounds": [
+        981,
+        999,
+        1215,
+        1193
+      ],
+      "sourceSize": [
+        238,
+        198
+      ],
+      "sourceScale": 1.6701030927835052,
+      "advance": 685,
+      "bitmapSize": [
+        424,
+        357
+      ],
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 223,
+      "componentCount": 1,
+      "nativeGlyph": "u0076.png"
+    },
+    "w": {
+      "sheet": 4,
+      "cell": 0,
+      "sourceBounds": [
+        44,
+        79,
+        328,
+        285
+      ],
+      "coreBounds": [
+        46,
+        81,
+        326,
+        283
+      ],
+      "sourceSize": [
+        284,
+        206
+      ],
+      "sourceScale": 1.603960396039604,
+      "advance": 783,
+      "bitmapSize": [
+        481,
+        356
+      ],
+      "bitmapOffsetX": -1,
+      "bitmapOffsetY": 224,
+      "componentCount": 1,
+      "nativeGlyph": "u0077.png"
+    },
+    "x": {
+      "sheet": 4,
+      "cell": 1,
+      "sourceBounds": [
+        367,
+        75,
+        592,
+        283
+      ],
+      "coreBounds": [
+        370,
+        78,
+        590,
+        281
+      ],
+      "sourceSize": [
+        225,
+        208
+      ],
+      "sourceScale": 1.5960591133004927,
+      "advance": 619,
+      "bitmapSize": [
+        385,
+        358
+      ],
+      "bitmapOffsetX": -3,
+      "bitmapOffsetY": 224,
+      "componentCount": 1,
+      "nativeGlyph": "u0078.png"
+    },
+    "y": {
+      "sheet": 4,
+      "cell": 2,
+      "sourceBounds": [
+        687,
+        72,
+        912,
+        338
+      ],
+      "coreBounds": [
+        690,
+        74,
+        909,
+        337
+      ],
+      "sourceSize": [
+        225,
+        266
+      ],
+      "sourceScale": 1.688212927756654,
+      "advance": 650,
+      "bitmapSize": [
+        407,
+        476
+      ],
+      "bitmapOffsetX": -4,
+      "bitmapOffsetY": 105,
+      "componentCount": 1,
+      "nativeGlyph": "u0079.png"
+    },
+    "z": {
+      "sheet": 4,
+      "cell": 3,
+      "sourceBounds": [
+        984,
+        75,
+        1208,
+        283
+      ],
+      "coreBounds": [
+        987,
+        77,
+        1206,
+        281
+      ],
+      "sourceSize": [
+        224,
+        208
+      ],
+      "sourceScale": 1.588235294117647,
+      "advance": 614,
+      "bitmapSize": [
+        381,
+        356
+      ],
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 224,
+      "componentCount": 1,
+      "nativeGlyph": "u007A.png"
+    },
+    "0": {
+      "sheet": 4,
+      "cell": 4,
+      "sourceBounds": [
+        54,
+        346,
+        282,
+        595
+      ],
+      "coreBounds": [
+        56,
+        348,
+        281,
+        593
+      ],
+      "sourceSize": [
+        228,
+        249
+      ],
+      "sourceScale": 1.836734693877551,
+      "advance": 723,
+      "bitmapSize": [
+        448,
+        487
+      ],
+      "bitmapOffsetX": -3,
+      "bitmapOffsetY": 222,
+      "componentCount": 1,
+      "nativeGlyph": "u0030.png"
+    },
+    "1": {
+      "sheet": 4,
+      "cell": 5,
+      "sourceBounds": [
+        408,
+        345,
+        525,
+        594
+      ],
+      "coreBounds": [
+        411,
+        347,
+        523,
+        592
+      ],
+      "sourceSize": [
+        117,
+        249
+      ],
+      "sourceScale": 1.836734693877551,
+      "advance": 377,
+      "bitmapSize": [
+        244,
+        487
+      ],
+      "bitmapOffsetX": -5,
+      "bitmapOffsetY": 222,
+      "componentCount": 1,
+      "nativeGlyph": "u0031.png"
+    },
+    "2": {
+      "sheet": 4,
+      "cell": 6,
+      "sourceBounds": [
+        669,
+        343,
+        894,
+        595
+      ],
+      "coreBounds": [
+        671,
+        345,
+        892,
+        593
+      ],
+      "sourceSize": [
+        225,
+        252
+      ],
+      "sourceScale": 1.814516129032258,
+      "advance": 702,
+      "bitmapSize": [
+        437,
+        486
+      ],
+      "bitmapOffsetX": -3,
+      "bitmapOffsetY": 222,
+      "componentCount": 1,
+      "nativeGlyph": "u0032.png"
+    },
+    "3": {
+      "sheet": 4,
+      "cell": 7,
+      "sourceBounds": [
+        996,
+        341,
+        1200,
+        594
+      ],
+      "coreBounds": [
+        997,
+        343,
+        1198,
+        592
+      ],
+      "sourceSize": [
+        204,
+        253
+      ],
+      "sourceScale": 1.8072289156626506,
+      "advance": 639,
+      "bitmapSize": [
+        398,
+        486
+      ],
+      "bitmapOffsetX": -1,
+      "bitmapOffsetY": 222,
+      "componentCount": 1,
+      "nativeGlyph": "u0033.png"
+    },
+    "4": {
+      "sheet": 4,
+      "cell": 8,
+      "sourceBounds": [
+        45,
+        634,
+        271,
+        877
+      ],
+      "coreBounds": [
+        48,
+        636,
+        269,
+        875
+      ],
+      "sourceSize": [
+        226,
+        243
+      ],
+      "sourceScale": 1.8828451882845187,
+      "advance": 728,
+      "bitmapSize": [
+        456,
+        488
+      ],
+      "bitmapOffsetX": -6,
+      "bitmapOffsetY": 221,
+      "componentCount": 1,
+      "nativeGlyph": "u0034.png"
+    },
+    "5": {
+      "sheet": 4,
+      "cell": 9,
+      "sourceBounds": [
+        361,
+        629,
+        577,
+        877
+      ],
+      "coreBounds": [
+        363,
+        632,
+        576,
+        875
+      ],
+      "sourceSize": [
+        216,
+        248
+      ],
+      "sourceScale": 1.8518518518518519,
+      "advance": 691,
+      "bitmapSize": [
+        430,
+        489
+      ],
+      "bitmapOffsetX": -4,
+      "bitmapOffsetY": 221,
+      "componentCount": 1,
+      "nativeGlyph": "u0035.png"
+    },
+    "6": {
+      "sheet": 4,
+      "cell": 10,
+      "sourceBounds": [
+        674,
+        633,
+        890,
+        875
+      ],
+      "coreBounds": [
+        676,
+        635,
+        888,
+        873
+      ],
+      "sourceSize": [
+        216,
+        242
+      ],
+      "sourceScale": 1.8907563025210083,
+      "advance": 702,
+      "bitmapSize": [
+        439,
+        488
+      ],
+      "bitmapOffsetX": -4,
+      "bitmapOffsetY": 221,
+      "componentCount": 1,
+      "nativeGlyph": "u0036.png"
+    },
+    "7": {
+      "sheet": 4,
+      "cell": 11,
+      "sourceBounds": [
+        1001,
+        631,
+        1219,
+        878
+      ],
+      "coreBounds": [
+        1003,
+        634,
+        1218,
+        875
+      ],
+      "sourceSize": [
+        218,
+        247
+      ],
+      "sourceScale": 1.8672199170124482,
+      "advance": 703,
+      "bitmapSize": [
+        437,
+        491
+      ],
+      "bitmapOffsetX": -4,
+      "bitmapOffsetY": 219,
+      "componentCount": 1,
+      "nativeGlyph": "u0037.png"
+    },
+    "8": {
+      "sheet": 4,
+      "cell": 12,
+      "sourceBounds": [
+        54,
+        908,
+        276,
+        1156
+      ],
+      "coreBounds": [
+        55,
+        909,
+        274,
+        1155
+      ],
+      "sourceSize": [
+        222,
+        248
+      ],
+      "sourceScale": 1.829268292682927,
+      "advance": 702,
+      "bitmapSize": [
+        435,
+        483
+      ],
+      "bitmapOffsetX": -1,
+      "bitmapOffsetY": 224,
+      "componentCount": 1,
+      "nativeGlyph": "u0038.png"
+    },
+    "9": {
+      "sheet": 4,
+      "cell": 13,
+      "sourceBounds": [
+        361,
+        906,
+        571,
+        1194
+      ],
+      "coreBounds": [
+        363,
+        908,
+        569,
+        1192
+      ],
+      "sourceSize": [
+        210,
+        288
+      ],
+      "sourceScale": 1.5845070422535212,
+      "advance": 578,
+      "bitmapSize": [
+        358,
+        482
+      ],
+      "bitmapOffsetX": -1,
+      "bitmapOffsetY": 224,
+      "componentCount": 1,
+      "nativeGlyph": "u0039.png"
+    }
+  },
+  "kerningPairs": 3844
+}

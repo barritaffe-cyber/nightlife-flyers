@@ -1,0 +1,257 @@
+{
+  "glyphs": {
+    "A": {
+      "advance": 583,
+      "sourceScale": 0.6,
+      "sourceBaseline": 278,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 77
+    },
+    "B": {
+      "advance": 502,
+      "sourceScale": 0.6,
+      "sourceBaseline": 278,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 76
+    },
+    "C": {
+      "advance": 490,
+      "sourceScale": 0.6,
+      "sourceBaseline": 278,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 76
+    },
+    "D": {
+      "advance": 493,
+      "sourceScale": 0.6,
+      "sourceBaseline": 278,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 76
+    },
+    "E": {
+      "advance": 460,
+      "sourceScale": 0.6,
+      "sourceBaseline": 278,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 78
+    },
+    "F": {
+      "advance": 424,
+      "sourceScale": 0.6,
+      "sourceBaseline": 278,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 77
+    },
+    "G": {
+      "advance": 478,
+      "sourceScale": 0.6,
+      "sourceBaseline": 278,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 76
+    },
+    "H": {
+      "advance": 505,
+      "sourceScale": 0.6,
+      "sourceBaseline": 278,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 78
+    },
+    "I": {
+      "advance": 241,
+      "sourceScale": 0.6,
+      "sourceBaseline": 278,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 78
+    },
+    "J": {
+      "advance": 488,
+      "sourceScale": 0.6493506493506493,
+      "sourceBaseline": 535,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 76
+    },
+    "K": {
+      "advance": 537,
+      "sourceScale": 0.6493506493506493,
+      "sourceBaseline": 535,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 77
+    },
+    "L": {
+      "advance": 462,
+      "sourceScale": 0.6493506493506493,
+      "sourceBaseline": 535,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 77
+    },
+    "M": {
+      "advance": 611,
+      "sourceScale": 0.6493506493506493,
+      "sourceBaseline": 535,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 77
+    },
+    "N": {
+      "advance": 504,
+      "sourceScale": 0.6493506493506493,
+      "sourceBaseline": 535,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 77
+    },
+    "O": {
+      "advance": 485,
+      "sourceScale": 0.6493506493506493,
+      "sourceBaseline": 535,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 76
+    },
+    "P": {
+      "advance": 495,
+      "sourceScale": 0.6493506493506493,
+      "sourceBaseline": 535,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 77
+    },
+    "Q": {
+      "advance": 556,
+      "sourceScale": 0.6493506493506493,
+      "sourceBaseline": 535,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 62
+    },
+    "R": {
+      "advance": 511,
+      "sourceScale": 0.6493506493506493,
+      "sourceBaseline": 535,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 77
+    },
+    "S": {
+      "advance": 513,
+      "sourceScale": 0.6756756756756757,
+      "sourceBaseline": 783,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 77
+    },
+    "T": {
+      "advance": 560,
+      "sourceScale": 0.6756756756756757,
+      "sourceBaseline": 783,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 77
+    },
+    "U": {
+      "advance": 570,
+      "sourceScale": 0.6756756756756757,
+      "sourceBaseline": 783,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 77
+    },
+    "V": {
+      "advance": 618,
+      "sourceScale": 0.6756756756756757,
+      "sourceBaseline": 783,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 77
+    },
+    "W": {
+      "advance": 699,
+      "sourceScale": 0.6756756756756757,
+      "sourceBaseline": 783,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 77
+    },
+    "X": {
+      "advance": 638,
+      "sourceScale": 0.6756756756756757,
+      "sourceBaseline": 783,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 77
+    },
+    "Y": {
+      "advance": 641,
+      "sourceScale": 0.6756756756756757,
+      "sourceBaseline": 783,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 77
+    },
+    "Z": {
+      "advance": 564,
+      "sourceScale": 0.6756756756756757,
+      "sourceBaseline": 783,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 77
+    },
+    "0": {
+      "advance": 505,
+      "sourceScale": 0.8021390374331551,
+      "sourceBaseline": 994,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 75
+    },
+    "1": {
+      "advance": 321,
+      "sourceScale": 0.8021390374331551,
+      "sourceBaseline": 994,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 77
+    },
+    "2": {
+      "advance": 537,
+      "sourceScale": 0.8021390374331551,
+      "sourceBaseline": 994,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 77
+    },
+    "3": {
+      "advance": 513,
+      "sourceScale": 0.8021390374331551,
+      "sourceBaseline": 994,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 75
+    },
+    "4": {
+      "advance": 610,
+      "sourceScale": 0.8021390374331551,
+      "sourceBaseline": 994,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 77
+    },
+    "5": {
+      "advance": 517,
+      "sourceScale": 0.8021390374331551,
+      "sourceBaseline": 994,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 75
+    },
+    "6": {
+      "advance": 537,
+      "sourceScale": 0.8021390374331551,
+      "sourceBaseline": 994,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 74
+    },
+    "7": {
+      "advance": 525,
+      "sourceScale": 0.8021390374331551,
+      "sourceBaseline": 994,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 76
+    },
+    "8": {
+      "advance": 581,
+      "sourceScale": 0.8021390374331551,
+      "sourceBaseline": 994,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 74
+    },
+    "9": {
+      "advance": 565,
+      "sourceScale": 0.8021390374331551,
+      "sourceBaseline": 994,
+      "bitmapOffsetX": 2,
+      "bitmapOffsetY": 75
+    }
+  },
+  "kerningPairs": 1296
+}

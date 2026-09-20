@@ -24,6 +24,27 @@ export default function PwaRuntime() {
     const media = window.matchMedia?.("(display-mode: standalone)");
     media?.addEventListener?.("change", applyInstalledModeFlag);
 
+    if ("serviceWorker" in navigator && process.env.NODE_ENV !== "production") {
+      navigator.serviceWorker
+        .getRegistrations()
+        .then((registrations) => {
+          registrations.forEach((registration) => {
+            registration.unregister().catch(() => {});
+          });
+        })
+        .catch(() => {});
+      window.caches
+        ?.keys()
+        .then((keys) => {
+          keys
+            .filter((key) => key.startsWith("nf-pwa-"))
+            .forEach((key) => {
+              window.caches.delete(key).catch(() => {});
+            });
+        })
+        .catch(() => {});
+    }
+
     if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
       const register = () => {
         navigator.serviceWorker

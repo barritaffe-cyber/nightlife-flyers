@@ -13,3 +13,7 @@ tsconfig.tsbuildinfo
 .env*.local
 test-results/
 playwright-report/
+
+# Local authoring backups and terminal output
+recipe-file-backups/
+screenlog.*

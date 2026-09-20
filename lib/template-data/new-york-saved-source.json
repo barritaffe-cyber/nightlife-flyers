@@ -1,0 +1,9 @@
+{
+  "source": "public/generated-flyers/new-york.nflyer",
+  "submittedPath": "public/generated-flyers/new-york-submitted-1b20174dc057.nflyer",
+  "submittedSha256": "1b20174dc0574ea2f78c6c5b13924f928fcf3845249ba6bb0bf33f86b3d6852c",
+  "sha256": "a8e627978e2a85466671f592976189e481e7b2ceb1af3f02e0f7f0c50b9e5504",
+  "savedAt": "2026-09-09T05:55:30.828Z",
+  "format": "square",
+  "correction": "Only root and Square/Story bgUrl/backgroundUrl replaced with transparent base; authored background objects and all user edits retained."
+}

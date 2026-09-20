@@ -150,17 +150,23 @@ function LoginPageInner() {
   const intentCopy =
     isStudioPreviewIntent
       ? "Create your workstation profile to start your preview."
+      : offer === "one-flyer"
+        ? "One Flyer — $5 once, with quick edits, your logo, Square + Story and seven days of corrections after export."
       : offer === "night-pass"
         ? "Sign in or create an account to get a one-time Event Pass."
         : offer === "weekend-pass"
           ? "Sign in or create an account to get a one-time Weekend Pass."
           : next === "/pricing"
             ? "Log in or create an account, then choose the plan that fits this flyer."
-            : plan === "creator"
+            : plan === "basic"
+              ? "Get 20 flyers each month with Coco, quick editing and remembered brand details for $10/month."
+              : plan === "full"
+                ? "Create flyers with Coco and unlock Coco + Studio for $15/month."
+                : plan === "creator"
               ? "Access your profile and start the Creator plan."
               : plan === "studio"
                 ? "Access your profile and start the Studio plan."
-                : "Access your profile, subscription, or on-demand pass.";
+                : "Access your profile and Coco subscription.";
 
   const oauthRedirectTo = React.useMemo(() => {
     const redirectUrl = new URL("/login", siteUrl);

@@ -1,0 +1,10 @@
+{
+  "source": "public/generated-flyers/diabla-all-white.nflyer",
+  "master": "public/generated-flyers/diabla-all-white-updated.nflyer",
+  "version": 2,
+  "sha256": "40c1758651026caa1e461ac34e353099c2a8a70ef5ea399bcb0e754e657f3c3e",
+  "overrides": {
+    "square": 9,
+    "story": 5
+  }
+}

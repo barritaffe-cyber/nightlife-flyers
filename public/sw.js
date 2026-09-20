@@ -1,4 +1,4 @@
-const CACHE_VERSION = "nf-pwa-2026-06-10-01";
+const CACHE_VERSION = "nf-pwa-2026-06-30-01";
 const STATIC_CACHE = `${CACHE_VERSION}:static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}:runtime`;
 
@@ -71,6 +71,9 @@ function shouldNeverCache(pathname) {
 
 function shouldRuntimeCache(pathname) {
   if (shouldNeverCache(pathname)) return false;
+  // Coco's portable recipe projects are versioned design masters rather than
+  // static media. Serving an older .nflyer changes the resulting composition.
+  if (pathname.endsWith(".nflyer")) return false;
   if (CACHEABLE_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return true;
   return CACHEABLE_EXTENSIONS.has(getExtension(pathname));
 }
@@ -91,6 +94,22 @@ async function cacheFirst(request, cacheName) {
     cache.put(request, response.clone()).catch(() => {});
   }
   return response;
+}
+
+async function networkFirst(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  try {
+    const response = await fetch(request);
+    if (response && response.ok) {
+      cache.put(request, response.clone()).catch(() => {});
+      trimCache(cacheName, 220).catch(() => {});
+    }
+    return response;
+  } catch {
+    const cached = await cache.match(request);
+    if (cached) return cached;
+    throw new Error("Network unavailable and no cached response exists.");
+  }
 }
 
 async function staleWhileRevalidate(request, cacheName) {
@@ -143,7 +162,7 @@ self.addEventListener("fetch", (event) => {
   if (shouldNeverCache(url.pathname)) return;
 
   if (url.pathname.startsWith("/_next/static/")) {
-    event.respondWith(cacheFirst(request, STATIC_CACHE));
+    event.respondWith(networkFirst(request, STATIC_CACHE));
     return;
   }
 

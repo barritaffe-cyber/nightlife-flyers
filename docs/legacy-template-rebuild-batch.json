@@ -1,0 +1,137 @@
+{
+  "status": "removed-from-gallery",
+  "strategy": "User correction: these ten are the delete batch, not the rebuild batch. Remaining gallery templates are the rebuild scope. Definitions and assets retained for existing projects. September 11: user explicitly requested replacing Techno / Afterhours with Mind State and restoring its gallery slot.",
+  "templates": [
+    {
+      "id": "ladies_night_center_hero",
+      "label": "Ladies Night Flyer",
+      "source": "lib/templates.ts",
+      "line": 7632,
+      "declaredFormats": [
+        "square",
+        "story"
+      ],
+      "recipeId": "ladies-night-center-hero-system",
+      "hasRecipeNotes": true,
+      "hasCompiledDocument": false
+    },
+    {
+      "id": "triple_hero_takeover_red",
+      "label": "Sunday Takeover Flyer",
+      "source": "lib/templates.ts",
+      "line": 1952,
+      "declaredFormats": [
+        "square"
+      ],
+      "recipeId": null,
+      "hasRecipeNotes": true,
+      "hasCompiledDocument": false
+    },
+    {
+      "id": "red_velvet_editorial",
+      "label": "Editorial Hero \u2014 Red Velvet",
+      "source": "lib/templates.ts",
+      "line": 5032,
+      "declaredFormats": [
+        "square",
+        "story"
+      ],
+      "recipeId": null,
+      "hasRecipeNotes": true,
+      "hasCompiledDocument": false
+    },
+    {
+      "id": "edm_stage_co2",
+      "label": "Techno / Afterhours Flyer",
+      "source": "lib/templates.ts",
+      "line": 6108,
+      "declaredFormats": [
+        "square",
+        "story"
+      ],
+      "recipeId": null,
+      "hasRecipeNotes": false,
+      "hasCompiledDocument": true,
+      "status": "replaced-and-restored",
+      "replacement": "mind-state"
+    },
+    {
+      "id": "hiphop_graffiti",
+      "label": "Hip Hop Night Flyer",
+      "source": "lib/templates.ts",
+      "line": 8315,
+      "declaredFormats": [
+        "square",
+        "story"
+      ],
+      "recipeId": null,
+      "hasRecipeNotes": false,
+      "hasCompiledDocument": false
+    },
+    {
+      "id": "bottle_service",
+      "label": "Bottle Service Flyer",
+      "source": "lib/templates.ts",
+      "line": 10445,
+      "declaredFormats": [
+        "square",
+        "story"
+      ],
+      "recipeId": null,
+      "hasRecipeNotes": false,
+      "hasCompiledDocument": false
+    },
+    {
+      "id": "summer_splash",
+      "label": "Summer Splash",
+      "source": "lib/templates.ts",
+      "line": 10902,
+      "declaredFormats": [
+        "square",
+        "story"
+      ],
+      "recipeId": null,
+      "hasRecipeNotes": false,
+      "hasCompiledDocument": false
+    },
+    {
+      "id": "techno_warehouse",
+      "label": "Techno \u2014 Industrial Fog",
+      "source": "lib/templates.ts",
+      "line": 10649,
+      "declaredFormats": [
+        "square",
+        "story"
+      ],
+      "recipeId": null,
+      "hasRecipeNotes": false,
+      "hasCompiledDocument": false
+    },
+    {
+      "id": "luau_tiki",
+      "label": "Luau \u2014 Tiki Sunset",
+      "source": "lib/templates.ts",
+      "line": 11046,
+      "declaredFormats": [
+        "square",
+        "story"
+      ],
+      "recipeId": null,
+      "hasRecipeNotes": false,
+      "hasCompiledDocument": false
+    },
+    {
+      "id": "hiphop_lowrider",
+      "label": "Hip-Hop \u2014 Lowrider Chrome",
+      "source": "lib/templates.ts",
+      "line": 8655,
+      "declaredFormats": [
+        "square",
+        "story"
+      ],
+      "recipeId": null,
+      "hasRecipeNotes": false,
+      "hasCompiledDocument": false
+    }
+  ]
+}

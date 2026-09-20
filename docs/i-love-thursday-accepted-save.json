@@ -1,0 +1,10 @@
+{
+  "source": "public/generated-flyers/assets/i-love-thursday.nflyer",
+  "master": "public/generated-flyers/i-love-thursday-updated.nflyer",
+  "version": 2,
+  "sha256": "b4c9b88af0d9ec61442fdb8ad92c6c577393ee08e30be8cb6aabbeda6da1ba81",
+  "overrides": {
+    "square": 14,
+    "story": 12
+  }
+}

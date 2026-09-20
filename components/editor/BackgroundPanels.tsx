@@ -107,16 +107,21 @@ type Props = {
   presetBackgroundLabel?: string;
   onPresetBackgroundSelect?: (src: string) => void;
   currentPalette?: SceneBuilderPalette;
+  paletteMaterialControls?: React.ReactNode;
   originalPalette?: SceneBuilderPalette | null;
   onPaletteChange?: (palette: SceneBuilderPalette) => void;
   onOriginalPaletteReset?: () => void;
   onGeneratedPaletteApply?: () => void;
+  generatedPaletteLabel?: string;
   layoutOptions?: ReadonlyArray<{
     id: string;
     label: string;
   }>;
   activeLayoutId?: string | null;
   onLayoutSelect?: (id: string) => void;
+  layoutTransitioning?: boolean;
+  subjectBoundsDebug?: boolean;
+  onSubjectBoundsDebugToggle?: () => void;
   allowUploads?: boolean;
   selectedPanel: string | null;
   setSelectedPanel: (v: string | null) => void;
@@ -187,13 +192,18 @@ function BackgroundPanels({
   presetBackgroundLabel = 'Background Picks',
   onPresetBackgroundSelect,
   currentPalette,
+  paletteMaterialControls,
   originalPalette,
   onPaletteChange,
   onOriginalPaletteReset,
   onGeneratedPaletteApply,
+  generatedPaletteLabel = 'Try another color',
   layoutOptions = [],
   activeLayoutId = null,
   onLayoutSelect,
+  layoutTransitioning = false,
+  subjectBoundsDebug = false,
+  onSubjectBoundsDebugToggle,
   allowUploads = true,
   selectedPanel,
   setSelectedPanel,
@@ -347,7 +357,7 @@ function BackgroundPanels({
   );
   const scenePalette = React.useMemo(() => {
     const base = normalizeHex(
-      currentPalette?.secondary || currentPalette?.bgFrom || '#101015',
+      currentPalette?.bgFrom || currentPalette?.secondary || '#101015',
       '#101015'
     );
     const primary = normalizeHex(
@@ -364,10 +374,29 @@ function BackgroundPanels({
       neutral: normalizeHex(currentPalette?.neutral || mixHex(primary, '#FFFFFF', 0.45), mixHex(primary, '#FFFFFF', 0.45)),
     };
   }, [currentPalette, mixHex, normalizeHex]);
+  type ScenePaletteInputKey = 'secondary' | 'bgTo' | 'primary' | 'neutral' | 'accent';
+  const [paletteHexDrafts, setPaletteHexDrafts] = React.useState<Record<ScenePaletteInputKey, string>>({
+    secondary: scenePalette.secondary,
+    bgTo: scenePalette.bgTo,
+    primary: scenePalette.primary,
+    neutral: scenePalette.neutral,
+    accent: scenePalette.accent,
+  });
+  const activePaletteHexInputRef = React.useRef<ScenePaletteInputKey | null>(null);
+  React.useEffect(() => {
+    setPaletteHexDrafts((current) => ({
+      secondary:
+        activePaletteHexInputRef.current === 'secondary' ? current.secondary : scenePalette.secondary,
+      bgTo: activePaletteHexInputRef.current === 'bgTo' ? current.bgTo : scenePalette.bgTo,
+      primary: activePaletteHexInputRef.current === 'primary' ? current.primary : scenePalette.primary,
+      neutral: activePaletteHexInputRef.current === 'neutral' ? current.neutral : scenePalette.neutral,
+      accent: activePaletteHexInputRef.current === 'accent' ? current.accent : scenePalette.accent,
+    }));
+  }, [scenePalette]);
   const originalScenePalette = React.useMemo(() => {
     if (!originalPalette) return null;
     const base = normalizeHex(
-      originalPalette.secondary || originalPalette.bgFrom || '#101015',
+      originalPalette.bgFrom || originalPalette.secondary || '#101015',
       '#101015'
     );
     const primary = normalizeHex(
@@ -386,8 +415,12 @@ function BackgroundPanels({
   }, [mixHex, normalizeHex, originalPalette]);
   const recommendedPalettes = React.useMemo(
     () => {
-      const baseHsl = hexToHsl(scenePalette.secondary);
-      const primaryHsl = hexToHsl(scenePalette.primary);
+      // Preset identity must stay stable after it is selected. Derive the two
+      // recommendations from the template's original palette when available,
+      // not from the just-selected recommendation itself.
+      const recommendationSeed = originalScenePalette ?? scenePalette;
+      const baseHsl = hexToHsl(recommendationSeed.secondary);
+      const primaryHsl = hexToHsl(recommendationSeed.primary);
       const warmHue = baseHsl.s < 12 ? 330 : baseHsl.h;
       const luxuryHue = primaryHsl.s > 18 ? primaryHsl.h : 43;
       const coolHue = (warmHue + 190) % 360;
@@ -411,7 +444,7 @@ function BackgroundPanels({
           id: 'warm-luxury-energy',
           label: 'Warm Luxury',
           palette: {
-            ...scenePalette,
+            ...recommendationSeed,
             bgFrom: warmBase,
             bgTo: warmShadow,
             secondary: warmBase,
@@ -424,7 +457,7 @@ function BackgroundPanels({
           id: 'cool-electric-contrast',
           label: 'Cool Electric',
           palette: {
-            ...scenePalette,
+            ...recommendationSeed,
             bgFrom: coolBase,
             bgTo: coolShadow,
             secondary: coolBase,
@@ -435,7 +468,7 @@ function BackgroundPanels({
         },
       ];
     },
-    [hexToHsl, hslToHex, pickSeparatedHue, scenePalette]
+    [hexToHsl, hslToHex, originalScenePalette, pickSeparatedHue, scenePalette]
   );
   const applyScenePalette = React.useCallback(
     (patch: Partial<SceneBuilderPalette>) => {
@@ -447,15 +480,15 @@ function BackgroundPanels({
       const nextAccent = normalizeHex(patch.accent || scenePalette.accent, scenePalette.accent);
       const next: SceneBuilderPalette = {
         bgFrom: nextBase,
-        bgTo: normalizeHex(patch.bgTo || mixHex(nextBase, '#000000', 0.35), mixHex(nextBase, '#000000', 0.35)),
+        bgTo: normalizeHex(patch.bgTo || scenePalette.bgTo, scenePalette.bgTo),
         secondary: nextBase,
         primary: nextPrimary,
         accent: nextAccent,
-        neutral: normalizeHex(patch.neutral || mixHex(nextPrimary, '#FFFFFF', 0.45), mixHex(nextPrimary, '#FFFFFF', 0.45)),
+        neutral: normalizeHex(patch.neutral || scenePalette.neutral, scenePalette.neutral),
       };
       onPaletteChange?.(next);
     },
-    [mixHex, normalizeHex, onPaletteChange, scenePalette]
+    [normalizeHex, onPaletteChange, scenePalette]
   );
   const resetToOriginalPalette = React.useCallback(() => {
     if (onOriginalPaletteReset) {
@@ -961,7 +994,11 @@ function BackgroundPanels({
             }}
           />
 
-          <div id="background-palette-section" className={`${editorSectionCardClass} mb-3`}>
+          <div
+            id="background-palette-section"
+            className={`${editorSectionCardClass} mb-3`}
+            data-coco-palette-options="true"
+          >
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className={editorSectionTitleClass}>Colors</div>
@@ -982,6 +1019,7 @@ function BackgroundPanels({
               </div>
             </div>
 
+            {paletteMaterialControls}
             <div className="mt-3 grid grid-cols-5 gap-2">
               {[
                 { key: 'secondary' as const, label: 'Base', value: scenePalette.secondary },
@@ -1002,10 +1040,23 @@ function BackgroundPanels({
                     aria-label={`${item.label} color`}
                   />
                   <input
-                    value={item.value}
+                    value={paletteHexDrafts[item.key]}
+                    onFocus={() => {
+                      activePaletteHexInputRef.current = item.key;
+                    }}
                     onChange={(event) => {
-                      const value = event.target.value.trim();
+                      const value = event.target.value.toUpperCase();
+                      setPaletteHexDrafts((current) => ({ ...current, [item.key]: value }));
                       if (isHexColor(value)) applyScenePalette({ [item.key]: value });
+                    }}
+                    onBlur={() => {
+                      activePaletteHexInputRef.current = null;
+                      const value = paletteHexDrafts[item.key].trim();
+                      if (isHexColor(value)) {
+                        applyScenePalette({ [item.key]: value });
+                      } else {
+                        setPaletteHexDrafts((current) => ({ ...current, [item.key]: item.value }));
+                      }
                     }}
                     className="h-7 w-full rounded-md border border-white/10 bg-black/30 px-2 text-[10px] uppercase text-neutral-300 outline-none focus:border-cyan-400/70"
                     aria-label={`${item.label} hex`}
@@ -1042,6 +1093,8 @@ function BackgroundPanels({
                 <button
                   key="generated-template-palette"
                   type="button"
+                  aria-label={`${generatedPaletteLabel}. Click for another compatible palette`}
+                  title="Click again to cycle through compatible generated palettes"
                   className="rounded-lg border border-white/10 bg-black/24 p-2 text-left transition hover:border-white/25 hover:bg-white/[0.04]"
                   onClick={onGeneratedPaletteApply}
                 >
@@ -1056,7 +1109,7 @@ function BackgroundPanels({
                       <span key={swatch.key} className="flex-1" style={{ backgroundColor: swatch.color }} />
                     ))}
                   </div>
-                  <div className="text-[11px] font-medium text-neutral-200">Generated</div>
+                  <div className="text-[11px] font-medium text-neutral-200">{generatedPaletteLabel}</div>
                 </button>
               ) : null}
               {recommendedPalettes.map((rec) => (
@@ -1083,21 +1136,36 @@ function BackgroundPanels({
             </div>
 
             {layoutOptions.length > 0 && (
-              <div id="background-layout-section" className="mt-4 border-t border-white/10 pt-3">
+              <div
+                id="background-layout-section"
+                className="mt-4 border-t border-white/10 pt-3"
+                data-coco-layout-options="true"
+              >
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <div className={editorSectionTitleClass}>Layout</div>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div
+                  className={clsx(
+                    "grid gap-1.5",
+                    layoutOptions.length === 4
+                      ? "grid-cols-4"
+                      : layoutOptions.length >= 3
+                      ? "grid-cols-3"
+                      : "grid-cols-2"
+                  )}
+                >
                   {layoutOptions.map((option) => {
                     const isActive = activeLayoutId === option.id;
                     return (
                       <button
                         key={option.id}
                         type="button"
+                        disabled={layoutTransitioning}
+                        aria-busy={layoutTransitioning || undefined}
                         className={clsx(
-                          "h-10 rounded-lg border px-3 text-[12px] font-semibold uppercase tracking-[0.14em] transition",
+                          "h-8 rounded-md border px-2 text-[10px] font-semibold uppercase tracking-[0.08em] transition disabled:cursor-wait disabled:opacity-50",
                           isActive
-                            ? "border-cyan-300/80 bg-cyan-300 text-black shadow-[0_0_18px_rgba(34,211,238,0.22)]"
+                            ? "border-cyan-300/70 bg-cyan-300 text-black shadow-[0_0_10px_rgba(34,211,238,0.16)]"
                             : "border-white/10 bg-black/24 text-neutral-300 hover:border-white/25 hover:bg-white/[0.04]"
                         )}
                         onClick={() => onLayoutSelect?.(option.id)}
@@ -1107,6 +1175,21 @@ function BackgroundPanels({
                     );
                   })}
                 </div>
+                {onSubjectBoundsDebugToggle ? (
+                  <button
+                    type="button"
+                    data-testid="coco-subject-bounds-debug-toggle"
+                    className={clsx(
+                      "mt-3 h-10 w-full rounded-lg px-3 text-[12px] font-semibold uppercase tracking-[0.14em] transition",
+                      subjectBoundsDebug
+                        ? "bg-emerald-300 text-black shadow-[0_0_18px_rgba(52,211,153,0.2)]"
+                        : "bg-white/[0.06] text-neutral-200 hover:bg-white/[0.1]"
+                    )}
+                    onClick={onSubjectBoundsDebugToggle}
+                  >
+                    {subjectBoundsDebug ? "Hide fit guides" : "Show fit guides"}
+                  </button>
+                ) : null}
               </div>
             )}
           </div>

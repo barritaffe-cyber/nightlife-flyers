@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Grey Rave Festival — Coco CSS Master</title>
+  <style>
+    @font-face { font-family: RaveWide; src: url("/fonts/LEMONMILK-Bold.ttf") format("truetype"); font-display: block; }
+    @font-face { font-family: RaveRegular; src: url("/fonts/LEMONMILK-Regular.ttf") format("truetype"); font-display: block; }
+    @font-face { font-family: RaveCondensed; src: url("/fonts/BebasNeue-Regular.ttf") format("truetype"); font-display: block; }
+    @font-face { font-family: RaveBrush; src: url("/fonts/script/Road_Rage.otf") format("opentype"); font-display: block; }
+    @font-face { font-family: RaveMarker; src: url("/fonts/Paint the town-1.ttf") format("truetype"); font-display: block; }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #080808; }
+    body { display: grid; place-items: center; padding: 24px; }
+    .canvas {
+      --pink: #f72a91;
+      --white: #f5f3f4;
+      --venue-font: RaveBrush, RaveMarker, cursive;
+      position: relative;
+      width: min(92vw, 540px);
+      aspect-ratio: 9 / 16;
+      overflow: hidden;
+      isolation: isolate;
+      container-type: inline-size;
+      color: var(--white);
+      background: #090909;
+      box-shadow: 0 30px 90px #000;
+    }
+    .background { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+    .date, .festival, .line-up, .lineup, .age, .entry, .handle, .footer { position: absolute; z-index: 10; text-align: center; }
+    .date {
+      left: 19%; top: 10.2%; width: 62%;
+      display: flex; align-items: center; justify-content: center; gap: 2.4cqw;
+      font-family: RaveWide, sans-serif; font-size: 2.25cqw; font-weight: 900;
+      letter-spacing: .62em; text-transform: uppercase; white-space: nowrap;
+      text-shadow: 0 .3cqw .4cqw #000;
+    }
+    .date strong { color: var(--pink); font-size: 8.8cqw; letter-spacing: -.09em; line-height: .7; }
+    .hero { position: absolute; left: 17%; top: 27.1%; width: 66%; height: 22%; z-index: 12; }
+    .hero::before, .hero::after {
+      content: ""; position: absolute; top: 1%; width: 8.5%; height: 91%;
+      background: var(--pink); opacity: .95; border-radius: 50% 45% 48% 40%;
+      filter: drop-shadow(0 .3cqw .3cqw rgba(0,0,0,.7)); transform: rotate(6deg) skewX(-8deg);
+    }
+    .hero::before { left: 34%; }
+    .hero::after { right: 35%; transform: rotate(-5deg) skewX(8deg); }
+    .rave {
+      position: absolute; inset: 18% -5% auto;
+      z-index: 3; text-align: center; color: #fff;
+      font: 400 17.5cqw/.74 RaveBrush, RaveMarker, cursive;
+      letter-spacing: -.065em; text-transform: uppercase; white-space: nowrap;
+      transform: rotate(-3deg) scaleX(1.08);
+      -webkit-text-stroke: 1.1cqw #111;
+      paint-order: stroke fill;
+      text-shadow: .3cqw .45cqw 0 #111, -.15cqw .12cqw 0 #111;
+    }
+    .festival {
+      left: 20%; top: 42.15%; width: 60%;
+      font: 900 2.35cqw/1 RaveWide, sans-serif;
+      letter-spacing: .62em; text-transform: uppercase; white-space: nowrap;
+      text-shadow: 0 .3cqw .5cqw #000;
+    }
+    .line-up {
+      left: 31%; top: 47%; width: 38%;
+      font: 400 5.6cqw/.9 RaveBrush, RaveMarker, cursive;
+      text-transform: uppercase; transform: rotate(-6deg);
+      -webkit-text-stroke: .18cqw #111; paint-order: stroke fill;
+      text-shadow: .25cqw .35cqw 0 #111;
+    }
+    .lineup {
+      left: 11%; top: 52.7%; width: 78%;
+      color: var(--pink); font: 400 5.25cqw/.92 RaveRegular, sans-serif;
+      letter-spacing: -.055em; text-transform: uppercase;
+      text-shadow: .16cqw .2cqw 0 #25000f;
+    }
+    .lineup span { display: inline; }
+    .zone, .venue-kicker { position: absolute; z-index: 10; left: 30%; width: 40%; text-align: center; text-transform: uppercase; }
+    .zone {
+      top: 66.55%;
+      color: var(--pink); font-family: RaveRegular, sans-serif; font-size: 4.65cqw; font-weight: 400; line-height: .86;
+      letter-spacing: -.035em; transform: none;
+      text-shadow: .14cqw .2cqw 0 #25000f;
+    }
+    .venue-kicker {
+      top: 64.45%; color: #fff; font-family: var(--venue-font); font-size: 3.2cqw; font-weight: 400; line-height: .8;
+      transform: rotate(-4deg); text-shadow: .2cqw .28cqw 0 #111;
+    }
+    .age {
+      left: 40%; top: 73.2%; width: 20%;
+      font: 400 2cqw/1 RaveWide, sans-serif; letter-spacing: .55em;
+    }
+    .entry {
+      left: 76%; top: 70.5%; width: 14%; aspect-ratio: 1;
+      display: grid; place-items: center; border: .34cqw solid var(--pink); border-radius: 50%;
+      color: #fff; background: rgba(8,8,8,.72);
+      font: 400 2.15cqw/1 RaveRegular, sans-serif; text-transform: uppercase;
+      box-shadow: 0 0 1.2cqw rgba(247,42,145,.24);
+    }
+    .handle {
+      left: 22.5%; top: 77%; width: 55%; padding: 1.05cqw 1.4cqw .9cqw;
+      color: #fff; background: var(--pink); border-radius: .5cqw;
+      font: 900 2.8cqw/1 RaveWide, sans-serif; letter-spacing: -.025em;
+      box-shadow: 0 .4cqw .8cqw rgba(0,0,0,.55);
+    }
+    .footer {
+      left: 17%; bottom: 4.1%; width: 66%;
+      font: 400 1.15cqw/1 RaveWide, sans-serif;
+      letter-spacing: .82em; text-transform: uppercase; white-space: nowrap;
+      text-shadow: 0 .2cqw .4cqw #000;
+    }
+    .footer::before {
+      content: ""; display: block; width: 31%; height: .22cqw; margin: 0 auto 2.3cqw;
+      background: linear-gradient(90deg, transparent, var(--pink), transparent);
+    }
+
+    .canvas[data-format="square"] { aspect-ratio: 1; }
+    .canvas[data-format="square"] .background { object-position: center 38%; }
+    .canvas[data-format="square"] .date { top: 5.5%; }
+    .canvas[data-format="square"] .hero { top: 20%; }
+    .canvas[data-format="square"] .festival { top: 39%; }
+    .canvas[data-format="square"] .line-up { top: 46%; }
+    .canvas[data-format="square"] .lineup { top: 54%; }
+    .canvas[data-format="square"] .venue-kicker { top: 73.25%; }
+    .canvas[data-format="square"] .zone { top: 76.4%; }
+    .canvas[data-format="square"] .age { top: 84%; }
+    .canvas[data-format="square"] .entry { left: 76%; top: 64%; width: 12%; }
+    .canvas[data-format="square"] .handle { top: 89%; }
+    .canvas[data-format="square"] .footer { bottom: 1.8%; }
+  </style>
+</head>
+<body>
+  <main class="canvas" data-coco-canvas data-format="story">
+    <img class="background" src="/generated-flyers/assets/grey%20assets-bg.png" alt="" data-region="background" data-coco-object="background" data-coco-kind="image" data-coco-asset="background" />
+
+    <div class="date" data-region="date" data-coco-object="date" data-coco-role="date" data-coco-editable="true"><span>Sat</span> <strong>28</strong> <span>May</span></div>
+    <div class="hero" data-region="hero-marks" data-coco-object="hero-marks" data-coco-kind="shape">
+      <div class="rave" data-region="headline" data-coco-object="headline" data-coco-role="headline" data-coco-editable="true">Rave</div>
+    </div>
+    <div class="festival" data-region="headline2" data-coco-object="headline2" data-coco-role="headline2" data-coco-editable="true">Festival</div>
+    <div class="line-up" data-region="dj-lineup-label" data-coco-object="dj-lineup-label" data-coco-role="djLineupLabel" data-coco-editable="true">Line Up</div>
+    <div class="lineup" data-region="dj-lineup" data-coco-object="dj-lineup" data-coco-role="djLineup" data-coco-editable="true">
+      <span>Dormun</span><br><span>Fran Di Rocco</span><br><span>Tato Lerner</span><br><span>Thomy Dome</span>
+    </div>
+    <div class="venue-kicker" data-region="venue-kicker" data-coco-object="venue-kicker" data-coco-role="address" data-coco-editable="true">Pilare</div>
+    <div class="zone" data-region="venue" data-coco-object="venue" data-coco-role="venue" data-coco-editable="true">Zona Noble</div>
+    <div class="age" data-region="age-restriction" data-coco-object="age-restriction" data-coco-role="compliance" data-coco-editable="true">+18</div>
+    <div class="entry" data-region="entry" data-coco-object="entry" data-coco-role="price" data-coco-editable="true">$20</div>
+    <div class="handle" data-region="social-handle" data-coco-object="social-handle" data-coco-role="social" data-coco-editable="true">@rave.festivall</div>
+    <div class="footer" data-region="footer-message" data-coco-object="footer-message" data-coco-role="footerDetails" data-coco-editable="true">Keep the date</div>
+  </main>
+  <script>
+    const format = new URLSearchParams(location.search).get("format") === "square" ? "square" : "story";
+    document.querySelector("[data-coco-canvas]").dataset.format = format;
+  </script>
+</body>
+</html>

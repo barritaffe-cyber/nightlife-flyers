@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="210" viewBox="0 0 980 210">
+  <defs>
+    <filter id="rough">
+      <feTurbulence type="fractalNoise" baseFrequency=".045" numOctaves="3" seed="21"/>
+      <feDisplacementMap in="SourceGraphic" scale="12"/>
+    </filter>
+    <filter id="paperShadow">
+      <feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#000" flood-opacity=".45"/>
+    </filter>
+  </defs>
+  <path
+    filter="url(#rough) url(#paperShadow)"
+    d="M22 46C122 37 200 52 303 40C430 24 553 50 681 38C801 27 889 42 958 31V171C876 161 782 178 671 168C543 155 421 182 301 166C190 152 112 170 24 158Z"
+    fill="#f6f2e8"
+  />
+  <path d="M50 61C158 54 266 62 374 54C511 45 641 62 778 53C839 49 891 51 932 45" fill="none" stroke="#ffffff" stroke-opacity=".54" stroke-width="5"/>
+  <path d="M45 154C171 143 285 161 401 151C552 139 675 164 817 151C876 146 918 151 952 145" fill="none" stroke="#111111" stroke-opacity=".08" stroke-width="7"/>
+</svg>

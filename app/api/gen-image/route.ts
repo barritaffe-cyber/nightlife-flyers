@@ -286,7 +286,7 @@ function placeholderDataURL(format: Format, note = 'placeholder') {
         </linearGradient>
       </defs>
       <rect width="100%" height="100%" fill="url(#g)"/>
-      <text x="50%" y="50%" font-family="Inter,system-ui" font-size="28" fill="#9ca3af" text-anchor="middle">
+      <text x="50%" y="50%" font-family="Bebas Neue,Arial,sans-serif" font-size="28" fill="#9ca3af" text-anchor="middle">
         ${note}
       </text>
     </svg>`;

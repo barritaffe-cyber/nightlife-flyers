@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brunch Saturday — CSS master</title>
+<style>
+@font-face{font-family:BrunchAnton;src:url('/fonts/Anton.ttf');font-weight:400;font-display:block}
+@font-face{font-family:SaturdayScript;src:url('/fonts/dear-script-demo-font.ttf');font-weight:400;font-display:block}
+*{box-sizing:border-box}html,body{margin:0;background:#180702}
+.canvas{position:relative;width:1000px;height:1000px;overflow:hidden;isolation:isolate;color:#fff;font-family:Arial,Helvetica,sans-serif}
+.scene{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+.txt{position:absolute;margin:0;white-space:nowrap;line-height:1;z-index:5}
+.presenter{left:231px;top:80px;width:540px;text-align:center;font-size:21px;font-weight:700;letter-spacing:13.4px}
+.headline{left:171px;top:104px;font-family:BrunchAnton,sans-serif;font-size:310px;font-weight:400;letter-spacing:-6px;transform:scaleX(.735) scaleY(1.07);transform-origin:0 0;z-index:2;color:#e8dfc2;background-image:url('/generated-flyers/assets/brunch-saturday-gold-texture.svg');background-size:210px 210px;background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(6px 10px 7px #16070399)}
+/* Reuse the clean scene through a local mask to put the cocktail in front
+   of the headline. The scene remains undistorted and is not the finished flyer. */
+.cocktail-front{z-index:3;clip-path:inset(0 30% 0 32%);mask-image:url('/generated-flyers/assets/brunch-saturday-foreground.png');mask-size:850px 845px;mask-position:78px 83px;mask-repeat:no-repeat}
+.kiwi-front{z-index:3;clip-path:ellipse(61px 61px at 854px 305px)}
+.orange-front{z-index:3;clip-path:inset(30% 70% 40% 0);mask-image:url('/generated-flyers/assets/brunch-saturday-foreground.png');mask-size:100% 100%;mask-repeat:no-repeat}
+.script{left:182px;top:431px;width:650px;text-align:center;font-family:SaturdayScript,cursive;font-size:210px;font-weight:400;transform:rotate(-7deg) scaleY(.68);transform-origin:center;z-index:6;text-shadow:0 0 1px #fff,0 0 6px #fff9,0 0 16px #ffab63,0 0 27px #ff7136}
+.corner{font-weight:900;font-style:italic;letter-spacing:-3px;text-shadow:0 0 5px #fff9,0 0 16px #ffbc39,0 0 25px #ff9c23}
+.date-number{left:62px;top:57px;font-size:64px}.date-month{left:60px;top:111px;font-size:29px;letter-spacing:-1px}
+.time-number{left:853px;top:59px;font-size:59px}.time-meridiem{left:893px;top:87px;font-size:26px;letter-spacing:-1px}.weekday{left:852px;top:109px;font-size:39px;letter-spacing:-1px}
+.offer-ribbon{position:absolute;left:146px;top:815px;width:706px;height:56px;z-index:4;background:linear-gradient(105deg,#d71915,#b00809 80%,#800705);clip-path:polygon(0 0,100% 0,98.5% 50%,100% 100%,0 100%,1.5% 50%)}
+.offer{position:absolute;top:824px;display:flex;align-items:center;gap:12px;z-index:5;height:38px;white-space:nowrap}
+.offer-one{left:193px}.offer-two{left:408px}.offer-three{left:650px}
+.price{font-size:47px;line-height:1;font-weight:700;letter-spacing:-2px}.currency{font-size:30px;vertical-align:top;line-height:1.05;letter-spacing:0;margin-right:4px}.offer-copy{font-size:18px;line-height:1.02;font-weight:700}
+.band{left:190px;top:893px;width:620px;text-align:center;font-size:22px;font-weight:800;letter-spacing:.3px}
+.address{left:182px;top:917px;width:640px;text-align:center;font-size:21px;font-weight:600;letter-spacing:5.5px}
+.qr-placeholder{position:absolute;left:60px;top:891px;width:49px;height:49px;z-index:5;background:#fff;color:#180702;border:4px solid #fff;display:grid;place-items:center;font:700 10px Arial;text-align:center}
+/* A real ticket destination was not supplied: this is explicitly a replaceable placeholder. */
+.stage{position:relative;width:1000px;height:1000px;overflow:hidden;background:#180702}.stage .canvas{position:absolute;left:0;top:0}.cocktail-front,.kiwi-front,.orange-front{clip-path:none;mask-image:none}.qr-placeholder{border:0;background:transparent}
+</style>
+</head>
+<body>
+<main class="stage" data-coco-canvas="true" data-format="square" aria-label="Brunch Saturday flyer"><div class="canvas">
+  <img class="scene" src="/generated-flyers/assets/brunch-saturday-scene.png" alt="Red tropical cocktail on a wooden table with citrus and warm amber bokeh" data-region="background" data-coco-kind="image" data-coco-role="background">
+  <p class="txt presenter" data-region="presenter" data-coco-kind="text" data-coco-role="presenter" data-coco-editable="true">REDSANITY PRESENTS</p>
+  <h1 class="txt headline" data-region="headline" data-coco-kind="text" data-coco-role="headline" data-coco-editable="true">BRUNCH</h1>
+  <img class="scene cocktail-front" src="/generated-flyers/assets/brunch-saturday-coco-cocktail-foreground.png" alt="" aria-hidden="true" data-region="cocktail-foreground" data-coco-kind="image" data-coco-role="subject">
+  <img class="scene kiwi-front" src="/generated-flyers/assets/brunch-saturday-coco-kiwi-foreground.png" alt="" aria-hidden="true" data-region="kiwi-foreground" data-coco-kind="image" data-coco-role="decoration">
+  <img class="scene orange-front" src="/generated-flyers/assets/brunch-saturday-coco-orange-foreground.png" alt="" aria-hidden="true" data-region="orange-foreground" data-coco-kind="image" data-coco-role="decoration">
+  <p class="txt script" data-region="script" data-coco-kind="text" data-coco-role="headline2" data-coco-editable="true">Saturday</p>
+  <p class="txt corner date-number" data-region="day-number" data-coco-kind="text" data-coco-role="day" data-coco-editable="true">18</p>
+  <p class="txt corner date-month" data-region="month" data-coco-kind="text" data-coco-role="month" data-coco-editable="true">AUG</p>
+  <p class="txt corner time-number" data-region="time" data-coco-kind="text" data-coco-role="time" data-coco-editable="true">8</p>
+  <p class="txt corner time-meridiem" data-region="meridiem" data-coco-kind="text" data-coco-role="meridiem" data-coco-editable="true">PM</p>
+  <p class="txt corner weekday" data-region="weekday" data-coco-kind="text" data-coco-role="weekday" data-coco-editable="true">SAT</p>
+  <div class="offer-ribbon" data-region="offer-ribbon" data-coco-kind="shape" data-coco-role="decoration"></div>
+  <div class="offer offer-one"><div class="price" data-region="offer-one-price" data-coco-kind="text" data-coco-role="offerOnePrice" data-coco-editable="true"><span class="currency">$</span>25</div><div class="offer-copy" data-region="offer-one-copy" data-coco-kind="text" data-coco-role="offerOneCopy" data-coco-editable="true">BRUNCH<br>BUFFET</div></div>
+  <div class="offer offer-two"><div class="price" data-region="offer-two-price" data-coco-kind="text" data-coco-role="offerTwoPrice" data-coco-editable="true"><span class="currency">$</span>14</div><div class="offer-copy" data-region="offer-two-copy" data-coco-kind="text" data-coco-role="offerTwoCopy" data-coco-editable="true">BOTTOMLESS<br>COCKTAILS</div></div>
+  <div class="offer offer-three"><div class="price" data-region="offer-three-price" data-coco-kind="text" data-coco-role="offerThreePrice" data-coco-editable="true"><span class="currency">$</span>19</div><div class="offer-copy" data-region="offer-three-copy" data-coco-kind="text" data-coco-role="offerThreeCopy" data-coco-editable="true">SPECIAL<br>BOTTLES</div></div>
+  <p class="txt band" data-region="band" data-coco-kind="text" data-coco-role="details" data-coco-editable="true">WITH LIVE ACOUSTIC BAND</p>
+  <p class="txt address" data-region="address" data-coco-kind="text" data-coco-role="address" data-coco-editable="true">217 ROYALE STREET, CALIFORNIA 0010</p>
+  <img class="qr-placeholder" src="/generated-flyers/assets/brunch-saturday-coco-qr-placeholder.png" data-region="qr-placeholder" data-coco-kind="image" data-coco-role="qr" alt="YOUR QR placeholder">
+</div></main>
+<script>if(new URLSearchParams(location.search).get('format')==='story'){const stage=document.querySelector('.stage');stage.dataset.format='story';stage.style.height=(1000*16/9)+'px';document.querySelector('.canvas').style.top=((1000*16/9-1000)/2)+'px'}</script></body>
+</html>

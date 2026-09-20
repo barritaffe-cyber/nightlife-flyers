@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { groupFontsByUseCase } from '../../lib/fonts';
+import { WhimsicalSvgText } from '../text/WhimsicalSvgText';
 
 const controlLabelClass = 'text-[11px] uppercase tracking-[0.12em] text-neutral-400';
 const controlFieldClass = 'border border-neutral-700 bg-[#17171b] text-white';
@@ -17,6 +18,7 @@ export function FontPicker({
   buttonClassName,
   menuClassName,
   sample = 'Aa Bb 123',
+  previewMode = 'compact',
 }: {
   value: string;
   options: string[];
@@ -27,6 +29,7 @@ export function FontPicker({
   buttonClassName?: string;
   menuClassName?: string;
   sample?: string;
+  previewMode?: 'compact' | 'text';
 }) {
   const [open, setOpen] = React.useState(false);
   const wrapRef = React.useRef<HTMLDivElement | null>(null);
@@ -47,6 +50,19 @@ export function FontPicker({
     () => groupedOptions.find((group) => group.id === selectedGroupId) ?? null,
     [groupedOptions, selectedGroupId]
   );
+  const menuId = React.useId();
+
+  React.useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.stopPropagation();
+      setOpen(false);
+      btnRef.current?.focus();
+    };
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, [open]);
 
   React.useEffect(() => {
     const handle = (e: MouseEvent | TouchEvent) => {
@@ -117,6 +133,9 @@ export function FontPicker({
       <button
         type="button"
         ref={btnRef}
+        aria-label={label || 'Choose font'}
+        aria-expanded={open}
+        aria-controls={open ? menuId : undefined}
         disabled={disabled}
         onClick={() => {
           setSelectedGroupId(null);
@@ -124,17 +143,14 @@ export function FontPicker({
         }}
         className={`w-full px-2 py-2 text-left flex items-center justify-between gap-2 disabled:opacity-60 ${controlFieldClass} ${buttonClassName ?? ''}`}
       >
-        <span className="truncate" style={{ fontFamily: value }}>
-          {value}
-        </span>
-        <span className="text-[11px] text-neutral-400" style={{ fontFamily: value }}>
-          {sample}
-        </span>
+        <span className="min-w-0 truncate text-sm">{value}</span>
       </button>
       {open && menuPos && typeof window !== 'undefined' &&
         createPortal(
           <div
             ref={menuRef}
+            id={menuId}
+            aria-label="Font choices"
             data-mobile-float-lock="true"
             data-floating-controls="fontpicker"
             className={`fixed z-[9999] overflow-auto border border-neutral-700 bg-[#0f0f12] shadow-xl pb-2 ${menuClassName ?? ''}`}
@@ -169,6 +185,8 @@ export function FontPicker({
                     <button
                       key={f}
                       type="button"
+                      aria-label={f}
+                      aria-pressed={active}
                       onClick={() => {
                         onChange(f);
                         setOpen(false);
@@ -177,11 +195,11 @@ export function FontPicker({
                         active ? 'bg-cyan-400/10 ring-1 ring-inset ring-cyan-300/25' : ''
                       }`}
                     >
-                      <div className="text-[12px] text-white" style={{ fontFamily: f }}>
+                      <div className="text-[12px] text-white" style={previewMode === 'text' ? undefined : { fontFamily: f }}>
                         {f}
                       </div>
-                      <div className="text-[11px] text-neutral-400" style={{ fontFamily: f }}>
-                        {sample}
+                      <div data-font-preview={f} className={previewMode === 'text' || f === 'Whimsical SVG' ? 'mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[20px] leading-normal text-neutral-200' : 'text-[11px] text-neutral-400'} style={{ fontFamily: `"${f}", sans-serif` }}>
+                        {f === 'Whimsical SVG' ? <WhimsicalSvgText text="Brunch" color="#ffffff" tracking={0} /> : sample}
                       </div>
                     </button>
                   );

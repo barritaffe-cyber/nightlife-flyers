@@ -1,0 +1,10 @@
+{
+  "source": "public/generated-flyers/assets/elite-monday.nflyer",
+  "master": "public/generated-flyers/elite-monday-updated.nflyer",
+  "version": 2,
+  "sha256": "1361764e7a4d9fa8345e42bb750716670de4955bf1face5c4a6c4760f9d37ee2",
+  "overrides": {
+    "square": 15,
+    "story": 13
+  }
+}

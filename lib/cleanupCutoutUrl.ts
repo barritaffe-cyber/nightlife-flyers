@@ -76,7 +76,7 @@ export async function cleanupCutoutUrl(
   // --- PARAMS (clamped defaults) ---
   const alphaBoost = clamp(params.alphaBoost ?? PREMIUM_CUTOUT_CLEANUP.alphaBoost, 0.5, 3.0);
   const alphaSmoothPx = Math.round(clamp(params.alphaSmoothPx ?? 0, 0, 6));
-  const shrinkPx = Math.round(clamp(params.shrinkPx ?? 0, 0, 12));
+  const shrinkPx = clamp(params.shrinkPx ?? 0, 0, 12);
   const alphaFill = clamp(params.alphaFill ?? PREMIUM_CUTOUT_CLEANUP.alphaFill, 0, 0.25);
   const featherPx = Math.round(clamp(params.featherPx ?? 0, 0, 24));
   const edgeGamma = clamp(params.edgeGamma ?? PREMIUM_CUTOUT_CLEANUP.edgeGamma, 0.7, 1.5);
@@ -313,28 +313,37 @@ function loadImage(src: string) {
 }
 
 /**
- * Erode alpha by N pixels
+ * Erode alpha by source-image pixels, interpolating neighboring integer
+ * masks for fractional radii so the half-pixel UI steps remain meaningful.
  */
-function erodeAlpha(data: Uint8ClampedArray, w: number, h: number, radius: number) {
+export function erodeAlpha(data: Uint8ClampedArray, w: number, h: number, radius: number) {
+  if (!Number.isFinite(radius) || radius <= 0) return;
+  const innerRadius = Math.floor(radius);
+  const outerRadius = Math.ceil(radius);
+  const fraction = radius - innerRadius;
   const copy = new Uint8ClampedArray(data);
   const getA = (x: number, y: number) => copy[(y * w + x) * 4 + 3];
 
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       let minA = 255;
-      for (let oy = -radius; oy <= radius; oy++) {
+      let innerMinA = 255;
+      for (let oy = -outerRadius; oy <= outerRadius; oy++) {
         const yy = y + oy;
         if (yy < 0 || yy >= h) continue;
-        for (let ox = -radius; ox <= radius; ox++) {
+        for (let ox = -outerRadius; ox <= outerRadius; ox++) {
           const xx = x + ox;
           if (xx < 0 || xx >= w) continue;
           const a = getA(xx, yy);
           if (a < minA) minA = a;
-          if (minA === 0) break;
+          if (Math.abs(ox) <= innerRadius && Math.abs(oy) <= innerRadius) {
+            innerMinA = Math.min(innerMinA, a);
+          }
         }
-        if (minA === 0) break;
       }
-      data[(y * w + x) * 4 + 3] = minA;
+      data[(y * w + x) * 4 + 3] = fraction === 0
+        ? minA
+        : Math.round(innerMinA + (minA - innerMinA) * fraction);
     }
   }
 }

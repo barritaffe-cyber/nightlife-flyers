@@ -1,0 +1,399 @@
+{
+  "schemaVersion": 1,
+  "recipeId": "glow-in-the-dark",
+  "recipeVersion": 10,
+  "sourceHash": "762588dc2998d526ddc436be53614f59739139df0797a77822a0275493ef89af",
+  "sourceProjectSha256": "e04f8f4b02561e9fe799ad8360c24fe20ce4b87a753b2e8f044ae9d4068d1ded",
+  "sourceSavedAt": "2026-09-01T16:58:15.447Z",
+  "formats": {
+    "square": {
+      "fields": {
+        "detailsUppercase": true,
+        "detailsFamily": "Bebas Neue",
+        "head2SizePx": 124,
+        "head2Size": 124,
+        "dateFamily": "Bebas Neue",
+        "subtagFamily": "Bebas Neue",
+        "subtagRotate": 0,
+        "venueFamily": "Bebas Neue",
+        "venueSize": 35,
+        "rightRail": "a high-energy Friday night packed with vibrant colors, great music, and nonstop party vibes.",
+        "leftRailLabelColor": "#00EF80",
+        "leftRailSize": 11,
+        "priceFamily": "Bebas Neue",
+        "priceX": 84.001,
+        "priceY": 62.462,
+        "priceAlign": "right",
+        "priceLineHeight": 0.3,
+        "priceLabel": "ENTRT",
+        "priceLabelSize": 16,
+        "priceLabelColor": "#FF1B92",
+        "priceLabelBgColor": "#071B24",
+        "cocoRushVenueStyles": {
+          "venueNameSize": 35,
+          "addressSize": 12,
+          "gap": 3,
+          "venueNameColor": "rgb(255, 255, 255)",
+          "addressColor": "rgb(255, 255, 255)"
+        }
+      },
+      "compiledObjectOverrides": {
+        "dark-title": {
+          "x": 50.79137731481482,
+          "y": 23.790509259259263
+        },
+        "footer-address": {
+          "x": 12.126736111111112,
+          "y": 95.14684606481481
+        },
+        "footer-contact-label": {
+          "x": 12.486255787037038,
+          "y": 63.36877893518518
+        },
+        "footer-contact-value": {
+          "x": 12.43272569444445,
+          "y": 66.7042824074074
+        },
+        "footer-details": {
+          "x": 46.946614583333336,
+          "y": 90.03761574074075
+        },
+        "friday": {
+          "x": 50.89988425925926,
+          "y": 65.71108217592592
+        },
+        "lineup": {
+          "x": 49.943576388888886,
+          "y": 77.49638310185185
+        },
+        "link-word": {
+          "x": 84.80396412037037,
+          "y": 14.769965277777779
+        },
+        "smoke-frame": {
+          "removed": true
+        },
+        "venue": {
+          "x": 23.353587962962965,
+          "y": 88.9431423611111
+        }
+      },
+      "assets": {
+        "removeCompiledObjectIds": [
+          "smoke-frame"
+        ],
+        "patchCompiledByObjectId": {
+          "edge-line-left": {
+            "x": 0.8441840277777776,
+            "y": 13.642939814814817,
+            "scale": 2.35,
+            "opacity": 0.6,
+            "rotation": 0
+          },
+          "edge-line-right": {
+            "x": 99.91391782407408,
+            "y": 75.859375,
+            "scale": 2.35,
+            "opacity": 0.6,
+            "rotation": 0,
+            "tint": -180
+          },
+          "subject": {
+            "x": 50.2611400462963,
+            "y": 62.639612268518526,
+            "scale": 1.28
+          },
+          "footer-band": {
+            "x": 42.26869212962963,
+            "y": 93.53443287037037,
+            "scale": 1.3
+          }
+        },
+        "additions": [
+          {
+            "id": "flare_sun04_1788281115505_pg39s",
+            "url": "/flares/sun04.png",
+            "x": 48.17780671296297,
+            "y": 72.64539930555556,
+            "scale": 0.2,
+            "locked": false,
+            "blendMode": "screen",
+            "opacity": 0.45,
+            "rotation": 0,
+            "isFlare": true,
+            "label": "Green Sun",
+            "layerOffset": -24
+          },
+          {
+            "id": "design_bold-plus_1788281289949_wc483",
+            "url": "data:image/svg+xml;base64,PHN2ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjggMTI4LjYyIiB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgZmlsbD0iI0ZGMUI5MiI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC5jbHMtMSB7CiAgICAgICAgZmlsbDogbm9uZTsKICAgICAgICBzdHJva2U6ICNGRjFCOTI7CiAgICAgICAgc3Ryb2tlLW1pdGVybGltaXQ6IDEwOwogICAgICAgIHN0cm9rZS13aWR0aDogMjhweDsKICAgICAgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPGxpbmUgY2xhc3M9ImNscy0xIiB4MT0iNjQuOTYiIHgyPSI2NC45NiIgeTI9IjEyOC42MiIvPgogIDxsaW5lIGNsYXNzPSJjbHMtMSIgeDE9IjEyOCIgeTE9IjYyIiB5Mj0iNjIiLz4KPC9zdmc+",
+            "x": 26.525607638888893,
+            "y": 50.99826388888889,
+            "scale": 0.44,
+            "layerOffset": 55,
+            "locked": false,
+            "isSticker": true,
+            "isDesignElement": true,
+            "label": "Bold Plus",
+            "showLabel": false,
+            "hitTestMode": "alpha-bounds",
+            "svgTemplate": "<svg id=\"Layer_1\" data-name=\"Layer 1\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 128 128.62\" width=\"128\" height=\"128\" fill=\"{{COLOR}}\">\n  <defs>\n    <style>\n      .cls-1 {\n        fill: none;\n        stroke: {{COLOR}};\n        stroke-miterlimit: 10;\n        stroke-width: 28px;\n      }\n    </style>\n  </defs>\n  <line class=\"cls-1\" x1=\"64.96\" x2=\"64.96\" y2=\"128.62\"/>\n  <line class=\"cls-1\" x1=\"128\" y1=\"62\" y2=\"62\"/>\n</svg>",
+            "iconColor": "#FF1B92",
+            "rotation": -36
+          },
+          {
+            "id": "design_bold-plus_1788281335149_mq35h",
+            "url": "data:image/svg+xml;base64,PHN2ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjggMTI4LjYyIiB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgZmlsbD0iIzAwRUY4MCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC5jbHMtMSB7CiAgICAgICAgZmlsbDogbm9uZTsKICAgICAgICBzdHJva2U6ICMwMEVGODA7CiAgICAgICAgc3Ryb2tlLW1pdGVybGltaXQ6IDEwOwogICAgICAgIHN0cm9rZS13aWR0aDogMjhweDsKICAgICAgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPGxpbmUgY2xhc3M9ImNscy0xIiB4MT0iNjQuOTYiIHgyPSI2NC45NiIgeTI9IjEyOC42MiIvPgogIDxsaW5lIGNsYXNzPSJjbHMtMSIgeDE9IjEyOCIgeTE9IjYyIiB5Mj0iNjIiLz4KPC9zdmc+",
+            "x": 71.74406828703702,
+            "y": 71.3744212962963,
+            "scale": 0.22,
+            "layerOffset": 55,
+            "locked": false,
+            "isSticker": true,
+            "isDesignElement": true,
+            "label": "Bold Plus",
+            "showLabel": false,
+            "hitTestMode": "alpha-bounds",
+            "svgTemplate": "<svg id=\"Layer_1\" data-name=\"Layer 1\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 128 128.62\" width=\"128\" height=\"128\" fill=\"{{COLOR}}\">\n  <defs>\n    <style>\n      .cls-1 {\n        fill: none;\n        stroke: {{COLOR}};\n        stroke-miterlimit: 10;\n        stroke-width: 28px;\n      }\n    </style>\n  </defs>\n  <line class=\"cls-1\" x1=\"64.96\" x2=\"64.96\" y2=\"128.62\"/>\n  <line class=\"cls-1\" x1=\"128\" y1=\"62\" y2=\"62\"/>\n</svg>",
+            "iconColor": "#00EF80",
+            "rotation": -80
+          }
+        ]
+      }
+    },
+    "story": {
+      "fields": {
+        "detailsFamily": "Bebas Neue",
+        "bodyFamily": "Bebas Neue",
+        "head2SizePx": 120,
+        "head2Size": 120,
+        "dateFamily": "Bebas Neue",
+        "subtagFamily": "Bebas Neue",
+        "subtagRotate": 0,
+        "venueFamily": "Bebas Neue",
+        "venueSize": 41,
+        "rightRail": "a high-energy Friday night packed with vibrant colors, great music, and nonstop party vibes.",
+        "rightRailColor": "#00EF80",
+        "rightRailAlign": "center",
+        "cocoManualTextColorRoles": {
+          "rightRail": true
+        },
+        "leftRailLabelBgColor": "#00EF80",
+        "priceFamily": "Bebas Neue",
+        "priceX": 86.616,
+        "priceY": 45.132,
+        "priceAlign": "right",
+        "priceLineHeight": 0.36,
+        "priceLabel": "ENTRY",
+        "priceLabelSize": 21,
+        "priceLabelColor": "#ffffff",
+        "priceLabelBgColor": "#FF1B92",
+        "head2Shadow": true,
+        "head2ShadowStrength": 1,
+        "detailsShadow": true,
+        "detailsShadowStrength": 1,
+        "details2Shadow": true,
+        "details2ShadowStrength": 1,
+        "venueShadow": true,
+        "venueShadowStrength": 1,
+        "subtagShadow": true,
+        "subtagShadowStrength": 1,
+        "head2Fx": {
+          "uppercase": true,
+          "bold": true,
+          "italic": false,
+          "underline": false,
+          "alpha": 1,
+          "tracking": 0,
+          "gradient": true,
+          "gradFrom": "#ffffff",
+          "gradTo": "#ffd166",
+          "color": "#ffffff",
+          "strokeWidth": 0,
+          "strokeColor": "#000000",
+          "shadow": 0.5,
+          "glow": 0.15,
+          "shadowEnabled": true
+        },
+        "textFx": {
+          "uppercase": true,
+          "bold": true,
+          "italic": false,
+          "underline": false,
+          "alpha": 1,
+          "tracking": 0,
+          "gradient": true,
+          "gradFrom": "#ffffff",
+          "gradTo": "#ffd166",
+          "color": "#ffffff",
+          "strokeWidth": 0,
+          "strokeColor": "#000000",
+          "shadow": 1,
+          "glow": 0.2,
+          "shadowEnabled": false
+        },
+        "vignette": true,
+        "vignetteStrength": 0.5,
+        "cocoRushVenueStyles": {
+          "venueNameSize": 41,
+          "addressSize": 7,
+          "gap": 3,
+          "venueNameColor": "rgb(255, 255, 255)",
+          "addressColor": "rgb(255, 255, 255)"
+        }
+      },
+      "compiledObjectOverrides": {
+        "dark-title": {
+          "x": 52.15277777777778,
+          "y": 17.34619140625
+        },
+        "date": {
+          "x": 11.867766203703704,
+          "y": 37.72176106770833
+        },
+        "footer-address": {
+          "x": 37.355324074074076,
+          "y": 97.12565104166667
+        },
+        "footer-contact-label": {
+          "x": 12.333622685185183,
+          "y": 45.70678710937501
+        },
+        "footer-contact-value": {
+          "x": 12.398726851851851,
+          "y": 47.83732096354167
+        },
+        "footer-details": {
+          "x": 27.09418402777778,
+          "y": 86.35335286458334
+        },
+        "friday": {
+          "x": 49.74392361111111,
+          "y": 76.268310546875
+        },
+        "headline": {
+          "x": 52.039207175925924,
+          "y": 9.158121744791666
+        },
+        "link-word": {
+          "x": 86.41637731481481,
+          "y": 12.523193359374998
+        },
+        "presenter": {
+          "x": 52.50144675925926,
+          "y": 5.945638020833334
+        },
+        "smoke-frame": {
+          "removed": true
+        },
+        "time": {
+          "x": 90.24016203703704,
+          "y": 36.978759765625
+        },
+        "venue": {
+          "x": 48.78689236111111,
+          "y": 92.89388020833333
+        }
+      },
+      "assets": {
+        "removeCompiledObjectIds": [
+          "smoke-frame"
+        ],
+        "patchCompiledByObjectId": {
+          "edge-line-left": {
+            "x": 0.35083912037037024,
+            "y": 40.310872395833336,
+            "scale": 2.15,
+            "opacity": 0.6,
+            "rotation": 0,
+            "tint": 125,
+            "tintMode": "hue"
+          },
+          "edge-line-right": {
+            "x": 99.58839699074075,
+            "y": 40.377197265625,
+            "scale": 2.15,
+            "opacity": 0.6,
+            "rotation": 0,
+            "tint": -85,
+            "tintMode": "hue"
+          },
+          "subject": {
+            "x": 50.01808449074073,
+            "y": 56.294352213541664,
+            "scale": 1.37
+          },
+          "footer-band": {
+            "x": 50.57002314814815,
+            "y": 96.96248372395834,
+            "scale": 1
+          }
+        },
+        "additions": [
+          {
+            "id": "flare_sun04_1788281674867_wxnif",
+            "url": "/flares/sun04.png",
+            "x": 49.56958912037037,
+            "y": 68.0859375,
+            "scale": 0.3,
+            "locked": false,
+            "blendMode": "screen",
+            "opacity": 0.6,
+            "rotation": 0,
+            "isFlare": true,
+            "label": "Green Sun",
+            "layerOffset": -24
+          },
+          {
+            "id": "flare_flare03_1788281708751_onwni",
+            "url": "/flares/optimized/flare03.png",
+            "x": 51.89742476851852,
+            "y": 27.318929036458332,
+            "scale": 0.4,
+            "locked": false,
+            "blendMode": "screen",
+            "opacity": 0.3,
+            "rotation": 0,
+            "isFlare": true,
+            "label": "Amber Burst",
+            "layerOffset": -24
+          },
+          {
+            "id": "design_bold-plus_1788281766134_1xh48",
+            "url": "data:image/svg+xml;base64,PHN2ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjggMTI4LjYyIiB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgZmlsbD0iIzAwRUY4MCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC5jbHMtMSB7CiAgICAgICAgZmlsbDogbm9uZTsKICAgICAgICBzdHJva2U6ICMwMEVGODA7CiAgICAgICAgc3Ryb2tlLW1pdGVybGltaXQ6IDEwOwogICAgICAgIHN0cm9rZS13aWR0aDogMjhweDsKICAgICAgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPGxpbmUgY2xhc3M9ImNscy0xIiB4MT0iNjQuOTYiIHgyPSI2NC45NiIgeTI9IjEyOC42MiIvPgogIDxsaW5lIGNsYXNzPSJjbHMtMSIgeDE9IjEyOCIgeTE9IjYyIiB5Mj0iNjIiLz4KPC9zdmc+",
+            "x": 22.631655092592595,
+            "y": 44.097086588541664,
+            "scale": 0.41,
+            "layerOffset": 55,
+            "locked": false,
+            "isSticker": true,
+            "isDesignElement": true,
+            "label": "Bold Plus",
+            "showLabel": false,
+            "hitTestMode": "alpha-bounds",
+            "svgTemplate": "<svg id=\"Layer_1\" data-name=\"Layer 1\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 128 128.62\" width=\"128\" height=\"128\" fill=\"{{COLOR}}\">\n  <defs>\n    <style>\n      .cls-1 {\n        fill: none;\n        stroke: {{COLOR}};\n        stroke-miterlimit: 10;\n        stroke-width: 28px;\n      }\n    </style>\n  </defs>\n  <line class=\"cls-1\" x1=\"64.96\" x2=\"64.96\" y2=\"128.62\"/>\n  <line class=\"cls-1\" x1=\"128\" y1=\"62\" y2=\"62\"/>\n</svg>",
+            "iconColor": "#00EF80",
+            "rotation": -41
+          },
+          {
+            "id": "design_bold-plus_1788281796429_p6fsh",
+            "url": "data:image/svg+xml;base64,PHN2ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjggMTI4LjYyIiB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgZmlsbD0iIzAwREZGNCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC5jbHMtMSB7CiAgICAgICAgZmlsbDogbm9uZTsKICAgICAgICBzdHJva2U6ICMwMERGRjQ7CiAgICAgICAgc3Ryb2tlLW1pdGVybGltaXQ6IDEwOwogICAgICAgIHN0cm9rZS13aWR0aDogMjhweDsKICAgICAgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPGxpbmUgY2xhc3M9ImNscy0xIiB4MT0iNjQuOTYiIHgyPSI2NC45NiIgeTI9IjEyOC42MiIvPgogIDxsaW5lIGNsYXNzPSJjbHMtMSIgeDE9IjEyOCIgeTE9IjYyIiB5Mj0iNjIiLz4KPC9zdmc+",
+            "x": 81.19068287037038,
+            "y": 35.15380859375,
+            "scale": 0.42,
+            "layerOffset": 55,
+            "locked": false,
+            "isSticker": true,
+            "isDesignElement": true,
+            "label": "Bold Plus",
+            "showLabel": false,
+            "hitTestMode": "alpha-bounds",
+            "svgTemplate": "<svg id=\"Layer_1\" data-name=\"Layer 1\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 128 128.62\" width=\"128\" height=\"128\" fill=\"{{COLOR}}\">\n  <defs>\n    <style>\n      .cls-1 {\n        fill: none;\n        stroke: {{COLOR}};\n        stroke-miterlimit: 10;\n        stroke-width: 28px;\n      }\n    </style>\n  </defs>\n  <line class=\"cls-1\" x1=\"64.96\" x2=\"64.96\" y2=\"128.62\"/>\n  <line class=\"cls-1\" x1=\"128\" y1=\"62\" y2=\"62\"/>\n</svg>",
+            "iconColor": "#00DFF4",
+            "rotation": 31
+          }
+        ]
+      }
+    }
+  }
+}

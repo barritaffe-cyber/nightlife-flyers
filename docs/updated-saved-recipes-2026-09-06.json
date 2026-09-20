@@ -1,0 +1,20 @@
+[
+  {
+    "id": "brunch-saturday",
+    "master": "public/generated-flyers/brunch-saturday-updated.nflyer",
+    "version": 2,
+    "sha256": "e2f04e3e6dc7d8a4b46d99bf2512f04ac7d007d3f5ca3215d4b404930c02acab"
+  },
+  {
+    "id": "pulse",
+    "master": "public/generated-flyers/pulse.nflyer",
+    "version": 2,
+    "sha256": "d9af4b77f87cfc3abf98c7e424ffa181ba4a030ba0afbfead432f3742d7ef65d"
+  },
+  {
+    "id": "space-neon",
+    "master": "public/generated-flyers/space-neon.nflyer",
+    "version": 2,
+    "sha256": "cb1f7f6c0822fcf853cde0741ec91f653d591f8851b838785131817d65d3fccb"
+  }
+]

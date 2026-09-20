@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Neon Night Shift — reference CSS master</title>
+  <style>
+    @font-face { font-family: "Anton"; src: url("../fonts/Anton.ttf") format("truetype"); font-display: block; }
+    @font-face { font-family: "Bebas Neue"; src: url("../fonts/BebasNeue-Regular.ttf") format("truetype"); font-display: block; }
+    @font-face { font-family: "Open Script"; src: url("../fonts/OpenScript.ttf") format("truetype"); font-display: block; }
+    @font-face { font-family: "Lemon Milk"; src: url("../fonts/LEMONMILK-Regular.ttf") format("truetype"); font-display: block; }
+    @font-face { font-family: "Lemon Milk"; src: url("../fonts/LEMONMILK-Bold.ttf") format("truetype"); font-weight: 800; font-display: block; }
+
+    :root {
+      --canvas-width: 1080px;
+      --canvas-height: 1920px;
+      --black: #020305;
+      --paper: #f2f0ed;
+      --pink: #f50087;
+      --pink-deep: #780039;
+      --cyan: #00d9e9;
+      --cyan-deep: #003f49;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: var(--canvas-width); height: var(--canvas-height); margin: 0; overflow: hidden; background: var(--black); }
+    body { font-family: "Lemon Milk", Arial, sans-serif; }
+    .flyer { position: relative; isolation: isolate; width: 100%; height: 100%; overflow: hidden; color: var(--paper); background: #020305; }
+
+    .wet-wall {
+      position: absolute; inset: 0; z-index: 0;
+      background:
+        radial-gradient(ellipse at 16% 18%, rgba(245,0,135,.28), transparent 34%),
+        radial-gradient(ellipse at 74% 31%, rgba(0,217,233,.18), transparent 25%),
+        linear-gradient(90deg, rgba(108,0,48,.72) 0 37.5%, rgba(2,3,5,.96) 37.5% 100%),
+        #020305;
+    }
+    .wet-wall::before {
+      content: ""; position: absolute; inset: 0; opacity: .58; mix-blend-mode: screen;
+      background-image:
+        radial-gradient(ellipse at center, rgba(255,255,255,.18) 0 1px, transparent 2px),
+        linear-gradient(102deg, transparent 0 48%, rgba(255,255,255,.08) 49%, transparent 51%);
+      background-size: 17px 29px, 73px 91px;
+      filter: blur(.3px);
+    }
+    .left-panel { position: absolute; left: 0; top: 0; width: 38.5%; height: 78%; z-index: 1; background: linear-gradient(180deg, rgba(111,0,46,.42), rgba(70,0,37,.2)); border-right: 2px solid rgba(245,0,135,.1); }
+    .bottom-wash { position: absolute; left: 0; bottom: 0; width: 100%; height: 34%; z-index: 2; background: linear-gradient(180deg, transparent, rgba(0,0,0,.9) 26%, #010203 72%); }
+    .edge-paint { position: absolute; z-index: 3; filter: saturate(1.4); opacity: .78; }
+    .edge-paint.left { left: -3%; bottom: 0; width: 25%; height: 31%; background: radial-gradient(ellipse at 55% 80%, rgba(0,217,233,.56), transparent 54%), linear-gradient(112deg, rgba(245,0,135,.4), transparent 64%); clip-path: polygon(0 0,65% 6%,83% 29%,63% 54%,92% 77%,66% 100%,0 100%); }
+    .edge-paint.right { right: -3%; bottom: 0; width: 24%; height: 33%; background: radial-gradient(ellipse at 42% 65%, rgba(0,217,233,.58), transparent 55%), linear-gradient(250deg, rgba(245,0,135,.42), transparent 58%); clip-path: polygon(28% 0,100% 7%,100% 100%,22% 100%,41% 78%,14% 55%,34% 29%); }
+
+    .portrait-disc { position: absolute; left: 10.5%; top: 27.2%; width: 80%; aspect-ratio: 1; z-index: 4; border-radius: 50%; overflow: hidden; background: linear-gradient(112deg, #e9e8e3 0 38%, #e9007e 39% 58%, #01dce9 59% 100%); box-shadow: 0 0 50px rgba(0,217,233,.22); }
+    .portrait-disc::before { content: ""; position: absolute; inset: 0; opacity: .38; background: repeating-radial-gradient(circle at 24% 42%, transparent 0 13px, rgba(0,0,0,.36) 14px 18px), linear-gradient(120deg, transparent 0 44%, rgba(0,0,0,.35) 45% 62%, transparent 63%); transform: scale(1.2) rotate(-8deg); }
+    .portrait { position: absolute; left: 10%; top: 13.5%; width: 80%; height: 64%; z-index: 7; object-fit: contain; object-position: 50% 50%; filter: contrast(1.08) saturate(.94) drop-shadow(0 24px 22px rgba(0,0,0,.68)); }
+    .portrait-grade { position: absolute; left: 8%; top: 13%; width: 84%; height: 65%; z-index: 8; pointer-events: none; background: linear-gradient(98deg, rgba(245,0,135,.28), transparent 45%, rgba(0,217,233,.2)); mix-blend-mode: color; mask-image: radial-gradient(ellipse at 50% 48%, #000 0 52%, transparent 73%); }
+
+    .date { position: absolute; left: 14.8%; top: 11.5%; width: 17%; height: 15%; z-index: 15; text-transform: uppercase; font-family: "Bebas Neue", sans-serif; line-height: .78; }
+    .date .weekday { display: block; font-family: "Lemon Milk"; font-size: 48px; font-weight: 800; letter-spacing: .02em; line-height: 1; }
+    .date .month { display: block; color: var(--pink); font-family: "Lemon Milk"; font-size: 43px; font-weight: 800; line-height: 1; }
+    .date .day { display: block; margin-top: 6px; font-size: 135px; letter-spacing: -.03em; }
+    .doors { position: absolute; left: 14.6%; top: 24.7%; width: 18%; z-index: 15; padding: 13px 0 12px; border-top: 3px solid var(--pink); border-bottom: 3px solid var(--pink); font-size: 25px; line-height: 1.03; text-transform: uppercase; }
+    .doors b { display: block; color: var(--pink); font-size: 21px; }
+
+    .compliance { position: absolute; right: 10.7%; top: 4.8%; z-index: 15; text-align: center; text-transform: uppercase; font-size: 22px; line-height: 1.08; }
+    .compliance b { display: block; font-size: 40px; }
+    .manifesto { position: absolute; right: 8.3%; top: 25.1%; z-index: 15; width: 14%; padding: 16px 0; border-top: 4px solid var(--cyan); border-bottom: 4px solid var(--cyan); font-size: 25px; font-weight: 800; line-height: 1.5; text-transform: uppercase; }
+    .manifesto span { display: block; }
+    .manifesto .cyan { color: var(--cyan); }
+
+    .headline { position: absolute; left: 5.4%; top: 44.2%; width: 61%; height: 20%; z-index: 20; font-family: "Anton", "Bebas Neue", sans-serif; font-size: 355px; line-height: .78; letter-spacing: -.055em; text-transform: uppercase; color: var(--paper); text-shadow: 0 6px 0 rgba(0,0,0,.28); }
+    .headline::after { content: ""; position: absolute; inset: 4% 1% 8%; opacity: .16; mix-blend-mode: multiply; background: repeating-linear-gradient(168deg, transparent 0 8px, #000 9px 11px); pointer-events: none; }
+    .script { position: absolute; left: 43%; top: 55.2%; width: 49%; height: 10%; z-index: 23; color: var(--pink); font-family: "Open Script", cursive; font-size: 165px; line-height: .8; transform: rotate(-7deg); text-shadow: 0 6px 18px rgba(0,0,0,.72); white-space: nowrap; }
+    .script-underline { position: absolute; left: 36%; top: 65.5%; width: 57%; height: 2.5%; z-index: 22; transform: rotate(-7deg); }
+    .script-underline path { fill: var(--pink); }
+
+    .triangle { position: absolute; width: 0; height: 0; z-index: 16; border-left: 25px solid transparent; border-right: 25px solid transparent; border-bottom: 42px solid var(--pink); transform: rotate(26deg); }
+    .triangle.top { left: 65%; top: 9.4%; }
+    .triangle.bottom { right: 13%; top: 68%; border-bottom-color: var(--cyan); transform: rotate(165deg); }
+
+    .footer-grid { position: absolute; left: 25.6%; top: 77.4%; width: 52.5%; height: 8.8%; z-index: 25; display: grid; grid-template-columns: 1fr 1px 1fr; gap: 38px; }
+    .footer-grid .rule { background: var(--paper); opacity: .9; }
+    .footer-card { position: relative; padding-top: 50px; font-size: 29px; line-height: 1.08; text-transform: uppercase; }
+    .footer-card .tag { position: absolute; top: 0; left: 0; padding: 7px 10px 5px; color: #08090a; font-size: 19px; font-weight: 800; line-height: 1; background: var(--pink); }
+    .footer-card.vip .tag { background: var(--cyan); }
+    .footer-card.vip::after { content: ""; position: absolute; left: 0; bottom: -18px; width: 52%; height: 3px; background: var(--cyan); }
+
+    .contact { position: absolute; left: 33.5%; top: 87.2%; width: 33%; z-index: 25; border: 2px solid rgba(245,0,135,.62); padding: 26px 20px 12px; color: var(--paper); font-size: 25px; letter-spacing: .34em; text-align: center; }
+    .contact .label { position: absolute; top: -17px; left: 50%; transform: translateX(-50%); padding: 0 14px; color: var(--pink); background: var(--black); font-size: 17px; font-weight: 800; letter-spacing: .14em; white-space: nowrap; text-transform: uppercase; }
+    .venue { position: absolute; left: 22%; top: 93.5%; width: 56%; z-index: 25; text-align: center; text-transform: uppercase; }
+    .venue .pin { display: block; margin: 0 auto 8px; width: 23px; height: 30px; border: 2px solid var(--pink); border-radius: 50% 50% 50% 0; transform: rotate(-45deg); }
+    .venue .address { display: block; font-size: 20px; letter-spacing: .16em; }
+    .venue .dress { display: block; margin-top: 12px; color: var(--cyan); font-size: 17px; letter-spacing: .45em; }
+
+    .photo-chip { position: absolute; right: 4.6%; top: 74.2%; width: 19%; height: 25.8%; z-index: 5; overflow: hidden; opacity: .62; background: linear-gradient(145deg, rgba(245,0,135,.55), rgba(0,0,0,.2)), url("../scene-assets/ladies-night-pink-chrokme/background.jpg") center / cover; clip-path: polygon(0 4%,100% 0,100% 100%,8% 100%); }
+  </style>
+</head>
+<body>
+  <main class="flyer" aria-label="Neon Night Shift CSS reference master">
+    <div class="wet-wall" data-region="background" data-coco-asset="background"></div>
+    <div class="left-panel" data-region="left-contrast" data-coco-asset="leftContrast"></div>
+    <div class="bottom-wash" data-region="footer-contrast" data-coco-asset="footerContrast"></div>
+    <div class="edge-paint left" data-region="paint-left" data-coco-asset="paintLeft"></div>
+    <div class="edge-paint right" data-region="paint-right" data-coco-asset="paintRight"></div>
+    <div class="portrait-disc" data-region="subject-disc" data-coco-asset="subjectDisc"></div>
+    <img class="portrait" data-region="subject" data-coco-object="subject" src="../scene-assets/sugar-rush/subject-cutout.png" alt="Replaceable event subject" />
+    <div class="portrait-grade" data-region="subject-grade" data-coco-asset="subjectGrade"></div>
+
+    <section class="date" data-region="date" data-coco-object="date"><span class="weekday">Sat</span><span class="month">Jun</span><span class="day">15</span></section>
+    <section class="doors" data-region="doors" data-coco-object="time" data-coco-asset="doorsRules"><b>Doors open</b><span>10:00PM</span></section>
+    <section class="compliance" data-region="compliance" data-coco-object="compliance"><b>18+</b><span>ID required</span></section>
+    <section class="manifesto" data-region="manifesto" data-coco-object="details" data-coco-asset="manifestoRules"><span>Step</span><span>Into</span><span class="cyan">The</span><span class="cyan">Night</span></section>
+
+    <div class="headline" data-region="headline" data-coco-object="headline">Night</div>
+    <div class="script" data-region="script" data-coco-object="subheadline">Shift</div>
+    <svg class="script-underline" data-region="script-underline" data-coco-asset="scriptUnderline" viewBox="0 0 620 70" aria-hidden="true"><path d="M4 49 C108 24 207 23 309 17 C407 11 505 14 613 4 C529 28 435 34 344 40 C231 47 124 61 19 67 Z" /></svg>
+    <i class="triangle top" data-region="accent-top" data-coco-asset="accentTop"></i><i class="triangle bottom" data-region="accent-bottom" data-coco-asset="accentBottom"></i>
+
+    <section class="footer-grid" data-region="support-grid">
+      <div class="footer-card" data-region="lineup" data-coco-object="djLineup" data-coco-asset="lineupTag"><span class="tag">Music by</span>DJ Nova<br />DJ Kairo<br />DJ Vybe</div>
+      <div class="rule" data-region="support-rule" data-coco-asset="supportRule"></div>
+      <div class="footer-card vip" data-region="offer" data-coco-object="offer" data-coco-asset="offerTag offerRule"><span class="tag">Special</span>VIP Tables<br />Hookah</div>
+    </section>
+    <section class="contact" data-region="contact" data-coco-object="rsvp" data-coco-asset="contactFrame contactLabelPlate"><span class="label">VIP tables &amp; info</span>555 123 4567</section>
+    <section class="venue" data-region="venue" data-coco-asset="venuePin"><i class="pin"></i><span class="address" data-region="venue-address" data-coco-object="venue">142 Night Ave, Downtown District</span><span class="dress" data-region="dress-code" data-coco-object="subtag">Dress to impress</span></section>
+    <div class="photo-chip" data-region="photo-chip" data-coco-asset="photoChip"></div>
+  </main>
+
+  <script type="application/json" id="neon-night-shift-css-master-geometry">
+  {
+    "schemaVersion": 1,
+    "formats": {
+      "square": {
+        "canvas": { "width": 1080, "height": 1080 },
+        "zones": {
+          "background": { "x": 0, "y": 0, "width": 100, "height": 100 },
+          "leftContrast": { "x": 0, "y": 15, "width": 37, "height": 63 },
+          "footerContrast": { "x": 0, "y": 70, "width": 100, "height": 30 },
+          "paintLeft": { "x": 0, "y": 72, "width": 22, "height": 28 },
+          "paintRight": { "x": 80, "y": 70, "width": 20, "height": 30 },
+          "subjectGrade": { "x": 15, "y": 5, "width": 78, "height": 84 },
+          "subject": { "x": 18, "y": 5, "width": 72, "height": 84 },
+          "subjectDisc": { "x": 13, "y": 18, "width": 75, "height": 75 },
+          "headline": { "x": 3.5, "y": 42, "width": 63, "height": 25 },
+          "script": { "x": 43, "y": 57, "width": 50, "height": 12 },
+          "date": { "x": 6, "y": 7, "width": 16, "height": 23 },
+          "doors": { "x": 6, "y": 31, "width": 19, "height": 7 },
+          "compliance": { "x": 82, "y": 5, "width": 13, "height": 7 },
+          "manifesto": { "x": 84, "y": 27, "width": 12, "height": 16 },
+          "lineup": { "x": 8, "y": 76, "width": 24, "height": 15 },
+          "offer": { "x": 38, "y": 76, "width": 24, "height": 15 },
+          "contact": { "x": 68, "y": 78, "width": 27, "height": 10 },
+          "venue": { "x": 20, "y": 93, "width": 60, "height": 3.5 },
+          "dressCode": { "x": 29, "y": 97, "width": 42, "height": 2 },
+          "doorsRules": { "x": 6, "y": 31, "width": 19, "height": 7 },
+          "manifestoRules": { "x": 84, "y": 27, "width": 12, "height": 16 },
+          "scriptUnderline": { "x": 49, "y": 66, "width": 43, "height": 3 },
+          "accentTop": { "x": 31, "y": 24, "width": 7, "height": 7 },
+          "accentBottom": { "x": 68, "y": 62, "width": 8, "height": 8 },
+          "lineupTag": { "x": 8, "y": 76, "width": 14, "height": 3 },
+          "offerTag": { "x": 38, "y": 76, "width": 12, "height": 3 },
+          "offerRule": { "x": 38, "y": 89, "width": 12, "height": 0.4 },
+          "supportRule": { "x": 34.8, "y": 77, "width": 0.35, "height": 14 },
+          "contactFrame": { "x": 68, "y": 78, "width": 27, "height": 10 },
+          "contactLabelPlate": { "x": 72, "y": 77.4, "width": 19, "height": 2.5 },
+          "venuePin": { "x": 48.9, "y": 90.5, "width": 2.2, "height": 2.2 },
+          "photoChip": { "x": 82, "y": 73, "width": 18, "height": 27 }
+        }
+      },
+      "story": {
+        "canvas": { "width": 1080, "height": 1920 },
+        "zones": {
+          "background": { "x": 0, "y": 0, "width": 100, "height": 100 },
+          "leftContrast": { "x": 0, "y": 0, "width": 38.5, "height": 78 },
+          "footerContrast": { "x": 0, "y": 66, "width": 100, "height": 34 },
+          "paintLeft": { "x": 0, "y": 69, "width": 25, "height": 31 },
+          "paintRight": { "x": 76, "y": 67, "width": 24, "height": 33 },
+          "subjectGrade": { "x": 8, "y": 13, "width": 84, "height": 65 },
+          "subject": { "x": 10, "y": 13.5, "width": 80, "height": 64 },
+          "subjectDisc": { "x": 10.5, "y": 27.2, "width": 80, "height": 45 },
+          "headline": { "x": 5.4, "y": 44.2, "width": 61, "height": 20 },
+          "script": { "x": 43, "y": 55.2, "width": 49, "height": 10 },
+          "date": { "x": 14.8, "y": 11.5, "width": 17, "height": 15 },
+          "doors": { "x": 14.6, "y": 24.7, "width": 18, "height": 5.2 },
+          "compliance": { "x": 80, "y": 4.8, "width": 12, "height": 4.8 },
+          "manifesto": { "x": 77.7, "y": 25.1, "width": 14, "height": 9 },
+          "lineup": { "x": 25.6, "y": 77.4, "width": 23.5, "height": 8.8 },
+          "offer": { "x": 54.8, "y": 77.4, "width": 23.3, "height": 8.8 },
+          "contact": { "x": 33.5, "y": 87.2, "width": 33, "height": 4.7 },
+          "venue": { "x": 22, "y": 93.5, "width": 56, "height": 3 },
+          "dressCode": { "x": 29, "y": 97, "width": 42, "height": 2 },
+          "doorsRules": { "x": 14.6, "y": 24.7, "width": 18, "height": 5.2 },
+          "manifestoRules": { "x": 77.7, "y": 25.1, "width": 14, "height": 9 },
+          "scriptUnderline": { "x": 36, "y": 65.5, "width": 57, "height": 2.5 },
+          "accentTop": { "x": 65, "y": 9.4, "width": 5, "height": 3 },
+          "accentBottom": { "x": 84, "y": 68, "width": 5, "height": 3 },
+          "lineupTag": { "x": 25.6, "y": 77.4, "width": 11, "height": 2.2 },
+          "offerTag": { "x": 54.8, "y": 77.4, "width": 10, "height": 2.2 },
+          "offerRule": { "x": 54.8, "y": 85.7, "width": 12, "height": 0.3 },
+          "supportRule": { "x": 51.7, "y": 77.4, "width": 0.3, "height": 8.8 },
+          "contactFrame": { "x": 33.5, "y": 87.2, "width": 33, "height": 4.7 },
+          "contactLabelPlate": { "x": 39.5, "y": 86.7, "width": 21, "height": 1.5 },
+          "venuePin": { "x": 48.9, "y": 91.7, "width": 2.2, "height": 1.7 },
+          "photoChip": { "x": 76.4, "y": 74.2, "width": 19, "height": 25.8 }
+        }
+      }
+    },
+    "canvas": { "width": 1080, "height": 1920, "ratio": "9:16", "format": "story" },
+    "subject": { "x": 10, "y": 13.5, "width": 80, "height": 64, "fit": "contain", "protected": ["face", "glasses", "headline-script-overlap"] },
+    "subjectDisc": { "x": 10.5, "y": 27.2, "width": 80, "height": 45 },
+    "date": { "x": 14.8, "y": 11.5, "width": 17, "height": 15 },
+    "doors": { "x": 14.6, "y": 24.7, "width": 18, "height": 5.2 },
+    "compliance": { "x": 80, "y": 4.8, "width": 12, "height": 4.8 },
+    "manifesto": { "x": 77.7, "y": 25.1, "width": 14, "height": 9 },
+    "headline": { "x": 5.4, "y": 44.2, "width": 61, "height": 20, "font": "Anton", "fontSizePx": 355, "trackingEm": -0.055 },
+    "script": { "x": 43, "y": 55.2, "width": 49, "height": 10, "font": "Open Script", "fontSizePx": 165, "rotationDeg": -7 },
+    "scriptUnderline": { "x": 36, "y": 65.5, "width": 57, "height": 2.5, "rotationDeg": -7 },
+    "lineup": { "x": 25.6, "y": 77.4, "width": 23.5, "height": 8.8 },
+    "offer": { "x": 54.8, "y": 77.4, "width": 23.3, "height": 8.8 },
+    "contact": { "x": 33.5, "y": 87.2, "width": 33, "height": 4.7 },
+    "venue": { "x": 22, "y": 93.5, "width": 56, "height": 5.5 },
+    "photoChip": { "x": 76.4, "y": 74.2, "width": 19, "height": 25.8 },
+    "zOrder": ["background", "left-contrast", "footer-contrast", "paint-left", "paint-right", "photo-chip", "subject-disc", "subject", "subject-grade", "date", "doors", "compliance", "manifesto", "headline", "script-underline", "script", "support-grid", "contact", "venue"],
+    "semanticObjects": {
+      "headline": "Headline",
+      "script": "Subheadline",
+      "date": "Date",
+      "doors": "Subtag",
+      "compliance": "Compliance",
+      "manifesto": "Details",
+      "lineup": "DJ Lineup",
+      "offer": "Price",
+      "contact": "RSVP",
+      "venueAddress": "Venue",
+      "dressCode": "Social"
+    },
+    "paletteRoles": { "base": "#020305", "primary": "#F50087", "secondary": "#00D9E9", "neutral": "#F2F0ED", "shadow": "#000000" },
+    "signatureGestures": ["cyan-magenta subject disc", "white condensed headline crossed by pink script and brush underline"],
+    "deniedUses": ["flattened reference image", "CSS screenshot as final canvas", "generic layout replacement", "generic palette replacement", "generic crop replacement", "generic decoration replacement", "AI-generated background replacement"]
+  }
+  </script>
+</body>
+</html>

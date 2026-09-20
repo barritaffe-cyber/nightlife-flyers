@@ -5,7 +5,7 @@ import React from "react";
 export default function AdminSubscriptionPage() {
   const [email, setEmail] = React.useState("");
   const [status, setStatus] = React.useState("active");
-  const [plan, setPlan] = React.useState("creator");
+  const [plan, setPlan] = React.useState("basic");
   const [periodEnd, setPeriodEnd] = React.useState("");
   const [secret, setSecret] = React.useState("");
   const [msg, setMsg] = React.useState<string | null>(null);
@@ -69,7 +69,9 @@ export default function AdminSubscriptionPage() {
             value={plan}
             onChange={(e) => setPlan(e.target.value)}
           >
-            <option value="creator">creator</option>
+            <option value="basic">Coco — $10/month</option>
+            <option value="full">Coco + Studio — $15/month</option>
+            <option value="creator">creator (legacy)</option>
             <option value="studio">studio</option>
             <option value="monthly">monthly</option>
             <option value="yearly">yearly</option>

@@ -1,0 +1,5 @@
+import { directCocoComposition } from "./director.ts";
+import { MOJITO_COMPOSITION_FIXTURE } from "./fixtures.ts";
+import { validateRenderedComposition } from "./compliance.ts";
+function assert(v:any,m:string):asserts v{if(!v)throw new Error(`Assertion failed: ${m}`)}
+export function runCompositionTests(){const r=directCocoComposition(MOJITO_COMPOSITION_FIXTURE);assert(r.winner.typeField==="left","type field left");assert(r.winner.blocks.some(b=>b.role==="identity"&&!b.hidden),"identity exists");assert(r.winner.score.subjectProtection>75,"subject protected");assert(r.winner.owns.includes("headline"),"owns headline");const snap={subjectRect:r.winner.subjectRect,textColumn:r.winner.textColumn,blockRects:Object.fromEntries(r.winner.blocks.filter(b=>!b.hidden).map(b=>[b.role,b.rect])),hiddenRoles:r.winner.blocks.filter(b=>b.hidden).map(b=>b.role),previewExportMatch:true,protectionViolations:[]};const c=validateRenderedComposition(r.winner,snap,MOJITO_COMPOSITION_FIXTURE);assert(c.pass,"render compliance passes");return{winner:r.winner.id,family:r.winner.family,total:r.winner.score.total}}

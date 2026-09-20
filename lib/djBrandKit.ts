@@ -58,7 +58,7 @@ const LEGACY_BRAND_KIT_KEY = "nightlife-flyers.brandkit.v1";
 
 export const DJ_FONT_PRESETS: DJFontPreset[] = [
   { id: "grime-heavy", label: "Heavy Grime", headline: "Anton", body: "Bebas Neue" },
-  { id: "clean-house", label: "Clean House", headline: "League Spartan", body: "Inter" },
+  { id: "clean-house", label: "Clean House", headline: "League Spartan", body: "LEMONMILK-Regular" },
   { id: "festival-neon", label: "Festival Neon", headline: "Bebas Neue", body: "Oswald" },
 ];
 
@@ -89,7 +89,7 @@ function buildDefaultBrandKit(label = "Brand 1"): DJBrandKit {
     },
     preferredFonts: {
       headline: "Bebas Neue",
-      body: "Inter",
+      body: "LEMONMILK-Regular",
     },
     brandPalette: {
       main: "#FFFFFF",

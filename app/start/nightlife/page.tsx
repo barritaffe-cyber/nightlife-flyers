@@ -346,16 +346,18 @@ export default function NightlifeStarterPage() {
       {starterPreloading ? (
         <NightlifePreloader
           surface="overlay"
-          title="Loading flyer templates"
-          subtitle="Pulling in finished post and story starters."
+          title="COCO ONLINE"
+          subtitle="Loading Nightlife Flyers."
+          detail="Preparing the creative system."
         />
       ) : null}
 
       {openingEditor ? (
         <NightlifePreloader
           surface="overlay"
-          title="Opening editor"
-          subtitle={`Loading ${openingEditor.label} as an editable ${openingEditor.format}.`}
+          title="COCO ONLINE"
+          subtitle="Opening the editor."
+          detail={`Preparing ${openingEditor.label} as an editable ${openingEditor.format}.`}
         />
       ) : null}
 

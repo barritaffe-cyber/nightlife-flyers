@@ -1,0 +1,398 @@
+[
+  {
+    "key": "recipe_afro_sunset",
+    "name": "Afro Sunset — Skyline Rooftop",
+    "preview": "/generated-flyers/afro-sunset-square-preview.png",
+    "search": "Afro Sunset — Skyline Rooftop A warm rooftop nightlife composition with a sunset palette, dominant portrait, and compact event information. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_afrobeat_rooftop",
+    "name": "Afrobeat Rooftop",
+    "preview": "/generated-flyers/afrobeat-rooftop-square-preview.png",
+    "search": "Afrobeat Rooftop An Afrobeat rooftop flyer with bold display type, warm city atmosphere, and structured supporting copy. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_aura",
+    "name": "Aura — Elevated Nightlife",
+    "preview": "/generated-flyers/aura-square-preview.png",
+    "search": "Aura — Elevated Nightlife A polished center-hero nightlife poster with luminous accents and a strong title-to-subject relationship. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_bass_pressure",
+    "name": "Bass Pressure — Concrete",
+    "preview": "/generated-flyers/bass-pressure-square-preview.png",
+    "search": "Bass Pressure — Concrete An industrial bass-night poster with concrete texture, compressed typography, and hard-edged club energy. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_black_tie",
+    "name": "Black Tie — Maison",
+    "preview": "/generated-flyers/black-tie-square-preview.png",
+    "search": "Black Tie — Maison A formal black-tie composition with restrained luxury, elegant typography, and a controlled monochrome palette. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_branch_happy_hour",
+    "name": "Happy Hour — The Branch Rathskeller",
+    "preview": "/generated-flyers/branch-happy-hour-square-preview.png",
+    "search": "Happy Hour — The Branch Rathskeller A premium happy-hour flyer built around cocktails, warm hospitality, and concise offer information. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_day_party",
+    "name": "Day Party — Offshore",
+    "preview": "/generated-flyers/day-party-square-preview.png",
+    "search": "Day Party — Offshore A bright day-party composition with a large lifestyle subject, open-air color, and high-impact event type. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_disco",
+    "name": "Disco — Y2K",
+    "preview": "/generated-flyers/disco-square-preview.png",
+    "search": "Disco — Y2K A Y2K disco composition with reflective materials, dance-floor energy, and a prominent party headline. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_drift_kingz",
+    "name": "Miami — Drift Kingz",
+    "preview": "/generated-flyers/drift-kingz-square-preview.png",
+    "search": "Miami — Drift Kingz An automotive Miami-night poster with a dominant car scene, aggressive type, and neon street color. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_electric_sunset",
+    "name": "Electric Sunset — Golden Sky",
+    "preview": "/generated-flyers/electric-sunset-square-preview.png",
+    "search": "Electric Sunset — Golden Sky A vivid sunset flyer balancing warm horizon light, electric accents, and clean event hierarchy. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_en_blanc",
+    "name": "En Blanc — The Rooftop",
+    "preview": "/generated-flyers/en-blanc-square-preview.png",
+    "search": "En Blanc — The Rooftop A clean all-white rooftop event design with editorial spacing, dark type, and refined supporting details. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_euphoria",
+    "name": "Euphoria — The Underground",
+    "preview": "/generated-flyers/euphoria-square-preview.png",
+    "search": "Euphoria — The Underground An underground electronic flyer with dimensional neon type, dark atmosphere, and a central club subject. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_fantasy",
+    "name": "Fantasy — Euphoria",
+    "preview": "/generated-flyers/fantasy-square-preview.png",
+    "search": "Fantasy — Euphoria A surreal nightlife composition with luminous fantasy color, expressive type, and layered atmospheric depth. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_in_crowd",
+    "name": "The In Crowd — Peachtree Rooftop",
+    "preview": "/generated-flyers/in-crowd-square-preview.png",
+    "search": "The In Crowd — Peachtree Rooftop An upscale rooftop flyer with editorial portrait placement and crisp metropolitan event information. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_karaoke_night",
+    "name": "Karaoke Night — Neon Lounge",
+    "preview": "/generated-flyers/karaoke-night-square-preview.png",
+    "search": "Karaoke Night — Neon Lounge A neon karaoke poster with a clear entertainment headline, lounge atmosphere, and accessible event details. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_ladies_secret",
+    "name": "Ladies Night — Neon Chrome",
+    "preview": "/generated-flyers/ladies-secret-square-preview.png",
+    "search": "Ladies Night — Neon Chrome A women-led nightlife poster with chrome lettering, saturated neon light, and compact promotional copy. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_mardi_gras",
+    "name": "Mardi Gras — Carnival of Colors",
+    "preview": "/generated-flyers/mardi-gras-square-preview.png",
+    "search": "Mardi Gras — Carnival of Colors A carnival-night composition with jewel colors, celebratory detail, and a bold Mardi Gras headline. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_martini_night",
+    "name": "Martini Night — Velvet Room",
+    "preview": "/generated-flyers/martini-night-square-preview.png",
+    "search": "Martini Night — Velvet Room A cocktail-led lounge flyer with dark velvet atmosphere, elegant type, and warm glass highlights. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_miami_nights",
+    "name": "Miami Nights — Sunset Sessions",
+    "preview": "/generated-flyers/miami-nights-square-preview.png",
+    "search": "Miami Nights — Sunset Sessions A Miami sunset-night flyer with tropical color, prominent portraiture, and high-contrast club typography. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_miami_ocean_nights",
+    "name": "Miami Nights — Ocean Drive",
+    "preview": "/generated-flyers/miami-ocean-nights-square-preview.png",
+    "search": "Miami Nights — Ocean Drive An Ocean Drive nightlife composition with tropical neon, luxury styling, and clear event hierarchy. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_miami_street",
+    "name": "Miami Street — Nights",
+    "preview": "/generated-flyers/miami-street-square-preview.png",
+    "search": "Miami Street — Nights A street-luxury Miami poster with energetic brush lettering, automotive atmosphere, and bold nightlife color. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_mind_state",
+    "name": "Mind State — Arctic Metal",
+    "preview": "/generated-flyers/mind-state-square-preview.png",
+    "search": "Mind State — Arctic Metal A techno poster with arctic metallic typography, industrial staging, and a tightly controlled cool palette. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_mojito_monday",
+    "name": "Mojito Monday — Mint Lounge",
+    "preview": "/generated-flyers/mojito-monday-square-preview.png",
+    "search": "Mojito Monday — Mint Lounge A fresh cocktail-night composition with mint color, polished lounge imagery, and playful promotional type. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_new_york",
+    "name": "New York",
+    "preview": "/generated-flyers/new-york-square-preview.png",
+    "search": "New York A metropolitan nightlife flyer with dense city atmosphere, bold headline structure, and concise venue details. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_nocturne_muse",
+    "name": "Nocturne — Midnight Muse",
+    "preview": "/generated-flyers/nocturne-muse-square-preview.png",
+    "search": "Nocturne — Midnight Muse A fashion-led nocturne poster with a dark floral atmosphere, elegant display type, and refined event copy. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_one_love_reggae",
+    "name": "One Love — Reggae Night",
+    "preview": "/generated-flyers/one-love-reggae-square-preview.png",
+    "search": "One Love — Reggae Night A Caribbean reggae-night flyer with warm color, rhythmic typography, and a relaxed social atmosphere. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_salsa_noche",
+    "name": "Salsa Noche — La Fiesta",
+    "preview": "/generated-flyers/salsa-noche-square-preview.png",
+    "search": "Salsa Noche — La Fiesta A tropical Latin-night design with lively movement, warm saturated color, and dance-focused information. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_sip_and_paint",
+    "name": "Sip and Paint — The Social Lounge",
+    "preview": "/generated-flyers/sip-and-paint-square-preview.png",
+    "search": "Sip and Paint — The Social Lounge A social art-night flyer balancing creative imagery, drinks, and an easy-to-scan event hierarchy. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_slow_jamz",
+    "name": "Slow Jamz — Velvet Room",
+    "preview": "/generated-flyers/slow-jamz-square-preview.png",
+    "search": "Slow Jamz — Velvet Room A moody R&B flyer with soft luxury, intimate portraiture, and elegant late-night typography. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_soiree_dream_house",
+    "name": "Soiree — Dream House",
+    "preview": "/generated-flyers/soiree-dream-house-square-preview.png",
+    "search": "Soiree — Dream House An elegant dream-house flyer with teal atmosphere, refined type, and a spacious premium composition. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_sugar_rush",
+    "name": "Sugar Rush — Suite 5",
+    "preview": "/generated-flyers/sugar-rush-square-preview.png",
+    "search": "Sugar Rush — Suite 5 A bright nightlife composition with playful candy color, bold headline scale, and energetic party details. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_sunset_yacht",
+    "name": "Sunset Yacht — Sunset Sessions",
+    "preview": "/generated-flyers/sunset-yacht-square-preview.png",
+    "search": "Sunset Yacht — Sunset Sessions A yacht-party flyer with warm ocean light, upscale styling, and clean sunset-session information. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_taco_tuesday",
+    "name": "Taco Tuesday — Velvet Room",
+    "preview": "/generated-flyers/taco-tuesday-square-preview.png",
+    "search": "Taco Tuesday — Velvet Room A food-and-drinks nightlife poster with warm gold details, appetizing imagery, and direct weekly promotion. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_throwback_saturdays",
+    "name": "Throwback Saturdays",
+    "preview": "/generated-flyers/throwback-saturdays-square-preview.png",
+    "search": "Throwback Saturdays A retro Saturday-night flyer with nostalgic music cues, bold period styling, and structured event details. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_yacht_escape",
+    "name": "Yacht Escape",
+    "preview": "/generated-flyers/yacht-escape-square-preview.png",
+    "search": "Yacht Escape A luxury yacht-event flyer with open-water atmosphere, premium type, and compact booking information. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_fashion_club_vertical",
+    "name": "Fashion Club Vertical — Friday Fever",
+    "preview": "/generated-flyers/friday-fever-square-preview.png",
+    "search": "Fashion Club Vertical — Friday Fever A red velvet fashion portrait and mirrored disco ball, framed by oversized ivory and gold vertical FRIDAY FEVER titles, a narrow date and talent column, and restrained champagne details. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_neon_night_shift",
+    "name": "Night Shift — Flyers HQ",
+    "preview": "/generated-flyers/neon-night-square-preview.png",
+    "search": "Night Shift — Flyers HQ A neon palm portrait with oversized silver NIGHT and hot-pink brush Shift, a compact date column, separate DJs, and a restrained footer. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_glow_in_the_dark",
+    "name": "Glow in the Dark",
+    "preview": "/generated-flyers/glow-square-preview.png",
+    "search": "Glow in the Dark Club Woods Glow in the Dark: supplied nightlife backgrounds, editable chrome GLOW and neon-green brush DARK, with separate Square and Story layouts. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_punta_cana_sundays",
+    "name": "Punta Cana Sundays",
+    "preview": "/generated-flyers/punta-cana-square-preview.png",
+    "search": "Punta Cana Sundays A tropical sunset portrait framed by ivory Punta, orange Cana, script Sundays, separate date and music notes, gold DJ names, and a restrained footer. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_baddies_n_bundles",
+    "name": "Baddies N Bundles",
+    "preview": "/coco-references/recipe-exports/baddies-n-bundles-square.png",
+    "search": "Baddies N Bundles A neon-lime fashion-night flyer with a split headline, replaceable seated subject, framed date and side details, and a structured venue/reservations footer. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_brunch_saturday",
+    "name": "Brunch Saturday",
+    "preview": "/coco-references/recipe-exports/brunch-saturday-square-v2.png",
+    "search": "Brunch Saturday Warm cocktail and fruit scene, tall textured headline, script Saturday accent, and a three-offer ribbon. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_pulse",
+    "name": "Pulse Sunday",
+    "preview": "/generated-flyers/pulse-square-preview.png",
+    "search": "Pulse Sunday Pink statue poster with a gradient Sunday headline and compact event details. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_space_neon",
+    "name": "Space Neon",
+    "preview": "/generated-flyers/space-neon-square-preview.png",
+    "search": "Space Neon Cosmic guitar astronaut, neon outline headline, script accent, and editable event details. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_zona_de_perreo",
+    "name": "Zona de Perreo",
+    "preview": "/generated-flyers/zona-de-perreo-square-preview.png",
+    "search": "Zona de Perreo Accepted Diabla / Una Noche Sin Reglas design: Latin / reggaeton flyer with purple chrome devil artwork, gold brush lettering, and accepted editable copy. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_summer_sunset",
+    "name": "Summer Sunset",
+    "preview": "/generated-flyers/summer-sunset-square-preview.png",
+    "search": "Summer Sunset Orange sunset palm flyer with editable white and yellow split lettering, striped frame and preserved Square/Story artwork. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_diabla_all_white",
+    "name": "Diabla All White",
+    "preview": "/generated-flyers/diabla-all-white-square-preview.png",
+    "search": "Diabla All White White and gold Latin night flyer with editable metallic serif and script lettering and preserved Square/Story artwork. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_rnb_thursdays",
+    "name": "R&B Thursdays",
+    "preview": "/generated-flyers/rnb-thursdays-square-preview.png",
+    "search": "R&B Thursdays Blue R&B lounge flyer with editable layered glass headline, separate seated subject, and preserved Square/Story artwork. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_reggae_jams",
+    "name": "Reggae Jams",
+    "preview": "/generated-flyers/reggae-jams-square-preview.png",
+    "search": "Reggae Jams Reggae lounge flyer with a supplied transparent portrait, independent Square and Story scenes, a stucco red-gold-green headline and editable supplied cream-gold script lettering for Jams. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_amapiano_night",
+    "name": "Amapiano Night",
+    "preview": "/generated-flyers/amapiano-night-square-preview.png",
+    "search": "Amapiano Night Amapiano nightlife flyer with orange palms, outlined portrait, script title and independent torn-paper footer. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_como_una_boa",
+    "name": "Eaden — The Garden Lounge",
+    "preview": "/generated-flyers/eaden-square-preview.png",
+    "search": "Eaden — The Garden Lounge Latin nightlife theme with emerald jungle, snake and cocktail artwork, oversized gold lettering, and accepted editable copy. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_i_love_thursday",
+    "name": "I Love Thursday",
+    "preview": "/generated-flyers/i-love-thursday-square-preview.png",
+    "search": "I Love Thursday Purple teddy-bear lounge, white brush headline, orange Thursday banner, and accepted editable event copy. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_elite_monday",
+    "name": "Elite Monday",
+    "preview": "/coco-references/recipe-exports/elite-monday-square-v2.png",
+    "search": "Elite Monday Dark blue classical hall, suited statue, silver condensed headline and accepted editable event details. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_we_outside",
+    "name": "We Outside Saturday",
+    "preview": "/generated-flyers/we-outside-square-preview.png",
+    "search": "We Outside Saturday Purple fashion portrait, angled headline, editable speech bubble, script Saturday, and compiled arrow divider. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_brunch_vibes",
+    "name": "Brunch Vibes",
+    "preview": "/coco-references/recipe-exports/brunch-vibes-square.png",
+    "search": "Brunch Vibes Terrace brunch editorial with gold serif lettering, a brush accent, and individually editable event details. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_grey_rave_festival",
+    "name": "Grey Rave Festival",
+    "preview": "/coco-references/recipe-exports/grey-rave-festival-square.png",
+    "search": "Grey Rave Festival A monochrome classical-statue rave flyer with electric-pink geometry, brush lettering, compact festival metadata, and a sponsor-free footer. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_dodge_night_rides",
+    "name": "Dodge Night Rides",
+    "preview": "/generated-flyers/dodge-night-rides-square-preview.png",
+    "search": "Dodge Night Rides An autumn street and muscle-car nightlife flyer with monumental type, red brush energy, and structured event facts. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_ladies_night_rose",
+    "name": "Ladies Night — Rose Gold",
+    "preview": "/generated-flyers/ladies-night-rose-square-preview.png",
+    "search": "Ladies Night — Rose Gold An upscale pink-and-rose-gold ladies night flyer with a supplied lounge scene, editable luxury headline lettering, and independent Square and Story compositions. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_grills_and_groove",
+    "name": "Grills & Groove",
+    "preview": "/generated-flyers/grills-and-groove-square-preview.png",
+    "search": "Grills & Groove Live-fire steaks and cocktails with textured gold serif GRILLS, cream brush GROOVE, and elegant event details. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_soft_life",
+    "name": "Soft Life",
+    "preview": "/generated-flyers/soft-life-square-preview.png",
+    "search": "Soft Life Cream and crimson R&B editorial with a dramatic serif SOFT, a sweeping Life script, and independent event details around the supplied fashion photograph. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_girl_code",
+    "name": "Girl Code",
+    "preview": "/generated-flyers/girl-code-square-preview.png",
+    "search": "Girl Code Gold and white painted brush lettering with neon smoke, tropical rooftop photography and independent event details. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_girl_code_rose",
+    "name": "Girl Code — Rose",
+    "preview": "/generated-flyers/girl-code-rose-square-preview.png",
+    "search": "Girl Code — Rose Rose chrome serif and flowing script lettering with pink smoke, tropical rooftop photography and independent event details. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_honey_nights",
+    "name": "Honey Nights",
+    "preview": "/generated-flyers/honey-nights-square-preview.png",
+    "search": "Honey Nights Honey gold serif lettering, a sculpted bee medallion and black stone with gold splashes. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_ycee_live",
+    "name": "YCEE Live",
+    "preview": "/generated-flyers/ycee-live-square-preview.png",
+    "search": "YCEE Live Spotlight gold lettering, an editable artist portrait and an amber concert crowd. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_brunch_sundays",
+    "name": "Brunch Sundays",
+    "preview": "/generated-flyers/brunch-sundays-square-preview.png",
+    "search": "Brunch Sundays White whimsical script with turquoise depth, a yellow Sunday ribbon and pink brunch photography. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_bad_girls",
+    "name": "Bad Girls",
+    "preview": "/generated-flyers/bad-girls-square-preview.png",
+    "search": "Bad Girls Red grunge, oversized white and pink brush lettering, and a separate portrait, with independent Square and Story compositions. Coco Registered recipe Square Story"
+  },
+  {
+    "key": "recipe_beat_therapy",
+    "name": "Beat Therapy",
+    "preview": "/generated-flyers/beat-therapy-square-preview.png",
+    "search": "Beat Therapy A neon DJ scene with oversized silver-to-pink italic BEAT lettering, a hot-pink brush THERAPY title, and clear event information in independent Square and Story compositions. Coco Registered recipe Square Story"
+  }
+]

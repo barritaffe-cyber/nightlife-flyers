@@ -59,6 +59,7 @@ export type FlyerDesignV1 = {
   currentTemplate: Record<Format, Partial<TemplateBase>>;
   session: { square: Partial<TemplateBase>; story: Partial<TemplateBase> };
   sessionDirty: { square: boolean; story: boolean };
+  cocoLayoutSessions?: Record<Format, Record<string, Record<string, any>>>;
 
   // ui-ish state
   selectedPanel: string | null;
@@ -91,8 +92,11 @@ export type MoveTarget =
   | "presenter"
   | "leftRail"
   | "rightRail"
+  | "socialHandle"
   | "date"
+  | "time"
   | "price"
+  | "compliance"
   | "qr"
   | "background"
   | "portrait"
@@ -161,9 +165,16 @@ export type PortraitLighting = {
 
 export type MainFaceFilterPreset = "none" | "mono" | "contrast" | "halftone" | "poster" | "pop" | "neo" | "comic";
 
+export type TextureGradient = {
+  angle: number;
+  stops: Array<{ offset: number; color: string }>;
+};
+
 // PORTRAIT STRUCTURE
 type Portrait = {
   id: string;
+  cocoCompiledObjectId?: string;
+  cocoAssetRole?: string;
   url: string;
   x: number;
   y: number;
@@ -213,13 +224,19 @@ type Portrait = {
     };
   };
   isBrandFace?: boolean;
+  isLogo?: boolean;
   isShapeGraphic?: boolean;
   isDesignElement?: boolean;
+  isSocialIcon?: boolean;
+  socialPlatform?: string;
   isCircularText?: boolean;
+  circularTextGeometryVersion?: number;
+  circularTextScaleVersion?: number;
   shapeKind?: string;
   shapeGradient?: boolean;
   tint?: number;          // hue-rotate degrees for tinting overlays/flares
   tintMode?: "hue" | "colorize";
+  textureGradient?: TextureGradient;
   svgTemplate?: string;
   iconColor?: string;
   paletteRole?: "base" | "primary" | "secondary" | "accent" | "neutral";
@@ -239,6 +256,7 @@ type Portrait = {
   shadowBlur?: number;
   shadowAlpha?: number;
   blur?: number;
+  hitTestMode?: "alpha-bounds" | "alpha-envelope";
   lighting?: PortraitLighting;
   mainFaceFilterPreset?: MainFaceFilterPreset;
   mainFaceFilterStrength?: number;
@@ -277,14 +295,39 @@ function buildAssetSessionState(
   opts?: AssetSessionSyncOptions
 ) {
   if (opts?.syncSession === false) return {};
+  const assetPatch = buildAssetSessionPatch(portraits, emojis);
+  const formatSession = state.session[fmt] ?? {};
+  const activeLayoutId = String(
+    (formatSession as any).cocoCenterLayoutOptionId ??
+      (formatSession as any).cocoSubjectLayoutId ??
+      ""
+  ).trim();
+  const activeLayout = activeLayoutId
+    ? state.cocoLayoutSessions?.[fmt]?.[activeLayoutId]
+    : undefined;
+
   return {
     session: {
       ...state.session,
       [fmt]: {
-        ...state.session[fmt],
-        ...buildAssetSessionPatch(portraits, emojis),
+        ...formatSession,
+        ...assetPatch,
       },
     },
+    ...(activeLayout
+      ? {
+          cocoLayoutSessions: {
+            ...state.cocoLayoutSessions,
+            [fmt]: {
+              ...state.cocoLayoutSessions[fmt],
+              [activeLayoutId]: {
+                ...activeLayout,
+                ...assetPatch,
+              },
+            },
+          },
+        }
+      : {}),
     sessionDirty:
       opts?.markDirty === false
         ? state.sessionDirty
@@ -292,6 +335,89 @@ function buildAssetSessionState(
             ...state.sessionDirty,
             [fmt]: true,
           },
+  };
+}
+
+function buildRemovedCompiledAssetSessionState(
+  state: FlyerState,
+  fmt: Format,
+  removedAsset: Portrait | Emoji | undefined,
+  portraits: Portrait[],
+  emojis: Emoji[],
+  opts?: AssetSessionSyncOptions
+) {
+  const assetSessionState = buildAssetSessionState(
+    state,
+    fmt,
+    portraits,
+    emojis,
+    opts
+  );
+  const compiledObjectId = String(
+    removedAsset?.cocoCompiledObjectId ?? ""
+  ).trim();
+
+  if (!compiledObjectId || opts?.syncSession === false) {
+    return assetSessionState;
+  }
+
+  const nextSession =
+    (assetSessionState as { session?: FlyerState["session"] }).session ??
+    state.session;
+  const markCompiledAssetRemoved = (variant: Record<string, any>) => {
+    const compositionSystem = variant.cocoCompositionSystem;
+    if (!compositionSystem) return variant;
+    const compiledObjectOverrides =
+      compositionSystem.compiledObjectOverrides ?? {};
+    const priorOverride = compiledObjectOverrides[compiledObjectId] ?? {};
+    return {
+      ...variant,
+      cocoCompositionSystem: {
+        ...compositionSystem,
+        compiledObjectOverrides: {
+          ...compiledObjectOverrides,
+          [compiledObjectId]: {
+            ...priorOverride,
+            removed: true,
+          },
+        },
+      },
+    };
+  };
+
+  const formatSession = nextSession[fmt] ?? {};
+  const nextFormatSession = markCompiledAssetRemoved(
+    formatSession as Record<string, any>
+  );
+  const activeLayoutId = String(
+    (formatSession as any).cocoCenterLayoutOptionId ??
+      (formatSession as any).cocoSubjectLayoutId ??
+      ""
+  ).trim();
+  const nextLayoutSessions =
+    (assetSessionState as { cocoLayoutSessions?: FlyerState["cocoLayoutSessions"] })
+      .cocoLayoutSessions ?? state.cocoLayoutSessions;
+  const activeLayout = activeLayoutId
+    ? nextLayoutSessions?.[fmt]?.[activeLayoutId]
+    : undefined;
+
+  return {
+    ...assetSessionState,
+    session: {
+      ...nextSession,
+      [fmt]: nextFormatSession,
+    },
+    ...(activeLayout
+      ? {
+          cocoLayoutSessions: {
+            ...nextLayoutSessions,
+            [fmt]: {
+              ...nextLayoutSessions[fmt],
+              [activeLayoutId]: markCompiledAssetRemoved(activeLayout),
+            },
+          },
+        }
+      : {}),
   };
 }
 
@@ -531,6 +657,11 @@ type FlyerState = {
     story: boolean;
   };
 
+  cocoLayoutSessions: Record<Format, Record<string, Record<string, any>>>;
+  setCocoLayoutSession: (fmt: Format, layoutId: string, snapshot: Record<string, any>) => void;
+  clearCocoLayoutSession: (fmt: Format, layoutId: string) => void;
+  clearCocoLayoutSessions: () => void;
+
   setSession: (
     next:
       | Partial<FlyerState["session"]>
@@ -599,6 +730,10 @@ export const useFlyerState = create<FlyerState>((set, get) => ({
 
   updatePortrait: (fmt, id, patch, opts) =>
     set((s) => {
+      const portrait = s.portraits[fmt].find((pt) => pt.id === id);
+      if (!portrait || Object.keys(patch).every(
+        (key) => Object.is(portrait[key as keyof Portrait], patch[key as keyof Portrait])
+      )) return s;
       const nextPortraits = s.portraits[fmt].map((pt) => {
           if (pt.id !== id) return pt;
           const next = { ...pt, ...patch };
@@ -655,7 +790,8 @@ export const useFlyerState = create<FlyerState>((set, get) => ({
   removePortrait: (fmt, id, opts) =>
     set((s) => {
       const current = s.portraits[fmt] || [];
-      backUpExtractedPortraitToSlot(current.find((pt) => pt.id === id));
+      const removedPortrait = current.find((pt) => pt.id === id);
+      backUpExtractedPortraitToSlot(removedPortrait);
       const nextPortraits = current.filter((pt) => pt.id !== id);
       const nextEmojis = Array.isArray(s.emojis?.[fmt]) ? s.emojis[fmt] : [];
       return {
@@ -663,7 +799,14 @@ export const useFlyerState = create<FlyerState>((set, get) => ({
           ...s.portraits,
           [fmt]: nextPortraits,
         },
-        ...buildAssetSessionState(s, fmt, nextPortraits, nextEmojis, opts),
+        ...buildRemovedCompiledAssetSessionState(
+          s,
+          fmt,
+          removedPortrait,
+          nextPortraits,
+          nextEmojis,
+          opts
+        ),
       };
     }),
 
@@ -685,7 +828,8 @@ export const useFlyerState = create<FlyerState>((set, get) => ({
   onDeletePortrait: (fmt, id) =>
     set((s) => {
       const current = s.portraits[fmt] || [];
-      backUpExtractedPortraitToSlot(current.find((pt) => pt.id === id));
+      const removedPortrait = current.find((pt) => pt.id === id);
+      backUpExtractedPortraitToSlot(removedPortrait);
       const nextPortraits = current.filter((pt) => pt.id !== id);
       const nextEmojis = Array.isArray(s.emojis?.[fmt]) ? s.emojis[fmt] : [];
       return {
@@ -693,7 +837,13 @@ export const useFlyerState = create<FlyerState>((set, get) => ({
           ...s.portraits,
           [fmt]: nextPortraits,
         },
-        ...buildAssetSessionState(s, fmt, nextPortraits, nextEmojis),
+        ...buildRemovedCompiledAssetSessionState(
+          s,
+          fmt,
+          removedPortrait,
+          nextPortraits,
+          nextEmojis
+        ),
       };
     }),
 
@@ -957,11 +1107,19 @@ setFocus: (t: any, panel: any) =>
           ? s.emojis
           : {};
       const bucket = Array.isArray(emojis[fmt]) ? emojis[fmt] : [];
+      const removedEmoji = bucket.find((e: Emoji) => e?.id === id);
       const nextEmojis = bucket.filter((e: any) => e?.id !== id);
       const nextPortraits = Array.isArray(s.portraits?.[fmt]) ? s.portraits[fmt] : [];
       return {
         emojis: { ...emojis, [fmt]: nextEmojis },
-        ...buildAssetSessionState(s, fmt, nextPortraits, nextEmojis, opts),
+        ...buildRemovedCompiledAssetSessionState(
+          s,
+          fmt,
+          removedEmoji,
+          nextPortraits,
+          nextEmojis,
+          opts
+        ),
       };
     }),
 
@@ -1022,28 +1180,28 @@ setFocus: (t: any, panel: any) =>
   //
   textStyles: {
     headline: {
-      square: { color: "#ffffff", sizePx: 100, lineHeight: 1, family: "Inter", align: "center" },
-      story: { color: "#ffffff", sizePx: 100, lineHeight: 1, family: "Inter", align: "center" },
+      square: { color: "#ffffff", sizePx: 100, lineHeight: 1, family: "LEMONMILK-Bold", align: "center" },
+      story: { color: "#ffffff", sizePx: 100, lineHeight: 1, family: "LEMONMILK-Bold", align: "center" },
     },
     headline2: {
-      square: { color: "#ffffff", sizePx: 80, lineHeight: 1, family: "Inter", align: "center" },
-      story: { color: "#ffffff", sizePx: 80, lineHeight: 1, family: "Inter", align: "center" },
+      square: { color: "#ffffff", sizePx: 80, lineHeight: 1, family: "LEMONMILK-Bold", align: "center" },
+      story: { color: "#ffffff", sizePx: 80, lineHeight: 1, family: "LEMONMILK-Bold", align: "center" },
     },
     details: {
-      square: { color: "#ffffff", sizePx: 28, lineHeight: 1.1, family: "Inter", align: "center" },
-      story: { color: "#ffffff", sizePx: 28, lineHeight: 1.1, family: "Inter", align: "center" },
+      square: { color: "#ffffff", sizePx: 28, lineHeight: 1.1, family: "LEMONMILK-Bold", align: "center" },
+      story: { color: "#ffffff", sizePx: 28, lineHeight: 1.1, family: "LEMONMILK-Bold", align: "center" },
     },
     details2: {
-      square: { color: "#ffffff", sizePx: 22, lineHeight: 1.1, family: "Inter", align: "center" },
-      story: { color: "#ffffff", sizePx: 22, lineHeight: 1.1, family: "Inter", align: "center" },
+      square: { color: "#ffffff", sizePx: 22, lineHeight: 1.1, family: "LEMONMILK-Regular", align: "center" },
+      story: { color: "#ffffff", sizePx: 22, lineHeight: 1.1, family: "LEMONMILK-Regular", align: "center" },
     },
     venue: {
-      square: { color: "#ffffff", sizePx: 32, lineHeight: 1, family: "Inter", align: "center" },
-      story: { color: "#ffffff", sizePx: 32, lineHeight: 1, family: "Inter", align: "center" },
+      square: { color: "#ffffff", sizePx: 32, lineHeight: 1, family: "LEMONMILK-Regular", align: "center" },
+      story: { color: "#ffffff", sizePx: 32, lineHeight: 1, family: "LEMONMILK-Regular", align: "center" },
     },
     subtag: {
-      square: { color: "#ffffff", sizePx: 20, lineHeight: 1, family: "Inter", align: "center" },
-      story: { color: "#ffffff", sizePx: 20, lineHeight: 1, family: "Inter", align: "center" },
+      square: { color: "#ffffff", sizePx: 20, lineHeight: 1, family: "LEMONMILK-Medium", align: "center" },
+      story: { color: "#ffffff", sizePx: 20, lineHeight: 1, family: "LEMONMILK-Medium", align: "center" },
     },
   },
 
@@ -1064,6 +1222,34 @@ setFocus: (t: any, panel: any) =>
   session: { square: {}, story: {} },
 
   sessionDirty: { square: false, story: false },
+
+  cocoLayoutSessions: { square: {}, story: {} },
+
+  setCocoLayoutSession: (fmt, layoutId, snapshot) =>
+    set((s) => ({
+      cocoLayoutSessions: {
+        ...s.cocoLayoutSessions,
+        [fmt]: {
+          ...s.cocoLayoutSessions[fmt],
+          [layoutId]: snapshot,
+        },
+      },
+    })),
+
+  clearCocoLayoutSession: (fmt, layoutId) =>
+    set((s) => {
+      const nextFormatSessions = { ...s.cocoLayoutSessions[fmt] };
+      delete nextFormatSessions[layoutId];
+      return {
+        cocoLayoutSessions: {
+          ...s.cocoLayoutSessions,
+          [fmt]: nextFormatSessions,
+        },
+      };
+    }),
+
+  clearCocoLayoutSessions: () =>
+    set({ cocoLayoutSessions: { square: {}, story: {} } }),
 
   setSession: (next) =>
     set((s) => {
@@ -1154,6 +1340,7 @@ exportDesign: () => {
     currentTemplate: s.currentTemplate,
     session: s.session,
     sessionDirty: s.sessionDirty,
+    cocoLayoutSessions: s.cocoLayoutSessions,
 
     selectedPanel: s.selectedPanel,
     moveTarget: s.moveTarget,
@@ -1196,6 +1383,7 @@ importDesign: (d) => {
     currentTemplate: d.currentTemplate ?? get().currentTemplate,
     session: d.session ?? get().session,
     sessionDirty: d.sessionDirty ?? get().sessionDirty,
+    cocoLayoutSessions: d.cocoLayoutSessions ?? get().cocoLayoutSessions,
 
     // reset selection on import
     selectedPanel: null,

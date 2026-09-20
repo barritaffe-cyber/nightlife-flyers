@@ -488,8 +488,12 @@ export default function DjBrandingPanel({
             <div className={editorUploadPreviewClass}>
               {faceBusy ? (
                 <div className="flex flex-col items-center gap-2 text-[10px] text-cyan-300">
-                  <div className="h-5 w-5 rounded-full border-2 border-cyan-400 border-t-transparent animate-spin" />
-                  <span>Removing background...</span>
+                  <div
+                    aria-hidden="true"
+                    className="nf-coco-loader-orb"
+                    style={{ height: 24, width: 24 }}
+                  />
+                  <span>Preparing subject...</span>
                 </div>
               ) : displayFace ? (
                 <img src={displayFace} alt="" className="h-full w-full object-contain bg-white" draggable={false} />

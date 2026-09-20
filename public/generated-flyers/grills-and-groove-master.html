@@ -1,0 +1,75 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Grills &amp; Groove</title><style>
+@font-face{font-family:Gold;src:url('/fonts/TexturedGoldSerifPNG.woff2')}
+@font-face{font-family:Brush;src:url('/fonts/another_danger/Another Danger Slanted - Demo.otf')}
+@font-face{font-family:Sans;src:url('/fonts/LEMONMILK-Light.ttf')}
+@font-face{font-family:Bold;src:url('/fonts/LEMONMILK-Bold.ttf')}
+@font-face{font-family:GrillSerif;src:url('/fonts/Avigea.woff2')}
+*{box-sizing:border-box}body{margin:0;background:#080503}.canvas{position:relative;width:1080px;height:1080px;overflow:hidden;background:#050402}.canvas>*{position:absolute}.background{inset:0;width:100%;height:100%;object-fit:cover}
+.shade{inset:0;background:linear-gradient(90deg,transparent 42%,rgba(0,0,0,.28) 57%,rgba(0,0,0,.68) 100%)}
+.text{margin:0;white-space:pre;color:#f8f2e7;font:16px/1.4 Sans;letter-spacing:.25em;text-align:center;z-index:4;left:55%;width:42%}
+.presenter{top:3%;font-size:19px;letter-spacing:.65em}.presents{top:6%;font-size:12px;letter-spacing:.65em;color:#dabd82}
+.headline{top:9%;left:55%;width:100%;font:270px/1.1 Gold;letter-spacing:-.035em;text-align:left;transform:scaleX(.39);transform-origin:left top;z-index:2}
+.ampersand{left:89.5%;top:16%;width:8%;font:135px/1.1 GrillSerif;color:#dfb977;letter-spacing:-.05em;z-index:3}
+.subtitle{top:29%;left:54%;width:54%;font:145px/1.3 Brush;letter-spacing:0;transform:scaleX(.8);transform-origin:left top;z-index:3;color:#f2e6cc}
+.tagline{top:47%;font-size:15px;letter-spacing:.29em}
+.day{left:61.5%;top:53.6%;width:7%;font-size:28px;letter-spacing:.16em}
+.month{left:69%;top:52%;width:15%;font:700 53px/1.3 Bold;letter-spacing:.01em;color:#e5bf81}
+.date{left:85%;top:52%;width:9%;font:700 53px/1.3 Bold;letter-spacing:.04em}
+.time{top:58.5%;font-size:15px;letter-spacing:.36em}
+.djLabel{top:63.5%;font-size:12px;letter-spacing:.55em;color:#d6c39f}
+.dj1{left:59%;top:66%;width:17%;font:700 19px/1.4 Bold;letter-spacing:.1em}.dj2{left:78%;top:66%;width:18%;font:700 19px/1.4 Bold;letter-spacing:.1em}
+.genres{top:69%;font-size:12px;letter-spacing:.17em}
+.specials{top:75.5%;font-size:13px;letter-spacing:.24em;line-height:2}
+.venue{top:84.2%;font-size:27px;letter-spacing:.37em;color:#e8c68d}
+.address{top:88.2%;font-size:13px;letter-spacing:.35em}
+.reservations{top:93.2%;font-size:12px;letter-spacing:.3em}
+.rule{height:1.5px;background:#d5b879;z-index:3;left:73.5%;width:5.5%}.r1{top:50%}.r2{top:73%}.r3{top:82%}.p1,.p2{top:6.8%;width:4%;left:61%}.p2{left:87%}
+.canvas[data-format=story]{height:1920px}
+.canvas[data-format=story] .shade{background:linear-gradient(180deg,rgba(0,0,0,.5),rgba(0,0,0,.3) 27%,transparent 36%,transparent 59%,rgba(0,0,0,.78) 74%,rgba(0,0,0,.7))}
+.canvas[data-format=story] .text{left:7%;width:86%}
+.canvas[data-format=story] .presenter{top:3%;font-size:25px;letter-spacing:.65em}.canvas[data-format=story] .presents{top:5.5%;font-size:16px}
+.canvas[data-format=story] .headline{top:8%;left:10%;width:120%;font-size:330px;transform:scaleX(.64)}
+.canvas[data-format=story] .ampersand{top:13%;left:84%;width:9%;font-size:165px}
+.canvas[data-format=story] .subtitle{top:20%;left:8%;width:95%;font-size:200px;transform:scaleX(1.05)}
+.canvas[data-format=story] .tagline{top:34%;font-size:21px;letter-spacing:.28em}
+.canvas[data-format=story] .day{top:70%;left:23%;width:10%;font-size:35px}
+.canvas[data-format=story] .month{top:69%;left:34%;width:26%;font-size:72px}
+.canvas[data-format=story] .date{top:69%;left:62%;width:15%;font-size:72px}
+.canvas[data-format=story] .time{top:74%;font-size:20px}
+.canvas[data-format=story] .djLabel{top:78%;font-size:16px}
+.canvas[data-format=story] .dj1{top:80%;left:16%;width:32%;font-size:25px}.canvas[data-format=story] .dj2{top:80%;left:52%;width:33%;font-size:25px}
+.canvas[data-format=story] .genres{top:82.5%;font-size:16px}
+.canvas[data-format=story] .specials{top:86%;font-size:17px;line-height:1.9}
+.canvas[data-format=story] .venue{top:91%;font-size:37px}
+.canvas[data-format=story] .address{top:94%;font-size:17px}
+.canvas[data-format=story] .reservations{top:97%;font-size:14px}
+.canvas[data-format=story] .rule{left:46%;width:8%}.canvas[data-format=story] .r1{top:67.5%}.canvas[data-format=story] .r2{top:85%}.canvas[data-format=story] .r3{top:90%}.canvas[data-format=story] .p1,.canvas[data-format=story] .p2{top:6.15%;width:7%;left:29%}.canvas[data-format=story] .p2{left:64%}
+</style></head><body><main class="canvas" data-coco-canvas data-format="square">
+<img class="background" data-region="background" data-coco-object="background" data-coco-role="background" src="/generated-flyers/assets/bar-b-q-square.jpg">
+<div class="shade" data-region="shade" data-coco-object="shade"></div>
+<div class="text presenter" data-region="presenter" data-coco-object="presenter" data-coco-role="presenter" data-coco-editable="true">CLUB WOODS</div>
+<div class="text presents" data-region="presents" data-coco-object="presents" data-coco-role="presents" data-coco-editable="true">PRESENTS</div>
+<div class="text headline" data-region="headline" data-coco-object="headline" data-coco-role="headline" data-coco-editable="true">GRILLS</div>
+<div class="text ampersand" data-region="ampersand" data-coco-object="ampersand" data-coco-role="ampersand" data-coco-editable="true">&amp;</div>
+<div class="text subtitle" data-region="subtitle" data-coco-object="subtitle" data-coco-role="subtitle" data-coco-editable="true">GROOVE</div>
+<div class="text tagline" data-region="tagline" data-coco-object="tagline" data-coco-role="tagline" data-coco-editable="true">DINNER • DRINKS • MUSIC</div>
+<div class="text day" data-region="day" data-coco-object="day" data-coco-role="day" data-coco-editable="true">SAT</div>
+<div class="text month" data-region="month" data-coco-object="month" data-coco-role="month" data-coco-editable="true">MAY</div>
+<div class="text date" data-region="date" data-coco-object="date" data-coco-role="date" data-coco-editable="true">03</div>
+<div class="text time" data-region="time" data-coco-object="time" data-coco-role="time" data-coco-editable="true">6PM TILL LATE</div>
+<div class="text djLabel" data-region="djLabel" data-coco-object="djLabel" data-coco-role="djLabel" data-coco-editable="true">MUSIC BY</div>
+<div class="text dj1" data-region="dj1" data-coco-object="dj1" data-coco-role="dj1" data-coco-editable="true">DJ SPICE</div>
+<div class="text dj2" data-region="dj2" data-coco-object="dj2" data-coco-role="dj2" data-coco-editable="true">DJ ELEVATE</div>
+<div class="text genres" data-region="genres" data-coco-object="genres" data-coco-role="genres" data-coco-editable="true">R&amp;B | AFROBEATS | REGGAE | HIP HOP</div>
+<div class="text specials" data-region="specials" data-coco-object="specials" data-coco-role="specials" data-coco-editable="true">DINNER SPECIALS 6PM - 9PM
+2 FOR 1 COCKTAILS BEFORE 8PM</div>
+<div class="text venue" data-region="venue" data-coco-object="venue" data-coco-role="venue" data-coco-editable="true">CLUB WOODS</div>
+<div class="text address" data-region="address" data-coco-object="address" data-coco-role="address" data-coco-editable="true">234 WEST AVENUE STREET</div>
+<div class="text reservations" data-region="reservations" data-coco-object="reservations" data-coco-role="reservations" data-coco-editable="true">RESERVATIONS RECOMMENDED • 21+</div>
+<div class="rule p1" data-region="p1" data-coco-object="p1"></div>
+<div class="rule p2" data-region="p2" data-coco-object="p2"></div>
+<div class="rule r1" data-region="r1" data-coco-object="r1"></div>
+<div class="rule r2" data-region="r2" data-coco-object="r2"></div>
+<div class="rule r3" data-region="r3" data-coco-object="r3"></div>
+</main><script>const format=new URLSearchParams(location.search).get('format')==='story'?'story':'square';document.querySelector('.canvas').dataset.format=format;document.querySelector('.background').src='/generated-flyers/assets/bar-b-q-'+format+'.jpg';</script></body></html>

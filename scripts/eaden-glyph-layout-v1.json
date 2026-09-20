@@ -1,0 +1,374 @@
+{
+  "0": {
+    "inkHeight": 148,
+    "inkWidth": 141,
+    "inkBottom": 81,
+    "advance": 763
+  },
+  "1": {
+    "inkHeight": 143,
+    "inkWidth": 86,
+    "inkBottom": 81,
+    "advance": 479
+  },
+  "2": {
+    "inkHeight": 151,
+    "inkWidth": 141,
+    "inkBottom": 79,
+    "advance": 757
+  },
+  "3": {
+    "inkHeight": 151,
+    "inkWidth": 134,
+    "inkBottom": 79,
+    "advance": 715
+  },
+  "4": {
+    "inkHeight": 150,
+    "inkWidth": 146,
+    "inkBottom": 79,
+    "advance": 784
+  },
+  "5": {
+    "inkHeight": 151,
+    "inkWidth": 135,
+    "inkBottom": 76,
+    "advance": 725
+  },
+  "6": {
+    "inkHeight": 148,
+    "inkWidth": 129,
+    "inkBottom": 78,
+    "advance": 693
+  },
+  "7": {
+    "inkHeight": 146,
+    "inkWidth": 120,
+    "inkBottom": 78,
+    "advance": 645
+  },
+  "8": {
+    "inkHeight": 150,
+    "inkWidth": 134,
+    "inkBottom": 77,
+    "advance": 715
+  },
+  "9": {
+    "inkHeight": 148,
+    "inkWidth": 135,
+    "inkBottom": 78,
+    "advance": 720
+  },
+  "A": {
+    "inkHeight": 155,
+    "inkWidth": 198,
+    "inkBottom": 74,
+    "advance": 1039
+  },
+  "B": {
+    "inkHeight": 151,
+    "inkWidth": 162,
+    "inkBottom": 79,
+    "advance": 861
+  },
+  "C": {
+    "inkHeight": 150,
+    "inkWidth": 136,
+    "inkBottom": 80,
+    "advance": 725
+  },
+  "D": {
+    "inkHeight": 149,
+    "inkWidth": 166,
+    "inkBottom": 79,
+    "advance": 884
+  },
+  "E": {
+    "inkHeight": 150,
+    "inkWidth": 122,
+    "inkBottom": 78,
+    "advance": 659
+  },
+  "F": {
+    "inkHeight": 147,
+    "inkWidth": 155,
+    "inkBottom": 82,
+    "advance": 828
+  },
+  "G": {
+    "inkHeight": 177,
+    "inkWidth": 134,
+    "inkBottom": 55,
+    "advance": 725
+  },
+  "H": {
+    "inkHeight": 148,
+    "inkWidth": 186,
+    "inkBottom": 82,
+    "advance": 978
+  },
+  "I": {
+    "inkHeight": 144,
+    "inkWidth": 89,
+    "inkBottom": 84,
+    "advance": 490
+  },
+  "J": {
+    "inkHeight": 194,
+    "inkWidth": 171,
+    "inkBottom": 35,
+    "advance": 906
+  },
+  "K": {
+    "inkHeight": 170,
+    "inkWidth": 182,
+    "inkBottom": 58,
+    "advance": 960
+  },
+  "L": {
+    "inkHeight": 151,
+    "inkWidth": 151,
+    "inkBottom": 80,
+    "advance": 805
+  },
+  "M": {
+    "inkHeight": 147,
+    "inkWidth": 191,
+    "inkBottom": 81,
+    "advance": 1003
+  },
+  "N": {
+    "inkHeight": 149,
+    "inkWidth": 169,
+    "inkBottom": 81,
+    "advance": 897
+  },
+  "O": {
+    "inkHeight": 147,
+    "inkWidth": 143,
+    "inkBottom": 80,
+    "advance": 766
+  },
+  "P": {
+    "inkHeight": 143,
+    "inkWidth": 141,
+    "inkBottom": 75,
+    "advance": 751
+  },
+  "Q": {
+    "inkHeight": 170,
+    "inkWidth": 161,
+    "inkBottom": 56,
+    "advance": 853
+  },
+  "R": {
+    "inkHeight": 155,
+    "inkWidth": 162,
+    "inkBottom": 73,
+    "advance": 863
+  },
+  "S": {
+    "inkHeight": 165,
+    "inkWidth": 146,
+    "inkBottom": 68,
+    "advance": 781
+  },
+  "T": {
+    "inkHeight": 148,
+    "inkWidth": 142,
+    "inkBottom": 79,
+    "advance": 762
+  },
+  "U": {
+    "inkHeight": 147,
+    "inkWidth": 143,
+    "inkBottom": 80,
+    "advance": 767
+  },
+  "V": {
+    "inkHeight": 155,
+    "inkWidth": 148,
+    "inkBottom": 82,
+    "advance": 795
+  },
+  "W": {
+    "inkHeight": 152,
+    "inkWidth": 194,
+    "inkBottom": 84,
+    "advance": 1020
+  },
+  "X": {
+    "inkHeight": 147,
+    "inkWidth": 152,
+    "inkBottom": 80,
+    "advance": 809
+  },
+  "Y": {
+    "inkHeight": 156,
+    "inkWidth": 163,
+    "inkBottom": 72,
+    "advance": 865
+  },
+  "Z": {
+    "inkHeight": 147,
+    "inkWidth": 162,
+    "inkBottom": 75,
+    "advance": 861
+  },
+  "a": {
+    "inkHeight": 85,
+    "inkWidth": 113,
+    "inkBottom": 80,
+    "advance": 617
+  },
+  "b": {
+    "inkHeight": 123,
+    "inkWidth": 99,
+    "inkBottom": 80,
+    "advance": 542
+  },
+  "c": {
+    "inkHeight": 85,
+    "inkWidth": 84,
+    "inkBottom": 81,
+    "advance": 467
+  },
+  "d": {
+    "inkHeight": 123,
+    "inkWidth": 109,
+    "inkBottom": 81,
+    "advance": 589
+  },
+  "e": {
+    "inkHeight": 84,
+    "inkWidth": 81,
+    "inkBottom": 81,
+    "advance": 457
+  },
+  "f": {
+    "inkHeight": 154,
+    "inkWidth": 116,
+    "inkBottom": 47,
+    "advance": 631
+  },
+  "g": {
+    "inkHeight": 120,
+    "inkWidth": 104,
+    "inkBottom": 44,
+    "advance": 570
+  },
+  "h": {
+    "inkHeight": 123,
+    "inkWidth": 108,
+    "inkBottom": 80,
+    "advance": 593
+  },
+  "i": {
+    "inkHeight": 120,
+    "inkWidth": 50,
+    "inkBottom": 80,
+    "advance": 298
+  },
+  "j": {
+    "inkHeight": 154,
+    "inkWidth": 84,
+    "inkBottom": 47,
+    "advance": 472
+  },
+  "k": {
+    "inkHeight": 134,
+    "inkWidth": 115,
+    "inkBottom": 67,
+    "advance": 622
+  },
+  "l": {
+    "inkHeight": 122,
+    "inkWidth": 56,
+    "inkBottom": 80,
+    "advance": 326
+  },
+  "m": {
+    "inkHeight": 80,
+    "inkWidth": 153,
+    "inkBottom": 80,
+    "advance": 814
+  },
+  "n": {
+    "inkHeight": 89,
+    "inkWidth": 117,
+    "inkBottom": 83,
+    "advance": 631
+  },
+  "o": {
+    "inkHeight": 89,
+    "inkWidth": 96,
+    "inkBottom": 83,
+    "advance": 528
+  },
+  "p": {
+    "inkHeight": 120,
+    "inkWidth": 120,
+    "inkBottom": 50,
+    "advance": 650
+  },
+  "q": {
+    "inkHeight": 121,
+    "inkWidth": 108,
+    "inkBottom": 51,
+    "advance": 584
+  },
+  "r": {
+    "inkHeight": 87,
+    "inkWidth": 91,
+    "inkBottom": 83,
+    "advance": 500
+  },
+  "s": {
+    "inkHeight": 89,
+    "inkWidth": 84,
+    "inkBottom": 80,
+    "advance": 467
+  },
+  "t": {
+    "inkHeight": 105,
+    "inkWidth": 65,
+    "inkBottom": 80,
+    "advance": 373
+  },
+  "u": {
+    "inkHeight": 87,
+    "inkWidth": 106,
+    "inkBottom": 80,
+    "advance": 575
+  },
+  "v": {
+    "inkHeight": 88,
+    "inkWidth": 86,
+    "inkBottom": 81,
+    "advance": 472
+  },
+  "w": {
+    "inkHeight": 88,
+    "inkWidth": 134,
+    "inkBottom": 81,
+    "advance": 711
+  },
+  "x": {
+    "inkHeight": 88,
+    "inkWidth": 105,
+    "inkBottom": 81,
+    "advance": 570
+  },
+  "y": {
+    "inkHeight": 124,
+    "inkWidth": 112,
+    "inkBottom": 45,
+    "advance": 607
+  },
+  "z": {
+    "inkHeight": 89,
+    "inkWidth": 89,
+    "inkBottom": 79,
+    "advance": 490
+  }
+}

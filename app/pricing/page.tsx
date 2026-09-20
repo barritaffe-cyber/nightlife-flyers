@@ -6,7 +6,7 @@ import PublicSiteFooter from "../../components/ui/PublicSiteFooter";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Compare pricing for Nightlife Flyers, the AI flyer maker for nightlife flyers, club flyers, event flyers, DJ flyers, and artist promo flyers.",
+    "Create flyers in five minutes with Coco. One Flyer is $5; Coco is $10/month; Coco + Studio is $15/month. Both include Square and Story.",
   keywords: [
     "nightlife flyers",
     "club flyers",

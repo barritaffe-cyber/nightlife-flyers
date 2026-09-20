@@ -31,7 +31,7 @@ export async function POST(req: Request) {
         | "weekend_pass"
         | "export_pass";
       current_period_end: string;
-      plan?: "creator" | "studio" | "monthly" | "yearly";
+      plan?: "basic" | "full" | "creator" | "studio" | "monthly" | "yearly";
     };
 
     if (!email || !status || !current_period_end) {

@@ -1,0 +1,350 @@
+{
+  "schemaVersion": 1,
+  "recipeId": "punta-cana-sundays",
+  "recipeVersion": 2,
+  "sourceHash": "31b04bc5f2ea003d03668373a0765821f51ba4b3e98aae96ba5916cbb88c4680",
+  "sourceProjectSha256": "d611ee901fbd37c2e4c78b9279d78a6777c0e8607c68089246ea0ec7d81a772a",
+  "sourceSavedAt": "2026-09-01T22:15:07.186Z",
+  "formats": {
+    "square": {
+      "fields": {
+        "headAlign": "left",
+        "align": "left",
+        "bodyFamily": "Bebas Neue",
+        "detailsFamily": "Bebas Neue",
+        "bodySize": 27.5,
+        "detailsSize": 27.5,
+        "detailsRotate": 90,
+        "detailsTracking": 0.04,
+        "bodyTracking": 0.04,
+        "detailsUppercase": true,
+        "details2Family": "LEMONMILK-Regular",
+        "venueSize": 25,
+        "rightRailSize": 9,
+        "leftRailX": 7.055844907407407,
+        "leftRailY": 72.32711226851852,
+        "compliance": "18+",
+        "complianceEnabled": true,
+        "qrEnabled": true,
+        "qrX": 86.30931712962963,
+        "qrY": 12.293258101851851,
+        "qrScale": 0.89,
+        "cocoRushVenueStyles": {
+          "venueNameSize": 25,
+          "addressSize": 7,
+          "gap": 3,
+          "venueNameColor": "rgb(255, 255, 255)",
+          "addressColor": "rgb(255, 255, 255)"
+        },
+        "headShadow": false,
+        "headShadowStrength": 1,
+        "head2Shadow": false,
+        "head2ShadowStrength": 1,
+        "detailsShadow": false,
+        "detailsShadowStrength": 1,
+        "details2Shadow": false,
+        "details2ShadowStrength": 1,
+        "venueShadow": false,
+        "venueShadowStrength": 1,
+        "vignette": false,
+        "vignetteStrength": 0.1,
+        "haze": 0.5,
+        "grade": 0.35
+      },
+      "compiledObjectOverrides": {
+        "date": {
+          "x": 6.042390046296296,
+          "y": 23.76446759259259
+        },
+        "details": {
+          "x": 51.268807870370374,
+          "y": 37.6048900462963
+        },
+        "djLineup": {
+          "x": 49.095052083333336,
+          "y": 76.60300925925927
+        },
+        "footerAddress": {
+          "x": 49.5970775462963,
+          "y": 96.17621527777779
+        },
+        "footerDetails": {
+          "x": 49.49218750000001,
+          "y": 88.71889467592592
+        },
+        "headline": {
+          "x": 23.90480324074074,
+          "y": 9.852430555555557
+        },
+        "headline2": {
+          "x": 25.882523148148145,
+          "y": 19.92476851851852
+        },
+        "hostedBy": {
+          "x": 7.739438657407397,
+          "y": 72.76114004629629
+        },
+        "social": {
+          "x": 10.317563657407405,
+          "y": 60.82465277777778
+        }
+      },
+      "assets": {
+        "removeCompiledObjectIds": [],
+        "patchCompiledByObjectId": {
+          "background": {
+            "x": 52.92100694444444,
+            "y": 45.67274305555555
+          },
+          "barcode": {
+            "x": 10.864438657407407,
+            "y": 40.311776620370374
+          },
+          "dotGridLeft": {
+            "x": 29.35474537037037,
+            "y": 85.74942129629629,
+            "scale": 0.9
+          },
+          "dotGridRight": {
+            "scale": 0.89
+          },
+          "foliageForeground": {
+            "scale": 1.58
+          },
+          "foliageFrame": {
+            "x": 48.44762731481482,
+            "y": 49.90089699074074,
+            "scale": 1.33
+          },
+          "footerBand": {
+            "x": 51.15523726851852,
+            "y": 97.05367476851852,
+            "scale": 1.69
+          },
+          "subject": {
+            "x": 50.101273148148145,
+            "y": 64.25130208333333
+          }
+        },
+        "additions": []
+      }
+    },
+    "story": {
+      "fields": {
+        "headlineSize": 112,
+        "headSize": 112,
+        "headManualPx": 112,
+        "headMaxPx": 112,
+        "headAlign": "center",
+        "align": "center",
+        "head2Size": 130,
+        "head2SizePx": 130,
+        "bodyFamily": "Bebas Neue",
+        "detailsFamily": "Bebas Neue",
+        "bodySize": 32,
+        "detailsSize": 32,
+        "detailsLineHeight": 0.62,
+        "detailsRotate": 90,
+        "detailsTracking": 0.04,
+        "bodyTracking": 0.04,
+        "details2Family": "LEMONMILK-Medium",
+        "details2Color": "#EAF418",
+        "venueAddress": "•297 Grodify St • New York • NY•\n • 07345 • 978.000.0000•",
+        "venueSize": 27,
+        "rightRailSize": 11,
+        "cocoRushVenueStyles": {
+          "venueNameSize": 27,
+          "addressSize": 10,
+          "gap": 3,
+          "venueNameColor": "rgb(255, 255, 255)",
+          "addressColor": "rgb(255, 255, 255)"
+        },
+        "cocoSocialHandleSize": 10,
+        "cocoSocialHandleAlign": "center",
+        "cocoSocialHandleRotation": 0,
+        "cocoManualTextColorRoles": {
+          "details2": true
+        },
+        "headShadow": false,
+        "headShadowStrength": 1,
+        "head2Shadow": true,
+        "head2ShadowStrength": 0.5,
+        "detailsShadow": true,
+        "detailsShadowStrength": 1,
+        "details2Shadow": true,
+        "details2ShadowStrength": 1,
+        "venueShadow": true,
+        "venueShadowStrength": 1,
+        "vignette": true,
+        "vignetteStrength": 0.5,
+        "haze": 0.5,
+        "grade": 0.35
+      },
+      "compiledObjectOverrides": {
+        "date": {
+          "x": 5.902054398148149,
+          "y": 23.760579427083332
+        },
+        "details": {
+          "x": 60.02242476851852,
+          "y": 23.006591796874996
+        },
+        "djLineup": {
+          "x": 49.39597800925926,
+          "y": 73.67472330729166
+        },
+        "footerAddress": {
+          "x": 47.8052662037037,
+          "y": 94.30460611979167
+        },
+        "footerDetails": {
+          "x": 50.151186342592595,
+          "y": 86.04085286458334
+        },
+        "headline": {
+          "x": 1.1190682870370374,
+          "y": 6.355794270833332
+        },
+        "headline2": {
+          "x": 16.21166087962963,
+          "y": 13.256429036458332
+        },
+        "hostedBy": {
+          "x": 8.999565972222221,
+          "y": 56.87703450520833
+        },
+        "presenter": {
+          "x": 5.951967592592593,
+          "y": 20.790608723958336
+        },
+        "social": {
+          "x": 32.84143518518519,
+          "y": 83.81022135416666
+        },
+        "venue": {
+          "x": 50.21195023148149,
+          "y": 77.39542643229166
+        }
+      },
+      "assets": {
+        "removeCompiledObjectIds": [],
+        "patchCompiledByObjectId": {
+          "dotGridLeft": {
+            "x": 26.37152777777778,
+            "y": 79.85310872395833,
+            "scale": 1.17
+          },
+          "dotGridRight": {
+            "x": 73.79267939814814,
+            "y": 79.77050781249999,
+            "scale": 1.17
+          },
+          "foliageForeground": {
+            "x": 52.371238425925924,
+            "y": 34.20450846354167,
+            "scale": 1.63
+          },
+          "foliageFrame": {
+            "x": 44.67881944444444,
+            "y": 50.46346028645833,
+            "scale": 1.47
+          },
+          "footerBand": {
+            "x": 47.873263888888886,
+            "y": 95.95743815104166,
+            "scale": 2.29
+          },
+          "subject": {
+            "x": 48.61689814814815,
+            "y": 54.44783528645833,
+            "scale": 1.22
+          }
+        },
+        "additions": [
+          {
+            "id": "flare_flareBlack_1788295687667_8n6od",
+            "url": "/flares/optimized/flareBlack.png",
+            "x": 65.61270254629629,
+            "y": 90.06184895833334,
+            "scale": 0.8,
+            "opacity": 1,
+            "rotation": 0,
+            "locked": false,
+            "blendMode": "screen",
+            "isFlare": true,
+            "isSticker": false,
+            "isNightlifeGraphic": false,
+            "label": "Black Flare",
+            "showLabel": true
+          },
+          {
+            "id": "sticker_instagram_logo_1788295812318_m9nsw",
+            "url": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTM4IDE2SDkwQzEwNiAxNiAxMTIgMjIgMTEyIDM4VjkwQzExMiAxMDYgMTA2IDExMiA5MCAxMTJIMzhDMjIgMTEyIDE2IDEwNiAxNiA5MFYzOEMxNiAyMiAyMiAxNiAzOCAxNloiLz48cGF0aCBkPSJNNjQgNDJBMjIgMjIgMCAxIDAgNjQgODZBMjIgMjIgMCAwIDAgNjQgNDJaIi8+PHBhdGggZD0iTTkwIDMyQTQuNSA0LjUgMCAxIDAgODkuOTkgMzJaIi8+PC9zdmc+",
+            "x": 42.83768265335648,
+            "y": 82.00642903645831,
+            "scale": 0.15,
+            "opacity": 0.9,
+            "rotation": 0,
+            "locked": false,
+            "blendMode": "normal",
+            "isFlare": false,
+            "isSticker": true,
+            "isNightlifeGraphic": true,
+            "label": "Instagram",
+            "layerOffset": 180,
+            "showLabel": false,
+            "hitTestMode": "alpha-bounds",
+            "svgTemplate": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"128\" height=\"128\" viewBox=\"0 0 128 128\" fill=\"none\" stroke=\"{{COLOR}}\" stroke-width=\"6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M38 16H90C106 16 112 22 112 38V90C112 106 106 112 90 112H38C22 112 16 106 16 90V38C16 22 22 16 38 16Z\"/><path d=\"M64 42A22 22 0 1 0 64 86A22 22 0 0 0 64 42Z\"/><path d=\"M90 32A4.5 4.5 0 1 0 89.99 32Z\"/></svg>",
+            "iconColor": "#ffffff",
+            "isSocialIcon": true,
+            "socialPlatform": "instagram"
+          },
+          {
+            "id": "sticker_facebook_logo_1788295974410_oob7e",
+            "url": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSItMTUgLTE1IDI0MiAyNDIiIGZpbGw9IiNmZmZmZmYiIHN0cm9rZT0ibm9uZSI+PHBhdGggZD0ibTE1NC4xMiwxMjYuODljLjk3LTYuMDksMS45MS0xMS45OCwyLjg5LTE4LjE0LS45NCwwLTEuNjgsMC0yLjQyLDAtNS45MiwwLTExLjg1LjAyLTE3Ljc3LS4wMS0zLjIxLS4wMi00LjY3LTEuNDgtNC42OC00LjctLjAyLTYuNjEtLjI3LTEzLjIzLjEtMTkuODIuNDYtOC4yMyw1LjIzLTEyLjM4LDEzLjQ0LTEyLjM4LDQuNTQsMCw5LjA3LDAsMTMuNzMsMCwuMDctLjU4LjE4LTEuMDMuMTgtMS40OC4wMS00LjYyLDAtOS4yMy4wMi0xMy44NSwwLS45Ny0uMDMtMS43Mi0xLjI3LTEuOS0xMS4wNy0xLjYtMjEuOTktMS41Ni0zMi40NCwzLjA2LTguNzIsMy44NS0xMy4zNiwxMC4zOS0xMy4xMywyMC4yMi4yLDguNjEuMDUsMTcuMjIuMDQsMjUuODMsMCwzLjU5LTEuNDIsNS4wMS01LDUuMDMtNS45OC4wMi0xMS45NiwwLTE4LjEyLDB2MTguMTRoMi4xMmM1LjI0LDAsMTAuNDcsMCwxNS43MSwwLDMuODMsMCw1LjMsMS40NSw1LjMsNS4yLDAsMjEuODQsMCw0My42OCwwLDY1LjUyLDAsMy40OC0xLjQxLDQuODctNC44Niw0Ljg3LTE1LjkxLDAtMzEuODMuMDQtNDcuNzQtLjAxLTI0LjMzLS4wNy00NC41LTE2LjM2LTQ5LjYzLTQwLjE1LS43Mi0zLjM0LTEuMDYtNi44Mi0xLjA3LTEwLjI0LS4wOC0zMC44Ni0uMS02MS43My0uMDMtOTIuNTkuMDYtMjUuMTgsMTguMTQtNDYuMTEsNDMuMDMtNDkuOTMsMi41OC0uMzksNS4yMS0uNTIsNy44Mi0uNTIsMzAuNTktLjAzLDYxLjE3LS4wNiw5MS43Ni0uMDEsMjQuNDQuMDQsNDQuNjQsMTYuMzcsNDkuNzMsNDAuMjguNzQsMy40NywxLjAzLDcuMSwxLjA0LDEwLjY2LjA4LDMwLjUyLjA3LDYxLjA0LjA0LDkxLjU2LS4wMywyNS41Ni0xNy43OSw0Ni4zNy00Mi45OCw1MC40MS0xLjk3LjMyLTMuOTcuNDgtNS45Ni41MS01Ljg1LjA3LTExLjcxLjA1LTE3LjU3LjA0LTIuNjYsMC00LjM4LTEuNzQtNC4zOC00LjQuMDMtMjEuNzcuMDgtNDMuNTQuMTEtNjUuMzEsMC00LjcxLDEuMTgtNS44OSw1Ljg0LTUuODksNS4zLDAsMTAuNiwwLDE2LjE2LDBabS0xMy42LDY3LjU4YzYuNC0uMjcsMTIuNjcuMDksMTguNzMtLjksMjAuODctMy4zOCwzNS4zNi0yMC44LDM1LjM4LTQxLjk5LjAzLTMwLjU5LjAyLTYxLjE4LS4wMi05MS43NywwLTIuNC0uMTQtNC44NC0uNTUtNy4yLTMuNjgtMjAuODgtMjAuODctMzUuMzEtNDIuMDktMzUuMzMtMzAuNTItLjAzLTYxLjAzLS4wMi05MS41NS4wMi0yLjQ3LDAtNC45OC4xMi03LjQuNTYtMjAuODksMy43Mi0zNS4yNywyMC45MS0zNS4yOCw0Mi4xNC0uMDIsMzAuNTItLjAyLDYxLjA0LjAyLDkxLjU2LDAsMi41NC4xNSw1LjEyLjYxLDcuNiwzLjk1LDIwLjk5LDIwLjk0LDM1LjAzLDQyLjMzLDM1LjA1LDEzLjg1LjAyLDI3LjY5LDAsNDEuNTQsMGgyLjE4di01OS4wNmMtNi4xLDAtMTIuMDgsMC0xOC4wNSwwLTMuNzMsMC01LjExLTEuMzYtNS4xMi01LjEtLjAyLTguMTMtLjAyLTE2LjI2LDAtMjQuMzksMC0zLjc5LDEuNDMtNS4xNiw1LjMxLTUuMTgsNS4yNC0uMDEsMTAuNDcsMCwxNS43MSwwLC43MiwwLDEuNDQsMCwyLjI4LDAsMC04LjA0LS4wNS0xNS43NC4wMy0yMy40NS4wMi0yLjMzLjE4LTQuNy42NS02Ljk3LDIuMDItOS42Myw4LjIxLTE1Ljg4LDE2LjktMTkuNzQsMTMuNTctNi4wMywyNy42Ny01Ljk0LDQxLjkxLTIuOTgsMi44Mi41OCwzLjgxLDEuODgsMy44Miw0Ljc2LjAyLDcuNzIuMDMsMTUuNDMsMCwyMy4xNS0uMDEsMy40LTEuNTEsNC44NS00Ljk4LDQuODYtNS43OS4wMi0xMS41NywwLTE3LjM2LDAtMy42NCwwLTQuOTMuOTUtNS4xLDQuNjUtLjIyLDQuNzMtLjA0LDkuNDktLjAyLDE0LjIzLDAsLjQ2LjEyLjkxLjE5LDEuNC40NS4wNC43OS4wOSwxLjEzLjA5LDYuNDgsMCwxMi45NS0uMDMsMTkuNDMuMDIsMy41My4wMyw1LjE4LDEuOTgsNC42NSw1LjQ1LTEuMTYsNy41NS0yLjMxLDE1LjEtMy41NiwyMi42NC0xLjA2LDYuNDEtMS4zMyw2LjU3LTcuODEsNi41Ny00LjYsMC05LjE5LDAtMTMuOTEsMHY1OS4zMVoiLz48L3N2Zz4=",
+            "x": 49.48350694444444,
+            "y": 82.08902994791666,
+            "scale": 0.15,
+            "opacity": 0.9,
+            "rotation": 0,
+            "locked": false,
+            "blendMode": "normal",
+            "isFlare": false,
+            "isSticker": true,
+            "isNightlifeGraphic": true,
+            "label": "Facebook",
+            "layerOffset": 180,
+            "showLabel": false,
+            "hitTestMode": "alpha-bounds",
+            "svgTemplate": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"128\" height=\"128\" viewBox=\"-15 -15 242 242\" fill=\"{{COLOR}}\" stroke=\"none\"><path d=\"m154.12,126.89c.97-6.09,1.91-11.98,2.89-18.14-.94,0-1.68,0-2.42,0-5.92,0-11.85.02-17.77-.01-3.21-.02-4.67-1.48-4.68-4.7-.02-6.61-.27-13.23.1-19.82.46-8.23,5.23-12.38,13.44-12.38,4.54,0,9.07,0,13.73,0,.07-.58.18-1.03.18-1.48.01-4.62,0-9.23.02-13.85,0-.97-.03-1.72-1.27-1.9-11.07-1.6-21.99-1.56-32.44,3.06-8.72,3.85-13.36,10.39-13.13,20.22.2,8.61.05,17.22.04,25.83,0,3.59-1.42,5.01-5,5.03-5.98.02-11.96,0-18.12,0v18.14h2.12c5.24,0,10.47,0,15.71,0,3.83,0,5.3,1.45,5.3,5.2,0,21.84,0,43.68,0,65.52,0,3.48-1.41,4.87-4.86,4.87-15.91,0-31.83.04-47.74-.01-24.33-.07-44.5-16.36-49.63-40.15-.72-3.34-1.06-6.82-1.07-10.24-.08-30.86-.1-61.73-.03-92.59.06-25.18,18.14-46.11,43.03-49.93,2.58-.39,5.21-.52,7.82-.52,30.59-.03,61.17-.06,91.76-.01,24.44.04,44.64,16.37,49.73,40.28.74,3.47,1.03,7.1,1.04,10.66.08,30.52.07,61.04.04,91.56-.03,25.56-17.79,46.37-42.98,50.41-1.97.32-3.97.48-5.96.51-5.85.07-11.71.05-17.57.04-2.66,0-4.38-1.74-4.38-4.4.03-21.77.08-43.54.11-65.31,0-4.71,1.18-5.89,5.84-5.89,5.3,0,10.6,0,16.16,0Zm-13.6,67.58c6.4-.27,12.67.09,18.73-.9,20.87-3.38,35.36-20.8,35.38-41.99.03-30.59.02-61.18-.02-91.77,0-2.4-.14-4.84-.55-7.2-3.68-20.88-20.87-35.31-42.09-35.33-30.52-.03-61.03-.02-91.55.02-2.47,0-4.98.12-7.4.56-20.89,3.72-35.27,20.91-35.28,42.14-.02,30.52-.02,61.04.02,91.56,0,2.54.15,5.12.61,7.6,3.95,20.99,20.94,35.03,42.33,35.05,13.85.02,27.69,0,41.54,0h2.18v-59.06c-6.1,0-12.08,0-18.05,0-3.73,0-5.11-1.36-5.12-5.1-.02-8.13-.02-16.26,0-24.39,0-3.79,1.43-5.16,5.31-5.18,5.24-.01,10.47,0,15.71,0,.72,0,1.44,0,2.28,0,0-8.04-.05-15.74.03-23.45.02-2.33.18-4.7.65-6.97,2.02-9.63,8.21-15.88,16.9-19.74,13.57-6.03,27.67-5.94,41.91-2.98,2.82.58,3.81,1.88,3.82,4.76.02,7.72.03,15.43,0,23.15-.01,3.4-1.51,4.85-4.98,4.86-5.79.02-11.57,0-17.36,0-3.64,0-4.93.95-5.1,4.65-.22,4.73-.04,9.49-.02,14.23,0,.46.12.91.19,1.4.45.04.79.09,1.13.09,6.48,0,12.95-.03,19.43.02,3.53.03,5.18,1.98,4.65,5.45-1.16,7.55-2.31,15.1-3.56,22.64-1.06,6.41-1.33,6.57-7.81,6.57-4.6,0-9.19,0-13.91,0v59.31Z\"/></svg>",
+            "iconColor": "#ffffff",
+            "isSocialIcon": true,
+            "socialPlatform": "facebook"
+          },
+          {
+            "id": "sticker_youtube_logo_1788296011818_9sbh7",
+            "url": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSItMjggLTI4IDI3OCAyNzgiIGZpbGw9IiNmZmZmZmYiIHN0cm9rZT0ibm9uZSI+PHBhdGggZD0ibTAsMTAwLjRjLjQzLTUuMTYuNjgtMTAuMzQsMS4zNC0xNS40NywxLjA1LTguMjksMS43NS0xNi42OSwzLjctMjQuNzcsNC4wMi0xNi42NCwxNy40NC0yNy45NSwzNC41LTMwLjIzLDIwLjI1LTIuNyw0MC41OS00LjEsNjEtNC40MSwxOS40MS0uMjksMzguOC4xMiw1OC4xNCwxLjg0LDguOS43OSwxNy44MywxLjYsMjYuNjEsMy4xOCwxNy4wMywzLjA3LDI5LjUsMTYuNTYsMzIuMzMsMzQuMDgsMi43MywxNi45LDQuMjcsMzMuOSwzLjkyLDUxLjAzLS4zLDE0LjY2LTEuNjYsMjkuMjMtNC4zOSw0My42My0zLjI5LDE3LjM4LTE3LjI0LDI5Ljk2LTM1LjI1LDMyLjQtMzAuOTYsNC4xOC02Mi4wNSw1LjEtOTMuMjQsNC4wNC0xNi45NC0uNTgtMzMuODMtMS44Ni01MC42LTQuMzYtMTcuMTMtMi41NS0zMC43MS0xNS4zMy0zMy41OS0zMi40Ni0xLjkxLTExLjM1LTIuNzQtMjIuODctNC4wNi0zNC4zMi0uMTMtMS4xMy0uMjctMi4yNy0uNC0zLjQsMC02LjkyLDAtMTMuODUsMC0yMC43N1ptMTA3LjMyLDgxLjg3YzIyLjQuMTIsNDcuMDItLjgxLDcyLjQ4LTQuMzIsMTIuNjItMS43NCwyMS44Mi05Ljc5LDIzLjg1LTIyLjEsMS41OS05LjU5LDIuNzYtMTkuMjcsMy41Mi0yOC45NiwxLjU5LTIwLjM3LjAzLTQwLjYyLTMuMzYtNjAuNzUtMS45My0xMS40My0xMC4yMi0yMC4yMS0yMS42Ny0yMi4wOS0xOC4zOC0zLjAyLTM2Ljk2LTQuMTUtNTUuNTYtNC41OC0yOC40NC0uNjYtNTYuOC4yOS04NS4wMyw0LjE3LTEyLjA0LDEuNjUtMjEuMjIsOS4zMi0yMy40LDIxLjI1LTEuNzgsOS43Ni0yLjk2LDE5LjY3LTMuNzUsMjkuNTctMS42MiwyMC40NC0uMTksNDAuNzgsMy40LDYwLjk1LDEuODgsMTAuNTgsNy45NCwxNy45OCwxOC4yOCwyMS4yOSwzLjczLDEuMTksNy43NiwxLjUyLDExLjY5LDIsMTkuNzcsMi40NSwzOS42NCwzLjUsNTkuNTYsMy41NloiLz48cGF0aCBkPSJtODEuMzIsMTEwLjhjMC0xMC40NS0uMDEtMjAuOSwwLTMxLjM1LDAtNi43Myw1LjQzLTkuODgsMTEuMTgtNi40NiwxNy41NywxMC40NSwzNS4xMywyMC45Myw1Mi42OCwzMS40Myw1LjU2LDMuMzMsNS41OSw5LjUuMDgsMTIuNzktMTcuNTYsMTAuNDctMzUuMTUsMjAuOTEtNTIuNzEsMzEuMzgtMi4yMywxLjMzLTQuNSwxLjk0LTYuOTcuODYtMi45Ny0xLjMtNC4yNy0zLjY1LTQuMjYtNi44Ny4wMy0xMC41OS4wMS0yMS4xOS4wMS0zMS43OFptNDcuNTcuMDJjLTExLjQzLTYuODMtMjIuNDQtMTMuMzktMzMuNTQtMjAuMDN2NDAuMDJjMTEuMjItNi42OSwyMi4yLTEzLjIzLDMzLjU0LTE5Ljk5WiIvPjwvc3ZnPg==",
+            "x": 55.92540599681713,
+            "y": 81.99137369791666,
+            "scale": 0.15,
+            "opacity": 0.9,
+            "rotation": 0,
+            "locked": false,
+            "blendMode": "normal",
+            "isFlare": false,
+            "isSticker": true,
+            "isNightlifeGraphic": true,
+            "label": "YouTube",
+            "layerOffset": 180,
+            "showLabel": false,
+            "hitTestMode": "alpha-bounds",
+            "svgTemplate": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"128\" height=\"128\" viewBox=\"-28 -28 278 278\" fill=\"{{COLOR}}\" stroke=\"none\"><path d=\"m0,100.4c.43-5.16.68-10.34,1.34-15.47,1.05-8.29,1.75-16.69,3.7-24.77,4.02-16.64,17.44-27.95,34.5-30.23,20.25-2.7,40.59-4.1,61-4.41,19.41-.29,38.8.12,58.14,1.84,8.9.79,17.83,1.6,26.61,3.18,17.03,3.07,29.5,16.56,32.33,34.08,2.73,16.9,4.27,33.9,3.92,51.03-.3,14.66-1.66,29.23-4.39,43.63-3.29,17.38-17.24,29.96-35.25,32.4-30.96,4.18-62.05,5.1-93.24,4.04-16.94-.58-33.83-1.86-50.6-4.36-17.13-2.55-30.71-15.33-33.59-32.46-1.91-11.35-2.74-22.87-4.06-34.32-.13-1.13-.27-2.27-.4-3.4,0-6.92,0-13.85,0-20.77Zm107.32,81.87c22.4.12,47.02-.81,72.48-4.32,12.62-1.74,21.82-9.79,23.85-22.1,1.59-9.59,2.76-19.27,3.52-28.96,1.59-20.37.03-40.62-3.36-60.75-1.93-11.43-10.22-20.21-21.67-22.09-18.38-3.02-36.96-4.15-55.56-4.58-28.44-.66-56.8.29-85.03,4.17-12.04,1.65-21.22,9.32-23.4,21.25-1.78,9.76-2.96,19.67-3.75,29.57-1.62,20.44-.19,40.78,3.4,60.95,1.88,10.58,7.94,17.98,18.28,21.29,3.73,1.19,7.76,1.52,11.69,2,19.77,2.45,39.64,3.5,59.56,3.56Z\"/><path d=\"m81.32,110.8c0-10.45-.01-20.9,0-31.35,0-6.73,5.43-9.88,11.18-6.46,17.57,10.45,35.13,20.93,52.68,31.43,5.56,3.33,5.59,9.5.08,12.79-17.56,10.47-35.15,20.91-52.71,31.38-2.23,1.33-4.5,1.94-6.97.86-2.97-1.3-4.27-3.65-4.26-6.87.03-10.59.01-21.19.01-31.78Zm47.57.02c-11.43-6.83-22.44-13.39-33.54-20.03v40.02c11.22-6.69,22.2-13.23,33.54-19.99Z\"/></svg>",
+            "iconColor": "#ffffff",
+            "isSocialIcon": true,
+            "socialPlatform": "youtube"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -17,6 +17,8 @@ html, body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: #02040a;
+  color-scheme: dark;
 }
 
 html[data-pwa-installed="true"],
@@ -149,44 +151,6 @@ body[data-pwa-installed="true"] {
   opacity: 0.65;
 }
 
-.nf-help-shimmer {
-  position: relative;
-  overflow: hidden;
-  border-color: rgba(34, 211, 238, 0.85) !important;
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.28), rgba(217, 70, 239, 0.22)) !important;
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.12) inset,
-    0 0 14px rgba(34, 211, 238, 0.32),
-    0 0 20px rgba(217, 70, 239, 0.18);
-}
-
-.nf-help-shimmer::after {
-  content: "";
-  position: absolute;
-  inset: -35% auto -35% -60%;
-  width: 48%;
-  transform: rotate(18deg);
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.68), transparent);
-  animation: nfHelpShimmerSweep 3.4s ease-in-out infinite;
-  pointer-events: none;
-}
-
-@keyframes nfHelpShimmerSweep {
-  0%, 42% {
-    left: -60%;
-  }
-  100% {
-    left: 125%;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .nf-help-shimmer::after {
-    animation: none;
-    display: none;
-  }
-}
-
 .nf-project-save-shimmer {
   position: relative;
   overflow: hidden;
@@ -248,29 +212,6 @@ body[data-pwa-installed="true"] {
   .nf-project-save-shimmer::after {
     animation: none;
     display: none;
-  }
-}
-
-.nf-onboarding-headline-cue {
-  filter: drop-shadow(0 0 12px rgba(34, 211, 238, 0.55))
-    drop-shadow(0 0 22px rgba(217, 70, 239, 0.28));
-  animation: nfOnboardingHeadlinePulse 1.8s ease-in-out infinite;
-}
-
-@keyframes nfOnboardingHeadlinePulse {
-  0%, 100% {
-    filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.36))
-      drop-shadow(0 0 18px rgba(217, 70, 239, 0.18));
-  }
-  50% {
-    filter: drop-shadow(0 0 16px rgba(34, 211, 238, 0.7))
-      drop-shadow(0 0 32px rgba(217, 70, 239, 0.34));
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .nf-onboarding-headline-cue {
-    animation: none;
   }
 }
 
@@ -375,6 +316,46 @@ body[data-pwa-installed="true"] {
   font-display: swap;
 }
 
+@font-face {
+  font-family: "Billion Dreams";
+  src: url("/fonts/billion_dreams/BillionDreams_PERSONAL.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Muthiara";
+  src: url("/fonts/muthiara/Muthiara%20demo%20version.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Dopestyle";
+  src: url("/fonts/dopestyle/Dopestyle.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Creamer";
+  src: url("/fonts/creamer/Creamer.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Transcity";
+  src: url("/fonts/transcity/Transcity%20DEMO.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* --- STABLE PATH: Dear Script (Demo_Font) --- */
 @font-face {
   font-family: "Dear Script (Demo_Font)";
@@ -440,7 +421,9 @@ body[data-pwa-installed="true"] {
 
 @font-face {
   font-family: "African";
-  src: url("/fonts/African.ttf") format("truetype");
+  /* The legacy African.ttf has an invalid cmap table and Chromium rejects it.
+     Keep the saved family contract while using a browser-safe display face. */
+  src: url("/fonts/Anton.ttf") format("truetype");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -463,8 +446,64 @@ body[data-pwa-installed="true"] {
 }
 
 @font-face {
+  font-family: "Brittany Signature";
+  src: url("/fonts/brittany_signature/BrittanySignature.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Northwell";
+  src: url("/fonts/Northwell-GraphicEx.com/Northwell/Northwell.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Northwell Alt";
+  src: url("/fonts/Northwell-GraphicEx.com/Northwell/Northwell-Alt.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Northwell Swash";
+  src: url("/fonts/Northwell-GraphicEx.com/Northwell/Northwell-Swash.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Another Danger";
+  src: url("/fonts/another_danger/Another%20Danger%20-%20Demo.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Another Danger Slanted";
+  src: url("/fonts/another_danger/Another%20Danger%20Slanted%20-%20Demo.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
   font-family: "Good Brush";
   src: url("/fonts/script/Good%20Brush.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Dabre Grunge";
+  src: url("/fonts/Dabre%20Grunge.otf") format("opentype");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -498,6 +537,22 @@ body[data-pwa-installed="true"] {
   font-family: "Adelia Alternate";
   src: url("/fonts/script/adelia%20alternate.otf") format("opentype");
   font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Georgia Brush";
+  src: url("/fonts/georgia_brush/Georgia%20Brush.otf") format("opentype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Hong Kong Script Brush";
+  src: url("/fonts/hong_kong_script_brush/Hong%20Kong%20Script%20Brush.ttf") format("truetype");
+  font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
@@ -558,6 +613,14 @@ body[data-pwa-installed="true"] {
 /* --- STANDARD FIXED: BebasNeue-Regular --- */
 @font-face {
   font-family: "BebasNeue-Regular";
+  src: url("/fonts/BebasNeue-Regular.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Bebas Neue";
   src: url("/fonts/BebasNeue-Regular.ttf") format("truetype");
   font-weight: 100 900;
   font-style: normal;
@@ -639,6 +702,13 @@ body[data-pwa-installed="true"] {
   font-display: swap;
 }
 @font-face {
+  font-family: "LEMONMILK-Medium";
+  src: url("/fonts/LEMONMILK-Medium.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
   font-family: "LEMONMILK-Regular";
   src: url("/fonts/LEMONMILK-Regular.ttf") format("truetype");
   font-weight: 100 900;
@@ -708,6 +778,16 @@ body[data-pwa-installed="true"] {
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
+}
+/* The bundled Brigends demo paints placeholder artwork for these characters.
+   Keep its letters, but render prices/numbers with real local glyphs. */
+@font-face {
+  font-family: "Brigends Expanded";
+  src: url("/fonts/LEMONMILK-Bold.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0023-0026, U+0030-0039, U+003F-0040, U+00A2-00A3, U+00A9, U+20A3-20A4, U+20A7, U+20AC, U+2116;
 }
 @font-face {
   font-family: "Moderniz";
@@ -1264,6 +1344,568 @@ body[data-pwa-installed="true"] {
   border-radius: 999px;
 }
 
+.nf-coco-loader-orb {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 52% 54%, rgba(255, 252, 242, 0.96) 0%, rgba(250, 237, 223, 0.86) 26%, rgba(225, 244, 249, 0.72) 52%, transparent 73%),
+    radial-gradient(circle at 34% 25%, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.18) 18%, transparent 32%),
+    radial-gradient(circle at 22% 73%, rgba(88, 214, 242, 0.82), transparent 36%),
+    radial-gradient(circle at 78% 72%, rgba(255, 183, 205, 0.78), transparent 35%),
+    conic-gradient(from 132deg, rgba(111, 225, 245, 0.92), rgba(255, 198, 225, 0.9), rgba(255, 226, 153, 0.86), rgba(198, 187, 255, 0.86), rgba(111, 225, 245, 0.92));
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.74) inset,
+    0 9px 24px rgba(0, 0, 0, 0.28),
+    0 0 22px rgba(125, 232, 245, 0.3),
+    0 0 28px rgba(255, 189, 214, 0.24);
+  animation: nfCocoLoaderOrb 2.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+.nf-coco-loader-orb-lg {
+  width: 70px;
+  height: 70px;
+  animation-duration: 3.2s;
+}
+
+.nf-coco-loader-orb::after {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  border-radius: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  box-shadow:
+    0 0 20px rgba(125, 232, 245, 0.18),
+    0 0 28px rgba(255, 189, 214, 0.14);
+  opacity: 0.76;
+  animation: nfCocoLoaderAura 2.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+.nf-coco-loader-orb-lg::after {
+  inset: -13px;
+  animation-duration: 3.2s;
+}
+
+.nf-coco-loader-meter {
+  position: relative;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.075);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.025);
+}
+
+.nf-coco-loader-meter-bar {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 46%;
+  border-radius: inherit;
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(103, 232, 249, 0.86),
+      rgba(255, 255, 255, 0.9),
+      rgba(217, 70, 239, 0.56),
+      transparent
+    );
+  box-shadow: 0 0 14px rgba(103, 232, 249, 0.22);
+  animation: nfCocoLoaderMeter 1.9s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+.nf-coco-loader-meter-bar[data-progress="true"] {
+  animation: none;
+  transform: none;
+}
+
+@keyframes nfCocoLoaderOrb {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  45% {
+    transform: translate3d(0, -3px, 0) scale(1.035);
+  }
+  72% {
+    transform: translate3d(1px, 1px, 0) scale(0.992);
+  }
+}
+
+@keyframes nfCocoLoaderAura {
+  0%,
+  100% {
+    opacity: 0.34;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 0.74;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes nfCocoLoaderMeter {
+  0% {
+    opacity: 0.22;
+    transform: translate3d(-72%, 0, 0) scaleX(0.62);
+  }
+  50% {
+    opacity: 0.9;
+    transform: translate3d(56%, 0, 0) scaleX(1);
+  }
+  100% {
+    opacity: 0.22;
+    transform: translate3d(190%, 0, 0) scaleX(0.7);
+  }
+}
+
+.nf-coco-boot {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 36%, rgba(160, 221, 235, 0.1), transparent 24rem),
+    radial-gradient(circle at 64% 70%, rgba(183, 92, 205, 0.07), transparent 25rem),
+    linear-gradient(180deg, rgba(2, 4, 9, 0.995), rgba(1, 2, 5, 1));
+  backdrop-filter: blur(28px) saturate(1.25);
+}
+
+.nf-coco-boot-glass {
+  background-color: rgba(1, 3, 8, 0.76);
+  backdrop-filter: blur(24px) saturate(0.72);
+  -webkit-backdrop-filter: blur(24px) saturate(0.72);
+}
+
+.nf-coco-boot::before {
+  content: none;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.nf-coco-boot::after {
+  content: none;
+  position: absolute;
+  inset: -30%;
+  pointer-events: none;
+}
+
+.nf-coco-boot-panel {
+  position: relative;
+  z-index: 1;
+  transform: translateZ(0);
+  animation: nfCocoBootPanelIn 0.72s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.nf-app-shell {
+  transform-origin: 50% 42%;
+  will-change: opacity, filter, transform;
+}
+
+.nf-startup-shell {
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(166, 221, 235, 0.115), transparent 30rem),
+    radial-gradient(circle at 65% 76%, rgba(202, 98, 211, 0.075), transparent 28rem),
+    linear-gradient(180deg, rgba(1, 3, 7, 0.998), rgba(0, 1, 4, 1)),
+    #010207;
+  color: #f7fbff;
+}
+
+.nf-startup-shell::before {
+  content: none;
+  position: absolute;
+  inset: -2px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.nf-startup-shell::after {
+  content: none;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.nf-startup-shell > * {
+  position: relative;
+  z-index: 2;
+}
+
+.nf-startup-coco {
+  filter: drop-shadow(0 20px 42px rgba(0, 0, 0, 0.54));
+}
+
+.nf-startup-coco-orb {
+  width: 104px;
+  height: 104px;
+}
+
+.nf-startup-coco-orb img {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.62),
+    0 0 28px rgba(103, 232, 249, 0.38),
+    0 0 54px rgba(217, 70, 239, 0.22),
+    0 20px 48px rgba(0, 0, 0, 0.5);
+}
+
+.nf-startup-coco-orb-aura,
+.nf-startup-coco-orb-ring {
+  position: absolute;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.nf-startup-coco-orb-aura {
+  inset: -30px;
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.38), rgba(103, 232, 249, 0.22) 28%, rgba(217, 70, 239, 0.13) 52%, transparent 72%);
+  filter: blur(18px);
+  opacity: 0.92;
+  animation: nfStartupCocoAura 4.2s ease-in-out infinite;
+}
+
+.nf-startup-coco-orb-ring {
+  inset: 12px;
+  border: 1px solid rgba(198, 249, 255, 0.5);
+  box-shadow:
+    0 0 18px rgba(103, 232, 249, 0.32),
+    inset 0 0 18px rgba(255, 255, 255, 0.13);
+  animation: nfStartupCocoRing 5.8s ease-in-out infinite;
+}
+
+.nf-startup-coco-copy {
+  text-shadow:
+    0 2px 18px rgba(0, 0, 0, 0.82),
+    0 0 22px rgba(103, 232, 249, 0.16);
+}
+
+.nf-startup-coco-title {
+  font-size: clamp(18px, 2.1vw, 24px);
+  font-weight: 680;
+  line-height: 1.2;
+  color: rgba(247, 252, 255, 0.98);
+  letter-spacing: 0;
+}
+
+.nf-startup-coco-body {
+  margin-top: 5px;
+  font-size: clamp(12.5px, 1.35vw, 14px);
+  line-height: 1.35;
+  color: rgba(188, 243, 255, 0.76);
+}
+
+.nf-startup-panel {
+  position: relative;
+  overflow: hidden;
+  border: 0;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(180, 232, 244, 0.08), transparent 58%),
+    linear-gradient(180deg, rgba(8, 12, 19, 0.72), rgba(3, 5, 10, 0.82)),
+    #03070d;
+  color: #f8fbff;
+  box-shadow:
+    0 36px 110px rgba(0, 0, 0, 0.72),
+    0 0 70px rgba(100, 186, 210, 0.08);
+  backdrop-filter: blur(28px) saturate(1.18);
+  clip-path: none;
+}
+
+.nf-startup-shell-scroll {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.nf-startup-panel-scroll {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.nf-startup-panel-auto-in {
+  animation: nfAppleSurfaceIn 0.86s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.nf-startup-panel-entry {
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.nf-startup-panel-gallery {
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.nf-startup-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.nf-startup-panel::before {
+  content: none;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.nf-startup-panel::after {
+  content: none;
+  position: absolute;
+  inset: 1px;
+  pointer-events: none;
+}
+
+.nf-startup-panel-title {
+  color: rgba(251, 253, 255, 0.98);
+  font-size: 23px;
+  font-weight: 680;
+  line-height: 1.15;
+  letter-spacing: 0;
+  text-shadow: 0 0 24px rgba(103, 232, 249, 0.12);
+}
+
+.nf-startup-card {
+  border: 1px solid rgba(145, 239, 255, 0.16);
+  background: linear-gradient(180deg, rgba(9, 18, 31, 0.78), rgba(5, 8, 16, 0.92));
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
+}
+
+.nf-startup-secondary-button {
+  border: 1px solid rgba(145, 239, 255, 0.18);
+  background: rgba(103, 232, 249, 0.06);
+  color: rgba(232, 250, 255, 0.82);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+}
+
+.nf-startup-template-card {
+  border: 1px solid rgba(145, 239, 255, 0.15);
+  background: linear-gradient(180deg, rgba(11, 24, 39, 0.82), rgba(7, 9, 18, 0.94));
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.32);
+}
+
+.nf-startup-choice {
+  border: 0;
+  background: rgba(255, 255, 255, 0.055);
+  box-shadow:
+    0 22px 58px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.055);
+  clip-path: none;
+}
+
+.nf-startup-choice-primary {
+  background: rgba(255, 255, 255, 0.105);
+  box-shadow:
+    0 24px 68px rgba(0, 0, 0, 0.42),
+    0 0 34px rgba(180, 232, 244, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.nf-startup-choice-saved {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.nf-startup-choice-title {
+  color: rgba(250, 253, 255, 0.98);
+  font-size: 15.5px;
+  font-weight: 690;
+  line-height: 1.15;
+}
+
+.nf-startup-choice-subtitle {
+  color: rgba(186, 230, 238, 0.7);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.nf-startup-choice-action {
+  color: rgba(230, 245, 250, 0.58);
+  font-size: 10px;
+  font-weight: 680;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  transition: color 240ms cubic-bezier(0.16, 1, 0.3, 1), text-shadow 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nf-startup-choice:hover .nf-startup-choice-action,
+.nf-startup-choice:focus-visible .nf-startup-choice-action {
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: none;
+}
+
+.nf-bloom-hover {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  transition:
+    border-color 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    background 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 260ms cubic-bezier(0.16, 1, 0.3, 1),
+    filter 260ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nf-bloom-hover::after {
+  content: none;
+  position: absolute;
+  inset: -1px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.nf-bloom-hover > * {
+  position: relative;
+  z-index: 1;
+}
+
+.nf-bloom-hover:hover,
+.nf-bloom-hover:focus-visible {
+  filter: brightness(1.06) saturate(1.04);
+  box-shadow:
+    0 24px 68px rgba(0, 0, 0, 0.4),
+    0 0 34px rgba(180, 232, 244, 0.08);
+}
+
+.nf-bloom-hover:hover::after,
+.nf-bloom-hover:focus-visible::after {
+  opacity: 1;
+}
+
+.nf-bloom-hover:active {
+  transform: translateY(1px) scale(0.998);
+  filter: brightness(0.99) saturate(1.02);
+}
+
+.nf-startup-flat-button {
+  border: 0 !important;
+  background: rgba(255, 255, 255, 0.075) !important;
+  box-shadow: 0 20px 54px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes nfAppleSurfaceIn {
+  0% {
+    opacity: 0;
+    filter: blur(18px);
+    transform: translate3d(0, 18px, 0) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes nfStartupGridDrift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.66;
+  }
+  50% {
+    transform: translate3d(0, 14px, 0) scale(1.01);
+    opacity: 0.9;
+  }
+}
+
+@keyframes nfStartupScanSweep {
+  0%,
+  100% {
+    transform: translate3d(-24%, 0, 0);
+    opacity: 0.2;
+  }
+  48% {
+    transform: translate3d(24%, 0, 0);
+    opacity: 0.5;
+  }
+}
+
+@keyframes nfStartupCocoAura {
+  0%,
+  100% {
+    opacity: 0.62;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes nfStartupCocoRing {
+  0%,
+  100% {
+    transform: scale(0.98) rotate(0deg);
+    opacity: 0.62;
+  }
+  50% {
+    transform: scale(1.12) rotate(16deg);
+    opacity: 1;
+  }
+}
+
+@keyframes nfCocoBootPanelIn {
+  0% {
+    opacity: 0;
+    filter: blur(12px);
+    transform: translate3d(0, 10px, 0) scale(0.975);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes nfCocoBootGrid {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.18;
+  }
+  50% {
+    transform: translate3d(0, 10px, 0);
+    opacity: 0.28;
+  }
+}
+
+@keyframes nfCocoBootSweep {
+  0%,
+  100% {
+    transform: rotate(0deg) scale(1);
+    opacity: 0.28;
+  }
+  50% {
+    transform: rotate(14deg) scale(1.08);
+    opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nf-coco-loader-orb,
+  .nf-coco-loader-orb::after,
+  .nf-coco-loader-meter-bar,
+  .nf-coco-boot::before,
+  .nf-coco-boot::after,
+  .nf-coco-boot-panel,
+  .nf-startup-shell::before,
+  .nf-startup-shell::after,
+  .nf-startup-coco-orb-aura,
+  .nf-startup-coco-orb-ring {
+    animation: none;
+  }
+
+  .nf-bloom-hover,
+  .nf-bloom-hover::after {
+    transition: none;
+  }
+}
+
 /* Landing page animations */
 .nf-landing .nf-fade-in-up {
   animation: nfLandingFadeUp 0.7s ease-out both;
@@ -1313,3 +1955,314 @@ body[data-pwa-installed="true"] {
     transform: none;
   }
 }
+
+@font-face {
+  font-family: "Lovelo Black";
+  src: url("/fonts/Lovelo/Commercial/WEB/Lovelo-Black.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Metropolis 1920";
+  src: url("/fonts/Metropolis1920-Regular.otf") format("opentype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+/* Canvas text is selected from its painted glyphs, never from the layout box.
+   Pointer events still bubble through the disabled owner to its drag handlers. */
+[data-tour="artboard"] [data-node]:has([data-text-glyph-box="true"]),
+[data-tour="artboard"] [data-node]:has([data-text-glyph-box="true"]) * {
+  pointer-events: none !important;
+}
+
+[data-tour="artboard"] [data-node]:has([data-text-glyph-box="true"]) [data-text-hit-surface="true"] {
+  pointer-events: visiblePainted !important;
+}
+@font-face {
+  font-family: "Offshore SVG";
+  src: url("/fonts/OffshoreSVG.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Gold PNG";
+  src: url("/fonts/GoldPNG.woff2?v=2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Red Neon PNG";
+  src: url("/fonts/RedNeonPNG.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Gold Serif PNG";
+  src: url("/fonts/GoldSerifPNG.woff2?v=3") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Gold Script PNG";
+  src: url("/fonts/GoldScriptPNG.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Rainbow PNG";
+  src: url("/fonts/RainbowPNG.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Gold Whimsical PNG";
+  src: url("/fonts/GoldWhimsicalPNG.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Pink Fur PNG";
+  src: url("/fonts/PinkFurPNG.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Afro PNG";
+  src: url("/fonts/AfroPNG.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Grunge PNG";
+  src: url("/fonts/GrungePNG.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Future PNG";
+  src: url("/fonts/FuturePNG.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Chrome PNG";
+  src: url("/fonts/ChromePNG.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Future 02 PNG";
+  src: url("/fonts/Future02PNG.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Gold Flourish PNG";
+  src: url("/fonts/GoldFlourishPNG.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Gold Filigree PNG";
+  src: url("/fonts/GoldFiligreePNG.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Africa Gold PNG";
+  src: url("/fonts/AfricaGoldPNG.woff2?v=2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Sunset Gold PNG";
+  src: url("/fonts/SunsetGoldPNG.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Arctic Metal PNG";
+  src: url("/fonts/ArcticMetalPNG.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Descriptive PNG family aliases. Retain original faces for saved flyers. */
+@font-face {
+  font-family: "Future Outline PNG";
+  src: url("/fonts/Future02PNG.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Liquid Chrome PNG";
+  src: url("/fonts/ChromePNG.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Circuit Lines PNG";
+  src: url("/fonts/FuturePNG.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Distressed Ink PNG";
+  src: url("/fonts/GrungePNG.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Tribal Pattern PNG";
+  src: url("/fonts/AfroPNG.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Rainbow Gradient PNG";
+  src: url("/fonts/RainbowPNG.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Whimsical Gold PNG";
+  src: url("/fonts/GoldWhimsicalPNG.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Rose Fur PNG";
+  src: url("/fonts/PinkFurPNG.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Calligraphy Gold PNG";
+  src: url("/fonts/GoldScriptPNG.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Classic Gold Serif PNG";
+  src: url("/fonts/GoldSerifPNG.woff2?v=3") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Block Gold PNG";
+  src: url("/fonts/GoldPNG.woff2?v=2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Crimson Neon PNG";
+  src: url("/fonts/RedNeonPNG.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face { font-family: "Drift Brush SVG"; src: url("/fonts/DriftBrushSVG.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+
+@font-face { font-family: "Bold Paint SVG"; src: url("/fonts/BoldPaintSVG.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Whimsical SVG"; src: url("/fonts/WhimsicalSVG.woff2?v=2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+
+@font-face { font-family: "Bass Pressure Blue PNG"; src: url("/fonts/BassPressureBluePNG.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+
+@font-face { font-family: "Ladies Neon Chrome PNG"; src: url("/fonts/LadiesNeonChromePNG.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+
+@font-face { font-family: "Textured Gold Serif PNG"; src: url("/fonts/TexturedGoldSerifPNG.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+
+@font-face { font-family: "Mojito Serif PNG"; src: url("/fonts/MojitoSerifPNG.woff2?v=4") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+
+@font-face { font-family: "Euphoria Chrome PNG"; src: url("/fonts/EuphoriaChromePNG.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+
+@font-face { font-family: "Paint Splash Serif PNG"; src: url("/fonts/PaintSplashSerifPNG.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+
+@font-face { font-family: "Sunset Paint Brush PNG"; src: url("/fonts/SunsetPaintBrushPNG.woff2?v=2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+
+@font-face { font-family: "Eaden Gold PNG"; src: url("/fonts/EadenGoldPNG.woff2?v=2") format("woff2"); font-weight:400; font-style:normal; font-display:swap; }
+@font-face { font-family: "Clean Gold PNG"; src: url("/fonts/CleanGoldPNG.woff2?v=1") format("woff2"); font-weight:400; font-style:normal; font-display:swap; }
+@font-face { font-family: "Reggae Jams Script PNG"; src: url("/fonts/ReggaeJamsScriptPNG.woff2?v=2") format("woff2"); font-weight:400; font-style:normal; font-display:swap; }
+@font-face { font-family: "Ladies Rose Gold PNG"; src: url("/fonts/LadiesRoseGoldPNG.woff2?v=3") format("woff2"); font-weight:400; font-style:normal; font-display:swap; }
+
+@font-face { font-family:"Glow Chrome PNG"; src:url("/fonts/GlowChromePNG.woff2?v=2") format("woff2"); font-weight:400; font-style:normal; font-display:swap; }
+@font-face { font-family:"Neon Green PNG"; src:url("/fonts/NeonGreenPNG.woff2") format("woff2"); font-weight:400; font-style:normal; font-display:swap; }
+
+@font-face {font-family:"Ladies Night Pink PNG";src:url("/fonts/LadiesNightPinkPNG.woff2?v=1") format("woff2");font-weight:400;font-style:normal;font-display:swap;}
+
+@font-face { font-family: "Bad Girls Brush PNG"; src: url("/fonts/BadGirlsBrushPNG.woff2?v=3") format("woff2"); font-weight:400; font-style:normal; font-display:swap; }
+@font-face { font-family: "Bad Girls Pink PNG"; src: url("/fonts/BadGirlsPinkPNG.woff2?v=3") format("woff2"); font-weight:400; font-style:normal; font-display:swap; }
+
+/* Coco is a conversation, with the orb and the flyer as the two focal points. */
+.coco-conversation { color: #edf0f4; background: radial-gradient(ellipse at 28% 42%, #11161d 0%, #090c11 48%, #07090d 100%); }
+.coco-conversation-orb { position: relative; width: 76px; height: 76px; margin: 0 auto 22px; display: grid; place-items: center; flex-shrink: 0; }
+.coco-conversation-orb img { position: relative; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; filter: drop-shadow(0 0 12px #96dfff18); }
+.coco-conversation-orb.is-compact { width: 56px; height: 56px; margin-bottom: 18px; }
+.coco-conversation-aura { position: absolute; inset: -24%; border-radius: 50%; background: radial-gradient(circle, #90d7ff12, transparent 68%); filter: blur(12px); }
+.coco-conversation h1[tabindex="-1"], .coco-conversation h2[tabindex="-1"] { outline: none; }
+.coco-response { min-height: 40px; padding: 9px 16px; border-radius: 12px; border: 1px solid #ffffff16; background: #ffffff03; color: #d5dce4; font-size: 12px; transition: background .18s, border-color .18s; }
+.coco-response:hover, .coco-response[aria-pressed=true] { background: #a4eaff15; border-color: #b2eaff85; }
+.coco-response:focus-visible, .coco-answer input:focus-visible, .coco-answer textarea:focus-visible { outline: 2px solid #b7efff; outline-offset: 4px; }
+.coco-response:disabled { opacity: .4; cursor: default; }
+.coco-response-primary { border-color: #d0e1e9; background: #d0e1e9; color: #101820; }
+.coco-response-primary:hover { background: #e3ecf1; }
+.coco-answer input:not([type=color]):not([type=range]), .coco-answer textarea { min-height: 46px; border-radius: 12px; border: 1px solid #ffffff20; background: #ffffff04; padding: 10px 12px; font-size: 16px; }
+.coco-answer input:focus, .coco-answer textarea:focus { border-color: #b7efff80; }
+.coco-answer fieldset button { border-radius: 999px; padding: 10px 15px; min-height: 42px; }
+.coco-question-enter { animation: coco-question-appear .24s ease-out both; }
+@keyframes coco-question-appear { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@media(max-width: 767px) { .coco-conversation-orb { width: 64px; height: 64px; margin-bottom: 18px; } .coco-conversation-orb.is-compact { width: 48px; height: 48px; margin-bottom: 14px; } .coco-response { min-height: 44px; } }
+@media(prefers-reduced-motion: reduce) { .coco-question-enter { animation: none; } .coco-response { transition: none; } }
+
+@font-face { font-family: "Honey Gold Serif PNG"; src: url("/fonts/HoneyGoldSerifPNG.woff2?v=1") format("woff2"); font-weight:400; font-style:normal; font-display:swap; }
+@font-face { font-family: "Rose Chrome Serif PNG"; src: url("/fonts/RoseChromeSerifPNG.woff2?v=1") format("woff2"); font-weight:400; font-style:normal; font-display:swap; }
+
+@font-face { font-family: "Spotlight Gold PNG"; src: url("/fonts/SpotlightGoldPNG.woff2?v=1") format("woff2"); font-weight:400; font-style:normal; font-display:swap; }

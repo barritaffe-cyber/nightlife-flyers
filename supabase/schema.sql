@@ -132,8 +132,9 @@ drop policy if exists "devices_update_own" on devices;
 create policy "profiles_read_own" on profiles
   for select using (auth.uid() = id);
 
-create policy "profiles_update_own" on profiles
-  for update using (auth.uid() = id);
+-- Billing fields must only be changed by trusted server routes.
+revoke insert, update, delete on profiles from anon, authenticated;
+grant select, insert, update, delete on profiles to service_role;
 
 create policy "devices_read_own" on devices
   for select using (auth.uid() = user_id);

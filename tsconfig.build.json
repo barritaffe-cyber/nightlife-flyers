@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "exclude": [
+    "node_modules",
+    "backup/**",
+    "saved files/**",
+    "recipe-file-backups/**",
+    "public/ai-assets/**",
+    "tests/**"
+  ]
+}

@@ -1,0 +1,404 @@
+{
+  "family": "Drift Brush SVG",
+  "source": "public/generated-flyers/assets/png-glyphs/paint01.png",
+  "sha256": "8f539254e7f2b12b97091bc27a5dd0fab79ef0f2512ac2041ab9d5cc88a4dada",
+  "threshold": 140,
+  "glyphs": [
+    {
+      "character": "A",
+      "sourceBounds": [
+        51,
+        51,
+        317,
+        266
+      ],
+      "pixels": 12572,
+      "advance": 919
+    },
+    {
+      "character": "B",
+      "sourceBounds": [
+        258,
+        73,
+        477,
+        250
+      ],
+      "pixels": 14410,
+      "advance": 919
+    },
+    {
+      "character": "C",
+      "sourceBounds": [
+        479,
+        53,
+        693,
+        231
+      ],
+      "pixels": 12397,
+      "advance": 894
+    },
+    {
+      "character": "D",
+      "sourceBounds": [
+        637,
+        43,
+        864,
+        261
+      ],
+      "pixels": 13768,
+      "advance": 778
+    },
+    {
+      "character": "E",
+      "sourceBounds": [
+        819,
+        60,
+        1103,
+        246
+      ],
+      "pixels": 14738,
+      "advance": 1127
+    },
+    {
+      "character": "F",
+      "sourceBounds": [
+        1061,
+        57,
+        1335,
+        256
+      ],
+      "pixels": 9759,
+      "advance": 1019
+    },
+    {
+      "character": "G",
+      "sourceBounds": [
+        1276,
+        53,
+        1510,
+        275
+      ],
+      "pixels": 16707,
+      "advance": 787
+    },
+    {
+      "character": "H",
+      "sourceBounds": [
+        44,
+        262,
+        294,
+        473
+      ],
+      "pixels": 13045,
+      "advance": 881
+    },
+    {
+      "character": "I",
+      "sourceBounds": [
+        272,
+        256,
+        366,
+        457
+      ],
+      "pixels": 4543,
+      "advance": 365
+    },
+    {
+      "character": "J",
+      "sourceBounds": [
+        349,
+        259,
+        617,
+        456
+      ],
+      "pixels": 10989,
+      "advance": 1007
+    },
+    {
+      "character": "K",
+      "sourceBounds": [
+        560,
+        271,
+        802,
+        465
+      ],
+      "pixels": 12290,
+      "advance": 926
+    },
+    {
+      "character": "L",
+      "sourceBounds": [
+        762,
+        255,
+        984,
+        451
+      ],
+      "pixels": 9943,
+      "advance": 844
+    },
+    {
+      "character": "M",
+      "sourceBounds": [
+        952,
+        258,
+        1235,
+        471
+      ],
+      "pixels": 17784,
+      "advance": 985
+    },
+    {
+      "character": "N",
+      "sourceBounds": [
+        1222,
+        241,
+        1498,
+        466
+      ],
+      "pixels": 14769,
+      "advance": 911
+    },
+    {
+      "character": "O",
+      "sourceBounds": [
+        58,
+        466,
+        270,
+        649
+      ],
+      "pixels": 16355,
+      "advance": 862
+    },
+    {
+      "character": "P",
+      "sourceBounds": [
+        268,
+        477,
+        475,
+        678
+      ],
+      "pixels": 11406,
+      "advance": 769
+    },
+    {
+      "character": "Q",
+      "sourceBounds": [
+        457,
+        479,
+        667,
+        672
+      ],
+      "pixels": 14945,
+      "advance": 811
+    },
+    {
+      "character": "R",
+      "sourceBounds": [
+        655,
+        483,
+        864,
+        663
+      ],
+      "pixels": 13004,
+      "advance": 864
+    },
+    {
+      "character": "S",
+      "sourceBounds": [
+        855,
+        468,
+        1059,
+        645
+      ],
+      "pixels": 13476,
+      "advance": 858
+    },
+    {
+      "character": "T",
+      "sourceBounds": [
+        1054,
+        477,
+        1328,
+        657
+      ],
+      "pixels": 9756,
+      "advance": 1124
+    },
+    {
+      "character": "U",
+      "sourceBounds": [
+        1282,
+        460,
+        1506,
+        645
+      ],
+      "pixels": 13474,
+      "advance": 900
+    },
+    {
+      "character": "V",
+      "sourceBounds": [
+        199,
+        660,
+        400,
+        833
+      ],
+      "pixels": 9352,
+      "advance": 865
+    },
+    {
+      "character": "W",
+      "sourceBounds": [
+        397,
+        664,
+        633,
+        833
+      ],
+      "pixels": 13113,
+      "advance": 1033
+    },
+    {
+      "character": "X",
+      "sourceBounds": [
+        593,
+        668,
+        843,
+        844
+      ],
+      "pixels": 11634,
+      "advance": 1051
+    },
+    {
+      "character": "Y",
+      "sourceBounds": [
+        850,
+        655,
+        1053,
+        845
+      ],
+      "pixels": 8309,
+      "advance": 797
+    },
+    {
+      "character": "Z",
+      "sourceBounds": [
+        1013,
+        671,
+        1330,
+        830
+      ],
+      "pixels": 17583,
+      "advance": 1463
+    },
+    {
+      "character": "0",
+      "sourceBounds": [
+        40,
+        847,
+        183,
+        988
+      ],
+      "pixels": 8315,
+      "advance": 758
+    },
+    {
+      "character": "1",
+      "sourceBounds": [
+        193,
+        849,
+        285,
+        994
+      ],
+      "pixels": 3602,
+      "advance": 485
+    },
+    {
+      "character": "2",
+      "sourceBounds": [
+        257,
+        853,
+        447,
+        990
+      ],
+      "pixels": 8550,
+      "advance": 1027
+    },
+    {
+      "character": "3",
+      "sourceBounds": [
+        411,
+        849,
+        573,
+        988
+      ],
+      "pixels": 7497,
+      "advance": 867
+    },
+    {
+      "character": "4",
+      "sourceBounds": [
+        577,
+        852,
+        740,
+        999
+      ],
+      "pixels": 6626,
+      "advance": 826
+    },
+    {
+      "character": "5",
+      "sourceBounds": [
+        701,
+        848,
+        896,
+        995
+      ],
+      "pixels": 8336,
+      "advance": 983
+    },
+    {
+      "character": "6",
+      "sourceBounds": [
+        879,
+        843,
+        1030,
+        987
+      ],
+      "pixels": 8720,
+      "advance": 783
+    },
+    {
+      "character": "7",
+      "sourceBounds": [
+        1032,
+        850,
+        1190,
+        1003
+      ],
+      "pixels": 6726,
+      "advance": 772
+    },
+    {
+      "character": "8",
+      "sourceBounds": [
+        1178,
+        841,
+        1328,
+        991
+      ],
+      "pixels": 10306,
+      "advance": 748
+    },
+    {
+      "character": "9",
+      "sourceBounds": [
+        1344,
+        843,
+        1479,
+        1000
+      ],
+      "pixels": 7745,
+      "advance": 647
+    }
+  ]
+}

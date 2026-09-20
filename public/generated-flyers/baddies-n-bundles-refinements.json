@@ -1,0 +1,798 @@
+{
+  "schemaVersion": 1,
+  "recipeId": "baddies-n-bundles",
+  "recipeVersion": 3,
+  "sourceHash": "e844a26b68859728a82672020bf958081d64781bcb60958b531610dd62ddf695",
+  "sourceProjectSha256": "f8d4a6df13c5da974de9cc223bebd7acff6f97f5ec5d765d6fd94b4f0b37d763",
+  "sourceSavedAt": "2026-09-03T16:35:13.336Z",
+  "formats": {
+    "square": {
+      "fields": {
+        "align": "center",
+        "headlineLineHeight": 0.73,
+        "detailsUppercase": true,
+        "presenterX": 34.50086805555556,
+        "presenterWidth": 40,
+        "head2Family": "Minecrafter Alt",
+        "head2SizePx": 54,
+        "head2Size": 54,
+        "head2Fx": {
+          "uppercase": true,
+          "bold": true,
+          "italic": false,
+          "underline": false,
+          "alpha": 1,
+          "tracking": 0,
+          "gradient": false,
+          "gradFrom": "#ffffff",
+          "gradTo": "#ffd166",
+          "color": "rgb(255, 255, 255)",
+          "strokeWidth": 0,
+          "strokeColor": "#000000",
+          "shadow": 0.5,
+          "glow": 0.15,
+          "shadowEnabled": true
+        },
+        "head2Shadow": true,
+        "head2ShadowStrength": 0.5,
+        "dateFamily": "Bebas Neue",
+        "dateSize": 48.6,
+        "dateLineHeight": 0.96,
+        "timeSize": 33.48,
+        "timeLineHeight": 1.08,
+        "details": "king hype",
+        "detailsSize": 11.61,
+        "bodySize": 11.61,
+        "detailsAlign": "center",
+        "detailsLabel": "hosted by",
+        "detailsLabelSize": 8,
+        "detailsLabelColor": "#00FF3C",
+        "detailsLabelBgColor": "#002B0D",
+        "detailsBold": true,
+        "detailsItalic": false,
+        "detailsUnderline": false,
+        "detailsTracking": 0.04,
+        "detailsShadow": true,
+        "detailsShadowStrength": 1,
+        "details2": "DJ Nova + \nDJ Chase",
+        "details2Size": 11,
+        "details2Align": "center",
+        "djLineupLabel": "music by",
+        "djLineupLabelSize": 8,
+        "djLineupLabelColor": "#00FF3C",
+        "djLineupLabelBgColor": "#002B0D",
+        "details2Uppercase": false,
+        "details2Bold": false,
+        "details2Italic": false,
+        "details2Underline": false,
+        "details2Shadow": true,
+        "details2ShadowStrength": 1,
+        "venueX": 21.002,
+        "venueY": 87.798,
+        "venueSize": 25.38,
+        "venueUppercase": true,
+        "venueBold": true,
+        "venueItalic": false,
+        "venueShadow": true,
+        "venueShadowStrength": 1,
+        "rightRailSize": 9,
+        "rightRailAlign": "center",
+        "rightRailRotation": 0,
+        "rightRailLineHeight": 1,
+        "subtagTextColor": "#F10D18",
+        "subtagSize": 31,
+        "subtagBgColor": "#E23B2E",
+        "subtagAlpha": 0.85,
+        "subtagBold": true,
+        "subtagItalic": false,
+        "subtagUnderline": false,
+        "subtagShadow": true,
+        "subtagShadowStrength": 1,
+        "pillAlpha": 0.85,
+        "textFx": {
+          "uppercase": true,
+          "bold": true,
+          "italic": false,
+          "underline": false,
+          "alpha": 1,
+          "tracking": -0.035,
+          "gradient": false,
+          "gradFrom": "#ffffff",
+          "gradTo": "#ffd166",
+          "color": "rgb(0, 255, 60)",
+          "strokeWidth": 0,
+          "strokeColor": "#000000",
+          "shadow": 1,
+          "glow": 0.2,
+          "shadowEnabled": false
+        },
+        "cocoManualTextColorRoles": {
+          "subtag": true
+        },
+        "haze": 0.5,
+        "grade": 0.35,
+        "leak": 0.25,
+        "vignette": false,
+        "vignetteStrength": 0.1,
+        "textureOpacity": 0,
+        "clarity": 0.15,
+        "exp": 1,
+        "contrast": 1.08,
+        "saturation": 1.1,
+        "warmth": 0.1,
+        "tint": 0,
+        "gamma": 1,
+        "grain": 0.15,
+        "vibrance": 0.15,
+        "filmGrade": 0.6
+      },
+      "compiledObjectOverrides": {
+        "address": {
+          "x": 50.2466724537037,
+          "y": 90.11574074074073
+        },
+        "age": {
+          "x": 42.51302083333333,
+          "y": 69.0827546296296
+        },
+        "connector": {
+          "x": 47.86241319444444,
+          "y": 35.09548611111112
+        },
+        "date": {
+          "x": 79.03501157407408,
+          "y": 69.80685763888887
+        },
+        "dj-lineup": {
+          "x": 22.670717592592595,
+          "y": 74.65711805555554
+        },
+        "doors": {
+          "x": 59.390190972222214,
+          "y": 69.81047453703704
+        },
+        "headline": {
+          "x": 46.43952546296296,
+          "y": 22.115162037037038
+        },
+        "hype": {
+          "x": 22.36472800925926,
+          "y": 68.73480902777777
+        },
+        "presenter": {
+          "x": 34.08854166666667,
+          "y": 15.80222800925926
+        },
+        "reservation-label": {
+          "x": 54.37138310185185,
+          "y": 94.296875
+        },
+        "reservation-value": {
+          "x": 55.550491898148145,
+          "y": 94.33015046296296
+        },
+        "responsible": {
+          "x": 36.809172453703695,
+          "y": 75.16565393518519
+        },
+        "venue": {
+          "x": 41.16825810185185,
+          "y": 82.18026620370371
+        }
+      },
+      "assets": {
+        "removeCompiledObjectIds": [],
+        "patchCompiledByObjectId": {
+          "background": {
+            "x": 49.770688657407405,
+            "y": 49.8900462962963,
+            "scale": 1,
+            "opacity": 1,
+            "rotation": 0,
+            "locked": true,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": -20
+          },
+          "green-glow": {
+            "x": 49.49580439814817,
+            "y": 59.97902199074074,
+            "scale": 1,
+            "opacity": 0.92,
+            "rotation": 0,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": -18
+          },
+          "stripe-left": {
+            "x": 2.002314814814815,
+            "y": 27.5,
+            "scale": 1,
+            "opacity": 0.31,
+            "rotation": 17.99999174234843,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": -16
+          },
+          "stripe-orb-top": {
+            "x": 34.78949652777778,
+            "y": 10.33058449074074,
+            "scale": 1,
+            "opacity": 0.27,
+            "rotation": 0,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": -15
+          },
+          "stripe-orb-right": {
+            "x": 97.00086805555556,
+            "y": 33.997395833333336,
+            "scale": 1,
+            "opacity": 0.22,
+            "rotation": 8.999976735956185,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": -15
+          },
+          "stripe-orb-bottom": {
+            "x": 93.01432291666666,
+            "y": 78.8693576388889,
+            "scale": 1,
+            "opacity": 0.18,
+            "rotation": -7.999994819856549,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": -15
+          },
+          "dot-trail": {
+            "x": 71.40480324074073,
+            "y": 13.214699074074074,
+            "scale": 1,
+            "opacity": 0.42,
+            "rotation": 0,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": -10
+          },
+          "accent-plus": {
+            "x": 15.962094907407408,
+            "y": 38.217592592592595,
+            "scale": 1,
+            "opacity": 0.68,
+            "rotation": 0,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": 28
+          },
+          "accent-waves-left": {
+            "x": 15.747974537037036,
+            "y": 25.99971064814815,
+            "scale": 1,
+            "opacity": 0.21,
+            "rotation": 0,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": -8
+          },
+          "accent-waves-right": {
+            "x": 95.05063657407408,
+            "y": 71.99797453703704,
+            "scale": 1,
+            "opacity": 0.37,
+            "rotation": 0,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": 16
+          },
+          "logo": {
+            "x": 49.622395833333336,
+            "y": 9.333043981481483,
+            "scale": 1,
+            "opacity": 1,
+            "rotation": 0,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": 56
+          },
+          "connector-disc": {
+            "x": 47.19835069444444,
+            "y": 40.08752893518518,
+            "scale": 1.62,
+            "opacity": 1,
+            "rotation": 0,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": 48
+          },
+          "subject": {
+            "x": 90.04123263888887,
+            "y": 42.13179976851852,
+            "scale": 1,
+            "opacity": 1,
+            "rotation": 0,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": 40
+          },
+          "date-frame": {
+            "x": 78.95688657407405,
+            "y": 76.16180555555556,
+            "scale": 0.67,
+            "opacity": 1,
+            "rotation": 45,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": 43
+          },
+          "venue-pin": {
+            "x": 38.03674768518518,
+            "y": 84.77647569444444,
+            "scale": 1,
+            "opacity": 1,
+            "rotation": 0,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": 61
+          },
+          "address-band": {
+            "x": 50.000723379629626,
+            "y": 90.65827546296296,
+            "scale": 1,
+            "opacity": 1,
+            "rotation": 0,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": 64
+          }
+        },
+        "additions": [
+          {
+            "id": "design_bold-plus_1788376024166_luqmz",
+            "url": "data:image/svg+xml;base64,PHN2ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjggMTI4LjYyIiB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgZmlsbD0iI2ZmZmZmZiI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC5jbHMtMSB7CiAgICAgICAgZmlsbDogbm9uZTsKICAgICAgICBzdHJva2U6ICNmZmZmZmY7CiAgICAgICAgc3Ryb2tlLW1pdGVybGltaXQ6IDEwOwogICAgICAgIHN0cm9rZS13aWR0aDogMjhweDsKICAgICAgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPGxpbmUgY2xhc3M9ImNscy0xIiB4MT0iNjQuOTYiIHgyPSI2NC45NiIgeTI9IjEyOC42MiIvPgogIDxsaW5lIGNsYXNzPSJjbHMtMSIgeDE9IjEyOCIgeTE9IjYyIiB5Mj0iNjIiLz4KPC9zdmc+",
+            "x": 94.64699074074075,
+            "y": 23.18793402777777,
+            "scale": 0.32,
+            "opacity": 0.9,
+            "rotation": -58,
+            "locked": false,
+            "blendMode": "normal",
+            "isFlare": false,
+            "isSticker": true,
+            "isDesignElement": true,
+            "label": "Bold Plus",
+            "layerOffset": 55,
+            "showLabel": false,
+            "hitTestMode": "alpha-bounds",
+            "svgTemplate": "<svg id=\"Layer_1\" data-name=\"Layer 1\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 128 128.62\" width=\"128\" height=\"128\" fill=\"{{COLOR}}\">\n  <defs>\n    <style>\n      .cls-1 {\n        fill: none;\n        stroke: {{COLOR}};\n        stroke-miterlimit: 10;\n        stroke-width: 28px;\n      }\n    </style>\n  </defs>\n  <line class=\"cls-1\" x1=\"64.96\" x2=\"64.96\" y2=\"128.62\"/>\n  <line class=\"cls-1\" x1=\"128\" y1=\"62\" y2=\"62\"/>\n</svg>",
+            "iconColor": "#ffffff",
+            "tint": 0,
+            "tintMode": "hue"
+          }
+        ]
+      }
+    },
+    "story": {
+      "fields": {
+        "align": "center",
+        "headlineLineHeight": 0.74,
+        "detailsUppercase": false,
+        "presenterX": 50,
+        "presenterWidth": 40,
+        "head2Family": "Minecrafter Alt",
+        "head2SizePx": 66,
+        "head2Size": 66,
+        "head2Fx": {
+          "uppercase": true,
+          "bold": true,
+          "italic": false,
+          "underline": false,
+          "alpha": 1,
+          "tracking": 0,
+          "gradient": false,
+          "gradFrom": "#ffffff",
+          "gradTo": "#ffd166",
+          "color": "rgb(255, 255, 255)",
+          "strokeWidth": 0,
+          "strokeColor": "#000000",
+          "shadow": 0.5,
+          "glow": 0.15,
+          "shadowEnabled": true
+        },
+        "head2Shadow": true,
+        "head2ShadowStrength": 0.5,
+        "dateFamily": "Bebas Neue",
+        "dateSize": 59.4,
+        "dateLineHeight": 0.98,
+        "timeSize": 39.42,
+        "timeLineHeight": 1.1,
+        "details": "king hype",
+        "detailsSize": 14.5,
+        "bodySize": 14.5,
+        "detailsAlign": "center",
+        "detailsLabel": "Hyped By",
+        "detailsLabelSize": 9,
+        "detailsLabelColor": "#00FF3C",
+        "detailsLabelBgColor": "#002B0D",
+        "detailsBold": true,
+        "detailsItalic": false,
+        "detailsUnderline": false,
+        "detailsTracking": 0.04,
+        "detailsShadow": true,
+        "detailsShadowStrength": 1,
+        "details2": "DJ Nova + \nDJ Chase",
+        "details2Size": 21,
+        "details2Align": "center",
+        "djLineupLabel": "Music By",
+        "djLineupLabelSize": 14,
+        "djLineupLabelColor": "#00FF3C",
+        "djLineupLabelBgColor": "#002B0D",
+        "details2Uppercase": false,
+        "details2Bold": false,
+        "details2Italic": false,
+        "details2Underline": false,
+        "details2Shadow": true,
+        "details2ShadowStrength": 1,
+        "venueX": 23.75,
+        "venueY": 86.449,
+        "venueSize": 24.03,
+        "venueUppercase": true,
+        "venueBold": true,
+        "venueItalic": false,
+        "venueShadow": true,
+        "venueShadowStrength": 1,
+        "rightRailSize": 10,
+        "rightRailAlign": "center",
+        "rightRailRotation": 0,
+        "rightRailLineHeight": 1,
+        "subtagTextColor": "#F10D18",
+        "subtagSize": 52,
+        "subtagBgColor": "#000000",
+        "subtagAlpha": 1,
+        "subtagBold": true,
+        "subtagItalic": false,
+        "subtagUnderline": false,
+        "subtagShadow": true,
+        "subtagShadowStrength": 1,
+        "pillAlpha": 1,
+        "textFx": {
+          "uppercase": true,
+          "bold": true,
+          "italic": false,
+          "underline": false,
+          "alpha": 1,
+          "tracking": -0.034999999999999996,
+          "gradient": false,
+          "gradFrom": "#ffffff",
+          "gradTo": "#ffd166",
+          "color": "rgb(0, 255, 60)",
+          "strokeWidth": 0,
+          "strokeColor": "#000000",
+          "shadow": 1,
+          "glow": 0.2,
+          "shadowEnabled": false
+        },
+        "cocoManualTextColorRoles": {
+          "subtag": true
+        },
+        "haze": 0.5,
+        "grade": 0.35,
+        "leak": 0.25,
+        "vignette": true,
+        "vignetteStrength": 0.5,
+        "textureOpacity": 0,
+        "clarity": 0.15,
+        "exp": 1,
+        "contrast": 1.08,
+        "saturation": 1.1,
+        "warmth": 0.1,
+        "tint": 0,
+        "gamma": 1,
+        "grain": 0.15,
+        "vibrance": 0.15,
+        "filmGrade": 0.6
+      },
+      "compiledObjectOverrides": {
+        "address": {
+          "x": 49.87774884259259,
+          "y": 92.73193359375
+        },
+        "age": {
+          "x": 80.58738425925927,
+          "y": 63.251546223958336
+        },
+        "connector": {
+          "x": 49.84085648148149,
+          "y": 28.33902994791667
+        },
+        "date": {
+          "x": 18.43315972222222,
+          "y": 57.76611328124999
+        },
+        "dj-lineup": {
+          "x": 19.01475694444444,
+          "y": 75.32918294270833
+        },
+        "doors": {
+          "x": 79.94285300925927,
+          "y": 54.285481770833336
+        },
+        "headline": {
+          "x": 51.419270833333336,
+          "y": 17.223307291666668
+        },
+        "hype": {
+          "x": 18.88816550925926,
+          "y": 70.95133463541667
+        },
+        "presenter": {
+          "x": 49.80902777777778,
+          "y": 13.821207682291666
+        },
+        "reservation-label": {
+          "x": 53.03385416666667,
+          "y": 95.63517252604166
+        },
+        "responsible": {
+          "x": 74.26359953703704,
+          "y": 60.52001953125
+        },
+        "venue": {
+          "x": 39.25491898148149,
+          "y": 87.70629882812499
+        }
+      },
+      "assets": {
+        "removeCompiledObjectIds": [],
+        "patchCompiledByObjectId": {
+          "background": {
+            "x": 50.67780671296296,
+            "y": 48.005777994791664,
+            "scale": 1,
+            "opacity": 1,
+            "rotation": 0,
+            "locked": true,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": -20
+          },
+          "green-glow": {
+            "x": 52.49710648148148,
+            "y": 58.9990234375,
+            "scale": 1,
+            "opacity": 0.92,
+            "rotation": 0,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": -18
+          },
+          "stripe-left": {
+            "x": -0.5005787037037024,
+            "y": 25.000813802083336,
+            "scale": 1,
+            "opacity": 0.31,
+            "rotation": 17.99999174234843,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": -16
+          },
+          "stripe-orb-top": {
+            "x": 38.17491319444444,
+            "y": 7.986653645833332,
+            "scale": 1,
+            "opacity": 0.27,
+            "rotation": 0,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": -15
+          },
+          "stripe-orb-right": {
+            "x": 97.5,
+            "y": 32.06868489583333,
+            "scale": 1,
+            "opacity": 0.22,
+            "rotation": 8.999976735956185,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": -15
+          },
+          "stripe-orb-bottom": {
+            "x": 91.99797453703704,
+            "y": 65.81136067708334,
+            "scale": 1,
+            "opacity": 0.18,
+            "rotation": -7.999994819856549,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": -15
+          },
+          "dot-trail": {
+            "x": 79.72149884259258,
+            "y": 15.771891276041668,
+            "scale": 1,
+            "opacity": 0.42,
+            "rotation": 0,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": -10
+          },
+          "accent-plus": {
+            "x": 10.21556712962963,
+            "y": 29.930013020833336,
+            "scale": 1,
+            "opacity": 0.68,
+            "rotation": 0,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": 28
+          },
+          "accent-waves-left": {
+            "x": 15.298032407407405,
+            "y": 17.648111979166664,
+            "scale": 1,
+            "opacity": 0.21,
+            "rotation": 0,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": -8
+          },
+          "accent-waves-right": {
+            "x": 95.30092592592592,
+            "y": 57.94840494791667,
+            "scale": 1,
+            "opacity": 0.37,
+            "rotation": 0,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": 16
+          },
+          "logo": {
+            "x": 49.99855324074073,
+            "y": 9.899088541666668,
+            "scale": 1,
+            "opacity": 1,
+            "rotation": 0,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": 56
+          },
+          "connector-disc": {
+            "x": 49.20500578703704,
+            "y": 31.528727213541664,
+            "scale": 1.79,
+            "opacity": 1,
+            "rotation": 0,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": 48
+          },
+          "subject": {
+            "x": 48.92578125,
+            "y": 62.129720052083336,
+            "scale": 1.2,
+            "opacity": 1,
+            "rotation": 0,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": 40
+          },
+          "date-frame": {
+            "x": 18.057725694444446,
+            "y": 61.262613932291664,
+            "scale": 1,
+            "opacity": 1,
+            "rotation": 0,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": 43
+          },
+          "venue-pin": {
+            "x": 37.02039930555556,
+            "y": 89.62239583333333,
+            "scale": 1,
+            "opacity": 1,
+            "rotation": 0,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": 61
+          },
+          "address-band": {
+            "x": 49.99710648148148,
+            "y": 93.04850260416666,
+            "scale": 1,
+            "opacity": 1,
+            "rotation": 0,
+            "locked": false,
+            "blendMode": "normal",
+            "tint": 0,
+            "tintMode": "hue",
+            "layerOffset": 64
+          }
+        },
+        "additions": [
+          {
+            "id": "design_bold-plus_1788376583911_xrxea",
+            "url": "data:image/svg+xml;base64,PHN2ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjggMTI4LjYyIiB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgZmlsbD0iI2ZmZmZmZiI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC5jbHMtMSB7CiAgICAgICAgZmlsbDogbm9uZTsKICAgICAgICBzdHJva2U6ICNmZmZmZmY7CiAgICAgICAgc3Ryb2tlLW1pdGVybGltaXQ6IDEwOwogICAgICAgIHN0cm9rZS13aWR0aDogMjhweDsKICAgICAgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPGxpbmUgY2xhc3M9ImNscy0xIiB4MT0iNjQuOTYiIHgyPSI2NC45NiIgeTI9IjEyOC42MiIvPgogIDxsaW5lIGNsYXNzPSJjbHMtMSIgeDE9IjEyOCIgeTE9IjYyIiB5Mj0iNjIiLz4KPC9zdmc+",
+            "x": 89.64554398148148,
+            "y": 29.412434895833336,
+            "scale": 0.34,
+            "opacity": 0.9,
+            "rotation": -70,
+            "locked": false,
+            "blendMode": "normal",
+            "isFlare": false,
+            "isSticker": true,
+            "isDesignElement": true,
+            "label": "Bold Plus",
+            "layerOffset": 55,
+            "showLabel": false,
+            "hitTestMode": "alpha-bounds",
+            "svgTemplate": "<svg id=\"Layer_1\" data-name=\"Layer 1\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 128 128.62\" width=\"128\" height=\"128\" fill=\"{{COLOR}}\">\n  <defs>\n    <style>\n      .cls-1 {\n        fill: none;\n        stroke: {{COLOR}};\n        stroke-miterlimit: 10;\n        stroke-width: 28px;\n      }\n    </style>\n  </defs>\n  <line class=\"cls-1\" x1=\"64.96\" x2=\"64.96\" y2=\"128.62\"/>\n  <line class=\"cls-1\" x1=\"128\" y1=\"62\" y2=\"62\"/>\n</svg>",
+            "iconColor": "#ffffff",
+            "tint": 0,
+            "tintMode": "hue"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,69 +1,93 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import React from "react";
-import Image from "next/image";
 
 export const NIGHTLIFE_PRELOADER_MESSAGES = [
-  "No more waiting on designer handoffs.",
-  "Full flyer in minutes.",
-  "Post and story promos start from the same design.",
-  "Change the event copy without rebuilding the layout.",
-  "Launch a clean promo before the room opens.",
-  "Start from a finished flyer, not a blank canvas.",
-  "Swap images, colors, and details when plans change.",
+  "Loading canvas engine.",
+  "Preparing template layers.",
+  "Syncing type controls.",
+  "Warming color tools.",
+  "Checking export pipeline.",
 ] as const;
 
 type NightlifePreloaderProps = {
+  detail?: string;
+  messages?: readonly string[];
+  showCoco?: boolean;
   title?: string;
   subtitle?: string;
-  surface?: "page" | "overlay";
+  surface?: "page" | "overlay" | "glass";
 };
 
 export default function NightlifePreloader({
-  title = "Loading flyer templates",
-  subtitle = "Getting the starter flyers ready.",
+  detail = "Creative system is coming online.",
+  messages = NIGHTLIFE_PRELOADER_MESSAGES,
+  showCoco = false,
+  title = "COCO ONLINE",
+  subtitle = "Preparing Nightlife Flyers.",
   surface = "page",
 }: NightlifePreloaderProps) {
   const [messageIndex, setMessageIndex] = React.useState(0);
 
   React.useEffect(() => {
     const timer = window.setInterval(() => {
-      setMessageIndex((index) => (index + 1) % NIGHTLIFE_PRELOADER_MESSAGES.length);
+      setMessageIndex((index) => (index + 1) % Math.max(1, messages.length));
     }, 1850);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [messages.length]);
 
   const shellClass =
-    surface === "overlay"
-      ? "fixed inset-0 z-[90] flex min-h-screen items-center justify-center bg-[#070709]/95 px-5 text-white backdrop-blur-md"
-      : "flex min-h-screen items-center justify-center bg-[#070709] px-5 text-white";
+    surface === "overlay" || surface === "glass"
+      ? "nf-coco-boot fixed inset-0 z-[1000] flex min-h-screen items-center justify-center px-5 text-white"
+      : "nf-coco-boot flex min-h-screen items-center justify-center px-5 text-white";
 
   return (
-    <div className={shellClass} role="status" aria-live="polite" aria-busy="true">
-      <div className="w-full max-w-sm text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-cyan-200/35 bg-black/45 shadow-[0_0_34px_rgba(49,194,246,0.26)]">
-          <Image
-            src="/branding/nf-logo.png"
-            alt=""
-            width={48}
-            height={48}
-            className="h-12 w-12 rounded-full"
-            draggable={false}
-          />
-        </div>
-
-        <div className="mt-6 text-2xl font-black leading-tight text-white">{title}</div>
-        <div className="mt-2 text-sm leading-6 text-white/62">{subtitle}</div>
-
-        <div className="mt-6 min-h-[58px] border border-cyan-100/14 bg-white/[0.045] px-4 py-3">
-          <div className="text-[11px] font-black uppercase text-cyan-100/70">Problem solved</div>
-          <div key={messageIndex} className="mt-1 text-base font-semibold leading-6 text-white">
-            {NIGHTLIFE_PRELOADER_MESSAGES[messageIndex]}
+    <div
+      className={`${shellClass} ${surface === "glass" ? "nf-coco-boot-glass" : ""}`}
+      data-testid={surface === "glass" ? "coco-generation-overlay" : undefined}
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="nf-coco-boot-panel w-full max-w-[360px] text-center">
+        {showCoco ? (
+          <div className="relative mx-auto w-fit" aria-hidden="true">
+            <span className="nf-startup-coco-orb-aura" />
+            <span className="nf-startup-coco-orb-ring" />
+            <img
+              src="/branding/coco-orb.png?v=3"
+              alt=""
+              className="relative h-[88px] w-[88px] rounded-full object-cover shadow-[0_0_44px_rgba(103,232,249,0.24)]"
+              draggable={false}
+            />
+            <span className="nf-coco-loader-orb absolute -bottom-2 -right-4 scale-75" />
           </div>
+        ) : (
+          <div className="nf-coco-loader-orb nf-coco-loader-orb-lg mx-auto" aria-hidden="true" />
+        )}
+
+        <div className="mt-7 text-[11px] font-semibold uppercase tracking-[0.28em] text-cyan-100/[0.64]">
+          {title}
+        </div>
+        <div className="mt-2 text-[21px] font-semibold leading-7 text-white">{subtitle}</div>
+        <div className="mx-auto mt-2 max-w-[280px] text-[13px] leading-5 text-white/[0.58]">
+          {detail}
         </div>
 
-        <div className="mx-auto mt-6 h-1 w-44 overflow-hidden bg-white/10">
-          <div className="h-full w-2/5 animate-pulse bg-cyan-200 shadow-[0_0_20px_rgba(103,232,249,0.7)]" />
+        <div className="mx-auto mt-6 flex w-full max-w-[280px] items-center justify-between gap-3 text-left">
+          <div className="h-px flex-1 bg-cyan-100/12" />
+          <div
+            key={messageIndex}
+            className="min-w-[152px] text-center text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-50/70"
+          >
+            {messages[messageIndex % Math.max(1, messages.length)] ?? "Working on your flyer."}
+          </div>
+          <div className="h-px flex-1 bg-fuchsia-100/12" />
+        </div>
+
+        <div className="nf-coco-loader-meter mx-auto mt-6 w-44" aria-hidden="true">
+          <span className="nf-coco-loader-meter-bar" />
         </div>
       </div>
     </div>

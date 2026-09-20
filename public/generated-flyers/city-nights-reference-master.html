@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>City Nights — Coco CSS Measurement Master</title>
+  <style>
+    @font-face {
+      font-family: CityDisplay;
+      src: url("/fonts/Anton.ttf") format("truetype");
+      font-weight: 400 900;
+      font-display: block;
+    }
+    @font-face {
+      font-family: CityCondensed;
+      src: url("/fonts/BebasNeue-Regular.ttf") format("truetype");
+      font-weight: 400;
+      font-display: block;
+    }
+    @font-face {
+      font-family: CitySans;
+      src: url("/fonts/LEMONMILK-Regular.ttf") format("truetype");
+      font-weight: 400 700;
+      font-display: block;
+    }
+    @font-face {
+      font-family: CitySansBold;
+      src: url("/fonts/LEMONMILK-Bold.ttf") format("truetype");
+      font-weight: 700 900;
+      font-display: block;
+    }
+    @font-face {
+      font-family: CityBrush;
+      src: url("/fonts/script/Good Brush.otf") format("opentype");
+      font-weight: 400 900;
+      font-display: block;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background-color: #050000; }
+    body { display: grid; place-items: center; padding: 24px; }
+
+    .canvas {
+      --red: #ed0909;
+      --white: #f6f2ef;
+      --black: #050000;
+      position: relative;
+      width: min(92vw, 540px);
+      aspect-ratio: 9 / 16;
+      container-type: inline-size;
+      overflow: hidden;
+      isolation: isolate;
+      color: var(--white);
+      background-color: var(--black);
+      box-shadow: 0 30px 90px #000d;
+      font-family: CitySans, Arial, sans-serif;
+    }
+    .canvas[data-format="square"] { aspect-ratio: 1; }
+    .canvas[data-format="story"] { aspect-ratio: 9 / 16; }
+
+    .background {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: 50% 50%;
+      z-index: -30;
+      filter: contrast(1.13) saturate(1.08) brightness(.77);
+    }
+    .black-wash {
+      position: absolute;
+      inset: 0;
+      z-index: -24;
+      background-color: transparent;
+      background-image:
+        linear-gradient(to bottom, rgba(0,0,0,.52) 0%, rgba(0,0,0,.02) 16%, rgba(0,0,0,.02) 70%, rgba(0,0,0,.84) 100%),
+        linear-gradient(to right, rgba(0,0,0,.34) 0%, transparent 28%, transparent 72%, rgba(0,0,0,.28) 100%);
+      pointer-events: none;
+    }
+    .grain {
+      position: absolute;
+      inset: 0;
+      z-index: 80;
+      opacity: .13;
+      mix-blend-mode: screen;
+      pointer-events: none;
+      background-color: transparent;
+      background-image:
+        repeating-linear-gradient(91deg, transparent 0 4px, rgba(255,255,255,.08) 5px, transparent 6px 11px),
+        repeating-linear-gradient(3deg, transparent 0 6px, rgba(255,0,0,.09) 7px, transparent 8px 13px);
+    }
+
+    .presenter {
+      position: absolute;
+      z-index: 42;
+      left: 23%;
+      top: 2.35%;
+      width: 54%;
+      color: var(--white);
+      font: 700 1.18cqw/1 CitySans, sans-serif;
+      letter-spacing: .78em;
+      text-align: center;
+      text-transform: uppercase;
+      white-space: nowrap;
+      text-shadow: 0 2px 4px #000;
+    }
+    .presenter .accent { color: var(--red); }
+
+    .date-frame, .doors-frame {
+      position: absolute;
+      z-index: 30;
+      border: .16cqw solid var(--red);
+      background-color: rgba(0,0,0,.43);
+      box-shadow: inset 0 0 0 .08cqw rgba(255,255,255,.13), 0 4px 18px #000a;
+    }
+    .date-frame { left: 4.05%; top: 6.65%; width: 13.25%; height: 16.2%; }
+    .date {
+      position: absolute;
+      z-index: 34;
+      left: 4.05%;
+      top: 7.85%;
+      width: 13.25%;
+      color: var(--white);
+      font-family: CityCondensed, sans-serif;
+      font-size: 3.05cqw;
+      font-weight: 400;
+      line-height: .78;
+      text-align: center;
+      text-transform: uppercase;
+      white-space: normal;
+      text-shadow: 0 2px 3px #000;
+    }
+    .date .day { color: var(--red); font-family: CityDisplay, sans-serif; font-size: 2.76em; line-height: .92; }
+    .date .month { font-size: 1.62em; line-height: .96; }
+
+    .callout-rule {
+      position: absolute;
+      z-index: 31;
+      right: 3.55%;
+      top: 7.4%;
+      width: .46%;
+      height: 11.9%;
+      background-color: var(--red);
+      box-shadow: 0 0 12px rgba(255,0,0,.42);
+    }
+    .callout {
+      position: absolute;
+      z-index: 34;
+      right: 5.25%;
+      top: 9.25%;
+      width: 18.8%;
+      color: var(--white);
+      font: 700 2.05cqw/1.18 CitySans, sans-serif;
+      text-align: right;
+      text-transform: uppercase;
+      text-shadow: 0 2px 4px #000;
+    }
+    .callout .accent { color: var(--red); font-family: CitySansBold, sans-serif; }
+
+    .headline {
+      position: absolute;
+      z-index: 18;
+      left: 13.7%;
+      top: 23.7%;
+      width: 72.8%;
+      color: #f6f2ef;
+      font: 900 27.5cqw/.8 CityDisplay, sans-serif;
+      letter-spacing: -.055em;
+      text-align: center;
+      text-transform: uppercase;
+      white-space: nowrap;
+      text-shadow: 1px 0 #c9c3bf, -1px 0 #fff, 0 4px 0 rgba(0,0,0,.64);
+      filter: drop-shadow(0 0 1px #fff);
+      transform: scaleX(1.04);
+      transform-origin: 50% 50%;
+    }
+    .headline2 {
+      position: absolute;
+      z-index: 38;
+      left: 18%;
+      top: 34.3%;
+      width: 64%;
+      color: var(--red);
+      font: 900 15.8cqw/.72 CityBrush, "Permanent Marker", cursive;
+      letter-spacing: -.045em;
+      text-align: center;
+      text-shadow: 0 4px 0 #220000, 0 0 10px rgba(255,0,0,.24);
+      transform: rotate(-7deg) scaleX(1.16);
+      transform-origin: 50% 50%;
+      white-space: nowrap;
+    }
+
+    .dot-rail {
+      position: absolute;
+      z-index: 33;
+      left: 4.25%;
+      top: 25.7%;
+      width: 2.1%;
+      height: 10.6%;
+      opacity: .94;
+      background-color: transparent;
+      background-image: radial-gradient(circle, #fff 0 22%, transparent 27%);
+      background-position: 50% 0;
+      background-repeat: repeat-y;
+      background-size: 100% 16.66%;
+      filter: drop-shadow(0 1px 2px #000);
+    }
+
+    .doors-frame { left: 3.85%; top: 61.4%; width: 12.25%; height: 10.2%; }
+    .doors {
+      position: absolute;
+      z-index: 34;
+      left: 4.5%;
+      top: 62.55%;
+      width: 10.95%;
+      color: var(--white);
+      font: 400 2.55cqw/1.03 CitySans, sans-serif;
+      text-align: center;
+      text-transform: uppercase;
+      text-shadow: 0 2px 3px #000;
+    }
+    .doors .accent { color: var(--red); font-family: CityDisplay, sans-serif; font-size: 1.7em; line-height: 1.08; }
+    .age {
+      position: absolute;
+      z-index: 35;
+      left: 4.35%;
+      top: 74.25%;
+      width: 11.5%;
+      color: var(--red);
+      font: 900 4.45cqw/.9 CitySansBold, sans-serif;
+      text-align: left;
+      text-transform: uppercase;
+      text-shadow: 0 2px 3px #000;
+    }
+    .age .label { color: var(--white); font: 400 .38em/1.4 CitySans, sans-serif; letter-spacing: .2em; }
+
+    .music-label-frame {
+      position: absolute;
+      z-index: 34;
+      right: 15.6%;
+      top: 66.3%;
+      width: 16.6%;
+      height: 2.45%;
+      border: .14cqw solid var(--red);
+      background-color: rgba(0,0,0,.56);
+    }
+    .music-label {
+      position: absolute;
+      z-index: 36;
+      right: 15.6%;
+      top: 66.9%;
+      width: 16.6%;
+      color: var(--red);
+      font: 700 1.25cqw/1 CitySansBold, sans-serif;
+      letter-spacing: .38em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+    .dj-lineup {
+      position: absolute;
+      z-index: 37;
+      right: 7.2%;
+      top: 69.2%;
+      width: 33.5%;
+      color: var(--white);
+      font: 700 3.05cqw/.93 CitySansBold, sans-serif;
+      letter-spacing: -.03em;
+      text-align: center;
+      text-transform: uppercase;
+      text-shadow: 0 3px 4px #000;
+    }
+    .dj-lineup .accent { color: var(--red); }
+    .music-policy {
+      position: absolute;
+      z-index: 37;
+      right: 6.2%;
+      top: 75.25%;
+      width: 35.5%;
+      color: var(--red);
+      font: 700 1.3cqw/1 CitySansBold, sans-serif;
+      text-align: center;
+      text-transform: uppercase;
+      white-space: nowrap;
+      text-shadow: 0 2px 3px #000;
+    }
+
+    .slogan {
+      position: absolute;
+      z-index: 42;
+      left: 12%;
+      top: 82.55%;
+      width: 76%;
+      color: var(--white);
+      font: 400 1.45cqw/1 CitySans, sans-serif;
+      letter-spacing: .44em;
+      text-align: center;
+      text-transform: uppercase;
+      white-space: nowrap;
+      text-shadow: 0 2px 4px #000;
+    }
+    .slogan .accent { color: var(--red); }
+    .venue {
+      position: absolute;
+      z-index: 43;
+      left: 19.5%;
+      top: 85.7%;
+      width: 61%;
+      color: var(--white);
+      font: 900 5.55cqw/.92 CitySansBold, sans-serif;
+      letter-spacing: -.055em;
+      text-align: center;
+      text-transform: uppercase;
+      white-space: nowrap;
+      text-shadow: 0 3px 5px #000;
+    }
+    .venue .accent { color: var(--red); }
+    .address {
+      position: absolute;
+      z-index: 44;
+      left: 14%;
+      top: 91.2%;
+      width: 72%;
+      color: var(--white);
+      font: 400 1.5cqw/1 CitySans, sans-serif;
+      letter-spacing: .24em;
+      text-align: center;
+      text-transform: uppercase;
+      white-space: nowrap;
+      text-shadow: 0 2px 4px #000;
+    }
+    .address .accent { color: var(--red); }
+    .ticket-band {
+      position: absolute;
+      z-index: 41;
+      left: 17%;
+      top: 94.1%;
+      width: 66%;
+      height: 3.3%;
+      background-color: var(--red);
+      clip-path: polygon(2% 25%, 10% 5%, 91% 8%, 99% 28%, 95% 50%, 100% 72%, 91% 91%, 8% 94%, 0 74%, 5% 50%);
+      filter: drop-shadow(0 3px 5px #000a);
+    }
+    .ticket-label {
+      position: absolute;
+      z-index: 45;
+      left: 25.2%;
+      top: 95.02%;
+      width: 24%;
+      color: #090000;
+      font: 700 1.55cqw/1 CitySansBold, sans-serif;
+      letter-spacing: .12em;
+      text-align: right;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .ticket-value {
+      position: absolute;
+      z-index: 45;
+      left: 50%;
+      top: 95.02%;
+      width: 28%;
+      color: #090000;
+      font: 700 1.55cqw/1 CitySansBold, sans-serif;
+      letter-spacing: .08em;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    /* Square is deliberately recomposed around the same authored background. */
+    .canvas[data-format="square"] .background { object-position: 50% 48%; }
+    .canvas[data-format="square"] .presenter { top: 3.1%; font-size: 1.45cqw; }
+    .canvas[data-format="square"] .date-frame { top: 8%; width: 15%; height: 27%; }
+    .canvas[data-format="square"] .date { top: 10%; width: 15%; font-size: 3.55cqw; }
+    .canvas[data-format="square"] .callout-rule { top: 9%; height: 20%; }
+    .canvas[data-format="square"] .callout { top: 12%; width: 23%; font-size: 2.15cqw; }
+    .canvas[data-format="square"] .headline { left: 14%; top: 30%; width: 72%; font-size: 27cqw; }
+    .canvas[data-format="square"] .headline2 { left: 18%; top: 47%; width: 64%; font-size: 15.8cqw; }
+    .canvas[data-format="square"] .dot-rail { top: 38%; height: 16%; }
+    .canvas[data-format="square"] .doors-frame { top: 65%; width: 14%; height: 17%; }
+    .canvas[data-format="square"] .doors { top: 67%; width: 12.7%; font-size: 2.65cqw; }
+    .canvas[data-format="square"] .age { top: 85%; font-size: 4.4cqw; }
+    .canvas[data-format="square"] .music-label-frame { top: 66%; right: 13%; width: 20%; height: 4%; }
+    .canvas[data-format="square"] .music-label { top: 67.2%; right: 13%; width: 20%; font-size: 1.4cqw; }
+    .canvas[data-format="square"] .dj-lineup { top: 71%; right: 4%; width: 39%; font-size: 3.2cqw; }
+    .canvas[data-format="square"] .music-policy { top: 79%; right: 3%; width: 41%; font-size: 1.22cqw; }
+    .canvas[data-format="square"] .slogan { display: none; }
+    .canvas[data-format="square"] .venue { left: 22%; top: 84.2%; width: 56%; font-size: 5.2cqw; }
+    .canvas[data-format="square"] .address { left: 18%; top: 90.1%; width: 64%; font-size: 1.25cqw; }
+    .canvas[data-format="square"] .ticket-band { top: 94%; }
+    .canvas[data-format="square"] .ticket-label,
+    .canvas[data-format="square"] .ticket-value { top: 95%; font-size: 1.35cqw; }
+  </style>
+</head>
+<body>
+  <main class="canvas" data-coco-canvas data-format="story">
+    <img class="background" src="/generated-flyers/assets/city-nights-background.jpg" alt="Red city skyline and classic car" data-region="background" data-coco-object="background" data-coco-asset="background" data-coco-kind="image" data-coco-editable="true" />
+    <div class="black-wash" data-region="black-wash" data-coco-object="blackWash" data-coco-asset="blackWash" data-coco-kind="shape" data-coco-editable="false" aria-hidden="true"></div>
+
+    <div class="presenter" data-region="presenter" data-coco-object="presenter" data-coco-kind="text" data-coco-role="presenter" data-coco-editable="true">Elite Nights <span class="accent">Presents</span></div>
+
+    <div class="date-frame" data-region="date-frame" data-coco-object="dateFrame" data-coco-asset="dateFrame" data-coco-kind="shape" data-coco-editable="true" aria-hidden="true"></div>
+    <div class="date" data-region="date" data-coco-object="date" data-coco-kind="text" data-coco-role="date" data-coco-editable="true"><span>Saturday</span><br><span class="day">22</span><br><span class="month">June</span></div>
+
+    <div class="callout-rule" data-region="callout-rule" data-coco-object="calloutRule" data-coco-asset="calloutRule" data-coco-kind="shape" data-coco-editable="true" aria-hidden="true"></div>
+    <div class="callout" data-region="callout" data-coco-object="callout" data-coco-kind="text" data-coco-role="details" data-coco-editable="true">The<br>Hottest<br>Night<br>In The<br><span class="accent">City</span></div>
+
+    <div class="headline" data-region="headline" data-coco-object="headline" data-coco-kind="text" data-coco-role="headline" data-coco-editable="true">City</div>
+    <div class="headline2" data-region="headline2" data-coco-object="headline2" data-coco-kind="text" data-coco-role="headline2" data-coco-editable="true">Nights</div>
+    <div class="dot-rail" data-region="dot-rail" data-coco-object="dotRail" data-coco-asset="dotRail" data-coco-kind="shape" data-coco-editable="true" aria-hidden="true"></div>
+
+    <div class="doors-frame" data-region="doors-frame" data-coco-object="doorsFrame" data-coco-asset="doorsFrame" data-coco-kind="shape" data-coco-editable="true" aria-hidden="true"></div>
+    <div class="doors" data-region="doors" data-coco-object="doors" data-coco-kind="text" data-coco-role="time" data-coco-editable="true">Doors<br>Open<br><span class="accent">10PM</span></div>
+    <div class="age" data-region="age" data-coco-object="age" data-coco-kind="text" data-coco-role="subtag" data-coco-editable="true">18+<br><span class="label">Event</span></div>
+
+    <div class="music-label-frame" data-region="music-label-frame" data-coco-object="musicLabelFrame" data-coco-asset="musicLabelFrame" data-coco-kind="shape" data-coco-editable="true" aria-hidden="true"></div>
+    <div class="music-label" data-region="music-label" data-coco-object="musicLabel" data-coco-kind="text" data-coco-role="rsvpLabel" data-coco-editable="true">Music By</div>
+    <div class="dj-lineup" data-region="dj-lineup" data-coco-object="djLineup" data-coco-kind="text" data-coco-role="djLineup" data-coco-editable="true">DJ Hype <span class="accent">X</span><br>DJ Kenzo</div>
+    <div class="music-policy" data-region="music-policy" data-coco-object="musicPolicy" data-coco-kind="text" data-coco-role="footerDetails" data-coco-editable="true">Hip Hop • Afrobeats • R&amp;B • Trap</div>
+
+    <div class="slogan" data-region="slogan" data-coco-object="slogan" data-coco-kind="text" data-coco-role="price" data-coco-editable="true">Good Music <span class="accent">•</span> Good People <span class="accent">•</span> Good Vibes</div>
+    <div class="venue" data-region="venue" data-coco-object="venue" data-coco-kind="text" data-coco-role="venue" data-coco-editable="true"><span class="accent">Elite</span> Lounge</div>
+    <div class="address" data-region="address" data-coco-object="address" data-coco-kind="text" data-coco-role="address" data-coco-editable="true">1234 West Madison St. <span class="accent">•</span> Chicago, IL 60607</div>
+    <div class="ticket-band" data-region="ticket-band" data-coco-object="ticketBand" data-coco-asset="ticketBand" data-coco-kind="shape" data-coco-editable="true" aria-hidden="true"></div>
+    <div class="ticket-label" data-region="ticket-label" data-coco-object="ticketLabel" data-coco-kind="text" data-coco-role="social" data-coco-editable="true">Tickets &amp; Tables:</div>
+    <div class="ticket-value" data-region="ticket-value" data-coco-object="ticketValue" data-coco-kind="text" data-coco-role="rsvp" data-coco-editable="true">312.555.0199</div>
+
+    <div class="grain" data-region="grain" data-coco-object="grain" data-coco-asset="grain" data-coco-kind="shape" data-coco-editable="false" aria-hidden="true"></div>
+  </main>
+  <script>
+    const format = new URLSearchParams(location.search).get("format");
+    const canvas = document.querySelector("[data-coco-canvas]");
+    if (canvas && (format === "square" || format === "story")) canvas.dataset.format = format;
+  </script>
+</body>
+</html>

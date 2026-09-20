@@ -1,0 +1,391 @@
+{
+  "acceptedAt": "2026-09-16",
+  "records": [
+    {
+      "recipeId": "mojito-monday",
+      "source": "/Users/thepartyrocker/Desktop/recipe-files/mojito-mondays.nflyer",
+      "publicPath": "public/generated-flyers/mojito-monday.nflyer",
+      "stem": "mojito-monday",
+      "sha256": "24a2d11d8fd9b19fca4b32f49b526204bb28da089d2e505a1de7f20af481f66b",
+      "previousSha256": "6bbafcc8fd38738f4ca6833a1edc98b7a0d15a4758c59ebd5658b2bf6c9b0e36",
+      "changed": true,
+      "cachePath": "lib/template-data/mojito-monday-v2.json",
+      "archive": "recipe-file-backups/september-16-updates/mojito-monday/24a2d11d8fd9/mojito-mondays.nflyer"
+    },
+    {
+      "recipeId": "afro-sunset",
+      "source": "/Users/thepartyrocker/Desktop/recipe-files/afro-sunset.nflyer",
+      "publicPath": "public/generated-flyers/afro-sunset.nflyer",
+      "stem": "afro-sunset",
+      "sha256": "0f1ad4d03e84d3e730d59471a1b6dd34468c49b44b781f05e33a19c540338fc3",
+      "previousSha256": "fd6f2da376479b75d7a5d7c62252da630c3105fad0c5e465a170b5824c9849ff",
+      "changed": true,
+      "cachePath": "lib/template-data/afro-sunset-v2.json",
+      "archive": "recipe-file-backups/september-16-updates/afro-sunset/0f1ad4d03e84/afro-sunset.nflyer"
+    },
+    {
+      "recipeId": "afrobeat-rooftop",
+      "source": "/Users/thepartyrocker/Desktop/recipe-files/afrobeat-rooftop.nflyer",
+      "publicPath": "public/generated-flyers/afrobeat-rooftop.nflyer",
+      "stem": "afrobeat-rooftop",
+      "sha256": "1a5e511f594c5c656fcfe56266a14f7d2dc5d8c35571bc5ad1edb125bda4a63f",
+      "previousSha256": "39149b217392cbd2b4c843394124f7cc7de2b54f2f014b3a1541f0854ead0b03",
+      "changed": true,
+      "cachePath": "lib/template-data/afrobeat-rooftop-v2.json",
+      "archive": "recipe-file-backups/september-16-updates/afrobeat-rooftop/1a5e511f594c/afrobeat-rooftop.nflyer"
+    },
+    {
+      "recipeId": "aura",
+      "source": "/Users/thepartyrocker/Desktop/recipe-files/aura.nflyer",
+      "publicPath": "public/generated-flyers/aura.nflyer",
+      "stem": "aura",
+      "sha256": "f9c14506b652b5b235efeaa6e8f3481837ae4a3e64b565f382186463ff98394a",
+      "previousSha256": "3d8f445b0b4cdcf355a896b49ba6a03565da6c2e285545d1e1e34ed8b5d11ebb",
+      "changed": true,
+      "cachePath": "lib/template-data/aura-v2.json",
+      "archive": "recipe-file-backups/september-16-updates/aura/f9c14506b652/aura.nflyer"
+    },
+    {
+      "recipeId": "como-una-boa",
+      "source": "/Users/thepartyrocker/Desktop/recipe-files/boa.nflyer",
+      "publicPath": "public/generated-flyers/eaden.nflyer",
+      "stem": "eaden",
+      "sha256": "8ab53e4465b0ead3a464f8eb9d188989cefee6433b73f0b37ce0eabafa3d9c87",
+      "previousSha256": "7e7977e120acf50c38a1ce9227b5f69e177baefb381a62164c4f0c7ed37d3044",
+      "changed": true,
+      "cachePath": "lib/template-data/eaden-v2.json",
+      "archive": "recipe-file-backups/september-16-updates/como-una-boa/8ab53e4465b0/boa.nflyer"
+    },
+    {
+      "recipeId": "disco",
+      "source": "/Users/thepartyrocker/Desktop/recipe-files/disco.nflyer",
+      "publicPath": "public/generated-flyers/disco.nflyer",
+      "stem": "disco",
+      "sha256": "a87060830f94c8a5f35bcaa6e733c608364d9a96ecc82a6d67c91418efb9114e",
+      "previousSha256": "d47174b485edad74d2405f21a7fc9128b0b758176a16dddff657ec3b67774c52",
+      "changed": true,
+      "cachePath": "lib/template-data/disco-v2.json",
+      "archive": "recipe-file-backups/september-16-updates/disco/a87060830f94/disco.nflyer"
+    },
+    {
+      "recipeId": "drift-kingz",
+      "source": "/Users/thepartyrocker/Desktop/recipe-files/drift.nflyer",
+      "publicPath": "public/generated-flyers/drift-kingz.nflyer",
+      "stem": "drift-kingz",
+      "sha256": "126649e1e22c4de7860215f236cac0d43ca63768d566ce2fd2d24bd8fd9bda25",
+      "previousSha256": "c62d8321c08930f947e4dac4f625a60864fbecf6be291d09121ee8889d36df89",
+      "changed": true,
+      "cachePath": "lib/template-data/drift-kingz-v2.json",
+      "archive": "recipe-file-backups/september-16-updates/drift-kingz/126649e1e22c/drift.nflyer"
+    },
+    {
+      "recipeId": "glow-in-the-dark",
+      "source": "/Users/thepartyrocker/Desktop/recipe-files/glow-in-dark.nflyer",
+      "publicPath": "public/generated-flyers/glow.nflyer",
+      "stem": "glow",
+      "sha256": "e2c95f27570d6ee7db578df7bf7eb438ebe41213b3f9f1b77e1a08756b344a89",
+      "previousSha256": "0cfe14556b5ccdd44a5a7bb0ed3e4b234dcb26e604e642abf65539e95b6335c4",
+      "changed": true,
+      "cachePath": "lib/template-data/glow-v2.json",
+      "archive": "recipe-file-backups/september-16-updates/glow-in-the-dark/e2c95f27570d/glow-in-dark.nflyer"
+    },
+    {
+      "recipeId": "in-crowd",
+      "source": "/Users/thepartyrocker/Desktop/recipe-files/in crowd.nflyer",
+      "publicPath": "public/generated-flyers/in-crowd.nflyer",
+      "stem": "in-crowd",
+      "sha256": "b420a0d3301317c6bf2c5608ab7d90a988f7fab63fa318ea58da3275f2d969d1",
+      "previousSha256": "10d57479d41edde60ed8581fdb42acf3965b6b41e2b90b4d95d95415c6a27fb1",
+      "changed": true,
+      "cachePath": "lib/template-data/in-crowd-v2.json",
+      "archive": "recipe-file-backups/september-16-updates/in-crowd/b420a0d33013/in crowd.nflyer"
+    },
+    {
+      "recipeId": "ladies-secret",
+      "source": "/Users/thepartyrocker/Desktop/recipe-files/ladies night neon.nflyer",
+      "publicPath": "public/generated-flyers/ladies-secret.nflyer",
+      "stem": "ladies-secret",
+      "sha256": "be869ba7e1c8835a7120a0ddcf36a692425e3f1782f991d00a5e8debb34d3b25",
+      "previousSha256": "ff81a706a0659f5a756ae2b00800d3ee38f74497e35de48d61b37be15b5a9f5b",
+      "changed": true,
+      "cachePath": "lib/template-data/ladies-secret-v2.json",
+      "archive": "recipe-file-backups/september-16-updates/ladies-secret/be869ba7e1c8/ladies night neon.nflyer"
+    },
+    {
+      "recipeId": "mardi-gras",
+      "source": "/Users/thepartyrocker/Desktop/recipe-files/mardi gras.nflyer",
+      "publicPath": "public/generated-flyers/mardi-gras.nflyer",
+      "stem": "mardi-gras",
+      "sha256": "c7c046fafa4ed92a21f541f2c4346eefe953403f7b8d52b05a26958976225e3f",
+      "previousSha256": "2df5fa1e380401c8a12769d638c498f8d8ab2d9c7f44122bafe6d3d63f4225d1",
+      "changed": true,
+      "cachePath": "lib/template-data/mardi-gras-v2.json",
+      "archive": "recipe-file-backups/september-16-updates/mardi-gras/c7c046fafa4e/mardi gras.nflyer"
+    },
+    {
+      "recipeId": "mind-state",
+      "source": "/Users/thepartyrocker/Desktop/recipe-files/mindstate.nflyer",
+      "publicPath": "public/generated-flyers/mind-state.nflyer",
+      "stem": "mind-state",
+      "sha256": "e65f5b3316d93b8dbf61d4a9c4b949404b9dec72c7469d4b21faaec459b9e0e4",
+      "previousSha256": "2be76a6959ce5b962c32962cc14c42b0a96d143288bd4f8dc8b6c1202fd02ccb",
+      "changed": true,
+      "cachePath": "lib/template-data/mind-state-v2.json",
+      "archive": "recipe-file-backups/september-16-updates/mind-state/e65f5b3316d9/mindstate.nflyer"
+    },
+    {
+      "recipeId": "dodge-night-rides",
+      "source": "/Users/thepartyrocker/Desktop/recipe-files/night-rides.nflyer",
+      "publicPath": "public/generated-flyers/dodge-night-rides.nflyer",
+      "stem": "dodge-night-rides",
+      "sha256": "03d8ba36f7cfebbf5bd97860d6b4a930325f7f1b0e5f1cffa738567c5fd338d0",
+      "previousSha256": "03d8ba36f7cfebbf5bd97860d6b4a930325f7f1b0e5f1cffa738567c5fd338d0",
+      "changed": false,
+      "cachePath": null,
+      "archive": "recipe-file-backups/september-16-updates/dodge-night-rides/03d8ba36f7cf/night-rides.nflyer"
+    },
+    {
+      "recipeId": "neon-night-shift",
+      "source": "/Users/thepartyrocker/Desktop/recipe-files/night-shift.nflyer",
+      "publicPath": "public/generated-flyers/neon-night.nflyer",
+      "stem": "neon-night",
+      "sha256": "b36259e469758a398abce200fbd4c0ffa03dafddfef17bc9b633e96b66e52454",
+      "previousSha256": "5b6a029eda9ce28cc457c9fb42a8ad9d35282cff65f4e766aeba768f02e0e5e3",
+      "changed": true,
+      "cachePath": "lib/template-data/neon-night-v2.json",
+      "archive": "recipe-file-backups/september-16-updates/neon-night-shift/b36259e46975/night-shift.nflyer"
+    },
+    {
+      "recipeId": "punta-cana-sundays",
+      "source": "/Users/thepartyrocker/Desktop/recipe-files/punta-cana.nflyer",
+      "publicPath": "public/generated-flyers/punta-cana.nflyer",
+      "stem": "punta-cana",
+      "sha256": "11350524d3b50b30ab2e983c85d801170b654de651f29e2a4e9dbcc33e8af178",
+      "previousSha256": "984695c3b068b04663e750e4654465f9c634ceb541620e0b2be42cbcd7d26a20",
+      "changed": true,
+      "cachePath": "lib/template-data/punta-cana-v2.json",
+      "archive": "recipe-file-backups/september-16-updates/punta-cana-sundays/11350524d3b5/punta-cana.nflyer"
+    },
+    {
+      "recipeId": "soiree-dream-house",
+      "source": "/Users/thepartyrocker/Desktop/recipe-files/soiree.nflyer",
+      "publicPath": "public/generated-flyers/soiree-dream-house.nflyer",
+      "stem": "soiree-dream-house",
+      "sha256": "6e39efc4c59c1fde10d4cb2577d96c7a2209fb47ce22b7b178aede42e8e9a657",
+      "previousSha256": "cfaa0cbfdd41e764a640cc20cfdb2474241591b458539990804c9cd9e0052848",
+      "changed": true,
+      "cachePath": "lib/template-data/soiree-dream-house-v2.json",
+      "archive": "recipe-file-backups/september-16-updates/soiree-dream-house/6e39efc4c59c/soiree.nflyer"
+    }
+  ],
+  "verification": {
+    "status": "passed",
+    "savedMasterRenders": 32,
+    "visuallyReviewedRenders": 32,
+    "textMismatches": 0,
+    "browserPageErrors": 0,
+    "automatedTestsPassed": 246,
+    "lint": "passed: lib/coco/formRecipeMapping.ts",
+    "cocoWizardCheck": "Disco Square and Story: separate DJ fields, inline Story separators, MUSIC BY heading, saved headline sizes; actual canvas PNGs visually inspected",
+    "renderMethod": "Playwright captures of actual editor artboards; downloaded exports were not tested for this batch",
+    "artifacts": "/tmp/september-recipe-updates",
+    "scripts": [
+      "scripts/verify-september-recipe-updates.mjs",
+      "scripts/verify-disco-updated-form.mjs"
+    ],
+    "previews": [
+      {
+        "recipeId": "mojito-monday",
+        "format": "square",
+        "path": "public/generated-flyers/mojito-monday-square-preview.png",
+        "sha256": "5e7d9f06d3d90f014ae58880032b6ba37072da80bf32f71341f71d45a1679727"
+      },
+      {
+        "recipeId": "mojito-monday",
+        "format": "story",
+        "path": "public/generated-flyers/mojito-monday-story-preview.png",
+        "sha256": "a30dde8a957ae4f7375f56461e8c56f8c4a7a33ca53eabb08274b0120014ca9c"
+      },
+      {
+        "recipeId": "afro-sunset",
+        "format": "square",
+        "path": "public/generated-flyers/afro-sunset-square-preview.png",
+        "sha256": "3222def9daa9911fa090bf3786c2c4cad9285220b0995c6179e178f88b1e39f1"
+      },
+      {
+        "recipeId": "afro-sunset",
+        "format": "story",
+        "path": "public/generated-flyers/afro-sunset-story-preview.png",
+        "sha256": "587bc2d90add12946d80111de131643a46554774e1bbd9d414c05e4e1c4bac4c"
+      },
+      {
+        "recipeId": "afrobeat-rooftop",
+        "format": "square",
+        "path": "public/generated-flyers/afrobeat-rooftop-square-preview.png",
+        "sha256": "d7e187c866ba7aabb75b1c6db978e397aca7e608711f892028aaf2a2a69ea72b"
+      },
+      {
+        "recipeId": "afrobeat-rooftop",
+        "format": "story",
+        "path": "public/generated-flyers/afrobeat-rooftop-story-preview.png",
+        "sha256": "09307d1270f0cc91416afe09f53c0ff22d5596c5770c4c8274601c76c4aae0c1"
+      },
+      {
+        "recipeId": "aura",
+        "format": "square",
+        "path": "public/generated-flyers/aura-square-preview.png",
+        "sha256": "fdcbf27c056a2f79c06cbb50da9f4f6220ec4096222a90c37510eb81276b494c"
+      },
+      {
+        "recipeId": "aura",
+        "format": "story",
+        "path": "public/generated-flyers/aura-story-preview.png",
+        "sha256": "9db73de77eeb43b0cc895c0f922324508eb94f73d3ca3a1b80a69ed36e72aa5e"
+      },
+      {
+        "recipeId": "como-una-boa",
+        "format": "square",
+        "path": "public/generated-flyers/eaden-square-preview.png",
+        "sha256": "5e023ca26072cb8de907ff2490300c4d07a710a51067f5b3c0abb363ea678138"
+      },
+      {
+        "recipeId": "como-una-boa",
+        "format": "story",
+        "path": "public/generated-flyers/eaden-story-preview.png",
+        "sha256": "cedf898a8b650d3cfbf171a49ac33c87106e296c18252b69f362fd6e04b0fe7a"
+      },
+      {
+        "recipeId": "disco",
+        "format": "square",
+        "path": "public/generated-flyers/disco-square-preview.png",
+        "sha256": "845fba386a4eb4124c4a89a0221421ad9500451025d737948cf35f438e0358f0"
+      },
+      {
+        "recipeId": "disco",
+        "format": "story",
+        "path": "public/generated-flyers/disco-story-preview.png",
+        "sha256": "02b833146317b7fe67a7d8ec39ffb1c2072ef29bb3b1909bed94e4581a5eabb0"
+      },
+      {
+        "recipeId": "drift-kingz",
+        "format": "square",
+        "path": "public/generated-flyers/drift-kingz-square-preview.png",
+        "sha256": "b86f3ff89f0865e569ed5936daec0adcc57e7e44c62ec896facc8b5ee26283c7"
+      },
+      {
+        "recipeId": "drift-kingz",
+        "format": "story",
+        "path": "public/generated-flyers/drift-kingz-story-preview.png",
+        "sha256": "e59e92336e8faf49f6039baa71a1357829326250defa0ce7ce068cbeea5ed5c4"
+      },
+      {
+        "recipeId": "glow-in-the-dark",
+        "format": "square",
+        "path": "public/generated-flyers/glow-square-preview.png",
+        "sha256": "9847c4fe3874f5142b23771ad9b385b26c5b456cabd2bc4bda67344627e38b39"
+      },
+      {
+        "recipeId": "glow-in-the-dark",
+        "format": "story",
+        "path": "public/generated-flyers/glow-story-preview.png",
+        "sha256": "29752a6028a867903422c4d5d7079f06c9401bd66754b0a4638dc43af3834e62"
+      },
+      {
+        "recipeId": "in-crowd",
+        "format": "square",
+        "path": "public/generated-flyers/in-crowd-square-preview.png",
+        "sha256": "ce6a91f9164a262ddf41cdbe7b4216fc2fc73fa3b9415cff4091816432a52822"
+      },
+      {
+        "recipeId": "in-crowd",
+        "format": "story",
+        "path": "public/generated-flyers/in-crowd-story-preview.png",
+        "sha256": "847e351b811d15c80de18c5b52b2973dc12b54abc6f81b946610d328af3a4d1d"
+      },
+      {
+        "recipeId": "ladies-secret",
+        "format": "square",
+        "path": "public/generated-flyers/ladies-secret-square-preview.png",
+        "sha256": "b94cf07a0d0c9402f82a2567ff1f424e620ac09530a578911f5afe5adef9d224"
+      },
+      {
+        "recipeId": "ladies-secret",
+        "format": "story",
+        "path": "public/generated-flyers/ladies-secret-story-preview.png",
+        "sha256": "d06e52876541c93c03308878e5942509dbbf0a5b36595354d29ad71e7083254b"
+      },
+      {
+        "recipeId": "mardi-gras",
+        "format": "square",
+        "path": "public/generated-flyers/mardi-gras-square-preview.png",
+        "sha256": "ebde7f43087fba2e5184954cd472e408aab748a846f2fa3506dcb2411c902d7a"
+      },
+      {
+        "recipeId": "mardi-gras",
+        "format": "story",
+        "path": "public/generated-flyers/mardi-gras-story-preview.png",
+        "sha256": "709010925cf57c3221f075fb3d4cef9339b3e4cf40d8cd2ca4e7f14434d325a3"
+      },
+      {
+        "recipeId": "mind-state",
+        "format": "square",
+        "path": "public/generated-flyers/mind-state-square-preview.png",
+        "sha256": "e3d952b198163e9344d036152c36886967d92de8724ec75d50dad5d6b207c2bd"
+      },
+      {
+        "recipeId": "mind-state",
+        "format": "story",
+        "path": "public/generated-flyers/mind-state-story-preview.png",
+        "sha256": "b0c61cb92ccf76ea096db92b0b4f8fb00a4408929250d310c0d3eea04132e758"
+      },
+      {
+        "recipeId": "dodge-night-rides",
+        "format": "square",
+        "path": "public/generated-flyers/dodge-night-rides-square-preview.png",
+        "sha256": "7a62e6fc64c0a39e23ca3cc693f3f439673ac78ecb02085dae42a318c949b14b"
+      },
+      {
+        "recipeId": "dodge-night-rides",
+        "format": "story",
+        "path": "public/generated-flyers/dodge-night-rides-story-preview.png",
+        "sha256": "ea28169f773703d7a47a7374afc04a91d180e29f66928e13afb4684a13194f13"
+      },
+      {
+        "recipeId": "neon-night-shift",
+        "format": "square",
+        "path": "public/generated-flyers/neon-night-square-preview.png",
+        "sha256": "afea55faf052096f0b321ef72833887a471171145e3ca1427a13523f7fa62901"
+      },
+      {
+        "recipeId": "neon-night-shift",
+        "format": "story",
+        "path": "public/generated-flyers/neon-night-story-preview.png",
+        "sha256": "abd67e7e33b8e5b6b12d6cc22519c13a6eaf80c3fc60e81e3493ad8d783f8ecb"
+      },
+      {
+        "recipeId": "punta-cana-sundays",
+        "format": "square",
+        "path": "public/generated-flyers/punta-cana-square-preview.png",
+        "sha256": "e863f9587a7accf627e29207191cded9941c296a5eb49ba244023b15c4401c2f"
+      },
+      {
+        "recipeId": "punta-cana-sundays",
+        "format": "story",
+        "path": "public/generated-flyers/punta-cana-story-preview.png",
+        "sha256": "e7c22f738d162e3eceecaccf717ec5379289401733a4a4c15e07c751b2df136d"
+      },
+      {
+        "recipeId": "soiree-dream-house",
+        "format": "square",
+        "path": "public/generated-flyers/soiree-dream-house-square-preview.png",
+        "sha256": "947ea360202163902f92806c28efadf16079f0a6ca4ddefc3aa2d7904e8b7a32"
+      },
+      {
+        "recipeId": "soiree-dream-house",
+        "format": "story",
+        "path": "public/generated-flyers/soiree-dream-house-story-preview.png",
+        "sha256": "a8e57a8ebd2d7a320bcf63cf29a7adaf2f98994a865698b54be41a08a37d8ddf"
+      }
+    ]
+  }
+}

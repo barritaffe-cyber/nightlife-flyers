@@ -1,0 +1,10 @@
+{
+  "source": "public/generated-flyers/assets/como-una-boa.nflyer",
+  "master": "public/generated-flyers/como-una-boa-updated.nflyer",
+  "version": 2,
+  "sha256": "c862da5b0cfcb3000942f4fd3e7b06b268d2f2b0cb02afaa6c827d6432256552",
+  "overrides": {
+    "square": 11,
+    "story": 10
+  }
+}

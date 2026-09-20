@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080" role="img" aria-label="Sunday Takeover flyer template preview">
+  <defs>
+    <radialGradient id="bgGlow" cx="50%" cy="28%" r="64%">
+      <stop offset="0%" stop-color="#ff2b18"/>
+      <stop offset="36%" stop-color="#a50805"/>
+      <stop offset="76%" stop-color="#250000"/>
+      <stop offset="100%" stop-color="#020000"/>
+    </radialGradient>
+    <linearGradient id="floor" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#130000"/>
+      <stop offset="48%" stop-color="#050000"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </linearGradient>
+    <filter id="softGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#000000" flood-opacity="0.62"/>
+    </filter>
+  </defs>
+  <rect width="1080" height="1080" fill="url(#bgGlow)"/>
+  <path d="M118 616 C244 300 330 190 540 190 C750 190 836 300 962 616" fill="none" stroke="#ff7a32" stroke-opacity=".2" stroke-width="13"/>
+  <path d="M162 610 C280 358 356 275 540 275 C724 275 800 358 918 610" fill="none" stroke="#ffb15a" stroke-opacity=".16" stroke-width="8"/>
+  <ellipse cx="540" cy="250" rx="280" ry="102" fill="#ff220f" opacity=".5" filter="url(#softGlow)"/>
+  <path d="M0 666 C190 690 336 652 520 670 C736 690 870 630 1080 620 L1080 1080 L0 1080 Z" fill="url(#floor)"/>
+  <g opacity=".55">
+    <circle cx="250" cy="304" r="86" fill="#060000"/>
+    <path d="M120 646 C142 470 190 386 270 394 C352 400 386 494 392 666 Z" fill="#0b0000"/>
+    <circle cx="830" cy="304" r="84" fill="#060000"/>
+    <path d="M688 666 C696 500 748 398 832 394 C918 392 950 496 966 654 Z" fill="#0b0000"/>
+  </g>
+  <g filter="url(#shadow)">
+    <circle cx="540" cy="264" r="112" fill="#0b0000"/>
+    <path d="M356 760 C374 482 430 376 540 376 C650 376 708 482 724 760 Z" fill="#090000"/>
+    <path d="M286 782 C348 682 426 635 540 632 C654 635 734 684 794 782 L802 1080 L278 1080 Z" fill="#120000"/>
+  </g>
+  <text x="540" y="92" text-anchor="middle" fill="#ffffff" font-family="Arial Black, Impact, sans-serif" font-size="44" letter-spacing="4">GALAXI ENT</text>
+  <text x="540" y="128" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="31" letter-spacing="3">PRESENTS</text>
+  <text x="58" y="416" fill="#ffffff" font-family="Arial Black, Impact, sans-serif" font-size="28">MUSIC</text>
+  <text x="58" y="462" fill="#ffffff" font-family="Arial Black, Impact, sans-serif" font-size="43">DJ SYNTH</text>
+  <text x="58" y="506" fill="#ffffff" font-family="Arial Black, Impact, sans-serif" font-size="43">DJ MAGIX</text>
+  <text x="870" y="405" text-anchor="middle" fill="#ffffff" font-family="Arial Black, Impact, sans-serif" font-size="34">ENTRY</text>
+  <text x="870" y="462" text-anchor="middle" fill="#ffffff" font-family="Arial Black, Impact, sans-serif" font-size="56">$50</text>
+  <text x="870" y="526" text-anchor="middle" fill="#ffffff" font-family="Arial Black, Impact, sans-serif" font-size="31">GIRLS FREE</text>
+  <text x="870" y="566" text-anchor="middle" fill="#ffffff" font-family="Arial Black, Impact, sans-serif" font-size="31">BEFORE 10PM</text>
+  <text x="540" y="650" text-anchor="middle" fill="#fff0d0" font-family="Georgia, serif" font-size="140" font-style="italic">Sunday</text>
+  <text x="540" y="770" text-anchor="middle" fill="#ffffff" font-family="Arial Black, Impact, sans-serif" font-size="132" letter-spacing="-5">TAKE</text>
+  <text x="540" y="888" text-anchor="middle" fill="#ffffff" font-family="Arial Black, Impact, sans-serif" font-size="132" letter-spacing="-5">OVER</text>
+  <rect x="74" y="882" width="146" height="146" rx="22" fill="#ff1612"/>
+  <text x="147" y="929" text-anchor="middle" fill="#ffffff" font-family="Arial Black, Impact, sans-serif" font-size="43">24TH</text>
+  <text x="147" y="974" text-anchor="middle" fill="#ffffff" font-family="Arial Black, Impact, sans-serif" font-size="43">APRIL</text>
+  <text x="147" y="1012" text-anchor="middle" fill="#ffffff" font-family="Arial Black, Impact, sans-serif" font-size="32">10PM</text>
+  <path d="M288 898 C380 880 500 910 618 890 C716 874 796 890 846 910 L824 1010 C724 1018 642 996 520 1012 C408 1026 346 1014 286 1008 Z" fill="#f5f0e6"/>
+  <text x="326" y="943" fill="#ff1612" font-family="Arial Black, Impact, sans-serif" font-size="42">CLUB ZERO</text>
+  <text x="488" y="944" fill="#16100d" font-family="Arial Black, Impact, sans-serif" font-size="20">1029 BOULEVARD AVENUE</text>
+  <text x="326" y="987" fill="#16100d" font-family="Arial Black, Impact, sans-serif" font-size="32">DRINKS | HOOKAH |</text>
+  <circle cx="882" cy="968" r="42" fill="#ff1612"/>
+  <text x="882" y="982" text-anchor="middle" fill="#ffffff" font-family="Arial Black, Impact, sans-serif" font-size="32">18+</text>
+</svg>

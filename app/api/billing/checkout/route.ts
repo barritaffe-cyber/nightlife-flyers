@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { supabaseAuth } from "../../../../lib/supabase/auth";
 import { supabaseAdmin } from "../../../../lib/supabase/admin";
 import { createProviderCheckout } from "../../../../lib/billing/provider";
-import { resolveBillingSelection } from "../../../../lib/billing/catalog";
+import { resolveBillingSelection, isPublicBillingSelection } from "../../../../lib/billing/catalog";
 import { extractClientTrackingPayload, insertAnalyticsEventForUser } from "../../../../lib/analytics/server";
+
+import {getFlyerAllowance} from "../../../../lib/billing/flyerAllowance";
 
 export const runtime = "nodejs";
 
@@ -31,10 +33,13 @@ export async function POST(req: Request) {
       offer: body?.offer,
     });
 
-    if (!selection) {
+    if (!selection || !isPublicBillingSelection(selection)) {
       return NextResponse.json({ error: "Invalid billing selection." }, { status: 400 });
     }
 
+    // Refuse to open payment if the credit schema has not been deployed.
+    try { await getFlyerAllowance(supabaseAdmin(),userData.user.id); }
+    catch { return NextResponse.json({error:"Checkout is temporarily unavailable. Please try again shortly."},{status:503}); }
     const siteUrl = req.headers.get("origin") || new URL(req.url).origin;
     const result = await createProviderCheckout(selection, userData.user.email, { siteUrl });
     if (!result.ok) {

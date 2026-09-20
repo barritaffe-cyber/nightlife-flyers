@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "status": "materialized-editable-master-v1",
+  "proposedRecipe": {
+    "id": "neon-night-shift",
+    "name": "Neon Night Shift",
+    "version": 1
+  },
+  "source": {
+    "path": "public/generated-flyers/neon-night-shift-reference-master.html",
+    "sha256": "44fbd44680cfb0787167ab6f7c8ad10f5f328d4edd66467b6dffba642039ed6e",
+    "preview": "public/generated-flyers/neon-night-shift-reference-master.png",
+    "referenceMode": "measurement-only",
+    "regionAttribute": "data-region",
+    "geometryScriptId": "neon-night-shift-css-master-geometry"
+  },
+  "designAnalysis": {
+    "readingOrder": [
+      "Oversized white condensed NIGHT headline",
+      "Hot-pink Shift script crossing the headline",
+      "Central sunglasses subject inside a cyan-magenta circular field",
+      "Date and doors on the left, compliance and manifesto on the right",
+      "Lineup, special offer, RSVP, venue, and dress code footer"
+    ],
+    "subject": {
+      "crop": "centered upper-body portrait",
+      "gaze": "front-facing",
+      "protectedAreas": ["face", "glasses", "headline-script overlap"],
+      "relationship": "subject sits behind both headline layers while the circular field separates the portrait from the wet black wall"
+    },
+    "paletteRoles": {
+      "base": "#020305",
+      "primary": "#F50087",
+      "secondary": "#00D9E9",
+      "neutral": "#F2F0ED",
+      "shadow": "#000000"
+    },
+    "signatureGestures": [
+      "cyan-magenta circular subject field",
+      "white condensed headline crossed by pink script and brush underline"
+    ]
+  },
+  "formats": {
+    "story": {
+      "canvas": { "width": 1080, "height": 1920 },
+      "zones": {
+        "subject": { "x": 10, "y": 13.5, "width": 80, "height": 64 },
+        "subjectDisc": { "x": 10.5, "y": 27.2, "width": 80, "height": 45 },
+        "headline": { "x": 5.4, "y": 44.2, "width": 61, "height": 20 },
+        "script": { "x": 43, "y": 55.2, "width": 49, "height": 10 },
+        "date": { "x": 14.8, "y": 11.5, "width": 17, "height": 15 },
+        "doors": { "x": 14.6, "y": 24.7, "width": 18, "height": 5.2 },
+        "compliance": { "x": 80, "y": 4.8, "width": 12, "height": 4.8 },
+        "manifesto": { "x": 77.7, "y": 25.1, "width": 14, "height": 9 },
+        "lineup": { "x": 25.6, "y": 77.4, "width": 23.5, "height": 8.8 },
+        "specialOffer": { "x": 54.8, "y": 77.4, "width": 23.3, "height": 8.8 },
+        "rsvp": { "x": 33.5, "y": 87.2, "width": 33, "height": 4.7 },
+        "venue": { "x": 22, "y": 93.5, "width": 56, "height": 3 },
+        "dressCode": { "x": 29, "y": 97, "width": 42, "height": 2 }
+      }
+    },
+    "square": {
+      "canvas": { "width": 1080, "height": 1080 },
+      "adaptation": "independently authored from the same campaign grammar; not a crop of Story",
+      "zones": {
+        "subject": { "x": 18, "y": 5, "width": 72, "height": 84 },
+        "subjectDisc": { "x": 13, "y": 18, "width": 75, "height": 75 },
+        "headline": { "x": 3.5, "y": 42, "width": 63, "height": 25 },
+        "script": { "x": 43, "y": 57, "width": 50, "height": 12 },
+        "date": { "x": 6, "y": 7, "width": 16, "height": 23 },
+        "doors": { "x": 6, "y": 31, "width": 19, "height": 7 },
+        "compliance": { "x": 82, "y": 5, "width": 13, "height": 7 },
+        "manifesto": { "x": 84, "y": 27, "width": 12, "height": 16 },
+        "lineup": { "x": 8, "y": 76, "width": 24, "height": 15 },
+        "specialOffer": { "x": 38, "y": 76, "width": 24, "height": 15 },
+        "rsvp": { "x": 68, "y": 78, "width": 27, "height": 10 },
+        "venue": { "x": 20, "y": 93, "width": 60, "height": 3.5 },
+        "dressCode": { "x": 29, "y": 97, "width": 42, "height": 2 }
+      }
+    }
+  },
+  "semanticObjectMap": [
+    { "visualRole": "main title", "cocoObject": "Headline", "editorLabel": "Event Name", "independentStyle": true },
+    { "visualRole": "script title", "cocoObject": "Subheadline", "editorLabel": "Title Accent", "independentStyle": true },
+    { "visualRole": "calendar and doors time", "cocoObject": "Date", "editorLabel": "Date & Doors", "independentStyle": true },
+    { "visualRole": "age and ID policy", "cocoObject": "Compliance", "editorLabel": "Age Requirement", "independentStyle": true },
+    { "visualRole": "right-side manifesto", "cocoObject": "Details", "editorLabel": "Side Message", "independentStyle": true },
+    { "visualRole": "music lineup", "cocoObject": "DJ Lineup", "editorLabel": "Music By", "independentStyle": true },
+    { "visualRole": "VIP and hookah offer", "cocoObject": "Right Rail", "editorLabel": "Special Offer", "independentStyle": true },
+    { "visualRole": "contact number", "cocoObject": "Left Rail", "editorLabel": "VIP Contact", "independentStyle": true },
+    { "visualRole": "street address", "cocoObject": "Venue", "editorLabel": "Venue", "independentStyle": true },
+    { "visualRole": "dress code", "cocoObject": "Subtag", "editorLabel": "Dress Code", "independentStyle": true }
+  ],
+  "cocoNativeAssetPlan": [
+    { "id": "neon-night-shift-subject-disc", "kind": "SVG circle", "editable": true, "paletteRoles": ["primary", "secondary", "neutral"] },
+    { "id": "neon-night-shift-script-brush", "kind": "SVG paint stroke", "editable": true, "paletteRoles": ["primary"] },
+    { "id": "neon-night-shift-left-field", "kind": "gradient contrast field", "editable": true, "paletteRoles": ["primary", "base"] },
+    { "id": "neon-night-shift-edge-paint-left", "kind": "SVG paint/texture", "editable": true, "paletteRoles": ["primary", "secondary"] },
+    { "id": "neon-night-shift-edge-paint-right", "kind": "SVG paint/texture", "editable": true, "paletteRoles": ["primary", "secondary"] },
+    { "id": "neon-night-shift-photo-chip", "kind": "editable paint/texture block", "editable": true, "paletteRoles": ["primary", "secondary", "base"] },
+    { "id": "neon-night-shift-accent-triangles", "kind": "SVG triangles", "editable": true, "paletteRoles": ["primary", "secondary"] }
+  ],
+  "authority": {
+    "ownsLayout": true,
+    "ownsPalette": true,
+    "ownsCrop": true,
+    "ownsDecorations": true,
+    "ownsBackground": true,
+    "preserveUserSubject": true,
+    "denyGenericLayout": true,
+    "denyGenericPalette": true,
+    "denyGenericCrop": true,
+    "denyGenericDecorations": true,
+    "denyAiBackgroundReplacement": true
+  },
+  "deniedUses": [
+    "flattened reference image",
+    "CSS screenshot as final Coco canvas",
+    "reference portrait as a required final asset",
+    "generic template replacement",
+    "generic palette replacement",
+    "generic crop replacement",
+    "generic decoration replacement",
+    "AI-generated background replacement"
+  ],
+  "editableMaster": "public/generated-flyers/neon-night-shift.nflyer",
+  "nextStep": "Open the editable master in Coco, refine Square and Story, then save over the same recipe family with an incremented version if schema or role mappings change."
+}

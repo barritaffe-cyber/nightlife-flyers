@@ -1,3 +1,5 @@
+import { getFlyerAllowance } from "./billing/flyerAllowance.ts";
+import { isBasicStudioPlan, BASIC_STUDIO_RESTRICTION } from "./billing/studioAccess.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type AccessStatus = "active" | "ondemand" | "starter" | "inactive";
@@ -54,6 +56,8 @@ const ON_DEMAND_LIMITS: Record<string, number> = {
 };
 
 const SUBSCRIPTION_LIMITS: Record<string, number> = {
+  basic: 0,
+  full: 180,
   creator: 90,
   studio: 180,
   monthly: 90,
@@ -207,7 +211,14 @@ export async function getAccessSnapshotForUser(
   }
 
   const synced = await syncProfileQuotaWindow(admin, data as ProfileQuotaRow);
-  return buildAccessSnapshot(synced);
+  const snapshot = buildAccessSnapshot(synced);
+  if(snapshot.status === 'starter') {
+    const flyers = await getFlyerAllowance(admin,userId);
+    if(flyers.has_one_flyer_purchase) return {...snapshot,
+      status:flyers.one_flyer_access?'ondemand':'inactive',
+      profile:{...snapshot.profile,plan:'one_flyer'},generationLimit:0,generationRemaining:0};
+  }
+  return snapshot;
 }
 
 export async function reserveGenerationUnits(
@@ -229,6 +240,9 @@ export async function reserveGenerationUnits(
       return { ok: false, code: 404, message: "Profile not found." };
     }
     lastSnapshot = snapshot;
+    if (isBasicStudioPlan(snapshot.profile.plan)) {
+      return { ok: false, code: 403, message: BASIC_STUDIO_RESTRICTION, snapshot };
+    }
 
     if (snapshot.status === "inactive") {
       return { ok: false, code: 403, message: "Paid access required for AI generation.", snapshot };

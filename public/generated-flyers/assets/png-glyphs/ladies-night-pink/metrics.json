@@ -1,0 +1,814 @@
+{
+  "family": "Ladies Night Pink PNG",
+  "source": "public/generated-flyers/assets/ladies-night-rose/night-alphabet.png",
+  "sourceSha256": "38d5afb9dcd2b977b8fd21eb07e2ba2afe0993c14a8d4b6466d68f9f59aa5484",
+  "glyphs": {
+    "A": {
+      "sourceBounds": [
+        24,
+        275,
+        167,
+        421
+      ],
+      "sourceBaseline": 410,
+      "sourceScale": 2.5,
+      "advance": 865,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 136
+    },
+    "B": {
+      "sourceBounds": [
+        138,
+        284,
+        275,
+        422
+      ],
+      "sourceBaseline": 410,
+      "sourceScale": 2.5,
+      "advance": 828,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 134
+    },
+    "C": {
+      "sourceBounds": [
+        261,
+        288,
+        380,
+        415
+      ],
+      "sourceBaseline": 410,
+      "sourceScale": 2.5,
+      "advance": 715,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 152
+    },
+    "D": {
+      "sourceBounds": [
+        351,
+        283,
+        493,
+        422
+      ],
+      "sourceBaseline": 410,
+      "sourceScale": 2.5,
+      "advance": 859,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 134
+    },
+    "E": {
+      "sourceBounds": [
+        475,
+        287,
+        603,
+        413
+      ],
+      "sourceBaseline": 410,
+      "sourceScale": 2.5,
+      "advance": 772,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 156
+    },
+    "F": {
+      "sourceBounds": [
+        585,
+        280,
+        734,
+        421
+      ],
+      "sourceBaseline": 410,
+      "sourceScale": 2.5,
+      "advance": 903,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 136
+    },
+    "G": {
+      "sourceBounds": [
+        674,
+        287,
+        822,
+        436
+      ],
+      "sourceBaseline": 410,
+      "sourceScale": 2.5,
+      "advance": 896,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 99
+    },
+    "H": {
+      "sourceBounds": [
+        798,
+        282,
+        939,
+        424
+      ],
+      "sourceBaseline": 410,
+      "sourceScale": 2.5,
+      "advance": 853,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 129
+    },
+    "I": {
+      "sourceBounds": [
+        918,
+        286,
+        1011,
+        428
+      ],
+      "sourceBaseline": 410,
+      "sourceScale": 2.5,
+      "advance": 553,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 119
+    },
+    "J": {
+      "sourceBounds": [
+        985,
+        280,
+        1157,
+        433
+      ],
+      "sourceBaseline": 410,
+      "sourceScale": 2.5,
+      "advance": 1046,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 106
+    },
+    "K": {
+      "sourceBounds": [
+        1110,
+        281,
+        1249,
+        432
+      ],
+      "sourceBaseline": 410,
+      "sourceScale": 2.5,
+      "advance": 840,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 109
+    },
+    "L": {
+      "sourceBounds": [
+        1215,
+        279,
+        1377,
+        421
+      ],
+      "sourceBaseline": 410,
+      "sourceScale": 2.5,
+      "advance": 984,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 136
+    },
+    "M": {
+      "sourceBounds": [
+        1363,
+        280,
+        1523,
+        428
+      ],
+      "sourceBaseline": 410,
+      "sourceScale": 2.5,
+      "advance": 972,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 119
+    },
+    "N": {
+      "sourceBounds": [
+        15,
+        425,
+        155,
+        573
+      ],
+      "sourceBaseline": 561,
+      "sourceScale": 2.5,
+      "advance": 846,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 134
+    },
+    "O": {
+      "sourceBounds": [
+        135,
+        437,
+        252,
+        572
+      ],
+      "sourceBaseline": 561,
+      "sourceScale": 2.5,
+      "advance": 703,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 136
+    },
+    "P": {
+      "sourceBounds": [
+        236,
+        425,
+        374,
+        580
+      ],
+      "sourceBaseline": 561,
+      "sourceScale": 2.5,
+      "advance": 834,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 116
+    },
+    "Q": {
+      "sourceBounds": [
+        342,
+        437,
+        495,
+        582
+      ],
+      "sourceBaseline": 561,
+      "sourceScale": 2.5,
+      "advance": 928,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 112
+    },
+    "R": {
+      "sourceBounds": [
+        476,
+        429,
+        609,
+        572
+      ],
+      "sourceBaseline": 561,
+      "sourceScale": 2.5,
+      "advance": 803,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 136
+    },
+    "S": {
+      "sourceBounds": [
+        595,
+        422,
+        719,
+        572
+      ],
+      "sourceBaseline": 561,
+      "sourceScale": 2.5,
+      "advance": 746,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 136
+    },
+    "T": {
+      "sourceBounds": [
+        714,
+        432,
+        879,
+        579
+      ],
+      "sourceBaseline": 561,
+      "sourceScale": 2.5,
+      "advance": 1003,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 119
+    },
+    "U": {
+      "sourceBounds": [
+        798,
+        445,
+        929,
+        568
+      ],
+      "sourceBaseline": 561,
+      "sourceScale": 2.5,
+      "advance": 790,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 146
+    },
+    "V": {
+      "sourceBounds": [
+        915,
+        430,
+        1043,
+        574
+      ],
+      "sourceBaseline": 561,
+      "sourceScale": 2.5,
+      "advance": 772,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 132
+    },
+    "W": {
+      "sourceBounds": [
+        1005,
+        432,
+        1161,
+        568
+      ],
+      "sourceBaseline": 561,
+      "sourceScale": 2.5,
+      "advance": 946,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 146
+    },
+    "X": {
+      "sourceBounds": [
+        1128,
+        432,
+        1285,
+        583
+      ],
+      "sourceBaseline": 561,
+      "sourceScale": 2.5,
+      "advance": 953,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 109
+    },
+    "Y": {
+      "sourceBounds": [
+        1273,
+        429,
+        1395,
+        594
+      ],
+      "sourceBaseline": 561,
+      "sourceScale": 2.5,
+      "advance": 734,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 82
+    },
+    "Z": {
+      "sourceBounds": [
+        1362,
+        428,
+        1517,
+        577
+      ],
+      "sourceBaseline": 561,
+      "sourceScale": 2.5,
+      "advance": 940,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 124
+    },
+    "a": {
+      "sourceBounds": [
+        29,
+        614,
+        163,
+        687
+      ],
+      "sourceBaseline": 687,
+      "sourceScale": 2.5,
+      "advance": 809,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 164
+    },
+    "b": {
+      "sourceBounds": [
+        152,
+        585,
+        275,
+        698
+      ],
+      "sourceBaseline": 687,
+      "sourceScale": 2.5,
+      "advance": 740,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 136
+    },
+    "c": {
+      "sourceBounds": [
+        275,
+        612,
+        382,
+        694
+      ],
+      "sourceBaseline": 687,
+      "sourceScale": 2.5,
+      "advance": 640,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 146
+    },
+    "d": {
+      "sourceBounds": [
+        383,
+        584,
+        515,
+        703
+      ],
+      "sourceBaseline": 687,
+      "sourceScale": 2.5,
+      "advance": 796,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 124
+    },
+    "e": {
+      "sourceBounds": [
+        495,
+        612,
+        603,
+        692
+      ],
+      "sourceBaseline": 687,
+      "sourceScale": 2.5,
+      "advance": 646,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 152
+    },
+    "f": {
+      "sourceBounds": [
+        589,
+        572,
+        717,
+        715
+      ],
+      "sourceBaseline": 687,
+      "sourceScale": 2.5,
+      "advance": 772,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 94
+    },
+    "g": {
+      "sourceBounds": [
+        679,
+        604,
+        841,
+        744
+      ],
+      "sourceBaseline": 687,
+      "sourceScale": 2.5,
+      "advance": 984,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 22
+    },
+    "h": {
+      "sourceBounds": [
+        826,
+        579,
+        952,
+        704
+      ],
+      "sourceBaseline": 687,
+      "sourceScale": 2.5,
+      "advance": 759,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 122
+    },
+    "i": {
+      "sourceBounds": [
+        947,
+        595,
+        1033,
+        694
+      ],
+      "sourceBaseline": 687,
+      "sourceScale": 2.5,
+      "advance": 509,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 146
+    },
+    "j": {
+      "sourceBounds": [
+        988,
+        595,
+        1140,
+        741
+      ],
+      "sourceBaseline": 687,
+      "sourceScale": 2.5,
+      "advance": 922,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 29
+    },
+    "k": {
+      "sourceBounds": [
+        1124,
+        592,
+        1276,
+        711
+      ],
+      "sourceBaseline": 687,
+      "sourceScale": 2.5,
+      "advance": 922,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 104
+    },
+    "l": {
+      "sourceBounds": [
+        1262,
+        583,
+        1364,
+        707
+      ],
+      "sourceBaseline": 687,
+      "sourceScale": 2.5,
+      "advance": 609,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 114
+    },
+    "m": {
+      "sourceBounds": [
+        1351,
+        616,
+        1517,
+        705
+      ],
+      "sourceBaseline": 687,
+      "sourceScale": 2.5,
+      "advance": 1009,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 119
+    },
+    "n": {
+      "sourceBounds": [
+        41,
+        728,
+        171,
+        808
+      ],
+      "sourceBaseline": 790,
+      "sourceScale": 2.5,
+      "advance": 784,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 119
+    },
+    "o": {
+      "sourceBounds": [
+        165,
+        730,
+        263,
+        805
+      ],
+      "sourceBaseline": 790,
+      "sourceScale": 2.5,
+      "advance": 584,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 126
+    },
+    "p": {
+      "sourceBounds": [
+        239,
+        727,
+        394,
+        843
+      ],
+      "sourceBaseline": 790,
+      "sourceScale": 2.5,
+      "advance": 940,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 32
+    },
+    "q": {
+      "sourceBounds": [
+        383,
+        728,
+        507,
+        856
+      ],
+      "sourceBaseline": 790,
+      "sourceScale": 2.5,
+      "advance": 746,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": -1
+    },
+    "r": {
+      "sourceBounds": [
+        497,
+        729,
+        611,
+        809
+      ],
+      "sourceBaseline": 790,
+      "sourceScale": 2.5,
+      "advance": 684,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 116
+    },
+    "s": {
+      "sourceBounds": [
+        577,
+        730,
+        706,
+        829
+      ],
+      "sourceBaseline": 790,
+      "sourceScale": 2.5,
+      "advance": 778,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 66
+    },
+    "t": {
+      "sourceBounds": [
+        705,
+        700,
+        846,
+        832
+      ],
+      "sourceBaseline": 790,
+      "sourceScale": 2.5,
+      "advance": 853,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 59
+    },
+    "u": {
+      "sourceBounds": [
+        811,
+        738,
+        926,
+        807
+      ],
+      "sourceBaseline": 790,
+      "sourceScale": 2.5,
+      "advance": 690,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 122
+    },
+    "v": {
+      "sourceBounds": [
+        930,
+        733,
+        1024,
+        818
+      ],
+      "sourceBaseline": 790,
+      "sourceScale": 2.5,
+      "advance": 559,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 94
+    },
+    "w": {
+      "sourceBounds": [
+        1026,
+        728,
+        1138,
+        814
+      ],
+      "sourceBaseline": 790,
+      "sourceScale": 2.5,
+      "advance": 672,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 104
+    },
+    "x": {
+      "sourceBounds": [
+        1129,
+        725,
+        1255,
+        838
+      ],
+      "sourceBaseline": 790,
+      "sourceScale": 2.5,
+      "advance": 759,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 44
+    },
+    "y": {
+      "sourceBounds": [
+        1255,
+        727,
+        1389,
+        855
+      ],
+      "sourceBaseline": 790,
+      "sourceScale": 2.5,
+      "advance": 809,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 2
+    },
+    "z": {
+      "sourceBounds": [
+        1371,
+        718,
+        1501,
+        823
+      ],
+      "sourceBaseline": 790,
+      "sourceScale": 2.5,
+      "advance": 784,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 82
+    },
+    "0": {
+      "sourceBounds": [
+        86,
+        852,
+        212,
+        994
+      ],
+      "sourceBaseline": 983,
+      "sourceScale": 2.5,
+      "advance": 759,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 136
+    },
+    "1": {
+      "sourceBounds": [
+        238,
+        848,
+        337,
+        1006
+      ],
+      "sourceBaseline": 983,
+      "sourceScale": 2.5,
+      "advance": 590,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 106
+    },
+    "2": {
+      "sourceBounds": [
+        326,
+        857,
+        461,
+        990
+      ],
+      "sourceBaseline": 983,
+      "sourceScale": 2.5,
+      "advance": 815,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 146
+    },
+    "3": {
+      "sourceBounds": [
+        450,
+        848,
+        599,
+        998
+      ],
+      "sourceBaseline": 983,
+      "sourceScale": 2.5,
+      "advance": 903,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 126
+    },
+    "4": {
+      "sourceBounds": [
+        605,
+        847,
+        749,
+        1009
+      ],
+      "sourceBaseline": 983,
+      "sourceScale": 2.5,
+      "advance": 872,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 99
+    },
+    "5": {
+      "sourceBounds": [
+        739,
+        833,
+        905,
+        1003
+      ],
+      "sourceBaseline": 983,
+      "sourceScale": 2.5,
+      "advance": 1009,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 114
+    },
+    "6": {
+      "sourceBounds": [
+        888,
+        857,
+        1013,
+        994
+      ],
+      "sourceBaseline": 983,
+      "sourceScale": 2.5,
+      "advance": 753,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 136
+    },
+    "7": {
+      "sourceBounds": [
+        1035,
+        844,
+        1174,
+        1004
+      ],
+      "sourceBaseline": 983,
+      "sourceScale": 2.5,
+      "advance": 840,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 112
+    },
+    "8": {
+      "sourceBounds": [
+        1159,
+        847,
+        1308,
+        999
+      ],
+      "sourceBaseline": 983,
+      "sourceScale": 2.5,
+      "advance": 903,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 124
+    },
+    "9": {
+      "sourceBounds": [
+        1306,
+        854,
+        1463,
+        1001
+      ],
+      "sourceBaseline": 983,
+      "sourceScale": 2.5,
+      "advance": 953,
+      "bitmapOffsetX": -2,
+      "bitmapOffsetY": 119
+    }
+  },
+  "kerningPairs": 3844
+}

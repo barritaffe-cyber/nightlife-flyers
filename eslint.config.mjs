@@ -18,6 +18,7 @@ const eslintConfig = [
       "build/**",
       "next-env.d.ts",
       "public/ai-assets/**",
+      "public/vendor/**",
       "types/**",
       "backup/**",
       "saved files/**",

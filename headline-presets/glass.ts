@@ -1,16 +1,16 @@
 export const HEADLINE_GLASS_DEFAULTS = {
-  primaryColor: "#FF2BBF",
-  secondaryColor: "#9B5CFF",
-  highlightColor: "#FFD6FF",
-  edgeColor: "#FF37D7",
+  primaryColor: "#FFFFFF",
+  secondaryColor: "#AEBAC6",
+  highlightColor: "#FFFFFF",
+  edgeColor: "#DCE2E8",
 
-  rimColor: "rgba(255,55,215,0.92)",
-  shadowColor: "rgba(10,0,26,0.82)",
+  rimColor: "rgba(220,230,240,0.65)",
+  shadowColor: "rgba(8,12,18,0.35)",
 
-  blur: 1.1,
-  glow: 48,
-  stroke: 1.7,
-  fillAlpha: 0.18,
+  blur: 0.3,
+  glow: 6,
+  stroke: 1.2,
+  fillAlpha: 0.08,
 
   bevelStrength: 0.92,
   innerGlow: 0.28,
@@ -40,24 +40,24 @@ export const GLASS_HEADLINE_PRESET = {
   },
 
   textFx: {
-    alpha: 0.78,
+    alpha: 1,
     uppercase: true,
     bold: true,
     italic: true,
     tracking: -0.045,
 
     gradient: true,
-    color: "rgba(255,80,220,0.08)",
+    color: "rgba(255,255,255,0.08)",
 
-    gradFrom: "rgba(255,160,255,0.22)",
-    gradMid: "rgba(255,43,191,0.18)",
-    gradTo: "rgba(40,0,80,0.62)",
+    gradFrom: "rgba(255,255,255,0.19)",
+    gradMid: "rgba(255,255,255,0.055)",
+    gradTo: "rgba(15,20,27,0.08)",
 
     strokeWidth: 0.75,
-    strokeColor: "rgba(255,70,220,0.88)",
+    strokeColor: "rgba(255,255,255,0.85)",
 
-    glow: 8,
-    glowColor: "rgba(255,43,191,0.48)",
+    glow: 0,
+    glowColor: "rgba(255,255,255,0.3)",
 
     shadowEnabled: true,
     shadowColor: HEADLINE_GLASS_DEFAULTS.shadowColor,
@@ -353,9 +353,9 @@ export const GLASS_HEADLINE_PRESET = {
     skew: -4,
     rotate: 0,
 
-    extrudeDepth: 6,
+    extrudeDepth: 0,
     extrudeAngle: 38,
-    extrudeDistance: 1.8,
+    extrudeDistance: 0,
     extrudeColor: "rgba(25,0,55,0.66)",
 
     align: "center",

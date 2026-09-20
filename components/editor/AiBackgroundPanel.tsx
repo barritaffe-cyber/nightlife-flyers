@@ -646,8 +646,12 @@ function AiBackgroundPanel({
            >
              {genLoading ? (
                <span className="inline-flex items-center gap-2">
-                 <span className="w-3 h-3 rounded-full bg-gradient-to-r from-fuchsia-400 to-indigo-400 animate-pulse" />
-                 Creating Magic…
+                 <span
+                   aria-hidden="true"
+                   className="nf-coco-loader-orb"
+                   style={{ height: 16, width: 16 }}
+                 />
+                 Creating Magic...
                </span>
              ) : (
                'Generate Scene'

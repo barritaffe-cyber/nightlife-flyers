@@ -1,0 +1,10 @@
+{
+  "source": "public/generated-flyers/amapiano-night.nflyer",
+  "master": "public/generated-flyers/amapiano-night-updated.nflyer",
+  "version": 2,
+  "sha256": "280c648735500896ba2d4627a1803bee5fc603ef27f2f1a79c4fa02f74833986",
+  "overrides": {
+    "square": 7,
+    "story": 5
+  }
+}

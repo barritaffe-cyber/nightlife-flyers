@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Glow in the Dark — Coco CSS Measurement Master</title>
+  <style>
+    @font-face { font-family: Anton; src: url("/fonts/Anton.ttf"); }
+    @font-face { font-family: "Permanent Marker Runtime"; src: url("/fonts/script/Good Brush.otf"); }
+    @font-face { font-family: Paint; src: url("/fonts/Paint the town-1.ttf"); }
+    @font-face { font-family: Bebas; src: url("/fonts/BebasNeue-Regular.ttf"); }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #101014; }
+    body { display: grid; place-items: center; padding: 24px; }
+    .canvas {
+      --green: #00ff9c; --cyan: #00dcff; --pink: #ff008f; --orange: #ff9d22;
+      position: relative; width: min(92vw, 540px); aspect-ratio: 9 / 16; overflow: hidden;
+      container-type: inline-size; isolation: isolate; color: #fff; background: #020202;
+      box-shadow: 0 30px 90px #000c;
+    }
+    .base { position: absolute; inset: 0; z-index: -12; background: radial-gradient(ellipse at 52% 44%, #00ffaf12 0%, transparent 32%), #020202; }
+    .glow-wash { position: absolute; inset: -3%; z-index: -10; background: radial-gradient(ellipse at 0 15%, #00ffa03d, transparent 18%), radial-gradient(ellipse at 100% 22%, #00e1ff38, transparent 18%), radial-gradient(ellipse at 0 70%, #00dcff40, transparent 20%), radial-gradient(ellipse at 100% 75%, #00ff962e, transparent 18%); filter: blur(20px); }
+    .smoke { display: none; }
+    .smoke-frame { position: absolute; inset: 0 0 11%; width: 100%; height: 89%; object-fit: fill; opacity: .24; z-index: -9; pointer-events: none; mix-blend-mode: screen; }
+    .subject-glow { position: absolute; z-index: 4; left: 23.5%; top: 31%; width: 53%; height: 50%; background: radial-gradient(ellipse, #00ffaf2e 0%, #00d2ff14 40%, transparent 72%); filter: blur(40px); }
+    .edge-line { position: absolute; z-index: 3; top: 18%; width: 2px; height: 42%; opacity: .6; background: linear-gradient(transparent, #00ffc8, #00c8ff, transparent); filter: drop-shadow(0 0 6px #00eaff); }
+    .edge-line.left { left: 3%; transform: rotate(-5deg); }
+    .edge-line.right { right: 3%; top: 17%; transform: rotate(6deg); }
+    .presenter { position: absolute; z-index: 20; top: 4%; left: 9%; width: 82%; text-align: center; font: 500 2.1cqw/1 Bebas, sans-serif; letter-spacing: .78em; color: #84cfe0; text-transform: uppercase; text-shadow: 0 0 8px #00d2ff73; }
+    .headline { position: absolute; z-index: 5; top: 8.5%; left: 5%; width: 90%; text-align: center; font: 900 19cqw/.78 "Permanent Marker", "Permanent Marker Runtime", cursive; text-transform: uppercase; transform: rotate(-3deg) scaleX(1.25); background: linear-gradient(90deg, #2ab8a2 0%, #00ff83 38%, #56b4d9 67%); color: transparent; background-clip: text; -webkit-background-clip: text; filter: drop-shadow(0 4px 0 #0009); }
+    .link-word { position: absolute; z-index: 5; top: 15.3%; right: 8%; width: 26%; text-align: center; font: 400 7.2cqw/1 Paint, "Permanent Marker Runtime", cursive; text-transform: none; transform: rotate(-7deg); background: linear-gradient(90deg, #f009ff, #ff4fa4, #b43bff); color: transparent; background-clip: text; -webkit-background-clip: text; }
+    .dark { position: absolute; z-index: 5; top: 19.8%; left: 5%; width: 90%; text-align: center; font: 900 32cqw/.78 "Permanent Marker", "Permanent Marker Runtime", cursive; letter-spacing: -.046em; text-transform: uppercase; transform: rotate(-2deg) scaleX(1.45); background: linear-gradient(95deg, #ff625c 0%, #ff9a22 35%, #ffbd20 58%, #dc577d 100%); color: transparent; background-clip: text; -webkit-background-clip: text; text-shadow: 0 8px 0 #0003; }
+    .subject { position: absolute; z-index: 10; left: 18%; top: 29%; width: 64%; height: 60%; object-fit: contain; object-position: center bottom; filter: saturate(1.15) contrast(1.05) drop-shadow(0 20px 28px #0008); }
+    .subject-grade, .slash { display: none; }
+    .date, .time { position: absolute; z-index: 15; top: 49%; font-family: Anton, sans-serif; font-weight: 800; text-transform: uppercase; line-height: .77; }
+    .date { left: 12%; width: 13%; color: var(--orange); font-size: 9cqw; text-align: left; }
+    .time { right: 12%; width: 13%; color: var(--green); font-size: 9cqw; text-align: right; }
+    .friday { position: absolute; z-index: 25; top: 69.5%; left: 25%; width: 50%; text-align: center; white-space: nowrap; font: 900 13.5cqw/.9 "Permanent Marker", "Permanent Marker Runtime", cursive; text-transform: uppercase; transform: rotate(-4deg) scaleX(1.35); filter: drop-shadow(0 4px 2px #0009); }
+    .friday span { display: inline-block; }
+    .friday span:nth-child(1) { color: #00ff99; }
+    .friday span:nth-child(2) { color: #00d8c8; }
+    .friday span:nth-child(3) { color: #ff8c28; }
+    .friday span:nth-child(4) { color: #ff49a0; }
+    .friday span:nth-child(5) { color: #c630da; }
+    .friday span:nth-child(6) { color: #b91cff; }
+    .lineup { position: absolute; z-index: 26; top: 84%; left: 10%; width: 80%; text-align: center; font: 500 4.2cqw/1 Bebas, sans-serif; letter-spacing: .075em; color: #fff; text-transform: uppercase; text-shadow: 0 2px 5px #000c; }
+    .footer { position: absolute; z-index: 30; left: 0; bottom: 0; width: 100%; height: 11%; background: linear-gradient(105deg, #02d9d8 0%, #00cbe7 43%, #007ee9 64%, #ff0099 100%); box-shadow: 0 -8px 24px #0006; }
+    .club { position: absolute; z-index: 31; left: 5%; top: 91%; width: 39%; padding: .75% 1.7%; border: 3px solid #ffffffbf; border-radius: 16px; text-align: center; font: 800 4.2cqw/1 Anton, sans-serif; letter-spacing: -.03em; color: #fff; background: #00506e1f; box-shadow: inset 0 0 10px #ffffff26, 0 2px 6px #0004; }
+    .footer-details, .footer-address, .footer-contact { position: absolute; z-index: 31; left: 49%; width: 43%; font: 600 2.1cqw/1.35 Bebas, sans-serif; letter-spacing: .075em; text-transform: uppercase; color: #ffffffe6; }
+    .footer-details { top: 90.4%; }
+    .footer-address { top: 93.8%; }
+    .footer-contact { top: 96.3%; }
+    .footer-contact span { margin-right: .65em; }
+    .footer-contact b { font-weight: 600; }
+    .price { position: absolute; z-index: 32; right: 3%; top: 91.2%; font: 600 3cqw/1 Anton, sans-serif; color: #fff; }
+    .canvas[data-format="square"] { aspect-ratio: 1; }
+    .canvas[data-format="story"] .presenter { top: 3%; }
+    .canvas[data-format="story"] .headline { top: 7%; }
+    .canvas[data-format="story"] .link-word { top: 12%; }
+    .canvas[data-format="story"] .dark { top: 15.5%; }
+    .canvas[data-format="story"] .subject { left: 14%; top: 29.5%; width: 72%; height: 59.5%; }
+    .canvas[data-format="story"] .date { left: 10%; }
+    .canvas[data-format="story"] .time { right: 10%; }
+    .canvas[data-format="story"] .friday { top: 73.5%; left: 22%; width: 56%; }
+    .canvas[data-format="story"] .lineup { top: 83%; }
+    .canvas[data-format="story"] .club { top: 91.4%; }
+    .canvas[data-format="story"] .footer-details { top: 90.5%; }
+    .canvas[data-format="story"] .footer-contact { top: 96.2%; }
+  </style>
+</head>
+<body>
+  <main class="canvas" data-coco-canvas data-format="story" aria-label="Glow in the Dark measurement master">
+    <div class="base" data-region="background" data-coco-kind="shape" data-coco-asset="background" data-coco-editable="true"></div>
+    <div class="glow-wash" data-region="glow-wash"></div>
+    <img class="smoke-frame" data-region="smoke-frame" data-coco-kind="texture" data-coco-asset="smokeFrame" data-coco-editable="true" src="/generated-flyers/assets/glow-in-the-dark-smoke-v1.png" alt="" aria-hidden="true" />
+    <div class="subject-glow" data-region="subject-glow" data-coco-kind="shape" data-coco-asset="subjectGlow" data-coco-editable="true" aria-hidden="true"></div>
+    <div class="edge-line left" data-region="edge-line-left" data-coco-kind="shape" data-coco-asset="edgeLineLeft" data-coco-editable="true" aria-hidden="true"></div>
+    <div class="edge-line right" data-region="edge-line-right" data-coco-kind="shape" data-coco-asset="edgeLineRight" data-coco-editable="true" aria-hidden="true"></div>
+    <div class="smoke left" data-region="smoke-left" aria-hidden="true">
+      <svg viewBox="0 0 180 1000" preserveAspectRatio="none">
+        <defs>
+          <filter id="smoke-soft" x="-80%" y="-30%" width="260%" height="160%">
+            <feTurbulence type="fractalNoise" baseFrequency=".008 .026" numOctaves="2" seed="17" result="noise" />
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="34" />
+            <feGaussianBlur stdDeviation="7" />
+          </filter>
+          <filter id="smoke-fine" x="-70%" y="-20%" width="240%" height="140%">
+            <feTurbulence type="fractalNoise" baseFrequency=".014 .035" numOctaves="2" seed="31" result="noise" />
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="18" />
+            <feGaussianBlur stdDeviation=".45" />
+          </filter>
+          <filter id="smoke-ghost" x="-70%" y="-20%" width="240%" height="140%">
+            <feTurbulence type="fractalNoise" baseFrequency=".01 .03" numOctaves="2" seed="23" result="noise" />
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="25" />
+            <feGaussianBlur stdDeviation="2.7" />
+          </filter>
+          <linearGradient id="left-smoke-a" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#00ef80" />
+            <stop offset=".46" stop-color="#00e8ff" />
+            <stop offset="1" stop-color="#086cff" />
+          </linearGradient>
+          <linearGradient id="left-smoke-b" x1=".15" y1="0" x2=".7" y2="1">
+            <stop offset="0" stop-color="#00ffa6" />
+            <stop offset=".55" stop-color="#00c9f3" />
+            <stop offset="1" stop-color="#0347ff" />
+          </linearGradient>
+        </defs>
+        <path class="wisp soft" stroke="url(#left-smoke-a)" stroke-width="24" d="M-48 5 C18 10 39 48 99 66 C143 79 121 113 62 118 C2 123 -17 149 31 167" />
+        <path class="wisp fine" stroke="url(#left-smoke-a)" stroke-width="2.2" d="M-50 2 C14 12 32 52 96 68 C141 79 119 109 61 116 C-1 123 -24 147 28 169" />
+        <path class="wisp ghost" stroke="url(#left-smoke-b)" stroke-width="9" d="M-26 204 C52 213 99 247 59 277 C19 308 -13 331 33 357 C74 381 61 411 18 431" />
+        <path class="wisp fine" stroke="url(#left-smoke-b)" stroke-width="1.6" d="M-30 203 C45 216 92 245 57 275 C17 307 -18 329 29 359 C72 385 54 414 12 433" />
+        <path class="wisp soft" stroke="url(#left-smoke-a)" stroke-width="19" d="M-34 492 C32 474 103 511 74 553 C45 595 -16 612 20 649 C49 681 94 698 55 734" />
+        <path class="wisp fine" stroke="url(#left-smoke-a)" stroke-width="1.9" d="M-39 493 C29 477 99 511 72 552 C43 594 -20 613 18 651 C48 681 89 701 51 738" />
+        <path class="wisp ghost" stroke="#00a7ff" stroke-width="7" d="M-29 788 C21 772 74 802 48 833 C24 861 -8 884 31 910" />
+        <path class="wisp fine" stroke="#00d9ef" stroke-width="1.25" opacity=".58" d="M-31 785 C18 775 69 803 45 834 C20 866 -12 885 28 913" />
+      </svg>
+    </div>
+    <div class="smoke right" data-region="smoke-right" aria-hidden="true">
+      <svg viewBox="0 0 180 1000" preserveAspectRatio="none">
+        <defs>
+          <filter id="smoke-soft" x="-80%" y="-30%" width="260%" height="160%">
+            <feTurbulence type="fractalNoise" baseFrequency=".009 .025" numOctaves="2" seed="43" result="noise" />
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="31" />
+            <feGaussianBlur stdDeviation="7" />
+          </filter>
+          <filter id="smoke-fine" x="-70%" y="-20%" width="240%" height="140%">
+            <feTurbulence type="fractalNoise" baseFrequency=".013 .038" numOctaves="2" seed="53" result="noise" />
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="17" />
+            <feGaussianBlur stdDeviation=".45" />
+          </filter>
+          <filter id="smoke-ghost" x="-70%" y="-20%" width="240%" height="140%">
+            <feTurbulence type="fractalNoise" baseFrequency=".011 .028" numOctaves="2" seed="47" result="noise" />
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="24" />
+            <feGaussianBlur stdDeviation="2.7" />
+          </filter>
+          <linearGradient id="right-smoke-a" x1="1" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#00e873" />
+            <stop offset=".48" stop-color="#00d4f4" />
+            <stop offset="1" stop-color="#1474ff" />
+          </linearGradient>
+          <linearGradient id="right-smoke-b" x1=".8" y1="0" x2=".2" y2="1">
+            <stop offset="0" stop-color="#00ff91" />
+            <stop offset=".6" stop-color="#00bafa" />
+            <stop offset="1" stop-color="#0065ff" />
+          </linearGradient>
+        </defs>
+        <path class="wisp soft" stroke="url(#right-smoke-a)" stroke-width="23" d="M228 -4 C154 12 147 42 82 57 C31 68 49 101 111 112 C170 122 190 146 147 177" />
+        <path class="wisp fine" stroke="url(#right-smoke-a)" stroke-width="2.15" d="M231 -7 C158 11 150 43 84 59 C36 70 53 100 112 110 C172 121 195 145 150 179" />
+        <path class="wisp ghost" stroke="url(#right-smoke-b)" stroke-width="8" d="M207 246 C145 227 88 258 116 293 C145 330 197 341 157 383 C129 414 93 442 132 471" />
+        <path class="wisp fine" stroke="url(#right-smoke-b)" stroke-width="1.5" d="M212 244 C146 231 93 258 119 294 C146 329 202 343 159 385 C130 415 96 443 136 474" />
+        <path class="wisp soft" stroke="url(#right-smoke-a)" stroke-width="20" d="M220 520 C163 507 97 535 129 575 C160 613 210 631 169 663 C131 695 104 718 144 751" />
+        <path class="wisp fine" stroke="url(#right-smoke-a)" stroke-width="1.9" d="M224 518 C166 509 102 536 132 577 C162 614 214 631 171 666 C133 696 108 720 148 754" />
+        <path class="wisp ghost" stroke="#078bff" stroke-width="8" d="M220 819 C163 799 111 824 142 855 C167 880 195 903 160 933" />
+        <path class="wisp fine" stroke="#00c5ff" stroke-width="1.25" opacity=".58" d="M224 817 C166 802 115 825 145 857 C171 881 198 905 163 936" />
+      </svg>
+    </div>
+    <div class="slash" data-region="title-slash"></div>
+    <div class="presenter" data-region="presenter" data-coco-kind="text" data-coco-role="presenter" data-coco-object="presenter" data-coco-editable="true">Club Woods Presents</div>
+    <div class="headline" data-region="headline" data-coco-kind="text" data-coco-role="headline" data-coco-object="headline" data-coco-editable="true">Glow</div>
+    <div class="link-word" data-region="link-word" data-coco-kind="text" data-coco-role="details" data-coco-object="linkWord" data-coco-editable="true">in the</div>
+    <div class="dark" data-region="dark-title" data-coco-kind="text" data-coco-role="headline2" data-coco-object="darkTitle" data-coco-editable="true">Dark</div>
+    <img class="subject" data-region="subject" data-coco-kind="image" data-coco-role="subject" data-coco-object="subject" data-coco-asset="subject" data-coco-editable="true" src="/scene-assets/sugar-rush/subject-cutout.png" alt="Replaceable subject" />
+    <div class="subject-grade" data-region="subject-grade"></div>
+    <div class="date" data-region="date" data-coco-kind="text" data-coco-role="date" data-coco-object="date" data-coco-editable="true">APR<br />25</div>
+    <div class="time" data-region="time" data-coco-kind="text" data-coco-role="time" data-coco-object="time" data-coco-editable="true">09<br />PM</div>
+    <div class="friday" data-region="friday" data-coco-kind="text" data-coco-role="subtag" data-coco-object="friday" data-coco-editable="true"><span>F</span><span>R</span><span>I</span><span>D</span><span>A</span><span>Y</span></div>
+    <div class="lineup" data-region="lineup" data-coco-kind="text" data-coco-role="djLineup" data-coco-object="djLineup" data-coco-editable="true">DJ Spice &nbsp;|&nbsp; DJ Elevate</div>
+    <div class="footer" data-region="footer-band" data-coco-kind="shape" data-coco-asset="footerBand" data-coco-editable="true" aria-hidden="true"></div>
+    <div class="club" data-region="venue" data-coco-kind="text" data-coco-role="venue" data-coco-object="venue" data-coco-editable="true">Clubwoods</div>
+    <div class="footer-details" data-region="footer-details" data-coco-kind="text" data-coco-role="details" data-coco-object="footerDetails" data-coco-editable="true">Drinks | Parking Area | Tickets</div>
+    <div class="footer-address" data-region="footer-address" data-coco-kind="text" data-coco-role="address" data-coco-object="footerAddress" data-coco-editable="true">234 West Avenue Street City</div>
+    <div class="footer-contact" data-region="footer-contact-group" data-coco-kind="shape"><span data-region="footer-contact-label" data-coco-kind="text" data-coco-role="rsvpLabel" data-coco-object="footerContactLabel" data-coco-editable="true">R.S.V.P</span><b data-region="footer-contact-value" data-coco-kind="text" data-coco-role="rsvp" data-coco-object="footerContact" data-coco-editable="true">0088 235 0089</b></div>
+    <div class="price" data-region="price" data-coco-kind="text" data-coco-role="price" data-coco-object="price" data-coco-editable="true">$25</div>
+  </main>
+  <script type="application/json" id="glow-in-the-dark-css-master-geometry">
+  {
+    "schemaVersion": 2,
+    "sourceCanvas": { "width": 1080, "height": 1350, "aspectRatio": "4:5" },
+    "elementStyles": {"background":{"type":"shape","editable":true,"paint":{"fill":{"type":"radial-gradient","center":{"x":52,"y":44},"shape":"ellipse","stops":[{"offset":0,"color":"#071B24"},{"offset":45,"color":"#020407"},{"offset":100,"color":"#010203"}]},"opacity":1},"stacking":{"zIndex":-12}},"smokeFrame":{"type":"texture","editable":true,"paint":{"fill":{"type":"solid","color":"#FFFFFF"},"opacity":0.24,"filter":"mix-blend-mode:screen"},"stacking":{"zIndex":-9},"image":{"fit":"fill","position":"center center"}},"subjectGlow":{"type":"shape","editable":true,"paint":{"fill":{"type":"radial-gradient","center":{"x":50,"y":50},"shape":"ellipse","stops":[{"offset":0,"color":"#00FFAF2E"},{"offset":40,"color":"#00D2FF14"},{"offset":72,"color":"#00000000"}]},"opacity":1,"filter":"blur(40px)"},"stacking":{"zIndex":4,"behind":["subject"]}},"edgeLineLeft":{"type":"shape","editable":true,"transform":{"rotate":-5,"scaleX":1,"scaleY":1,"origin":"50% 50%"},"paint":{"fill":{"type":"linear-gradient","angle":180,"stops":[{"offset":0,"color":"#00000000"},{"offset":38,"color":"#00FFC8"},{"offset":68,"color":"#00C8FF"},{"offset":100,"color":"#00000000"}]},"opacity":0.6,"filter":"drop-shadow(0 0 6px #00EAFF)"},"stacking":{"zIndex":3}},"edgeLineRight":{"type":"shape","editable":true,"transform":{"rotate":6,"scaleX":1,"scaleY":1,"origin":"50% 50%"},"paint":{"fill":{"type":"linear-gradient","angle":180,"stops":[{"offset":0,"color":"#00000000"},{"offset":38,"color":"#00FFC8"},{"offset":68,"color":"#00C8FF"},{"offset":100,"color":"#00000000"}]},"opacity":0.6,"filter":"drop-shadow(0 0 6px #00EAFF)"},"stacking":{"zIndex":3}},"presenter":{"type":"text","semanticRole":"presenter","editable":true,"typography":{"sourceFamily":"Bebas Neue","runtimeFamily":"Bebas Neue","fontSize":18,"fontSizeUnit":"source-px","weight":500,"lineHeight":1,"letterSpacing":0.66,"letterSpacingUnit":"em","align":"center","textTransform":"uppercase","fit":{"mode":"width","targetFill":1}},"transform":{"rotate":0,"scaleX":1,"scaleY":1,"origin":"50% 50%"},"paint":{"fill":{"type":"solid","color":"#84CFE0"},"opacity":1,"shadow":{"x":0,"y":0,"blur":8,"color":"#00D2FF73"}},"stacking":{"zIndex":20}},"headline":{"type":"text","semanticRole":"primary-headline","editable":true,"typography":{"sourceFamily":"Permanent Marker","runtimeFamily":"Good Brush","fontSize":132,"fontSizeUnit":"source-px","weight":900,"lineHeight":0.78,"letterSpacing":0,"letterSpacingUnit":"em","align":"center","textTransform":"uppercase","fit":{"mode":"width","targetFill":1}},"transform":{"rotate":-3,"scaleX":1,"scaleY":1,"origin":"50% 50%"},"paint":{"fill":{"type":"linear-gradient","angle":90,"stops":[{"offset":0,"color":"#2AB8A2"},{"offset":38,"color":"#00FF83"},{"offset":67,"color":"#56B4D9"}]},"opacity":1,"shadow":{"x":0,"y":4,"blur":0,"color":"#00000099"}},"stacking":{"zIndex":5,"behind":["subject"]}},"linkWord":{"type":"text","semanticRole":"connector","editable":true,"typography":{"sourceFamily":"Paint the Town","runtimeFamily":"Paint the town","fontSize":48,"fontSizeUnit":"source-px","weight":400,"lineHeight":1,"letterSpacing":0,"letterSpacingUnit":"em","align":"center","textTransform":"none","fit":{"mode":"width","targetFill":1}},"transform":{"rotate":-7,"scaleX":1,"scaleY":1,"origin":"50% 50%"},"paint":{"fill":{"type":"linear-gradient","angle":90,"stops":[{"offset":0,"color":"#F009FF"},{"offset":50,"color":"#FF4FA4"},{"offset":100,"color":"#B43BFF"}]},"opacity":1},"stacking":{"zIndex":5}},"darkTitle":{"type":"text","semanticRole":"primary-headline","editable":true,"typography":{"sourceFamily":"Permanent Marker","runtimeFamily":"Good Brush","fontSize":196,"fontSizeUnit":"source-px","weight":900,"lineHeight":0.78,"letterSpacing":-0.046,"letterSpacingUnit":"em","align":"center","textTransform":"uppercase","fit":{"mode":"width","targetFill":1}},"transform":{"rotate":-2,"scaleX":1.03,"scaleY":1,"origin":"50% 50%"},"paint":{"fill":{"type":"linear-gradient","angle":95,"stops":[{"offset":0,"color":"#FF625C"},{"offset":35,"color":"#FF9A22"},{"offset":58,"color":"#FFBD20"},{"offset":100,"color":"#DC577D"}]},"opacity":1,"shadow":{"x":0,"y":8,"blur":0,"color":"#00000033"}},"stacking":{"zIndex":5,"behind":["subject"]}},"subject":{"type":"image","semanticRole":"subject","editable":true,"transform":{"rotate":0,"scaleX":1,"scaleY":1,"origin":"50% 50%"},"paint":{"fill":{"type":"solid","color":"#FFFFFF"},"opacity":1},"stacking":{"zIndex":10,"above":["headline","linkWord","darkTitle"]},"image":{"fit":"contain","position":"center bottom","filters":{"saturate":1.15,"contrast":1.05,"dropShadow":{"x":0,"y":20,"blur":28,"color":"#00000088"}}}},"date":{"type":"text","semanticRole":"date","editable":true,"typography":{"sourceFamily":"Anton","runtimeFamily":"Anton","fontSize":61,"fontSizeUnit":"source-px","weight":800,"lineHeight":0.77,"letterSpacing":0,"letterSpacingUnit":"em","align":"left","textTransform":"uppercase","fit":{"mode":"width","targetFill":1}},"transform":{"rotate":0,"scaleX":1,"scaleY":1,"origin":"50% 50%"},"paint":{"fill":{"type":"solid","color":"#FF9D22"},"opacity":1},"stacking":{"zIndex":15}},"time":{"type":"text","semanticRole":"time","editable":true,"typography":{"sourceFamily":"Anton","runtimeFamily":"Anton","fontSize":62,"fontSizeUnit":"source-px","weight":800,"lineHeight":0.77,"letterSpacing":0,"letterSpacingUnit":"em","align":"right","textTransform":"uppercase","fit":{"mode":"width","targetFill":1}},"transform":{"rotate":0,"scaleX":1,"scaleY":1,"origin":"50% 50%"},"paint":{"fill":{"type":"solid","color":"#00FF9C"},"opacity":1},"stacking":{"zIndex":15}},"friday":{"type":"text","semanticRole":"secondary-headline","editable":true,"typography":{"sourceFamily":"Permanent Marker","runtimeFamily":"Good Brush","fontSize":91,"fontSizeUnit":"source-px","weight":900,"lineHeight":0.9,"letterSpacing":0,"letterSpacingUnit":"em","align":"center","textTransform":"uppercase","fit":{"mode":"width","targetFill":1}},"transform":{"rotate":-4,"scaleX":1,"scaleY":1,"origin":"50% 50%"},"paint":{"fill":{"type":"solid","color":"#00FF99"},"glyphColors":["#00FF99","#00D8C8","#FF8C28","#FF49A0","#C630DA","#B91CFF"],"opacity":1,"shadow":{"x":0,"y":4,"blur":2,"color":"#00000099"}},"stacking":{"zIndex":25,"above":["subject"]}},"lineup":{"type":"text","semanticRole":"dj-lineup","editable":true,"typography":{"sourceFamily":"Bebas Neue","runtimeFamily":"Bebas Neue","fontSize":27,"fontSizeUnit":"source-px","weight":500,"lineHeight":1,"letterSpacing":0.075,"letterSpacingUnit":"em","align":"center","textTransform":"uppercase","fit":{"mode":"width","targetFill":1}},"transform":{"rotate":0,"scaleX":1,"scaleY":1,"origin":"50% 50%"},"paint":{"fill":{"type":"solid","color":"#FFFFFF"},"opacity":1,"shadow":{"x":0,"y":2,"blur":5,"color":"#000000CC"}},"stacking":{"zIndex":26}},"footerBand":{"type":"shape","semanticRole":"footer","editable":true,"paint":{"fill":{"type":"linear-gradient","angle":105,"stops":[{"offset":0,"color":"#02D9D8"},{"offset":43,"color":"#00CBE7"},{"offset":64,"color":"#007EE9"},{"offset":100,"color":"#FF0099"}]},"opacity":1,"shadow":{"x":0,"y":-8,"blur":24,"color":"#00000066"}},"stacking":{"zIndex":30}},"venue":{"type":"text","semanticRole":"venue-name","editable":true,"typography":{"sourceFamily":"Anton","runtimeFamily":"Anton","fontSize":32,"fontSizeUnit":"source-px","weight":800,"lineHeight":1,"letterSpacing":-0.03,"letterSpacingUnit":"em","align":"center","textTransform":"uppercase","fit":{"mode":"width","targetFill":1}},"transform":{"rotate":0,"scaleX":1,"scaleY":1,"origin":"50% 50%"},"paint":{"fill":{"type":"solid","color":"#FFFFFF"},"opacity":1,"background":{"type":"solid","color":"#00506E1F"},"border":{"width":3,"style":"solid","color":"#FFFFFFBF","radius":16}},"stacking":{"zIndex":31}},"footerDetails":{"type":"text","semanticRole":"footer-details","editable":true,"typography":{"sourceFamily":"Bebas Neue","runtimeFamily":"Bebas Neue","fontSize":16,"fontSizeUnit":"source-px","weight":600,"lineHeight":1.35,"letterSpacing":0.075,"letterSpacingUnit":"em","align":"left","textTransform":"uppercase","fit":{"mode":"width","targetFill":1}},"transform":{"rotate":0,"scaleX":1,"scaleY":1,"origin":"50% 50%"},"paint":{"fill":{"type":"solid","color":"#FFFFFFE6"},"opacity":1},"stacking":{"zIndex":31}},"footerAddress":{"type":"text","semanticRole":"venue-address","editable":true,"typography":{"sourceFamily":"Bebas Neue","runtimeFamily":"Bebas Neue","fontSize":16,"fontSizeUnit":"source-px","weight":600,"lineHeight":1.35,"letterSpacing":0.075,"letterSpacingUnit":"em","align":"left","textTransform":"uppercase","fit":{"mode":"width","targetFill":1}},"transform":{"rotate":0,"scaleX":1,"scaleY":1,"origin":"50% 50%"},"paint":{"fill":{"type":"solid","color":"#FFFFFFE6"},"opacity":1},"stacking":{"zIndex":31}},"footerContact":{"type":"text","semanticRole":"rsvp-contact","editable":true,"typography":{"sourceFamily":"Bebas Neue","runtimeFamily":"Bebas Neue","fontSize":16,"fontSizeUnit":"source-px","weight":600,"lineHeight":1.35,"letterSpacing":0.075,"letterSpacingUnit":"em","align":"left","textTransform":"uppercase","fit":{"mode":"width","targetFill":1}},"transform":{"rotate":0,"scaleX":1,"scaleY":1,"origin":"50% 50%"},"paint":{"fill":{"type":"solid","color":"#FFFFFFE6"},"opacity":1},"stacking":{"zIndex":31}},"price":{"type":"text","semanticRole":"price","editable":true,"typography":{"sourceFamily":"Anton","runtimeFamily":"Anton","fontSize":22,"fontSizeUnit":"source-px","weight":600,"lineHeight":1,"letterSpacing":0,"letterSpacingUnit":"em","align":"right","textTransform":"uppercase","fit":{"mode":"width","targetFill":1}},"transform":{"rotate":0,"scaleX":1,"scaleY":1,"origin":"50% 50%"},"paint":{"fill":{"type":"solid","color":"#FFFFFF"},"opacity":1},"stacking":{"zIndex":32}}},
+    "runtimeTypography": {
+      "presenter": { "runtimeFontSize": 9 },
+      "headline": { "runtimeFontSize": 88 },
+      "linkWord": { "runtimeFontSize": 24 },
+      "darkTitle": { "runtimeFontSize": 132 },
+      "date": { "runtimeFontSize": 30.5 },
+      "time": { "runtimeFontSize": 31 },
+      "friday": { "runtimeFontSize": 60 },
+      "lineup": { "runtimeFontSize": 13.5 },
+      "venue": { "runtimeFontSize": 16 },
+      "footerDetails": { "runtimeFontSize": 8 },
+      "footerAddress": { "runtimeFontSize": 8 },
+      "footerContact": { "runtimeFontSize": 8 },
+      "price": { "runtimeFontSize": 11 }
+    },
+    "formats": {
+      "square": {
+        "canvas": { "width": 1080, "height": 1080 },
+        "zones": {
+          "background": { "x": 0, "y": 0, "width": 100, "height": 100 },
+          "smokeFrame": { "x": 0, "y": 0, "width": 100, "height": 89 },
+          "subjectGlow": { "x": 23.5, "y": 31, "width": 53, "height": 50 },
+          "edgeLineLeft": { "x": 3, "y": 18, "width": 0.2, "height": 42 },
+          "edgeLineRight": { "x": 96.8, "y": 17, "width": 0.2, "height": 42 },
+          "presenter": { "x": 9, "y": 4, "width": 82, "height": 2.2 },
+          "headline": { "x": 5, "y": 8.5, "width": 90, "height": 11.5 },
+          "linkWord": { "x": 67, "y": 15.3, "width": 22, "height": 5 },
+          "darkTitle": { "x": 5, "y": 19.8, "width": 90, "height": 17.5 },
+          "subject": { "x": 18, "y": 29, "width": 64, "height": 60 },
+          "date": { "x": 12, "y": 49, "width": 13, "height": 10 },
+          "time": { "x": 75, "y": 49, "width": 13, "height": 10 },
+          "friday": { "x": 25, "y": 72, "width": 50, "height": 9 },
+          "lineup": { "x": 10, "y": 83.5, "width": 80, "height": 3 },
+          "footerBand": { "x": 0, "y": 89, "width": 100, "height": 11 },
+          "venue": { "x": 6, "y": 91.3, "width": 32, "height": 5 },
+          "footerDetails": { "x": 43, "y": 90.4, "width": 41, "height": 2.2 },
+          "footerAddress": { "x": 43, "y": 93.8, "width": 41, "height": 2 },
+          "footerContact": { "x": 43, "y": 96.3, "width": 41, "height": 2 },
+          "price": { "x": 88, "y": 91.5, "width": 6, "height": 3 }
+        }
+      },
+      "story": {
+        "canvas": { "width": 1080, "height": 1920 },
+        "zones": {
+          "background": { "x": 0, "y": 0, "width": 100, "height": 100 },
+          "smokeFrame": { "x": 0, "y": 0, "width": 100, "height": 89 },
+          "subjectGlow": { "x": 23.5, "y": 31, "width": 53, "height": 50 },
+          "edgeLineLeft": { "x": 3, "y": 18, "width": 0.2, "height": 42 },
+          "edgeLineRight": { "x": 96.8, "y": 17, "width": 0.2, "height": 42 },
+          "presenter": { "x": 9, "y": 3, "width": 82, "height": 1.5 },
+          "headline": { "x": 5, "y": 7, "width": 90, "height": 7 },
+          "linkWord": { "x": 67, "y": 12, "width": 22, "height": 3 },
+          "darkTitle": { "x": 5, "y": 15.5, "width": 90, "height": 10.5 },
+          "subject": { "x": 14, "y": 29.5, "width": 72, "height": 59.5 },
+          "date": { "x": 10, "y": 49, "width": 13, "height": 7 },
+          "time": { "x": 77, "y": 49, "width": 13, "height": 7 },
+          "friday": { "x": 22, "y": 73.5, "width": 56, "height": 5.5 },
+          "lineup": { "x": 10, "y": 83, "width": 80, "height": 2 },
+          "footerBand": { "x": 0, "y": 89, "width": 100, "height": 11 },
+          "venue": { "x": 6, "y": 91.4, "width": 32, "height": 3.5 },
+          "footerDetails": { "x": 43, "y": 90.5, "width": 41, "height": 1.5 },
+          "footerAddress": { "x": 43, "y": 93.8, "width": 41, "height": 1.2 },
+          "footerContact": { "x": 43, "y": 96.2, "width": 41, "height": 1.2 },
+          "price": { "x": 88, "y": 91.5, "width": 6, "height": 2 }
+        }
+      }
+    },
+    "palette": { "base": "#010203", "primary": "#ff1b92", "secondary": "#00dff4", "accent": "#00ef80", "warm": "#ff9d24", "neutral": "#f8f5f0" },
+    "deniedUses": ["flattened reference image", "CSS screenshot as final canvas", "generic layout replacement", "generic palette replacement", "generic crop replacement", "AI-generated background"]
+  }
+  </script>
+  <script>
+    const requested = new URLSearchParams(location.search).get("format");
+    if (requested === "square" || requested === "story") document.querySelector(".canvas").dataset.format = requested;
+  </script>
+</body>
+</html>

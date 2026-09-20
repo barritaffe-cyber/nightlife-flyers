@@ -1,0 +1,103 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Fantasy · Euphoria</title>
+<style>
+@font-face{font-family:FantasySerif;src:local('Didot')}
+@font-face{font-family:FantasySans;src:url('/fonts/LEMONMILK-Regular.ttf')}
+*{box-sizing:border-box}body{margin:0;background:#002631}
+.canvas{position:relative;width:1080px;height:1080px;overflow:hidden;background:#002631}.canvas>*{position:absolute}
+.background{inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+.wash{inset:0;background:linear-gradient(180deg,transparent 44%,#00232c08 60%,#001e29a6 84%,#001924b8 100%);z-index:1}
+.text{margin:0;white-space:pre;font:13px/1.45 FantasySerif;color:#fff7e7;z-index:4;text-align:left}
+.presenter{left:5.5%;top:3.3%;width:34%;font:14px/1.4 FantasySans;letter-spacing:.65em}
+.presents{left:17.7%;top:6%;width:20%;font-size:11px;letter-spacing:.7em;color:#edcb89}
+.day{left:5%;top:10.5%;width:9%;font-size:25px;letter-spacing:.4em;text-align:center}
+.month{left:4.7%;top:13.1%;width:10%;font-size:38px;line-height:1;text-align:center}
+.date{left:4.2%;top:16.4%;width:11.5%;font-size:99px;line-height:.95;text-align:center;color:#edcb89}
+.mood{left:6%;top:32.5%;width:18%;font-size:12px;line-height:2.1;letter-spacing:.38em;color:#dfbf7b}
+.genres{left:82%;top:10%;width:15%;font-size:13px;line-height:2;letter-spacing:.32em;text-align:right}
+.headline{left:5%;top:50%;width:75%;font:164px/1 FantasySerif;letter-spacing:-.045em;transform:scaleY(1.18);transform-origin:left top;color:transparent;background:linear-gradient(100deg,#fff5c9 0%,#ae762f 12%,#fff2b4 19%,#e4b864 28%,#fffae1 34%,#bc8234 41%,#fff4b7 48%,#d7a34f 57%,#fff9d1 65%,#a16d29 74%,#f4d38c 83%,#fff7ce 92%,#c18c40 100%);background-clip:text;-webkit-background-clip:text;filter:drop-shadow(0 1px 0 #fff4bc) drop-shadow(0 0 3px #eabb6970) drop-shadow(0 3px 5px #00242ab3)}
+.subtitle{left:11.5%;top:66.6%;width:63%;font-size:16px;letter-spacing:.46em;text-align:left}
+.musicLabel{left:5.8%;top:72%;width:18%;font-size:12px;letter-spacing:.35em}
+.dj1,.dj2,.dj3{top:74.4%;font-size:22px;line-height:1;letter-spacing:.17em;width:16%}.dj1{left:5.8%}.dj2{left:22.2%}.dj3{left:38.2%}
+.entry,.entryNote,.dress,.dressNote,.rsvp,.rsvpNote{font:9px/1.45 FantasySans;letter-spacing:.25em}.entry{left:9.2%;top:80.3%}.entryNote{left:9.2%;top:83%}.dress{left:26.5%;top:80.6%}.dressNote{left:26.5%;top:82%}.rsvp{left:45.5%;top:80.6%}.rsvpNote{left:45.5%;top:82%}
+.venue{left:5.8%;top:88.4%;width:24%;font-size:61px;line-height:1;letter-spacing:.34em;color:#edcb89}
+.city{left:8.4%;top:94%;width:22%;font:12px/1.3 FantasySans;letter-spacing:.6em;color:#edcb89}
+.time{left:34%;top:89%;width:28%;font-size:15px;letter-spacing:.27em}
+.address{left:34%;top:91.7%;width:29%;font-size:12px;line-height:1.7;letter-spacing:.3em}
+.reserve{left:69%;top:91.3%;width:25%;font-size:12px;letter-spacing:.3em;text-align:center;color:#edcb89}
+.rule{background:#dfbf7b;z-index:3;height:1.3px}.dateRule{left:6.5%;top:25.3%;width:1.3px;height:5%}.moodRule{left:6%;top:43%;width:4%}.genresRule{left:93%;top:21%;width:4%}.titleRule{left:33%;top:69.7%;width:4%}.djRule1{left:19%;top:74.5%;width:1px;height:1.5%}.djRule2{left:33%;top:74.5%;width:1px;height:1.5%}.lineupRule{left:5.8%;top:78%;width:3.5%}.offerRule1{left:21.2%;top:79.5%;width:1px;height:5.5%}.offerRule2{left:40%;top:79.5%;width:1px;height:5.5%}.venueRule{left:31%;top:89%;width:1.3px;height:5.5%}
+.reserveFrame{left:68%;top:89%;width:27%;height:5.5%;border:1.3px solid #dfbf7b;background:#001923c9;z-index:2}
+.icon{top:80.6%;height:2.8%;width:2.8%;z-index:3}.people{left:5.8%}.dressIcon{left:23%}.ticket{left:41.8%}
+.canvas[data-format=story]{height:1920px}
+.canvas[data-format=story] .presenter{left:6%;top:3%;width:52%;font-size:17px;letter-spacing:.55em}
+.canvas[data-format=story] .presents{left:19%;top:5%;width:30%;font-size:13px}
+.canvas[data-format=story] .day{left:4%;top:10%;width:11%;font-size:25px}
+.canvas[data-format=story] .month{left:3%;top:12%;width:13%;font-size:39px}
+.canvas[data-format=story] .date{left:2.5%;top:14.5%;width:14%;font-size:100px}
+.canvas[data-format=story] .dateRule{left:6%;top:21%;height:3%}
+.canvas[data-format=story] .mood{left:5%;top:27%;width:19%;font-size:13px;letter-spacing:.25em}
+.canvas[data-format=story] .moodRule{left:5%;top:33.5%;width:5%}
+.canvas[data-format=story] .genres{left:78%;top:8%;width:18%;font-size:15px}
+.canvas[data-format=story] .genresRule{left:91%;top:15.5%;width:5%}
+.canvas[data-format=story] .headline{left:5%;top:56%;width:90%;font-size:194px}
+.canvas[data-format=story] .subtitle{left:8%;top:67%;width:84%;font-size:18px;letter-spacing:.45em;text-align:center}
+.canvas[data-format=story] .titleRule{left:46%;top:70%;width:8%}
+.canvas[data-format=story] .musicLabel{left:8%;top:73%;font-size:15px;width:30%}
+.canvas[data-format=story] .dj1,.canvas[data-format=story] .dj2,.canvas[data-format=story] .dj3{top:75.5%;font-size:29px;width:25%}
+.canvas[data-format=story] .dj1{left:8%}.canvas[data-format=story] .dj2{left:38%}.canvas[data-format=story] .dj3{left:68%}
+.canvas[data-format=story] .djRule1{left:33%;top:75.6%;height:1.5%}.canvas[data-format=story] .djRule2{left:62%;top:75.6%;height:1.5%}
+.canvas[data-format=story] .lineupRule{left:8%;top:79%;width:5%}
+.canvas[data-format=story] .entry,.canvas[data-format=story] .entryNote,.canvas[data-format=story] .dress,.canvas[data-format=story] .dressNote,.canvas[data-format=story] .rsvp,.canvas[data-format=story] .rsvpNote{font-size:11px;letter-spacing:.14em}
+.canvas[data-format=story] .entry{left:12%;top:81.8%}.canvas[data-format=story] .entryNote{left:12%;top:83.5%}
+.canvas[data-format=story] .dress{left:44%;top:82%}.canvas[data-format=story] .dressNote{left:44%;top:83.2%}
+.canvas[data-format=story] .rsvp{left:77%;top:82%}.canvas[data-format=story] .rsvpNote{left:77%;top:83.2%}
+.canvas[data-format=story] .icon{top:82%;width:3.4%;height:2%}.canvas[data-format=story] .people{left:7%}.canvas[data-format=story] .dressIcon{left:39%}.canvas[data-format=story] .ticket{left:72%}
+.canvas[data-format=story] .offerRule1{left:34%;top:81.5%;height:3%}.canvas[data-format=story] .offerRule2{left:67%;top:81.5%;height:3%}
+.canvas[data-format=story] .venue{left:8%;top:88%;width:32%;font-size:70px}
+.canvas[data-format=story] .city{left:11%;top:92%;width:29%;font-size:13px}
+.canvas[data-format=story] .venueRule{left:44%;top:88%;height:5%}
+.canvas[data-format=story] .time{left:50%;top:88.5%;width:43%;font-size:18px}
+.canvas[data-format=story] .address{left:50%;top:90.5%;width:44%;font-size:13px;letter-spacing:.22em}
+.canvas[data-format=story] .reserveFrame{left:23%;top:95%;width:54%;height:3%}
+.canvas[data-format=story] .reserve{left:24%;top:96%;width:52%;font-size:14px}
+.headline{width:80%;font-size:148px;transform:scaleY(1.3)}
+.canvas[data-format=story] .headline{width:90%;font-size:174px}
+</style></head><body>
+<main class="canvas" data-coco-canvas data-format="square">
+<img class="background" data-region="background" data-coco-object="background" src="/templates/fantasy-editor.jpg">
+<div class="wash" data-region="wash" data-coco-object="wash"></div>
+<div class="text presenter" data-region="presenter" data-coco-object="presenter" data-coco-editable="true">ÉLITE EVENTS</div>
+<div class="text presents" data-region="presents" data-coco-object="presents" data-coco-editable="true">PRESENTS</div>
+<div class="text day" data-region="day" data-coco-object="day" data-coco-editable="true">SAT</div>
+<div class="text month" data-region="month" data-coco-object="month" data-coco-editable="true">OCT</div>
+<div class="text date" data-region="date" data-coco-object="date" data-coco-editable="true">05</div>
+<div class="text mood" data-region="mood" data-coco-object="mood" data-coco-editable="true">GOOD
+MUSIC
+BEAUTIFUL
+PEOPLE</div>
+<div class="text genres" data-region="genres" data-coco-object="genres" data-coco-editable="true">R&amp;B
+AFROBEATS
+HIP-HOP
+HOUSE</div>
+<div class="text headline" data-region="headline" data-coco-object="headline" data-coco-editable="true">EUPHORIA</div>
+<div class="text subtitle" data-region="subtitle" data-coco-object="subtitle" data-coco-editable="true">A HIGHER STATE OF NIGHTLIFE</div>
+<div class="text musicLabel" data-region="musicLabel" data-coco-object="musicLabel" data-coco-editable="true">MUSIC BY</div>
+<div class="text dj1" data-region="dj1" data-coco-object="dj1" data-coco-editable="true">DJ NOVA</div>
+<div class="text dj2" data-region="dj2" data-coco-object="dj2" data-coco-editable="true">DJ KAY</div>
+<div class="text dj3" data-region="dj3" data-coco-object="dj3" data-coco-editable="true">DJ ELLE</div>
+<div class="text entry" data-region="entry" data-coco-object="entry" data-coco-editable="true">LADIES
+COMPLIMENTARY</div>
+<div class="text entryNote" data-region="entryNote" data-coco-object="entryNote" data-coco-editable="true">BEFORE 11PM</div>
+<div class="text dress" data-region="dress" data-coco-object="dress" data-coco-editable="true">UPSCALE</div>
+<div class="text dressNote" data-region="dressNote" data-coco-object="dressNote" data-coco-editable="true">FASHION FORWARD</div>
+<div class="text rsvp" data-region="rsvp" data-coco-object="rsvp" data-coco-editable="true">RSVP</div>
+<div class="text rsvpNote" data-region="rsvpNote" data-coco-object="rsvpNote" data-coco-editable="true">GUEST LIST ONLY</div>
+<div class="text venue" data-region="venue" data-coco-object="venue" data-coco-editable="true">LAVO</div>
+<div class="text city" data-region="city" data-coco-object="city" data-coco-editable="true">NEW YORK</div>
+<div class="text time" data-region="time" data-coco-object="time" data-coco-editable="true">10PM — LATE</div>
+<div class="text address" data-region="address" data-coco-object="address" data-coco-editable="true">39 EAST 58TH STREET
+NEW YORK, NY</div>
+<div class="text reserve" data-region="reserve" data-coco-object="reserve" data-coco-editable="true">RESERVE YOUR TABLE  ›</div>
+<div class="rule dateRule" data-region="dateRule" data-coco-object="dateRule"></div><div class="rule moodRule" data-region="moodRule" data-coco-object="moodRule"></div><div class="rule genresRule" data-region="genresRule" data-coco-object="genresRule"></div><div class="rule titleRule" data-region="titleRule" data-coco-object="titleRule"></div><div class="rule djRule1" data-region="djRule1" data-coco-object="djRule1"></div><div class="rule djRule2" data-region="djRule2" data-coco-object="djRule2"></div><div class="rule lineupRule" data-region="lineupRule" data-coco-object="lineupRule"></div><div class="rule offerRule1" data-region="offerRule1" data-coco-object="offerRule1"></div><div class="rule offerRule2" data-region="offerRule2" data-coco-object="offerRule2"></div><div class="rule venueRule" data-region="venueRule" data-coco-object="venueRule"></div><div class="reserveFrame" data-region="reserveFrame" data-coco-object="reserveFrame"></div>
+<img class="icon people" data-region="people" data-coco-object="people" src="/generated-flyers/assets/new-york-people.svg"><img class="icon dressIcon" data-region="dressIcon" data-coco-object="dressIcon" src="/generated-flyers/assets/fantasy-dress.svg"><img class="icon ticket" data-region="ticket" data-coco-object="ticket" src="/generated-flyers/assets/new-york-ticket.svg">
+</main><script>const format=new URLSearchParams(location.search).get('format')==='story'?'story':'square';document.querySelector('.canvas').dataset.format=format;document.querySelector('.background').src=format==='story'?'/generated-flyers/assets/fantassy-story.png':'/templates/fantasy-editor.jpg';</script></body></html>

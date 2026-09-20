@@ -1,0 +1,20 @@
+{
+  "source": "public/generated-flyers/assets/reggae-jams.nflyer",
+  "master": "public/generated-flyers/reggae-jams-updated.nflyer",
+  "version": 2,
+  "sha256": "8763bdadead697d72ce162f2f1528eca9f12b2374cbe72e4a9a15d246d3060c9",
+  "overrides": {
+    "square": 18,
+    "story": 12
+  },
+  "sourceSha256": "99f405f790cbb6249b3e2d7a2896f576d6fe36dd25380e2d99b3973a18af51ba",
+  "subjectReplacement": {
+    "source": "public/generated-flyers/assets/reggae-subject.png",
+    "sha256": "b352c0621807da75f8bd52bf380cb727457baa692f6153752ab495a5a0c5b8e2",
+    "encoding": "Original PNG bytes embedded directly; no additional processing",
+    "replacedReferences": 21,
+    "previousMaster": "recipe-file-backups/reggae-jams-before-subject-99f405f790cb.nflyer",
+    "previousMasterSha256": "99f405f790cbb6249b3e2d7a2896f576d6fe36dd25380e2d99b3973a18af51ba",
+    "preserved": "All non-subject-image project content is byte-identical, including both format sessions, geometry, and object overrides."
+  }
+}

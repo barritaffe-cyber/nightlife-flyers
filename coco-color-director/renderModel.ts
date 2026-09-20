@@ -1,0 +1,1 @@
+import type{ColorRenderModel,ColorSystem}from"./types.ts";export const buildColorRenderModel=(s:ColorSystem,maxStrongColors=3):ColorRenderModel=>({id:`render:${s.id}`,policy:s.policy,roles:s.roles,colorCast:s.colorCast,maxStrongColors});

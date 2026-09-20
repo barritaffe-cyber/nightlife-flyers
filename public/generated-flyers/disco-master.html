@@ -1,0 +1,99 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Disco · Y2K</title><style>
+@font-face{font-family:DiscoSerif;src:local('Didot')}
+@font-face{font-family:DiscoSans;src:url('/fonts/LEMONMILK-Regular.ttf')}
+@font-face{font-family:DiscoScript;src:url('/fonts/Northwell-GraphicEx.com/Northwell/Northwell.otf')}
+*{box-sizing:border-box}body{margin:0;background:#17130f}
+.canvas{position:relative;width:1080px;height:1080px;overflow:hidden;background:#17130f}.canvas>*{position:absolute}
+.background{inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+.wash{inset:0;background:linear-gradient(90deg,#080707b8 0%,#100c0860 30%,transparent 53%,transparent 85%,#09070755 100%);z-index:1}
+.text{margin:0;white-space:pre;font:12px/1.7 DiscoSans;color:#f9f1e7;z-index:4;text-align:left;letter-spacing:.3em}
+.presenter{left:4.8%;top:3.8%;width:36%;font-size:14px;letter-spacing:.75em}
+.presents{left:4.8%;top:6.2%;width:29%;font-size:11px;letter-spacing:.65em}
+.gold{color:transparent;background:linear-gradient(112deg,#fff8dc 0%,#d0a369 17%,#fff4ca 30%,#b68c4b 49%,#ffe7ae 65%,#f3cf8e 81%,#fff5d2 100%);background-clip:text;-webkit-background-clip:text;filter:drop-shadow(0 1px 0 #ffefc780) drop-shadow(0 2px 3px #170d0a70)}
+.headline{left:4.5%;top:10.2%;width:42%;font:237px/.95 DiscoSerif;letter-spacing:-.075em;transform:scaleY(1.04);transform-origin:left top}
+.subtitle{left:5%;top:20%;width:44%;font:200px/1.1 DiscoScript;letter-spacing:0;transform:rotate(-7deg);transform-origin:center}
+.tagline{left:13.5%;top:42%;width:30%;font-size:12px;line-height:2;letter-spacing:.55em}
+.day{left:87.5%;top:3.8%;width:8.5%;font:28px/1 DiscoSerif;letter-spacing:.3em;text-align:center}
+.month{left:87%;top:6.5%;width:10%;font:32px/1 DiscoSerif;letter-spacing:.1em;text-align:center;color:#f3d394}
+.date{left:86.8%;top:9%;width:10%;font:87px/1 DiscoSerif;letter-spacing:0;text-align:center;color:#f3d394}
+.mood{left:89%;top:25%;width:10%;font-size:11px;line-height:2.2;letter-spacing:.3em}
+.musicLabel{left:5%;top:47%;width:25%;font-size:11px;letter-spacing:.4em}
+.dj1,.dj2,.dj3{left:5%;width:26%;font:24px/1 DiscoSerif;letter-spacing:.25em}
+.dj1{top:49.4%}.dj2{top:52%}.dj3{top:54.6%}
+.genres{left:5%;top:60.8%;width:25%;font-size:12px;line-height:1.85}
+.entry{left:5%;top:75%;width:27%;font-size:11px;line-height:1.8}
+.entryNote{left:5%;top:78.6%;width:25%;font-size:11px}
+.venue{left:4.8%;top:84%;width:27%;font:58px/1 DiscoSerif;letter-spacing:.35em;color:#f3d394}
+.city{left:5%;top:89.8%;width:27%;font-size:12px;letter-spacing:.7em}
+.address{left:5%;top:93.4%;width:33%;font-size:10px;line-height:1.85;letter-spacing:.35em}
+.reserve{left:89.5%;top:92%;width:9%;font-size:10px;line-height:1.8}
+.rule{height:1px;background:#e8c991;z-index:3}.dateRule{left:91%;top:17%;width:1px;height:6%}.djRule{left:5%;top:58.3%;width:4%}.genreRule{left:5%;top:71.6%;width:4%}.entryRule{left:5%;top:81%;width:6.4%}.reserveRule{left:89.5%;top:95.7%;width:5.2%}.reserveStem{left:88%;top:94%;width:1px;height:1.8%}
+.canvas[data-format=story]{height:1920px}
+.canvas[data-format=story] .wash{background:linear-gradient(90deg,#08070770 0%,transparent 42%,transparent 86%,#09070740 100%)}
+.canvas[data-format=story] .presenter{left:6%;top:3%;width:60%;font-size:17px}
+.canvas[data-format=story] .presents{left:6%;top:5%;width:45%;font-size:13px}
+.canvas[data-format=story] .headline{left:5%;top:9%;width:66%;font-size:355px}
+.canvas[data-format=story] .subtitle{left:6%;top:16.5%;width:68%;font-size:300px}
+.canvas[data-format=story] .tagline{left:7%;top:35.5%;width:29%;font-size:12px;letter-spacing:.25em}
+.canvas[data-format=story] .day{left:84%;top:5%;width:12%;font-size:33px}
+.canvas[data-format=story] .month{left:83%;top:7%;width:13%;font-size:38px}
+.canvas[data-format=story] .date{left:82%;top:9.5%;width:15%;font-size:112px}
+.canvas[data-format=story] .dateRule{left:89%;top:16.5%;height:4%}
+.canvas[data-format=story] .mood{left:85%;top:23%;width:13%;font-size:12px}
+.canvas[data-format=story] .musicLabel{left:6%;top:44%;width:25%;font-size:13px}
+.canvas[data-format=story] .dj1,.canvas[data-format=story] .dj2,.canvas[data-format=story] .dj3{left:6%;width:26%;font-size:27px}
+.canvas[data-format=story] .dj1{top:46%}.canvas[data-format=story] .dj2{top:48%}.canvas[data-format=story] .dj3{top:50%}
+.canvas[data-format=story] .djRule{left:6%;top:53%;width:6%}
+.canvas[data-format=story] .genres{left:6%;top:55%;width:27%;font-size:13px}
+.canvas[data-format=story] .genreRule{left:6%;top:62.5%;width:6%}
+.canvas[data-format=story] .entry{left:6%;top:66%;width:28%;font-size:12px}
+.canvas[data-format=story] .entryNote{left:6%;top:68.4%;width:28%;font-size:12px}
+.canvas[data-format=story] .entryRule{left:6%;top:71%;width:8%}
+.canvas[data-format=story] .venue{left:6%;top:87%;width:48%;font-size:88px}
+.canvas[data-format=story] .city{left:6.5%;top:92%;width:47%;font-size:15px;letter-spacing:.85em}
+.canvas[data-format=story] .address{left:6.5%;top:95%;width:65%;font-size:13px}
+.canvas[data-format=story] .reserve{left:82%;top:94%;width:15%;font-size:13px}
+.canvas[data-format=story] .reserveRule{left:82%;top:97%;width:10%}
+.canvas[data-format=story] .reserveStem{left:79%;top:95%;height:2%}
+</style></head><body><main class="canvas" data-coco-canvas data-format="square">
+<img class="background" data-region="background" data-coco-object="background" src="/generated-flyers/assets/disco-square.png">
+<div class="wash" data-region="wash" data-coco-object="wash"></div>
+<div class="text presenter" data-region="presenter" data-coco-object="presenter" data-coco-editable="true">NOVA EVENTS</div>
+<div class="text presents" data-region="presents" data-coco-object="presents" data-coco-editable="true">PRESENTS</div>
+<div class="text headline gold" data-region="headline" data-coco-object="headline" data-coco-editable="true">Y2K</div>
+<div class="text subtitle gold" data-region="subtitle" data-coco-object="subtitle" data-coco-editable="true">Disco</div>
+<div class="text tagline" data-region="tagline" data-coco-object="tagline" data-coco-editable="true">THROWBACK HITS
+ALL NIGHT LONG</div>
+<div class="text day" data-region="day" data-coco-object="day" data-coco-editable="true">SAT</div>
+<div class="text month" data-region="month" data-coco-object="month" data-coco-editable="true">OCT</div>
+<div class="text date" data-region="date" data-coco-object="date" data-coco-editable="true">12</div>
+<div class="text mood" data-region="mood" data-coco-object="mood" data-coco-editable="true">GOOD
+MUSIC
+BETTER
+PEOPLE</div>
+<div class="text musicLabel" data-region="musicLabel" data-coco-object="musicLabel" data-coco-editable="true">MUSIC BY</div>
+<div class="text dj1" data-region="dj1" data-coco-object="dj1" data-coco-editable="true">DJ NOVA</div>
+<div class="text dj2" data-region="dj2" data-coco-object="dj2" data-coco-editable="true">DJ KAY</div>
+<div class="text dj3" data-region="dj3" data-coco-object="dj3" data-coco-editable="true">DJ ELLE</div>
+<div class="text genres" data-region="genres" data-coco-object="genres" data-coco-editable="true">2000s HITS
+R&amp;B
+HIP-HOP
+DANCE
+HOUSE</div>
+<div class="text entry" data-region="entry" data-coco-object="entry" data-coco-editable="true">LADIES
+COMPLIMENTARY</div>
+<div class="text entryNote" data-region="entryNote" data-coco-object="entryNote" data-coco-editable="true">BEFORE 11PM</div>
+<div class="text venue" data-region="venue" data-coco-object="venue" data-coco-editable="true">LUXE</div>
+<div class="text city" data-region="city" data-coco-object="city" data-coco-editable="true">NIGHTCLUB</div>
+<div class="text address" data-region="address" data-coco-object="address" data-coco-editable="true">123 WEST 52ND STREET
+NEW YORK, NY</div>
+<div class="text reserve" data-region="reserve" data-coco-object="reserve" data-coco-editable="true">RSVP
+TABLES</div>
+<div class="rule dateRule" data-region="dateRule" data-coco-object="dateRule"></div>
+<div class="rule djRule" data-region="djRule" data-coco-object="djRule"></div>
+<div class="rule genreRule" data-region="genreRule" data-coco-object="genreRule"></div>
+<div class="rule entryRule" data-region="entryRule" data-coco-object="entryRule"></div>
+<div class="rule reserveRule" data-region="reserveRule" data-coco-object="reserveRule"></div>
+<div class="rule reserveStem" data-region="reserveStem" data-coco-object="reserveStem"></div>
+</main><script>const format=new URLSearchParams(location.search).get('format')==='story'?'story':'square';document.querySelector('.canvas').dataset.format=format;document.querySelector('.background').src=format==='story'?'/generated-flyers/assets/disco-story.jpg':'/generated-flyers/assets/disco-square.png';</script></body></html>

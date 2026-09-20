@@ -13,6 +13,7 @@ export default function ContactPage() {
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [subject, setSubject] = React.useState("");
+  React.useEffect(()=>{if(new URLSearchParams(window.location.search).get("subject")==="Template request")setSubject("Template request");},[]);
   const [message, setMessage] = React.useState("");
   const [website, setWebsite] = React.useState("");
   const [submitState, setSubmitState] = React.useState<SubmitState>("idle");
@@ -137,6 +138,7 @@ export default function ContactPage() {
               />
             </label>
 
+            {subject === "Template request" && <p className="text-xs text-white/55">Tell us the event type, mood and design you would like to see. Requests guide the shared library; custom design work and delivery dates are not included.</p>}
             <label className="hidden" aria-hidden="true">
               <span>Website</span>
               <input value={website} onChange={(e) => setWebsite(e.target.value)} tabIndex={-1} autoComplete="off" />

@@ -3,6 +3,8 @@ import { supabaseAdmin } from "../../../../lib/supabase/admin";
 import { supabaseAuth } from "../../../../lib/supabase/auth";
 import { getAccessSnapshotForUser } from "../../../../lib/accessQuota";
 
+import { getFlyerAllowance } from "../../../../lib/billing/flyerAllowance";
+
 export const runtime = "nodejs";
 
 export async function GET(req: Request) {
@@ -29,12 +31,15 @@ export async function GET(req: Request) {
       );
     }
 
+    const flyers = await getFlyerAllowance(admin, userId);
+    const oneFlyer = !["active", "ondemand"].includes(snapshot.status) && flyers.one_flyer_access;
     return NextResponse.json({
-      status: snapshot.status,
+      flyers,
+      status: oneFlyer ? "ondemand" : snapshot.status,
       raw_status: snapshot.rawStatus,
       current_period_end: snapshot.profile.current_period_end,
       email: snapshot.profile.email,
-      plan: snapshot.profile.plan,
+      plan: !["active","ondemand"].includes(snapshot.status) && flyers.has_one_flyer_purchase ? "one_flyer" : snapshot.profile.plan,
       generation_limit: snapshot.generationLimit,
       generation_used: snapshot.generationUsed,
       generation_remaining: snapshot.generationRemaining,

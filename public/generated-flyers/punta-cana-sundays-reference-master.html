@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Punta Cana Sundays — Coco CSS Measurement Master</title>
+  <!--
+    Adapted from the user-supplied 1080x1350 source without modifying it.
+    Supplied source SHA-256: 33329d8c31feb372986b789205cda88696afc7ce5af789af039ab39d65112f54
+    The supplied raster dependencies were not attached. This reusable master
+    therefore uses explicit local tropical framing and a replaceable subject.
+  -->
+  <style>
+    @font-face { font-family: PuntaDisplay; src: url("/fonts/Avigea.woff2") format("woff2"); font-weight: 800; }
+    @font-face { font-family: PuntaScript; src: url("/fonts/OpenScript.ttf") format("truetype"); font-weight: 400; }
+    @font-face { font-family: PuntaSans; src: url("/fonts/LEMONMILK-Bold.ttf") format("truetype"); font-weight: 700 900; }
+    @font-face { font-family: PuntaSansRegular; src: url("/fonts/LEMONMILK-Regular.ttf") format("truetype"); font-weight: 400 700; }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #100c07; }
+    body { display: grid; place-items: center; padding: 24px; }
+
+    .canvas {
+      --orange: #ff4e17;
+      --red: #ef1414;
+      --acid: #eaf418;
+      position: relative;
+      width: min(92vw, 540px);
+      aspect-ratio: 4 / 5;
+      overflow: hidden;
+      container-type: inline-size;
+      isolation: isolate;
+      color: #fff;
+      background: #020201;
+      box-shadow: 0 30px 90px #000e, 0 0 0 1px #ff4e1718;
+      font-family: PuntaSansRegular, sans-serif;
+    }
+    .canvas[data-format="square"] { aspect-ratio: 1; }
+    .canvas[data-format="story"] { aspect-ratio: 9 / 16; }
+
+    .background-field {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse at 50% 39%, #ff7a2a30 0%, #8d20141d 31%, transparent 58%),
+        radial-gradient(ellipse at 50% 76%, #b50d181f 0%, transparent 44%),
+        radial-gradient(ellipse at 8% 43%, #173c2226 0%, transparent 32%),
+        radial-gradient(ellipse at 92% 47%, #74250f2b 0%, transparent 32%),
+        linear-gradient(165deg, #0c0804 0%, #030201 57%, #000 100%);
+    }
+    .subject-halo {
+      position: absolute;
+      z-index: 12;
+      left: 14%;
+      top: 19%;
+      width: 72%;
+      height: 70%;
+      border-radius: 50%;
+      background: radial-gradient(ellipse, #ffae3b4f 0%, #ef3a222d 39%, #bd101013 60%, transparent 76%);
+      filter: blur(28px);
+    }
+
+    .tropical-frame {
+      position: absolute;
+      z-index: 14;
+      inset: -2%;
+      width: 104%;
+      height: 104%;
+      object-fit: fill;
+      object-position: center;
+      opacity: .94;
+      mix-blend-mode: normal;
+      filter: saturate(1.08) contrast(1.08) brightness(.82) drop-shadow(0 10px 20px #000b);
+      pointer-events: none;
+    }
+    .foliage-foreground {
+      position: absolute;
+      z-index: 36;
+      inset: -2%;
+      width: 104%;
+      height: 104%;
+      object-fit: fill;
+      object-position: center;
+      opacity: .92;
+      clip-path: inset(62% 0 0 0);
+      filter: saturate(1.08) contrast(1.08) brightness(.86) drop-shadow(0 -10px 18px #0009);
+      pointer-events: none;
+    }
+
+    .title-group { position: absolute; z-index: 18; top: 2%; left: 21.5%; width: 72%; height: 27%; }
+    .title-punta,
+    .title-cana {
+      position: absolute;
+      font-family: PuntaDisplay, "Times New Roman", serif;
+      font-weight: 800;
+      line-height: .72;
+      text-align: left;
+      white-space: nowrap;
+      transform-origin: left center;
+    }
+    .title-punta {
+      z-index: 18;
+      left: 0;
+      top: 0;
+      width: 100%;
+      font-size: 16cqw;
+      letter-spacing: -.052em;
+      color: var(--orange);
+      transform: scaleX(1.3);
+    }
+    .title-cana {
+      z-index: 18;
+      left: 1%;
+      top: 27%;
+      width: 90%;
+      font-size: 16.5cqw;
+      letter-spacing: -.057em;
+      color: var(--red);
+      transform: scaleX(1.34);
+    }
+    .title-sundays {
+      position: absolute;
+      z-index: 24;
+      right: -9%;
+      top: 55%;
+      width: 66%;
+      font-family: PuntaScript, cursive;
+      font-size: 10.2cqw;
+      font-weight: 400;
+      line-height: .8;
+      color: var(--acid);
+      text-align: left;
+      white-space: nowrap;
+      transform: rotate(-6deg) scaleX(1.25);
+      transform-origin: center;
+      filter: drop-shadow(0 3px 2px #0009);
+    }
+
+    .left-rail { position: absolute; z-index: 40; left: 6.4%; top: 18.5%; width: 14%; height: 49%; color: #fff; }
+    .presenter {
+      position: absolute;
+      z-index: 40;
+      top: 0;
+      left: 0;
+      width: 100%;
+      font-family: PuntaSans, sans-serif;
+      font-size: 1.3cqw;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: .23em;
+      text-transform: uppercase;
+      color: #f6f6f6;
+    }
+    .date-block {
+      position: absolute;
+      z-index: 40;
+      top: 9%;
+      left: 0;
+      width: 100%;
+      font-family: PuntaSans, sans-serif;
+      font-size: 5.45cqw;
+      font-weight: 900;
+      line-height: .72;
+      letter-spacing: -.037em;
+      color: #fff;
+    }
+    .barcode {
+      position: absolute;
+      z-index: 40;
+      left: 0;
+      top: 27%;
+      width: 51%;
+      height: 25.5%;
+      opacity: .92;
+      background: repeating-linear-gradient(90deg, #fff 0 3px, transparent 3px 7px, #fff 7px 9px, transparent 9px 13px);
+    }
+    .hosted,
+    .social {
+      position: absolute;
+      z-index: 40;
+      left: -8%;
+      width: 245%;
+      font-family: PuntaSans, sans-serif;
+      font-size: 1.08cqw;
+      font-weight: 700;
+      line-height: 1;
+      text-transform: uppercase;
+      text-align: left;
+      white-space: nowrap;
+      transform: rotate(-90deg);
+      transform-origin: left top;
+    }
+    .hosted { top: 95%; letter-spacing: .64em; color: #fff; }
+    .social { left: 35%; top: 94%; letter-spacing: .55em; color: var(--acid); }
+
+    .subject {
+      position: absolute;
+      z-index: 30;
+      left: 8%;
+      top: 24%;
+      width: 84%;
+      height: 66%;
+      object-fit: cover;
+      object-position: center top;
+      filter: saturate(1.03) contrast(1.08) brightness(.9) drop-shadow(0 18px 26px #000e) drop-shadow(0 0 24px #f23b2348);
+    }
+
+    .dj-names {
+      position: absolute;
+      z-index: 52;
+      left: 20%;
+      top: 76.3%;
+      width: 62%;
+      text-align: center;
+      font-family: PuntaDisplay, serif;
+      font-size: 4.85cqw;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -.022em;
+      color: #fff;
+      white-space: nowrap;
+      text-shadow: 0 3px 7px #000, 0 1px 0 #000;
+    }
+    .dot-grid {
+      position: absolute;
+      z-index: 45;
+      top: 82.5%;
+      width: 18%;
+      height: 5.7%;
+      opacity: .96;
+      background: radial-gradient(circle, #fff 2px, transparent 2.6px);
+      background-size: 13px 13px;
+    }
+    .dot-grid.left { left: 21%; }
+    .dot-grid.right { right: 21%; }
+
+    .venue {
+      position: absolute;
+      z-index: 55;
+      left: 37%;
+      top: 82.8%;
+      width: 26%;
+      text-align: center;
+      font-family: PuntaSans, sans-serif;
+      font-size: 4.85cqw;
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -.055em;
+      color: #fff;
+      text-shadow: 0 3px 0 #0006;
+    }
+    .dress-code {
+      position: absolute;
+      z-index: 58;
+      left: 21%;
+      top: 89.8%;
+      width: 58%;
+      text-align: center;
+      font-family: PuntaSans, sans-serif;
+      font-size: 1.42cqw;
+      font-weight: 800;
+      line-height: 1.35;
+      text-transform: uppercase;
+      color: #fff;
+      text-shadow: 0 2px 4px #000c;
+    }
+    .footer-band {
+      position: absolute;
+      z-index: 80;
+      left: 0;
+      bottom: 0;
+      width: 100%;
+      height: 4.25%;
+      background: linear-gradient(90deg, #ff3040 0%, #ff1743 55%, #ef1934 100%);
+    }
+    .footer-address {
+      position: absolute;
+      z-index: 81;
+      left: 0;
+      top: 95.75%;
+      width: 100%;
+      height: 4.25%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: PuntaSans, sans-serif;
+      font-size: 1.02cqw;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: .64em;
+      text-transform: uppercase;
+      text-align: center;
+      white-space: nowrap;
+      color: #fff;
+    }
+
+    .canvas[data-format="square"] .subject-halo { left: 14%; top: 19%; width: 72%; height: 70%; }
+    .canvas[data-format="square"] .tropical-frame { inset: -2%; width: 104%; height: 104%; }
+    .canvas[data-format="square"] .foliage-foreground { inset: -2%; width: 104%; height: 104%; clip-path: inset(62% 0 0 0); }
+    .canvas[data-format="square"] .title-group { left: 21.5%; top: 2%; width: 72%; height: 27%; }
+    .canvas[data-format="square"] .left-rail { left: 6.4%; top: 18.5%; width: 14%; height: 49%; }
+    .canvas[data-format="square"] .subject { left: 8%; top: 24%; width: 84%; height: 66%; }
+    .canvas[data-format="square"] .dj-names { left: 20%; top: 76.3%; width: 62%; }
+    .canvas[data-format="square"] .dot-grid { top: 82.5%; height: 5.7%; }
+    .canvas[data-format="square"] .venue { left: 37%; top: 82.8%; width: 26%; }
+    .canvas[data-format="square"] .dress-code { left: 19%; top: 89.8%; width: 62%; }
+
+    .canvas[data-format="story"] .subject-halo { left: 12%; top: 16%; width: 76%; height: 68%; }
+    .canvas[data-format="story"] .tropical-frame { inset: -1%; width: 102%; height: 102%; }
+    .canvas[data-format="story"] .foliage-foreground { inset: -1%; width: 102%; height: 102%; clip-path: inset(64% 0 0 0); }
+    .canvas[data-format="story"] .title-group { left: 21.5%; top: 1.8%; width: 73%; height: 20.5%; }
+    .canvas[data-format="story"] .title-punta { font-size: 17cqw; transform: scaleX(1.3); }
+    .canvas[data-format="story"] .title-cana { top: 29%; font-size: 17.5cqw; transform: scaleX(1.34); }
+    .canvas[data-format="story"] .title-sundays { top: 52%; right: -9%; width: 67%; font-size: 10.8cqw; }
+    .canvas[data-format="story"] .left-rail { left: 6%; top: 18%; width: 14%; height: 46%; }
+    .canvas[data-format="story"] .subject { left: 6%; top: 20%; width: 88%; height: 58%; }
+    .canvas[data-format="story"] .dj-names { left: 17%; top: 76.7%; width: 66%; }
+    .canvas[data-format="story"] .dot-grid { top: 82.5%; height: 4.3%; }
+    .canvas[data-format="story"] .venue { left: 34%; top: 83%; width: 32%; }
+    .canvas[data-format="story"] .dress-code { left: 17%; top: 90.2%; width: 66%; }
+    .canvas[data-format="story"] .footer-band { height: 4.25%; }
+    .canvas[data-format="story"] .footer-address { top: 95.75%; height: 4.25%; }
+  </style>
+</head>
+<body>
+  <main class="canvas" data-coco-canvas data-format="story" aria-label="Punta Cana Sundays measurement master">
+    <div class="background-field" data-region="background" data-coco-object="background" data-coco-asset="background" data-coco-kind="shape" data-coco-editable="true" aria-hidden="true"></div>
+    <div class="subject-halo" data-region="subjectGlow" data-coco-object="subjectGlow" data-coco-asset="subjectGlow" data-coco-kind="shape" data-coco-editable="true" aria-hidden="true"></div>
+    <img class="tropical-frame" src="/generated-flyers/assets/punta-cana-foliage-story-v2.png" alt="" data-region="foliageFrame" data-coco-object="foliageFrame" data-coco-asset="foliageFrame" data-coco-kind="image" data-coco-editable="true" />
+
+    <section class="title-group" aria-label="Three-part title">
+      <div class="title-punta" data-region="headline" data-coco-object="headline" data-coco-kind="text" data-coco-role="headline" data-coco-editable="true">Punta</div>
+      <div class="title-cana" data-region="headline2" data-coco-object="headline2" data-coco-kind="text" data-coco-role="headline2" data-coco-editable="true">Cana</div>
+      <div class="title-sundays" data-region="details" data-coco-object="details" data-coco-kind="text" data-coco-role="details" data-coco-editable="true">Sundays</div>
+    </section>
+
+    <aside class="left-rail" aria-label="Left information rail">
+      <div class="presenter" data-region="presenter" data-coco-object="presenter" data-coco-kind="text" data-coco-role="presenter" data-coco-editable="true">Grodify<br />Presents</div>
+      <div class="date-block" data-region="date" data-coco-object="date" data-coco-kind="text" data-coco-role="date" data-coco-editable="true">03<br />06</div>
+      <div class="barcode" data-region="barcode" data-coco-object="barcode" data-coco-asset="barcode" data-coco-kind="shape" data-coco-editable="true" aria-hidden="true"></div>
+      <div class="hosted" data-region="hostedBy" data-coco-object="hostedBy" data-coco-kind="text" data-coco-role="hostedBy" data-coco-editable="true">Hosted by Grodify</div>
+      <div class="social" data-region="social" data-coco-object="social" data-coco-kind="text" data-coco-role="social" data-coco-editable="true">@Grodify</div>
+    </aside>
+
+    <img class="subject" src="/generated-flyers/assets/punta-cana-subject-v2.png" alt="Replaceable event subject" data-region="subject" data-coco-object="subject" data-coco-asset="subject" data-coco-kind="image" data-coco-role="subject" data-coco-editable="true" />
+    <img class="foliage-foreground" src="/generated-flyers/assets/punta-cana-foliage-story-v2.png" alt="" data-region="foliageForeground" data-coco-object="foliageForeground" data-coco-asset="foliageForeground" data-coco-kind="image" data-coco-editable="true" />
+    <div class="dj-names" data-region="djLineup" data-coco-object="djLineup" data-coco-kind="text" data-coco-role="djLineup" data-coco-editable="true">DjName × DjName</div>
+    <div class="dot-grid left" data-region="dotGridLeft" data-coco-object="dotGridLeft" data-coco-asset="dotGridLeft" data-coco-kind="shape" data-coco-editable="true" aria-hidden="true"></div>
+    <div class="dot-grid right" data-region="dotGridRight" data-coco-object="dotGridRight" data-coco-asset="dotGridRight" data-coco-kind="shape" data-coco-editable="true" aria-hidden="true"></div>
+    <div class="venue" data-region="venue" data-coco-object="venue" data-coco-kind="text" data-coco-role="venue" data-coco-editable="true">Flyers HQ</div>
+    <div class="dress-code" data-region="footerDetails" data-coco-object="footerDetails" data-coco-kind="text" data-coco-role="footerDetails" data-coco-editable="true">Dress code strictly enforced<br />Bottle specials &amp; birthday packages available</div>
+    <div class="footer-band" data-region="footerBand" data-coco-object="footerBand" data-coco-asset="footerBand" data-coco-kind="shape" data-coco-editable="true" aria-hidden="true"></div>
+    <div class="footer-address" data-region="footerAddress" data-coco-object="footerAddress" data-coco-kind="text" data-coco-role="address" data-coco-editable="true">297 Grodify St • New York • NY • 07345 • 978.000.0000</div>
+  </main>
+  <script>
+    const requestedFormat = new URLSearchParams(location.search).get("format");
+    const format = requestedFormat === "square" || requestedFormat === "story" ? requestedFormat : "story";
+    document.querySelector(".canvas").dataset.format = format;
+    const frameUrl = format === "square"
+      ? "/generated-flyers/assets/punta-cana-foliage-square-v2.png"
+      : "/generated-flyers/assets/punta-cana-foliage-story-v2.png";
+    document.querySelectorAll(".tropical-frame, .foliage-foreground").forEach((image) => {
+      image.src = frameUrl;
+    });
+  </script>
+</body>
+</html>

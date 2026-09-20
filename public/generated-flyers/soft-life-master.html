@@ -1,0 +1,90 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Soft Life</title><style>
+@font-face{font-family:SoftSerif;src:url('/fonts/Avigea.woff2')}
+@font-face{font-family:Hand;src:url('/fonts/Northwell-GraphicEx.com/Northwell/Northwell.otf')}
+@font-face{font-family:Sans;src:url('/fonts/LEMONMILK-Light.ttf')}
+@font-face{font-family:Medium;src:url('/fonts/LEMONMILK-Regular.ttf')}
+*{box-sizing:border-box}body{margin:0;background:#f9e3d3}.canvas{position:relative;width:1080px;height:1080px;overflow:hidden;background:#f9e3d3}.canvas>*{position:absolute}.background{inset:0;width:100%;height:100%;object-fit:cover}
+.text{margin:0;white-space:pre;z-index:5;left:4%;width:39%;color:#18130f;font:14px/1.45 Sans;letter-spacing:.24em;text-align:left}
+.presenter{top:2.8%;font-size:21px;letter-spacing:.53em}.presents{top:6%;font-size:11px;letter-spacing:.58em}
+.genres{top:10.5%;font-size:14px;line-height:1.45;letter-spacing:.12em}
+.headline{top:22%;left:2.5%;width:110%;font:470px/1 SoftSerif;letter-spacing:-.055em;transform:scaleX(.51);transform-origin:left top;z-index:2;color:#ac0028;background-image:url('/generated-flyers/assets/soft-life-crimson-material-v2.png');background-size:1100px 470px;background-position:0 0;background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 10px 6px #28020b36)}
+.subtitle{top:40%;left:3.5%;width:48%;font:245px/1.1 Hand;letter-spacing:-.02em;color:#edc997;transform:rotate(-10deg) scaleX(1.8);transform-origin:left top;z-index:4}
+.tagline{top:59%;font-size:19px;letter-spacing:.36em}
+.day{left:90%;top:3%;width:8%;font-size:15px;letter-spacing:.52em;text-align:center}
+.month{left:89%;top:6%;width:10%;font:42px/1 SoftSerif;letter-spacing:0;text-align:center;color:#bb153b}
+.date{left:86%;top:9.6%;width:12%;font:96px/1 SoftSerif;letter-spacing:-.06em;text-align:center}
+.time{left:89%;top:21%;width:10%;font-size:10px;letter-spacing:.42em;text-align:center;line-height:1.5}
+.djLabel{top:65%;font-size:13px;letter-spacing:.36em;color:#a9092a}
+.dj1,.dj2{font:32px/1 SoftSerif;letter-spacing:-.025em}.dj1{top:67.8%}.dj2{top:71.2%}
+.experience{top:77%;font-size:13px;line-height:1.5;letter-spacing:.23em}
+.entry{left:26%;top:77%;width:23%;font:12px/1.6 Medium;letter-spacing:.23em;color:#c2143c}
+.dressLabel{top:87%;font:11px/1.4 Medium;letter-spacing:.24em}.dress{top:89.3%;font:11px/1.4 Medium;letter-spacing:.27em;color:#b20c30}
+.venue{top:94%;font:27px/1 SoftSerif;letter-spacing:-.02em}.address{top:97%;font:10px/1.6 Medium;letter-spacing:.26em}
+.motto{left:65%;top:36.5%;width:16%;font:37px/1.05 Hand;letter-spacing:0;color:#c31842;text-align:center;transform:rotate(-10deg)}
+.badgeTitle{left:81%;top:65%;width:15%;font:48px/1.2 Hand;letter-spacing:0;color:#ffecd6;text-align:center;transform:rotate(-18deg)}
+.badgeCaption{left:80%;top:70%;width:17%;font:14px/1.2 Medium;letter-spacing:.25em;color:#ffecd6;text-align:center;transform:rotate(-18deg)}
+.signoff{left:83%;top:83%;width:16%;font:31px/1.15 Hand;letter-spacing:0;color:#fff0dc;transform:rotate(-15deg);text-align:center}
+.rule{height:2px;width:5%;background:#15110d;z-index:5;left:4%}.r1{top:20.5%}.r2{top:75%}.r3{left:92%;top:19.5%;width:5%;background:#b41539}
+.oval{left:78%;top:62.5%;width:20%;height:12%;border:2px solid #f4ddc6;border-radius:50%;transform:rotate(-20deg);z-index:4}.oval2{left:78.4%;top:62.1%;width:19%;height:12.7%;transform:rotate(-14deg);border-width:1px}
+.canvas[data-format=story]{height:1920px}
+.canvas[data-format=story] .presenter{top:3%;font-size:24px;left:4%;width:60%}.canvas[data-format=story] .presents{top:5.2%;font-size:13px}
+.canvas[data-format=story] .genres{top:8.5%;font-size:18px;line-height:1.4}
+.canvas[data-format=story] .headline{top:16%;font-size:430px;left:2%;transform:scaleX(.37);background-size:1100px 510px}
+.canvas[data-format=story] .subtitle{top:29%;left:3.5%;font-size:270px;transform:rotate(-12deg) scaleX(1.78)}
+.canvas[data-format=story] .tagline{top:45%;font-size:21px;letter-spacing:.27em;width:42%}
+.canvas[data-format=story] .day{left:90%;top:3%;font-size:20px}.canvas[data-format=story] .month{left:89%;top:5.2%;font-size:52px}.canvas[data-format=story] .date{left:84.5%;width:14%;top:8%;font-size:125px}.canvas[data-format=story] .time{left:89%;top:17%;font-size:13px}
+.canvas[data-format=story] .djLabel{top:55%;font-size:16px}.canvas[data-format=story] .dj1{top:57.3%;font-size:39px}.canvas[data-format=story] .dj2{top:59.9%;font-size:39px}
+.canvas[data-format=story] .experience{top:65%;font-size:17px;line-height:1.5}
+.canvas[data-format=story] .entry{left:4%;top:72%;width:35%;font-size:17px}
+.canvas[data-format=story] .dressLabel{top:80%;font-size:15px}.canvas[data-format=story] .dress{top:82%;font-size:15px}
+.canvas[data-format=story] .venue{top:89%;font-size:38px;width:70%}.canvas[data-format=story] .address{top:92%;font-size:15px;width:70%;line-height:1.7}
+.canvas[data-format=story] .motto{left:63%;top:43%;width:17%;font-size:47px}
+.canvas[data-format=story] .badgeTitle{left:78%;top:64.5%;width:19%;font-size:58px}.canvas[data-format=story] .badgeCaption{left:78%;top:68%;width:19%;font-size:17px}
+.canvas[data-format=story] .signoff{left:70%;top:89%;width:25%;font-size:45px;color:#722035}
+.canvas[data-format=story] .r1{top:15.6%;width:6%}.canvas[data-format=story] .r2{top:63%;width:6%}.canvas[data-format=story] .r3{top:16%;left:92%;width:5%}
+.canvas[data-format=story] .oval{left:76%;top:63%;width:23%;height:8.5%}.canvas[data-format=story] .oval2{left:76.4%;top:62.8%;width:22%;height:9%}
+</style></head><body><main class="canvas" data-coco-canvas data-format="square">
+<img class="background" data-region="background" data-coco-object="background" src="/generated-flyers/assets/soft-life-Sq.jpg">
+<div class="text presenter" data-region="presenter" data-coco-object="presenter" data-coco-role="presenter" data-coco-editable="true">CLUB WOODS</div>
+<div class="text presents" data-region="presents" data-coco-object="presents" data-coco-role="presents" data-coco-editable="true">PRESENTS</div>
+<div class="text genres" data-region="genres" data-coco-object="genres" data-coco-role="genres" data-coco-editable="true">R&amp;B
+NEO SOUL
+SLOW JAMS
+2000s CLASSICS</div>
+<div class="text headline" data-region="headline" data-coco-object="headline" data-coco-role="headline" data-coco-editable="true">SOFT</div>
+<div class="text subtitle" data-region="subtitle" data-coco-object="subtitle" data-coco-role="subtitle" data-coco-editable="true">Life</div>
+<div class="text day" data-region="day" data-coco-object="day" data-coco-role="day" data-coco-editable="true">SAT</div>
+<div class="text month" data-region="month" data-coco-object="month" data-coco-role="month" data-coco-editable="true">MAY</div>
+<div class="text date" data-region="date" data-coco-object="date" data-coco-role="date" data-coco-editable="true">24</div>
+<div class="text time" data-region="time" data-coco-object="time" data-coco-role="time" data-coco-editable="true">9PM
+TILL LATE</div>
+<div class="text tagline" data-region="tagline" data-coco-object="tagline" data-coco-role="tagline" data-coco-editable="true">R&amp;B AFTER DARK</div>
+<div class="text djLabel" data-region="djLabel" data-coco-object="djLabel" data-coco-role="djLabel" data-coco-editable="true">MUSIC BY</div>
+<div class="text dj1" data-region="dj1" data-coco-object="dj1" data-coco-role="dj1" data-coco-editable="true">DJ SPICE</div>
+<div class="text dj2" data-region="dj2" data-coco-object="dj2" data-coco-role="dj2" data-coco-editable="true">DJ ELEVATE</div>
+<div class="text experience" data-region="experience" data-coco-object="experience" data-coco-role="experience" data-coco-editable="true">COCKTAILS
+CONVERSATIONS
+LATE NIGHT R&amp;B</div>
+<div class="text entry" data-region="entry" data-coco-object="entry" data-coco-role="entry" data-coco-editable="true">LADIES
+COMPLIMENTARY
+BEFORE 10PM</div>
+<div class="text dressLabel" data-region="dressLabel" data-coco-object="dressLabel" data-coco-role="dressLabel" data-coco-editable="true">DRESS CODE:</div>
+<div class="text dress" data-region="dress" data-coco-object="dress" data-coco-role="dress" data-coco-editable="true">PRETTY &amp; POLISHED</div>
+<div class="text venue" data-region="venue" data-coco-object="venue" data-coco-role="venue" data-coco-editable="true">CLUB WOODS</div>
+<div class="text address" data-region="address" data-coco-object="address" data-coco-role="address" data-coco-editable="true">234 WEST AVENUE STREET
+CITY</div>
+<div class="text motto" data-region="motto" data-coco-object="motto" data-coco-role="motto" data-coco-editable="true">Good
+Music
+Better
+Company ♡</div>
+<div class="text badgeTitle" data-region="badgeTitle" data-coco-object="badgeTitle" data-coco-role="badgeTitle" data-coco-editable="true">R&amp;B</div>
+<div class="text badgeCaption" data-region="badgeCaption" data-coco-object="badgeCaption" data-coco-role="badgeCaption" data-coco-editable="true">ALL NIGHT</div>
+<div class="text signoff" data-region="signoff" data-coco-object="signoff" data-coco-role="signoff" data-coco-editable="true">Come cute.
+Stay late.
+♡</div>
+<div class="rule r1" data-region="r1" data-coco-object="r1"></div>
+<div class="rule r2" data-region="r2" data-coco-object="r2"></div>
+<div class="rule r3" data-region="r3" data-coco-object="r3"></div>
+<div class="oval oval" data-region="oval" data-coco-object="oval"></div>
+<div class="oval oval2" data-region="oval2" data-coco-object="oval2"></div>
+</main><script>const format=new URLSearchParams(location.search).get('format')==='story'?'story':'square';document.querySelector('.canvas').dataset.format=format;document.querySelector('.background').src='/generated-flyers/assets/soft-life-'+(format==='story'?'St':'Sq')+'.jpg';</script></body></html>

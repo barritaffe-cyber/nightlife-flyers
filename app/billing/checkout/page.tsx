@@ -14,6 +14,7 @@ import {
   buildBillingLoginHref,
   getBillingCatalogItem,
   resolveBillingSelection,
+  isPublicBillingSelection,
 } from "../../../lib/billing/catalog";
 import { getClientTrackingPayload } from "../../../lib/analytics/client";
 
@@ -58,7 +59,7 @@ function BillingCheckoutInner() {
     [searchParams]
   );
 
-  const item = selection ? getBillingCatalogItem(selection) : null;
+  const item = selection && isPublicBillingSelection(selection) ? getBillingCatalogItem(selection) : null;
   const loginHref = selection ? buildBillingLoginHref(selection) : "/login";
 
   const [email, setEmail] = React.useState<string | null>(null);
@@ -72,7 +73,7 @@ function BillingCheckoutInner() {
   const currency = getPublicTransactionCurrency();
   const isRecurringPlan = selection?.kind === "plan";
   const foundingPlan =
-    selection?.kind === "plan" ? foundingOffer?.prices?.[selection.plan]?.[selection.billing] : null;
+    selection?.kind === "plan" && (selection.plan === "creator" || selection.plan === "studio") ? foundingOffer?.prices?.[selection.plan]?.[selection.billing] : null;
   const displayPrice = foundingPlan?.effective_price ?? item?.price ?? 0;
   const recurringAmount = item ? `${currency} ${formatPrice(displayPrice)}` : "";
   const recurringCadenceLabel =
@@ -101,7 +102,7 @@ function BillingCheckoutInner() {
   }, []);
 
   const startCheckout = async () => {
-    if (!selection) {
+    if (!selection || !isPublicBillingSelection(selection)) {
       setMsg("Invalid billing selection.");
       return;
     }
@@ -154,7 +155,7 @@ function BillingCheckoutInner() {
       <main className="min-h-screen bg-neutral-950 px-4 py-10 text-white">
         <div className="mx-auto max-w-xl rounded-2xl border border-white/10 bg-neutral-900 p-6">
           <h1 className="text-xl font-semibold">Billing selection not found</h1>
-          <p className="mt-3 text-sm text-white/70">Choose a plan or pass from pricing to continue.</p>
+          <p className="mt-3 text-sm text-white/70">Choose Coco or Coco + Studio from pricing to continue.</p>
           <div className="mt-5 flex gap-2">
             <Link href="/pricing" className="rounded-lg bg-white/10 px-3 py-2 text-sm hover:bg-white/15">
               View pricing
@@ -201,7 +202,7 @@ function BillingCheckoutInner() {
           <p className="mt-3 text-sm text-white/70">{item.description}</p>
         </div>
 
-        {isRecurringPlan && foundingOffer && (foundingOffer.active || foundingOffer.retained_for_user) ? (
+        {isRecurringPlan && foundingPlan && foundingOffer && (foundingOffer.active || foundingOffer.retained_for_user) ? (
           <div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-100">
             <div className="text-[11px] font-semibold uppercase tracking-[0.16em]">Founding 50</div>
             <div className="mt-1">

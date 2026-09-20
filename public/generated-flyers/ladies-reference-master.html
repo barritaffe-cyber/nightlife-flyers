@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ladies — reference CSS master</title>
+  <style>
+    @font-face {
+      font-family: "Avigea";
+      src: url("../fonts/Avigea.woff2") format("woff2");
+      font-display: block;
+    }
+
+    @font-face {
+      font-family: "Open Script";
+      src: url("../fonts/OpenScript.ttf") format("truetype");
+      font-display: block;
+    }
+
+    @font-face {
+      font-family: "Lemon Milk";
+      src: url("../fonts/LEMONMILK-Regular.ttf") format("truetype");
+      font-display: block;
+    }
+
+    @font-face {
+      font-family: "Lemon Milk";
+      src: url("../fonts/LEMONMILK-Bold.ttf") format("truetype");
+      font-weight: 800;
+      font-display: block;
+    }
+
+    :root {
+      /* Native finished-reference canvas. All zones below are percentages. */
+      --canvas-width: 900px;
+      --canvas-height: 1200px;
+
+      --photo-x: 0%;
+      --photo-y: 0%;
+      --photo-width: 100%;
+      --photo-height: 100%;
+      --photo-position-x: 50%;
+      --photo-position-y: 0%;
+
+      --utility-left-x: 5.7%;
+      --utility-left-y: 2.2%;
+      --utility-left-width: 24%;
+      --utility-left-height: 2.5%;
+
+      --utility-right-x: 55.5%;
+      --utility-right-y: 2.1%;
+      --utility-right-width: 38.5%;
+      --utility-right-height: 3.3%;
+
+      --headline-x: 8%;
+      --headline-y: 8.2%;
+      --headline-width: 84%;
+      --headline-height: 16.8%;
+
+      --swash-x: 22%;
+      --swash-y: 22.3%;
+      --swash-width: 53%;
+      --swash-height: 8.5%;
+
+      --date-x: 5.6%;
+      --date-y: 34.5%;
+      --date-width: 20.5%;
+      --date-height: 15.4%;
+
+      --script-x: 15.5%;
+      --script-y: 73%;
+      --script-width: 72%;
+      --script-height: 12.5%;
+
+      --footer-x: 0%;
+      --footer-y: 74%;
+      --footer-width: 100%;
+      --footer-height: 26%;
+
+      --footer-logo-x: 8%;
+      --footer-logo-y: 87.8%;
+      --footer-logo-width: 38%;
+      --footer-logo-height: 8.6%;
+
+      --footer-legal-x: 52.8%;
+      --footer-legal-y: 89.1%;
+      --footer-legal-width: 27%;
+      --footer-legal-height: 7.1%;
+
+      --footer-age-x: 81%;
+      --footer-age-y: 86.5%;
+      --footer-age-width: 5.8%;
+      --footer-age-height: 3.4%;
+
+      --footer-time-x: 83.1%;
+      --footer-time-y: 91.3%;
+      --footer-time-width: 10.5%;
+      --footer-time-height: 5.6%;
+
+      --ink: #fbf8ef;
+      --accent: #ff302a;
+      --micro-accent: #ff473d;
+      --footer-ink: #f8f6f0;
+      --headline-font: "Avigea", Didot, "Bodoni MT", serif;
+      --script-font: "Open Script", "Brush Script MT", cursive;
+      --utility-font: "Lemon Milk", Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: var(--canvas-width);
+      height: var(--canvas-height);
+      margin: 0;
+      overflow: hidden;
+      background: #120c0a;
+    }
+
+    body {
+      font-family: var(--utility-font);
+    }
+
+    .flyer {
+      position: relative;
+      isolation: isolate;
+      width: var(--canvas-width);
+      height: var(--canvas-height);
+      overflow: hidden;
+      color: var(--ink);
+      background: #120c0a;
+    }
+
+    .photo {
+      position: absolute;
+      z-index: 0;
+      left: var(--photo-x);
+      top: var(--photo-y);
+      width: var(--photo-width);
+      height: var(--photo-height);
+      object-fit: cover;
+      object-position: var(--photo-position-x) var(--photo-position-y);
+      filter: saturate(.96) contrast(1.045) brightness(.91);
+    }
+
+    /* These are contrast controls over the user photo, not a replacement background. */
+    .photo-control {
+      position: absolute;
+      z-index: 1;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(180deg, rgba(4, 7, 10, .5) 0%, rgba(4, 7, 10, .07) 23%, transparent 48%),
+        linear-gradient(90deg, rgba(5, 8, 10, .24) 0%, transparent 30%, transparent 76%, rgba(7, 3, 2, .12) 100%);
+    }
+
+    .footer-fade {
+      position: absolute;
+      z-index: 2;
+      left: var(--footer-x);
+      top: var(--footer-y);
+      width: var(--footer-width);
+      height: var(--footer-height);
+      pointer-events: none;
+      background: linear-gradient(180deg, rgba(5, 7, 11, 0) 0%, rgba(5, 7, 11, .72) 26%, #05070b 70%, #05070b 100%);
+    }
+
+    .utility {
+      position: absolute;
+      z-index: 6;
+      font-family: var(--utility-font);
+      text-transform: uppercase;
+      text-shadow: 0 2px 11px rgba(0, 0, 0, .66);
+    }
+
+    .utility-left {
+      left: var(--utility-left-x);
+      top: var(--utility-left-y);
+      width: var(--utility-left-width);
+      min-height: var(--utility-left-height);
+      font-size: 10px;
+      line-height: 1.2;
+      font-weight: 800;
+      letter-spacing: .3em;
+    }
+
+    .utility-right {
+      left: var(--utility-right-x);
+      top: var(--utility-right-y);
+      width: var(--utility-right-width);
+      min-height: var(--utility-right-height);
+      font-size: 8.6px;
+      line-height: 1.28;
+      letter-spacing: .018em;
+    }
+
+    .headline {
+      position: absolute;
+      z-index: 5;
+      left: var(--headline-x);
+      top: var(--headline-y);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: var(--headline-width);
+      height: var(--headline-height);
+      overflow: visible;
+      color: var(--ink);
+      font-family: var(--headline-font);
+      font-size: 210px;
+      font-weight: 400;
+      line-height: .78;
+      letter-spacing: -.058em;
+      text-align: center;
+      text-transform: uppercase;
+      white-space: nowrap;
+      text-shadow: 0 5px 26px rgba(0, 0, 0, .16);
+    }
+
+    .headline-swash {
+      position: absolute;
+      z-index: 5;
+      left: var(--swash-x);
+      top: var(--swash-y);
+      width: var(--swash-width);
+      height: var(--swash-height);
+      overflow: visible;
+      color: var(--ink);
+      transform: rotate(-1.8deg);
+      transform-origin: center;
+      filter: drop-shadow(0 3px 8px rgba(0, 0, 0, .12));
+    }
+
+    .date-seal {
+      position: absolute;
+      z-index: 6;
+      left: var(--date-x);
+      top: var(--date-y);
+      width: var(--date-width);
+      height: var(--date-height);
+      overflow: visible;
+      color: var(--accent);
+      filter: drop-shadow(0 2px 8px rgba(255, 18, 18, .08));
+    }
+
+    .date-seal .ring-copy {
+      fill: currentColor;
+      font-family: var(--headline-font);
+      font-size: 15px;
+      letter-spacing: 1.8px;
+    }
+
+    .date-seal .date-number {
+      fill: currentColor;
+      font-family: var(--utility-font);
+      font-size: 45px;
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      text-anchor: middle;
+    }
+
+    .date-seal .date-month {
+      fill: currentColor;
+      font-family: var(--utility-font);
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: .7px;
+      text-anchor: middle;
+    }
+
+    .script {
+      position: absolute;
+      z-index: 7;
+      left: var(--script-x);
+      top: var(--script-y);
+      display: flex;
+      align-items: center;
+      width: var(--script-width);
+      height: var(--script-height);
+      color: var(--ink);
+      font-family: var(--script-font);
+      font-size: 142px;
+      font-weight: 400;
+      line-height: .78;
+      letter-spacing: -.035em;
+      white-space: nowrap;
+      transform: rotate(-2.1deg);
+      transform-origin: 48% 50%;
+      text-shadow: 0 6px 24px rgba(0, 0, 0, .46);
+    }
+
+    .script::after {
+      content: "";
+      position: absolute;
+      left: 49%;
+      bottom: 19%;
+      width: 43%;
+      height: 3px;
+      background: currentColor;
+      transform: rotate(-3deg);
+      transform-origin: left center;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, .25);
+    }
+
+    .footer-rule {
+      position: absolute;
+      z-index: 5;
+      left: 7.6%;
+      top: 85.8%;
+      width: 84.8%;
+      height: 1px;
+      background: rgba(248, 246, 240, .25);
+    }
+
+    .footer-logo {
+      position: absolute;
+      z-index: 6;
+      left: var(--footer-logo-x);
+      top: var(--footer-logo-y);
+      width: var(--footer-logo-width);
+      height: var(--footer-logo-height);
+      color: var(--footer-ink);
+    }
+
+    .footer-logo strong {
+      display: block;
+      font-family: var(--utility-font);
+      font-size: 38px;
+      font-weight: 800;
+      line-height: .88;
+      letter-spacing: -.04em;
+    }
+
+    .footer-logo span {
+      display: block;
+      margin-top: 9px;
+      font-size: 10px;
+      line-height: 1.25;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    .footer-legal {
+      position: absolute;
+      z-index: 6;
+      left: var(--footer-legal-x);
+      top: var(--footer-legal-y);
+      width: var(--footer-legal-width);
+      min-height: var(--footer-legal-height);
+      color: rgba(248, 246, 240, .82);
+      font-family: var(--utility-font);
+      font-size: 7.5px;
+      line-height: 1.42;
+      letter-spacing: .035em;
+      text-transform: uppercase;
+    }
+
+    .footer-age {
+      position: absolute;
+      z-index: 6;
+      left: var(--footer-age-x);
+      top: var(--footer-age-y);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: var(--footer-age-width);
+      height: var(--footer-age-height);
+      border-radius: 8px;
+      background: var(--micro-accent);
+      color: white;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: .02em;
+    }
+
+    .footer-time {
+      position: absolute;
+      z-index: 6;
+      left: var(--footer-time-x);
+      top: var(--footer-time-y);
+      width: var(--footer-time-width);
+      min-height: var(--footer-time-height);
+      color: var(--footer-ink);
+      font-family: var(--utility-font);
+      font-size: 30px;
+      font-weight: 800;
+      line-height: .77;
+      letter-spacing: -.05em;
+      text-align: right;
+      text-transform: uppercase;
+    }
+
+    .footer-signoff {
+      position: absolute;
+      z-index: 6;
+      left: 8%;
+      bottom: 2.3%;
+      width: 84%;
+      color: rgba(248, 246, 240, .52);
+      font-size: 7.5px;
+      letter-spacing: .47em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <main class="flyer" aria-label="Ladies Wednesday nightlife flyer CSS master">
+    <img
+      class="photo"
+      data-region="photo"
+      src="../create-with-coco/subjects/subject02.jpg"
+      alt="Fashion portrait used as the flyer hero"
+    />
+    <div class="photo-control" data-region="photo-contrast"></div>
+    <div class="footer-fade" data-region="footer-contrast"></div>
+
+    <div class="utility utility-left" data-region="presenter">LA VIDA NIGHT CLUB</div>
+    <div class="utility utility-right" data-region="policies">
+      MUSIC POLICY: DJ NJ · DJ KILTON · DJ MATTHEW &amp; KAY DRUM<br />
+      HYPE POLICY: VOLTAGE PRINCE · CHIEF PRIEST OF HYPE · ECO BLACK · SHERICO
+    </div>
+
+    <div class="headline" data-region="headline">LADIES</div>
+
+    <svg class="headline-swash" data-region="headline-swash" viewBox="0 0 500 110" aria-hidden="true">
+      <path
+        d="M10 30 C100 65 196 78 292 66 C365 57 430 35 487 13 C414 57 341 77 276 82 C174 91 83 71 10 30 Z"
+        fill="currentColor"
+      />
+    </svg>
+
+    <svg class="date-seal" data-region="date" viewBox="0 0 200 200" aria-label="28 August">
+      <defs>
+        <path id="date-ring-path" d="M100,100 m-77,0 a77,77 0 1,1 154,0 a77,77 0 1,1 -154,0" />
+      </defs>
+      <text class="ring-copy">
+        <textPath href="#date-ring-path" startOffset="1%">LA VIDA · LA VIDA · LA VIDA · LA VIDA ·</textPath>
+      </text>
+      <text class="date-number" x="100" y="97">28</text>
+      <text class="date-month" x="100" y="125">AUG</text>
+    </svg>
+
+    <div class="script" data-region="script">Wednesday</div>
+
+    <div class="footer-rule" data-region="footer-rule"></div>
+    <section class="footer-logo" data-region="venue">
+      <strong>LA VIDA<br />NIGHT CLUB</strong>
+      <span>JAMESLINE HOTEL, AVIELE.</span>
+    </section>
+    <section class="footer-legal" data-region="legal">
+      ALL RIGHTS RESERVED. NO PART OF THIS PUBLICATION MAY BE REPRODUCED, DISTRIBUTED OR
+      TRANSMITTED IN ANY FORM WITHOUT PRIOR WRITTEN PERMISSION OF LA VIDA.
+    </section>
+    <div class="footer-age" data-region="age">18+</div>
+    <div class="footer-time" data-region="time">09<br />PM</div>
+    <div class="footer-signoff" data-region="signoff">DRINK RESPONSIBLY · ADMISSION RESERVED</div>
+  </main>
+
+  <!-- Measurement contract for the later Coco translation. No application code is used here. -->
+  <script type="application/json" id="ladies-css-master-geometry">
+    {
+      "canvas": { "width": 900, "height": 1200, "ratio": "3:4" },
+      "photo": { "x": 0, "y": 0, "width": 100, "height": 100, "fit": "cover", "positionX": 50, "positionY": 0 },
+      "photoContrast": { "x": 0, "y": 0, "width": 100, "height": 100, "kind": "two-axis-photo-control" },
+      "presenter": { "x": 5.7, "y": 2.2, "width": 24, "height": 2.5 },
+      "policies": { "x": 55.5, "y": 2.1, "width": 38.5, "height": 3.3 },
+      "headline": { "x": 8, "y": 8.2, "width": 84, "height": 16.8, "font": "Avigea", "fontSizePx": 210, "trackingEm": -0.058 },
+      "headlineSwash": { "x": 22, "y": 22.3, "width": 53, "height": 8.5, "rotationDeg": -1.8 },
+      "date": { "x": 5.6, "y": 34.5, "width": 20.5, "height": 15.4, "accent": "#ff302a" },
+      "script": { "x": 15.5, "y": 73, "width": 72, "height": 12.5, "font": "Open Script", "fontSizePx": 142, "rotationDeg": -2.1 },
+      "footerContrast": { "x": 0, "y": 74, "width": 100, "height": 26, "kind": "transparent-to-solid-fade" },
+      "footerRule": { "x": 7.6, "y": 85.8, "width": 84.8, "heightPx": 1 },
+      "venue": { "x": 8, "y": 87.8, "width": 38, "height": 8.6 },
+      "legal": { "x": 52.8, "y": 89.1, "width": 27, "height": 7.1 },
+      "age": { "x": 81, "y": 86.5, "width": 5.8, "height": 3.4 },
+      "time": { "x": 83.1, "y": 91.3, "width": 10.5, "height": 5.6 },
+      "signoff": { "x": 8, "y": 96.7, "width": 84, "height": 1, "bottom": 2.3 },
+      "zOrder": ["photo", "photo-contrast", "footer-contrast", "headline", "headline-swash", "presenter", "policies", "date", "script", "footer-rule", "venue", "legal", "age", "time", "signoff"]
+    }
+  </script>
+</body>
+</html>

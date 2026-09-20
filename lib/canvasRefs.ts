@@ -12,8 +12,14 @@ export const canvasRefs = {
   presenter: null as HTMLDivElement | null,
   leftRail: null as HTMLDivElement | null,
   rightRail: null as HTMLDivElement | null,
+  socialHandle: null as HTMLDivElement | null,
   date: null as HTMLDivElement | null,
+  time: null as HTMLDivElement | null,
   price: null as HTMLDivElement | null,
+  // compliance renders only through the coco TypographyStack zone system,
+  // no legacy positioned div - stays null always, but needs to exist here
+  // so MoveTarget's "compliance" value can index this object at all.
+  compliance: null as HTMLDivElement | null,
   qr: null as HTMLDivElement | null,
 
   // SPECIAL ELEMENTS

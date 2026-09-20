@@ -1,0 +1,10 @@
+import {readFile,writeFile,copyFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+const source=new URL('../public/generated-flyers/throwback-saturdays.nflyer',import.meta.url);
+const bytes=await readFile(source);const project=JSON.parse(bytes);const sessions=project.state?.session;
+for(const format of ['square','story'])if(sessions?.[format]?.cocoCompositionSystem?.compiledDocument?.id!=='throwback-saturdays')throw new Error(`Missing Throwback ${format} document`);
+await copyFile(source,new URL('../public/generated-flyers/throwback-saturdays-updated.nflyer',import.meta.url));
+await writeFile(new URL('../lib/template-data/throwback-v2.json',import.meta.url),JSON.stringify({square:sessions.square,story:sessions.story},null,2)+'\n');
+const metadata={source:'public/generated-flyers/throwback-saturdays.nflyer',sha256:createHash('sha256').update(bytes).digest('hex'),savedAt:project.state.savedAt,format:project.state.format};
+await writeFile(new URL('../lib/template-data/throwback-saved-source.json',import.meta.url),JSON.stringify(metadata,null,2)+'\n');
+console.log(metadata);

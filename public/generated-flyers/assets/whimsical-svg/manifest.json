@@ -1,0 +1,769 @@
+{
+  "family": "Whimsical SVG",
+  "source": "public/generated-flyers/assets/png-glyphs/whimsical.png",
+  "sha256": "89e71a3e58a7045277eb37354568d30e77d454988c6c7b84b56959c3404148ed",
+  "threshold": 128,
+  "texture": false,
+  "layoutRecipe": "lib/whimsicalWordLayout.ts",
+  "ornamentBounds": {
+    "curl": [
+      22,
+      820,
+      305,
+      911
+    ],
+    "spray": [
+      670,
+      833,
+      763,
+      912
+    ]
+  },
+  "features": "feature kern {\npos uni0041 uni0041 -56;\npos uni0041 uni0042 -56;\npos uni0041 uni0043 -40;\npos uni0041 uni0044 -56;\npos uni0041 uni0045 -67;\npos uni0041 uni0046 -89;\npos uni0041 uni0047 -19;\npos uni0041 uni0048 -78;\npos uni0041 uni0049 -62;\npos uni0041 uni004A -56;\npos uni0041 uni004B -56;\npos uni0041 uni004C -62;\npos uni0041 uni004D -137;\npos uni0041 uni004E -24;\npos uni0041 uni004F -51;\npos uni0041 uni0050 -24;\npos uni0041 uni0051 -40;\npos uni0041 uni0052 -19;\npos uni0041 uni0053 -78;\npos uni0041 uni0054 -46;\npos uni0041 uni0055 -13;\npos uni0041 uni0056 -13;\npos uni0041 uni0057 -13;\npos uni0041 uni0058 -56;\npos uni0041 uni0059 -29;\npos uni0041 uni005A -62;\npos uni0041 uni0061 -56;\npos uni0041 uni0062 -56;\npos uni0041 uni0063 -56;\npos uni0041 uni0064 -56;\npos uni0041 uni0065 -62;\npos uni0041 uni0066 -89;\npos uni0041 uni0067 -148;\npos uni0041 uni0068 -56;\npos uni0041 uni0069 -62;\npos uni0041 uni006A -143;\npos uni0041 uni006B -56;\npos uni0041 uni006C -56;\npos uni0041 uni006D -56;\npos uni0041 uni006E -62;\npos uni0041 uni006F -62;\npos uni0041 uni0070 -83;\npos uni0041 uni0071 -73;\npos uni0041 uni0072 -67;\npos uni0041 uni0073 -78;\npos uni0041 uni0074 -180;\npos uni0041 uni0075 -56;\npos uni0041 uni0076 -56;\npos uni0041 uni0077 -56;\npos uni0041 uni0078 -121;\npos uni0041 uni0079 -159;\npos uni0041 uni007A -180;\npos uni0041 uni0030 -54;\npos uni0041 uni0031 -56;\npos uni0041 uni0032 -62;\npos uni0041 uni0033 -56;\npos uni0041 uni0034 -124;\npos uni0041 uni0035 -56;\npos uni0041 uni0036 -68;\npos uni0041 uni0037 -103;\npos uni0041 uni0038 -56;\npos uni0041 uni0039 -56;\npos uni0042 uni0041 -105;\npos uni0042 uni0042 -94;\npos uni0042 uni0043 -13;\npos uni0042 uni0044 -67;\npos uni0042 uni0045 -35;\npos uni0042 uni0046 -51;\npos uni0042 uni0047 -13;\npos uni0042 uni0048 -24;\npos uni0042 uni0049 -67;\npos uni0042 uni004A -72;\npos uni0042 uni004B -99;\npos uni0042 uni004C -56;\npos uni0042 uni004D -78;\npos uni0042 uni004E -62;\npos uni0042 uni004F -13;\npos uni0042 uni0050 -51;\npos uni0042 uni0051 -13;\npos uni0042 uni0052 -45;\npos uni0042 uni0053 -24;\npos uni0042 uni0054 -78;\npos uni0042 uni0055 -40;\npos uni0042 uni0056 -40;\npos uni0042 uni0057 -18;\npos uni0042 uni0058 -105;\npos uni0042 uni0059 -67;\npos uni0042 uni005A -143;\npos uni0042 uni0061 -72;\npos uni0042 uni0062 -35;\npos uni0042 uni0063 -56;\npos uni0042 uni0064 -67;\npos uni0042 uni0065 -45;\npos uni0042 uni0066 -35;\npos uni0042 uni0067 -148;\npos uni0042 uni0068 -35;\npos uni0042 uni0069 -40;\npos uni0042 uni006A -180;\npos uni0042 uni006B -45;\npos uni0042 uni006C -105;\npos uni0042 uni006D -45;\npos uni0042 uni006E -13;\npos uni0042 uni006F -40;\npos uni0042 uni0070 -99;\npos uni0042 uni0071 -29;\npos uni0042 uni0072 -132;\npos uni0042 uni0073 -99;\npos uni0042 uni0074 -13;\npos uni0042 uni0075 -40;\npos uni0042 uni0076 -13;\npos uni0042 uni0077 -29;\npos uni0042 uni0078 -72;\npos uni0042 uni0079 -110;\npos uni0042 uni007A -110;\npos uni0042 uni0030 -18;\npos uni0042 uni0031 -51;\npos uni0042 uni0032 -155;\npos uni0042 uni0033 -60;\npos uni0042 uni0034 -13;\npos uni0042 uni0035 -60;\npos uni0042 uni0036 -20;\npos uni0042 uni0037 -18;\npos uni0042 uni0038 -60;\npos uni0042 uni0039 -85;\npos uni0043 uni0041 -180;\npos uni0043 uni0042 -116;\npos uni0043 uni0043 -127;\npos uni0043 uni0044 -116;\npos uni0043 uni0045 -78;\npos uni0043 uni0046 -24;\npos uni0043 uni0047 -116;\npos uni0043 uni0048 -127;\npos uni0043 uni0049 -40;\npos uni0043 uni004A -159;\npos uni0043 uni004B -165;\npos uni0043 uni004C -143;\npos uni0043 uni004D -51;\npos uni0043 uni004E -73;\npos uni0043 uni004F -127;\npos uni0043 uni0050 -84;\npos uni0043 uni0051 -127;\npos uni0043 uni0052 -78;\npos uni0043 uni0053 -127;\npos uni0043 uni0054 -51;\npos uni0043 uni0055 -89;\npos uni0043 uni0056 -84;\npos uni0043 uni0057 -132;\npos uni0043 uni0058 -180;\npos uni0043 uni0059 -67;\npos uni0043 uni005A -138;\npos uni0043 uni0061 -159;\npos uni0043 uni0062 -138;\npos uni0043 uni0063 -148;\npos uni0043 uni0064 -154;\npos uni0043 uni0065 -143;\npos uni0043 uni0066 -132;\npos uni0043 uni0067 -180;\npos uni0043 uni0068 -138;\npos uni0043 uni0069 -138;\npos uni0043 uni006A -180;\npos uni0043 uni006B -148;\npos uni0043 uni006C -180;\npos uni0043 uni006D -148;\npos uni0043 uni006E -132;\npos uni0043 uni006F -138;\npos uni0043 uni0070 -180;\npos uni0043 uni0071 -127;\npos uni0043 uni0072 -180;\npos uni0043 uni0073 -180;\npos uni0043 uni0074 -127;\npos uni0043 uni0075 -143;\npos uni0043 uni0076 -127;\npos uni0043 uni0077 -132;\npos uni0043 uni0078 -180;\npos uni0043 uni0079 -180;\npos uni0043 uni007A -180;\npos uni0043 uni0030 -127;\npos uni0043 uni0031 -138;\npos uni0043 uni0032 -180;\npos uni0043 uni0033 -106;\npos uni0043 uni0034 -127;\npos uni0043 uni0035 -151;\npos uni0043 uni0036 -127;\npos uni0043 uni0037 -53;\npos uni0043 uni0038 -151;\npos uni0043 uni0039 -145;\npos uni0044 uni0041 -180;\npos uni0044 uni0042 -57;\npos uni0044 uni0043 -40;\npos uni0044 uni0044 -73;\npos uni0044 uni0045 -40;\npos uni0044 uni0046 -24;\npos uni0044 uni0047 -19;\npos uni0044 uni0048 -78;\npos uni0044 uni0049 -13;\npos uni0044 uni004A -143;\npos uni0044 uni004B -121;\npos uni0044 uni004C -132;\npos uni0044 uni004D -13;\npos uni0044 uni004E -13;\npos uni0044 uni004F -46;\npos uni0044 uni0050 -13;\npos uni0044 uni0051 -40;\npos uni0044 uni0052 -13;\npos uni0044 uni0053 -78;\npos uni0044 uni0054 -13;\npos uni0044 uni0055 -13;\npos uni0044 uni0056 -13;\npos uni0044 uni0057 -19;\npos uni0044 uni0058 -180;\npos uni0044 uni0059 -13;\npos uni0044 uni005A -132;\npos uni0044 uni0061 -138;\npos uni0044 uni0062 -73;\npos uni0044 uni0063 -116;\npos uni0044 uni0064 -132;\npos uni0044 uni0065 -105;\npos uni0044 uni0066 -105;\npos uni0044 uni0067 -180;\npos uni0044 uni0068 -73;\npos uni0044 uni0069 -51;\npos uni0044 uni006A -180;\npos uni0044 uni006B -89;\npos uni0044 uni006C -180;\npos uni0044 uni006D -89;\npos uni0044 uni006E -46;\npos uni0044 uni006F -94;\npos uni0044 uni0070 -143;\npos uni0044 uni0071 -78;\npos uni0044 uni0072 -148;\npos uni0044 uni0073 -127;\npos uni0044 uni0074 -62;\npos uni0044 uni0075 -100;\npos uni0044 uni0076 -62;\npos uni0044 uni0077 -73;\npos uni0044 uni0078 -121;\npos uni0044 uni0079 -159;\npos uni0044 uni007A -154;\npos uni0044 uni0030 -50;\npos uni0044 uni0031 -20;\npos uni0044 uni0032 -180;\npos uni0044 uni0033 -100;\npos uni0044 uni0034 -57;\npos uni0044 uni0035 -131;\npos uni0044 uni0036 -58;\npos uni0044 uni0037 -46;\npos uni0044 uni0038 -124;\npos uni0044 uni0039 -75;\npos uni0045 uni0041 -45;\npos uni0045 uni0042 -45;\npos uni0045 uni0043 -13;\npos uni0045 uni0044 -29;\npos uni0045 uni0045 -13;\npos uni0045 uni0046 -67;\npos uni0045 uni0047 -51;\npos uni0045 uni0048 -13;\npos uni0045 uni0049 -51;\npos uni0045 uni004A -29;\npos uni0045 uni004B -51;\npos uni0045 uni004C -18;\npos uni0045 uni004D -105;\npos uni0045 uni004E -137;\npos uni0045 uni004F -13;\npos uni0045 uni0050 -175;\npos uni0045 uni0051 -18;\npos uni0045 uni0052 -170;\npos uni0045 uni0053 -13;\npos uni0045 uni0054 -180;\npos uni0045 uni0055 -180;\npos uni0045 uni0056 -180;\npos uni0045 uni0057 -62;\npos uni0045 uni0058 -51;\npos uni0045 uni0059 -180;\npos uni0045 uni005A -89;\npos uni0045 uni0061 -29;\npos uni0045 uni0062 -18;\npos uni0045 uni0063 -24;\npos uni0045 uni0064 -29;\npos uni0045 uni0065 -18;\npos uni0045 uni0066 -13;\npos uni0045 uni0067 -126;\npos uni0045 uni0068 -18;\npos uni0045 uni0069 -13;\npos uni0045 uni006A -180;\npos uni0045 uni006B -24;\npos uni0045 uni006C -51;\npos uni0045 uni006D -24;\npos uni0045 uni006E -29;\npos uni0045 uni006F -13;\npos uni0045 uni0070 -72;\npos uni0045 uni0071 -13;\npos uni0045 uni0072 -89;\npos uni0045 uni0073 -116;\npos uni0045 uni0074 -13;\npos uni0045 uni0075 -18;\npos uni0045 uni0076 -13;\npos uni0045 uni0077 -18;\npos uni0045 uni0078 -67;\npos uni0045 uni0079 -99;\npos uni0045 uni007A -121;\npos uni0045 uni0030 -13;\npos uni0045 uni0031 -25;\npos uni0045 uni0032 -96;\npos uni0045 uni0033 -25;\npos uni0045 uni0034 -18;\npos uni0045 uni0035 -25;\npos uni0045 uni0036 -13;\npos uni0045 uni0037 -13;\npos uni0045 uni0038 -25;\npos uni0045 uni0039 -48;\npos uni0046 uni0041 -180;\npos uni0046 uni0042 -127;\npos uni0046 uni0043 -122;\npos uni0046 uni0044 -149;\npos uni0046 uni0045 -180;\npos uni0046 uni0046 -78;\npos uni0046 uni0047 -95;\npos uni0046 uni0048 -180;\npos uni0046 uni0049 -100;\npos uni0046 uni004A -180;\npos uni0046 uni004B -180;\npos uni0046 uni004C -180;\npos uni0046 uni004D -105;\npos uni0046 uni004E -84;\npos uni0046 uni004F -132;\npos uni0046 uni0050 -84;\npos uni0046 uni0051 -122;\npos uni0046 uni0052 -84;\npos uni0046 uni0053 -180;\npos uni0046 uni0054 -89;\npos uni0046 uni0055 -84;\npos uni0046 uni0056 -84;\npos uni0046 uni0057 -95;\npos uni0046 uni0058 -180;\npos uni0046 uni0059 -84;\npos uni0046 uni005A -180;\npos uni0046 uni0061 -180;\npos uni0046 uni0062 -159;\npos uni0046 uni0063 -180;\npos uni0046 uni0064 -180;\npos uni0046 uni0065 -180;\npos uni0046 uni0066 -180;\npos uni0046 uni0067 -180;\npos uni0046 uni0068 -159;\npos uni0046 uni0069 -122;\npos uni0046 uni006A -180;\npos uni0046 uni006B -176;\npos uni0046 uni006C -180;\npos uni0046 uni006D -180;\npos uni0046 uni006E -159;\npos uni0046 uni006F -180;\npos uni0046 uni0070 -180;\npos uni0046 uni0071 -180;\npos uni0046 uni0072 -180;\npos uni0046 uni0073 -180;\npos uni0046 uni0074 -180;\npos uni0046 uni0075 -180;\npos uni0046 uni0076 -180;\npos uni0046 uni0077 -180;\npos uni0046 uni0078 -180;\npos uni0046 uni0079 -180;\npos uni0046 uni007A -180;\npos uni0046 uni0030 -137;\npos uni0046 uni0031 -91;\npos uni0046 uni0032 -180;\npos uni0046 uni0033 -168;\npos uni0046 uni0034 -180;\npos uni0046 uni0035 -180;\npos uni0046 uni0036 -150;\npos uni0046 uni0037 -114;\npos uni0046 uni0038 -180;\npos uni0046 uni0039 -145;\npos uni0047 uni0041 -180;\npos uni0047 uni0042 -57;\npos uni0047 uni0043 -62;\npos uni0047 uni0044 -73;\npos uni0047 uni0045 -46;\npos uni0047 uni0046 -35;\npos uni0047 uni0047 -35;\npos uni0047 uni0048 -180;\npos uni0047 uni0049 -19;\npos uni0047 uni004A -154;\npos uni0047 uni004B -127;\npos uni0047 uni004C -180;\npos uni0047 uni004D -19;\npos uni0047 uni004E -14;\npos uni0047 uni004F -73;\npos uni0047 uni0050 -19;\npos uni0047 uni0051 -62;\npos uni0047 uni0052 -14;\npos uni0047 uni0053 -180;\npos uni0047 uni0054 -14;\npos uni0047 uni0055 -14;\npos uni0047 uni0056 -14;\npos uni0047 uni0057 -35;\npos uni0047 uni0058 -180;\npos uni0047 uni0059 -14;\npos uni0047 uni005A -149;\npos uni0047 uni0061 -180;\npos uni0047 uni0062 -100;\npos uni0047 uni0063 -180;\npos uni0047 uni0064 -180;\npos uni0047 uni0065 -180;\npos uni0047 uni0066 -180;\npos uni0047 uni0067 -180;\npos uni0047 uni0068 -100;\npos uni0047 uni0069 -52;\npos uni0047 uni006A -180;\npos uni0047 uni006B -116;\npos uni0047 uni006C -180;\npos uni0047 uni006D -180;\npos uni0047 uni006E -111;\npos uni0047 uni006F -180;\npos uni0047 uni0070 -180;\npos uni0047 uni0071 -176;\npos uni0047 uni0072 -180;\npos uni0047 uni0073 -180;\npos uni0047 uni0074 -180;\npos uni0047 uni0075 -180;\npos uni0047 uni0076 -180;\npos uni0047 uni0077 -180;\npos uni0047 uni0078 -180;\npos uni0047 uni0079 -180;\npos uni0047 uni007A -180;\npos uni0047 uni0030 -78;\npos uni0047 uni0031 -26;\npos uni0047 uni0032 -180;\npos uni0047 uni0033 -117;\npos uni0047 uni0034 -170;\npos uni0047 uni0035 -180;\npos uni0047 uni0036 -91;\npos uni0047 uni0037 -63;\npos uni0047 uni0038 -180;\npos uni0047 uni0039 -75;\npos uni0048 uni0041 -84;\npos uni0048 uni0042 -84;\npos uni0048 uni0043 -13;\npos uni0048 uni0044 -84;\npos uni0048 uni0045 -40;\npos uni0048 uni0046 -100;\npos uni0048 uni0047 -13;\npos uni0048 uni0048 -30;\npos uni0048 uni0049 -89;\npos uni0048 uni004A -84;\npos uni0048 uni004B -84;\npos uni0048 uni004C -84;\npos uni0048 uni004D -138;\npos uni0048 uni004E -62;\npos uni0048 uni004F -19;\npos uni0048 uni0050 -51;\npos uni0048 uni0051 -13;\npos uni0048 uni0052 -46;\npos uni0048 uni0053 -30;\npos uni0048 uni0054 -89;\npos uni0048 uni0055 -40;\npos uni0048 uni0056 -40;\npos uni0048 uni0057 -13;\npos uni0048 uni0058 -84;\npos uni0048 uni0059 -67;\npos uni0048 uni005A -94;\npos uni0048 uni0061 -84;\npos uni0048 uni0062 -40;\npos uni0048 uni0063 -62;\npos uni0048 uni0064 -78;\npos uni0048 uni0065 -51;\npos uni0048 uni0066 -51;\npos uni0048 uni0067 -148;\npos uni0048 uni0068 -40;\npos uni0048 uni0069 -46;\npos uni0048 uni006A -180;\npos uni0048 uni006B -46;\npos uni0048 uni006C -84;\npos uni0048 uni006D -46;\npos uni0048 uni006E -13;\npos uni0048 uni006F -46;\npos uni0048 uni0070 -105;\npos uni0048 uni0071 -35;\npos uni0048 uni0072 -105;\npos uni0048 uni0073 -100;\npos uni0048 uni0074 -19;\npos uni0048 uni0075 -46;\npos uni0048 uni0076 -19;\npos uni0048 uni0077 -30;\npos uni0048 uni0078 -73;\npos uni0048 uni0079 -116;\npos uni0048 uni007A -111;\npos uni0048 uni0030 -20;\npos uni0048 uni0031 -53;\npos uni0048 uni0032 -90;\npos uni0048 uni0033 -84;\npos uni0048 uni0034 -13;\npos uni0048 uni0035 -77;\npos uni0048 uni0036 -26;\npos uni0048 uni0037 -19;\npos uni0048 uni0038 -70;\npos uni0048 uni0039 -84;\npos uni0049 uni0041 -180;\npos uni0049 uni0042 -122;\npos uni0049 uni0043 -14;\npos uni0049 uni0044 -95;\npos uni0049 uni0045 -35;\npos uni0049 uni0046 -116;\npos uni0049 uni0047 -25;\npos uni0049 uni0048 -25;\npos uni0049 uni0049 -116;\npos uni0049 uni004A -84;\npos uni0049 uni004B -127;\npos uni0049 uni004C -79;\npos uni0049 uni004D -138;\npos uni0049 uni004E -138;\npos uni0049 uni004F -14;\npos uni0049 uni0050 -95;\npos uni0049 uni0051 -14;\npos uni0049 uni0052 -89;\npos uni0049 uni0053 -25;\npos uni0049 uni0054 -180;\npos uni0049 uni0055 -84;\npos uni0049 uni0056 -73;\npos uni0049 uni0057 -25;\npos uni0049 uni0058 -180;\npos uni0049 uni0059 -180;\npos uni0049 uni005A -180;\npos uni0049 uni0061 -79;\npos uni0049 uni0062 -35;\npos uni0049 uni0063 -57;\npos uni0049 uni0064 -73;\npos uni0049 uni0065 -46;\npos uni0049 uni0066 -46;\npos uni0049 uni0067 -149;\npos uni0049 uni0068 -35;\npos uni0049 uni0069 -41;\npos uni0049 uni006A -180;\npos uni0049 uni006B -46;\npos uni0049 uni006C -180;\npos uni0049 uni006D -46;\npos uni0049 uni006E -14;\npos uni0049 uni006F -41;\npos uni0049 uni0070 -100;\npos uni0049 uni0071 -30;\npos uni0049 uni0072 -133;\npos uni0049 uni0073 -100;\npos uni0049 uni0074 -14;\npos uni0049 uni0075 -41;\npos uni0049 uni0076 -14;\npos uni0049 uni0077 -30;\npos uni0049 uni0078 -73;\npos uni0049 uni0079 -111;\npos uni0049 uni007A -111;\npos uni0049 uni0030 -19;\npos uni0049 uni0031 -52;\npos uni0049 uni0032 -180;\npos uni0049 uni0033 -86;\npos uni0049 uni0034 -14;\npos uni0049 uni0035 -72;\npos uni0049 uni0036 -21;\npos uni0049 uni0037 -19;\npos uni0049 uni0038 -65;\npos uni0049 uni0039 -110;\npos uni004A uni0041 -180;\npos uni004A uni0042 -132;\npos uni004A uni0043 -13;\npos uni004A uni0044 -105;\npos uni004A uni0045 -40;\npos uni004A uni0046 -127;\npos uni004A uni0047 -19;\npos uni004A uni0048 -29;\npos uni004A uni0049 -127;\npos uni004A uni004A -94;\npos uni004A uni004B -137;\npos uni004A uni004C -89;\npos uni004A uni004D -137;\npos uni004A uni004E -116;\npos uni004A uni004F -13;\npos uni004A uni0050 -78;\npos uni004A uni0051 -13;\npos uni004A uni0052 -73;\npos uni004A uni0053 -29;\npos uni004A uni0054 -159;\npos uni004A uni0055 -67;\npos uni004A uni0056 -56;\npos uni004A uni0057 -19;\npos uni004A uni0058 -180;\npos uni004A uni0059 -143;\npos uni004A uni005A -180;\npos uni004A uni0061 -89;\npos uni004A uni0062 -35;\npos uni004A uni0063 -67;\npos uni004A uni0064 -83;\npos uni004A uni0065 -56;\npos uni004A uni0066 -105;\npos uni004A uni0067 -148;\npos uni004A uni0068 -35;\npos uni004A uni0069 -46;\npos uni004A uni006A -180;\npos uni004A uni006B -46;\npos uni004A uni006C -180;\npos uni004A uni006D -46;\npos uni004A uni006E -13;\npos uni004A uni006F -46;\npos uni004A uni0070 -105;\npos uni004A uni0071 -29;\npos uni004A uni0072 -143;\npos uni004A uni0073 -100;\npos uni004A uni0074 -13;\npos uni004A uni0075 -51;\npos uni004A uni0076 -13;\npos uni004A uni0077 -29;\npos uni004A uni0078 -73;\npos uni004A uni0079 -116;\npos uni004A uni007A -110;\npos uni004A uni0030 -20;\npos uni004A uni0031 -53;\npos uni004A uni0032 -180;\npos uni004A uni0033 -96;\npos uni004A uni0034 -13;\npos uni004A uni0035 -82;\npos uni004A uni0036 -20;\npos uni004A uni0037 -19;\npos uni004A uni0038 -72;\npos uni004A uni0039 -97;\npos uni004B uni0041 -14;\npos uni004B uni0042 -14;\npos uni004B uni0043 -41;\npos uni004B uni0044 -14;\npos uni004B uni0045 -19;\npos uni004B uni0046 -46;\npos uni004B uni0047 -24;\npos uni004B uni0048 -30;\npos uni004B uni0049 -19;\npos uni004B uni004A -14;\npos uni004B uni004B -14;\npos uni004B uni004C -14;\npos uni004B uni004D -95;\npos uni004B uni004E -111;\npos uni004B uni004F -41;\npos uni004B uni0050 -154;\npos uni004B uni0051 -78;\npos uni004B uni0052 -159;\npos uni004B uni0053 -30;\npos uni004B uni0054 -180;\npos uni004B uni0055 -180;\npos uni004B uni0056 -180;\npos uni004B uni0057 -180;\npos uni004B uni0058 -14;\npos uni004B uni0059 -180;\npos uni004B uni005A -19;\npos uni004B uni0061 -14;\npos uni004B uni0062 -14;\npos uni004B uni0063 -14;\npos uni004B uni0064 -14;\npos uni004B uni0065 -14;\npos uni004B uni0066 -46;\npos uni004B uni0067 -100;\npos uni004B uni0068 -14;\npos uni004B uni0069 -14;\npos uni004B uni006A -95;\npos uni004B uni006B -14;\npos uni004B uni006C -14;\npos uni004B uni006D -14;\npos uni004B uni006E -19;\npos uni004B uni006F -14;\npos uni004B uni0070 -41;\npos uni004B uni0071 -24;\npos uni004B uni0072 -24;\npos uni004B uni0073 -35;\npos uni004B uni0074 -180;\npos uni004B uni0075 -14;\npos uni004B uni0076 -14;\npos uni004B uni0077 -14;\npos uni004B uni0078 -78;\npos uni004B uni0079 -111;\npos uni004B uni007A -138;\npos uni004B uni0030 -27;\npos uni004B uni0031 -14;\npos uni004B uni0032 -19;\npos uni004B uni0033 -14;\npos uni004B uni0034 -180;\npos uni004B uni0035 -14;\npos uni004B uni0036 -20;\npos uni004B uni0037 -60;\npos uni004B uni0038 -14;\npos uni004B uni0039 -14;\npos uni004C uni0041 -19;\npos uni004C uni0042 -19;\npos uni004C uni0043 -24;\npos uni004C uni0044 -13;\npos uni004C uni0045 -13;\npos uni004C uni0046 -51;\npos uni004C uni0047 -35;\npos uni004C uni0048 -13;\npos uni004C uni0049 -29;\npos uni004C uni004A -13;\npos uni004C uni004B -24;\npos uni004C uni004C -13;\npos uni004C uni004D -94;\npos uni004C uni004E -116;\npos uni004C uni004F -24;\npos uni004C uni0050 -159;\npos uni004C uni0051 -40;\npos uni004C uni0052 -159;\npos uni004C uni0053 -19;\npos uni004C uni0054 -180;\npos uni004C uni0055 -180;\npos uni004C uni0056 -180;\npos uni004C uni0057 -180;\npos uni004C uni0058 -19;\npos uni004C uni0059 -180;\npos uni004C uni005A -46;\npos uni004C uni0061 -13;\npos uni004C uni0062 -13;\npos uni004C uni0063 -13;\npos uni004C uni0064 -13;\npos uni004C uni0065 -13;\npos uni004C uni0066 -29;\npos uni004C uni0067 -132;\npos uni004C uni0068 -13;\npos uni004C uni0069 -13;\npos uni004C uni006A -154;\npos uni004C uni006B -13;\npos uni004C uni006C -13;\npos uni004C uni006D -19;\npos uni004C uni006E -19;\npos uni004C uni006F -13;\npos uni004C uni0070 -56;\npos uni004C uni0071 -13;\npos uni004C uni0072 -62;\npos uni004C uni0073 -67;\npos uni004C uni0074 -180;\npos uni004C uni0075 -13;\npos uni004C uni0076 -13;\npos uni004C uni0077 -13;\npos uni004C uni0078 -116;\npos uni004C uni0079 -100;\npos uni004C uni007A -148;\npos uni004C uni0030 -19;\npos uni004C uni0031 -13;\npos uni004C uni0032 -42;\npos uni004C uni0033 -13;\npos uni004C uni0034 -180;\npos uni004C uni0035 -13;\npos uni004C uni0036 -13;\npos uni004C uni0037 -74;\npos uni004C uni0038 -13;\npos uni004C uni0039 -24;\npos uni004D uni0041 -13;\npos uni004D uni0042 -13;\npos uni004D uni0043 -24;\npos uni004D uni0044 -13;\npos uni004D uni0045 -13;\npos uni004D uni0046 -46;\npos uni004D uni0047 -29;\npos uni004D uni0048 -13;\npos uni004D uni0049 -24;\npos uni004D uni004A -13;\npos uni004D uni004B -19;\npos uni004D uni004C -13;\npos uni004D uni004D -94;\npos uni004D uni004E -116;\npos uni004D uni004F -24;\npos uni004D uni0050 -127;\npos uni004D uni0051 -46;\npos uni004D uni0052 -127;\npos uni004D uni0053 -19;\npos uni004D uni0054 -116;\npos uni004D uni0055 -127;\npos uni004D uni0056 -127;\npos uni004D uni0057 -137;\npos uni004D uni0058 -19;\npos uni004D uni0059 -121;\npos uni004D uni005A -40;\npos uni004D uni0061 -13;\npos uni004D uni0062 -13;\npos uni004D uni0063 -13;\npos uni004D uni0064 -13;\npos uni004D uni0065 -13;\npos uni004D uni0066 -35;\npos uni004D uni0067 -132;\npos uni004D uni0068 -13;\npos uni004D uni0069 -13;\npos uni004D uni006A -143;\npos uni004D uni006B -13;\npos uni004D uni006C -13;\npos uni004D uni006D -13;\npos uni004D uni006E -19;\npos uni004D uni006F -13;\npos uni004D uni0070 -56;\npos uni004D uni0071 -13;\npos uni004D uni0072 -51;\npos uni004D uni0073 -56;\npos uni004D uni0074 -164;\npos uni004D uni0075 -13;\npos uni004D uni0076 -13;\npos uni004D uni0077 -13;\npos uni004D uni0078 -105;\npos uni004D uni0079 -100;\npos uni004D uni007A -148;\npos uni004D uni0030 -20;\npos uni004D uni0031 -13;\npos uni004D uni0032 -36;\npos uni004D uni0033 -13;\npos uni004D uni0034 -164;\npos uni004D uni0035 -13;\npos uni004D uni0036 -13;\npos uni004D uni0037 -72;\npos uni004D uni0038 -13;\npos uni004D uni0039 -19;\npos uni004E uni0041 -29;\npos uni004E uni0042 -29;\npos uni004E uni0043 -18;\npos uni004E uni0044 -24;\npos uni004E uni0045 -13;\npos uni004E uni0046 -56;\npos uni004E uni0047 -45;\npos uni004E uni0048 -13;\npos uni004E uni0049 -40;\npos uni004E uni004A -24;\npos uni004E uni004B -35;\npos uni004E uni004C -13;\npos uni004E uni004D -99;\npos uni004E uni004E -110;\npos uni004E uni004F -24;\npos uni004E uni0050 -116;\npos uni004E uni0051 -35;\npos uni004E uni0052 -116;\npos uni004E uni0053 -13;\npos uni004E uni0054 -105;\npos uni004E uni0055 -121;\npos uni004E uni0056 -121;\npos uni004E uni0057 -143;\npos uni004E uni0058 -29;\npos uni004E uni0059 -110;\npos uni004E uni005A -56;\npos uni004E uni0061 -24;\npos uni004E uni0062 -13;\npos uni004E uni0063 -18;\npos uni004E uni0064 -24;\npos uni004E uni0065 -13;\npos uni004E uni0066 -24;\npos uni004E uni0067 -126;\npos uni004E uni0068 -13;\npos uni004E uni0069 -13;\npos uni004E uni006A -164;\npos uni004E uni006B -18;\npos uni004E uni006C -24;\npos uni004E uni006D -24;\npos uni004E uni006E -24;\npos uni004E uni006F -13;\npos uni004E uni0070 -67;\npos uni004E uni0071 -13;\npos uni004E uni0072 -72;\npos uni004E uni0073 -78;\npos uni004E uni0074 -45;\npos uni004E uni0075 -13;\npos uni004E uni0076 -13;\npos uni004E uni0077 -13;\npos uni004E uni0078 -99;\npos uni004E uni0079 -99;\npos uni004E uni007A -148;\npos uni004E uni0030 -18;\npos uni004E uni0031 -18;\npos uni004E uni0032 -54;\npos uni004E uni0033 -18;\npos uni004E uni0034 -66;\npos uni004E uni0035 -18;\npos uni004E uni0036 -13;\npos uni004E uni0037 -45;\npos uni004E uni0038 -18;\npos uni004E uni0039 -32;\npos uni004F uni0041 -180;\npos uni004F uni0042 -56;\npos uni004F uni0043 -40;\npos uni004F uni0044 -73;\npos uni004F uni0045 -40;\npos uni004F uni0046 -24;\npos uni004F uni0047 -19;\npos uni004F uni0048 -83;\npos uni004F uni0049 -13;\npos uni004F uni004A -148;\npos uni004F uni004B -121;\npos uni004F uni004C -137;\npos uni004F uni004D -13;\npos uni004F uni004E -13;\npos uni004F uni004F -46;\npos uni004F uni0050 -13;\npos uni004F uni0051 -35;\npos uni004F uni0052 -13;\npos uni004F uni0053 -78;\npos uni004F uni0054 -13;\npos uni004F uni0055 -13;\npos uni004F uni0056 -13;\npos uni004F uni0057 -13;\npos uni004F uni0058 -180;\npos uni004F uni0059 -13;\npos uni004F uni005A -137;\npos uni004F uni0061 -143;\npos uni004F uni0062 -73;\npos uni004F uni0063 -121;\npos uni004F uni0064 -137;\npos uni004F uni0065 -110;\npos uni004F uni0066 -110;\npos uni004F uni0067 -180;\npos uni004F uni0068 -73;\npos uni004F uni0069 -51;\npos uni004F uni006A -180;\npos uni004F uni006B -89;\npos uni004F uni006C -180;\npos uni004F uni006D -89;\npos uni004F uni006E -46;\npos uni004F uni006F -100;\npos uni004F uni0070 -143;\npos uni004F uni0071 -78;\npos uni004F uni0072 -143;\npos uni004F uni0073 -127;\npos uni004F uni0074 -67;\npos uni004F uni0075 -100;\npos uni004F uni0076 -62;\npos uni004F uni0077 -73;\npos uni004F uni0078 -121;\npos uni004F uni0079 -159;\npos uni004F uni007A -154;\npos uni004F uni0030 -50;\npos uni004F uni0031 -20;\npos uni004F uni0032 -180;\npos uni004F uni0033 -106;\npos uni004F uni0034 -56;\npos uni004F uni0035 -136;\npos uni004F uni0036 -58;\npos uni004F uni0037 -51;\npos uni004F uni0038 -130;\npos uni004F uni0039 -74;\npos uni0050 uni0041 -180;\npos uni0050 uni0042 -62;\npos uni0050 uni0043 -72;\npos uni0050 uni0044 -72;\npos uni0050 uni0045 -35;\npos uni0050 uni0046 -13;\npos uni0050 uni0047 -45;\npos uni0050 uni0048 -180;\npos uni0050 uni0049 -13;\npos uni0050 uni004A -159;\npos uni0050 uni004B -121;\npos uni0050 uni004C -180;\npos uni0050 uni004D -13;\npos uni0050 uni004E -18;\npos uni0050 uni004F -89;\npos uni0050 uni0050 -24;\npos uni0050 uni0051 -78;\npos uni0050 uni0052 -18;\npos uni0050 uni0053 -180;\npos uni0050 uni0054 -13;\npos uni0050 uni0055 -18;\npos uni0050 uni0056 -18;\npos uni0050 uni0057 -45;\npos uni0050 uni0058 -180;\npos uni0050 uni0059 -13;\npos uni0050 uni005A -126;\npos uni0050 uni0061 -180;\npos uni0050 uni0062 -110;\npos uni0050 uni0063 -180;\npos uni0050 uni0064 -180;\npos uni0050 uni0065 -180;\npos uni0050 uni0066 -180;\npos uni0050 uni0067 -180;\npos uni0050 uni0068 -110;\npos uni0050 uni0069 -56;\npos uni0050 uni006A -180;\npos uni0050 uni006B -126;\npos uni0050 uni006C -180;\npos uni0050 uni006D -180;\npos uni0050 uni006E -126;\npos uni0050 uni006F -180;\npos uni0050 uni0070 -180;\npos uni0050 uni0071 -180;\npos uni0050 uni0072 -180;\npos uni0050 uni0073 -180;\npos uni0050 uni0074 -180;\npos uni0050 uni0075 -180;\npos uni0050 uni0076 -180;\npos uni0050 uni0077 -180;\npos uni0050 uni0078 -180;\npos uni0050 uni0079 -180;\npos uni0050 uni007A -180;\npos uni0050 uni0030 -90;\npos uni0050 uni0031 -36;\npos uni0050 uni0032 -180;\npos uni0050 uni0033 -95;\npos uni0050 uni0034 -178;\npos uni0050 uni0035 -180;\npos uni0050 uni0036 -105;\npos uni0050 uni0037 -40;\npos uni0050 uni0038 -180;\npos uni0050 uni0039 -80;\npos uni0051 uni0041 -19;\npos uni0051 uni0042 -19;\npos uni0051 uni0043 -78;\npos uni0051 uni0044 -30;\npos uni0051 uni0045 -46;\npos uni0051 uni0046 -51;\npos uni0051 uni0047 -24;\npos uni0051 uni0048 -67;\npos uni0051 uni0049 -19;\npos uni0051 uni004A -19;\npos uni0051 uni004B -13;\npos uni0051 uni004C -46;\npos uni0051 uni004D -94;\npos uni0051 uni004E -116;\npos uni0051 uni004F -73;\npos uni0051 uni0050 -159;\npos uni0051 uni0051 -105;\npos uni0051 uni0052 -165;\npos uni0051 uni0053 -57;\npos uni0051 uni0054 -180;\npos uni0051 uni0055 -180;\npos uni0051 uni0056 -180;\npos uni0051 uni0057 -180;\npos uni0051 uni0058 -24;\npos uni0051 uni0059 -180;\npos uni0051 uni005A -13;\npos uni0051 uni0061 -19;\npos uni0051 uni0062 -19;\npos uni0051 uni0063 -30;\npos uni0051 uni0064 -19;\npos uni0051 uni0065 -35;\npos uni0051 uni0066 -46;\npos uni0051 uni0067 -78;\npos uni0051 uni0068 -13;\npos uni0051 uni0069 -30;\npos uni0051 uni006A -73;\npos uni0051 uni006B -13;\npos uni0051 uni006C -24;\npos uni0051 uni006D -13;\npos uni0051 uni006E -30;\npos uni0051 uni006F -35;\npos uni0051 uni0070 -40;\npos uni0051 uni0071 -67;\npos uni0051 uni0072 -19;\npos uni0051 uni0073 -24;\npos uni0051 uni0074 -180;\npos uni0051 uni0075 -19;\npos uni0051 uni0076 -24;\npos uni0051 uni0077 -24;\npos uni0051 uni0078 -62;\npos uni0051 uni0079 -89;\npos uni0051 uni007A -111;\npos uni0051 uni0030 -57;\npos uni0051 uni0031 -19;\npos uni0051 uni0032 -13;\npos uni0051 uni0033 -30;\npos uni0051 uni0034 -180;\npos uni0051 uni0035 -31;\npos uni0051 uni0036 -43;\npos uni0051 uni0037 -54;\npos uni0051 uni0038 -31;\npos uni0051 uni0039 -13;\npos uni0052 uni0041 -13;\npos uni0052 uni0042 -13;\npos uni0052 uni0043 -35;\npos uni0052 uni0044 -13;\npos uni0052 uni0045 -19;\npos uni0052 uni0046 -46;\npos uni0052 uni0047 -24;\npos uni0052 uni0048 -24;\npos uni0052 uni0049 -19;\npos uni0052 uni004A -13;\npos uni0052 uni004B -13;\npos uni0052 uni004C -13;\npos uni0052 uni004D -94;\npos uni0052 uni004E -111;\npos uni0052 uni004F -35;\npos uni0052 uni0050 -154;\npos uni0052 uni0051 -62;\npos uni0052 uni0052 -159;\npos uni0052 uni0053 -24;\npos uni0052 uni0054 -159;\npos uni0052 uni0055 -175;\npos uni0052 uni0056 -175;\npos uni0052 uni0057 -180;\npos uni0052 uni0058 -13;\npos uni0052 uni0059 -165;\npos uni0052 uni005A -30;\npos uni0052 uni0061 -13;\npos uni0052 uni0062 -13;\npos uni0052 uni0063 -13;\npos uni0052 uni0064 -13;\npos uni0052 uni0065 -13;\npos uni0052 uni0066 -51;\npos uni0052 uni0067 -132;\npos uni0052 uni0068 -13;\npos uni0052 uni0069 -13;\npos uni0052 uni006A -127;\npos uni0052 uni006B -13;\npos uni0052 uni006C -13;\npos uni0052 uni006D -13;\npos uni0052 uni006E -19;\npos uni0052 uni006F -13;\npos uni0052 uni0070 -46;\npos uni0052 uni0071 -19;\npos uni0052 uni0072 -40;\npos uni0052 uni0073 -46;\npos uni0052 uni0074 -180;\npos uni0052 uni0075 -13;\npos uni0052 uni0076 -13;\npos uni0052 uni0077 -13;\npos uni0052 uni0078 -94;\npos uni0052 uni0079 -105;\npos uni0052 uni007A -154;\npos uni0052 uni0030 -26;\npos uni0052 uni0031 -13;\npos uni0052 uni0032 -26;\npos uni0052 uni0033 -13;\npos uni0052 uni0034 -180;\npos uni0052 uni0035 -13;\npos uni0052 uni0036 -20;\npos uni0052 uni0037 -61;\npos uni0052 uni0038 -13;\npos uni0052 uni0039 -13;\npos uni0053 uni0041 -51;\npos uni0053 uni0042 -56;\npos uni0053 uni0043 -13;\npos uni0053 uni0044 -35;\npos uni0053 uni0045 -18;\npos uni0053 uni0046 -29;\npos uni0053 uni0047 -29;\npos uni0053 uni0048 -13;\npos uni0053 uni0049 -35;\npos uni0053 uni004A -40;\npos uni0053 uni004B -56;\npos uni0053 uni004C -24;\npos uni0053 uni004D -40;\npos uni0053 uni004E -56;\npos uni0053 uni004F -13;\npos uni0053 uni0050 -67;\npos uni0053 uni0051 -13;\npos uni0053 uni0052 -62;\npos uni0053 uni0053 -13;\npos uni0053 uni0054 -45;\npos uni0053 uni0055 -72;\npos uni0053 uni0056 -67;\npos uni0053 uni0057 -35;\npos uni0053 uni0058 -56;\npos uni0053 uni0059 -51;\npos uni0053 uni005A -89;\npos uni0053 uni0061 -40;\npos uni0053 uni0062 -18;\npos uni0053 uni0063 -29;\npos uni0053 uni0064 -35;\npos uni0053 uni0065 -24;\npos uni0053 uni0066 -13;\npos uni0053 uni0067 -126;\npos uni0053 uni0068 -18;\npos uni0053 uni0069 -18;\npos uni0053 uni006A -180;\npos uni0053 uni006B -29;\npos uni0053 uni006C -51;\npos uni0053 uni006D -29;\npos uni0053 uni006E -18;\npos uni0053 uni006F -18;\npos uni0053 uni0070 -78;\npos uni0053 uni0071 -13;\npos uni0053 uni0072 -99;\npos uni0053 uni0073 -99;\npos uni0053 uni0074 -13;\npos uni0053 uni0075 -18;\npos uni0053 uni0076 -13;\npos uni0053 uni0077 -18;\npos uni0053 uni0078 -67;\npos uni0053 uni0079 -99;\npos uni0053 uni007A -110;\npos uni0053 uni0030 -13;\npos uni0053 uni0031 -27;\npos uni0053 uni0032 -96;\npos uni0053 uni0033 -32;\npos uni0053 uni0034 -13;\npos uni0053 uni0035 -32;\npos uni0053 uni0036 -13;\npos uni0053 uni0037 -13;\npos uni0053 uni0038 -32;\npos uni0053 uni0039 -54;\npos uni0054 uni0041 -180;\npos uni0054 uni0042 -137;\npos uni0054 uni0043 -180;\npos uni0054 uni0044 -137;\npos uni0054 uni0045 -105;\npos uni0054 uni0046 -40;\npos uni0054 uni0047 -148;\npos uni0054 uni0048 -180;\npos uni0054 uni0049 -62;\npos uni0054 uni004A -180;\npos uni0054 uni004B -180;\npos uni0054 uni004C -180;\npos uni0054 uni004D -73;\npos uni0054 uni004E -100;\npos uni0054 uni004F -180;\npos uni0054 uni0050 -110;\npos uni0054 uni0051 -180;\npos uni0054 uni0052 -110;\npos uni0054 uni0053 -180;\npos uni0054 uni0054 -73;\npos uni0054 uni0055 -121;\npos uni0054 uni0056 -116;\npos uni0054 uni0057 -175;\npos uni0054 uni0058 -180;\npos uni0054 uni0059 -94;\npos uni0054 uni005A -159;\npos uni0054 uni0061 -180;\npos uni0054 uni0062 -180;\npos uni0054 uni0063 -180;\npos uni0054 uni0064 -180;\npos uni0054 uni0065 -180;\npos uni0054 uni0066 -180;\npos uni0054 uni0067 -180;\npos uni0054 uni0068 -180;\npos uni0054 uni0069 -180;\npos uni0054 uni006A -180;\npos uni0054 uni006B -180;\npos uni0054 uni006C -180;\npos uni0054 uni006D -180;\npos uni0054 uni006E -180;\npos uni0054 uni006F -180;\npos uni0054 uni0070 -180;\npos uni0054 uni0071 -180;\npos uni0054 uni0072 -180;\npos uni0054 uni0073 -180;\npos uni0054 uni0074 -180;\npos uni0054 uni0075 -180;\npos uni0054 uni0076 -180;\npos uni0054 uni0077 -180;\npos uni0054 uni0078 -180;\npos uni0054 uni0079 -180;\npos uni0054 uni007A -180;\npos uni0054 uni0030 -180;\npos uni0054 uni0031 -175;\npos uni0054 uni0032 -180;\npos uni0054 uni0033 -119;\npos uni0054 uni0034 -180;\npos uni0054 uni0035 -180;\npos uni0054 uni0036 -180;\npos uni0054 uni0037 -69;\npos uni0054 uni0038 -180;\npos uni0054 uni0039 -171;\npos uni0055 uni0041 -19;\npos uni0055 uni0042 -19;\npos uni0055 uni0043 -29;\npos uni0055 uni0044 -13;\npos uni0055 uni0045 -13;\npos uni0055 uni0046 -51;\npos uni0055 uni0047 -29;\npos uni0055 uni0048 -19;\npos uni0055 uni0049 -24;\npos uni0055 uni004A -13;\npos uni0055 uni004B -24;\npos uni0055 uni004C -13;\npos uni0055 uni004D -78;\npos uni0055 uni004E -94;\npos uni0055 uni004F -29;\npos uni0055 uni0050 -100;\npos uni0055 uni0051 -46;\npos uni0055 uni0052 -94;\npos uni0055 uni0053 -19;\npos uni0055 uni0054 -83;\npos uni0055 uni0055 -100;\npos uni0055 uni0056 -100;\npos uni0055 uni0057 -121;\npos uni0055 uni0058 -19;\npos uni0055 uni0059 -89;\npos uni0055 uni005A -40;\npos uni0055 uni0061 -13;\npos uni0055 uni0062 -13;\npos uni0055 uni0063 -13;\npos uni0055 uni0064 -13;\npos uni0055 uni0065 -13;\npos uni0055 uni0066 -35;\npos uni0055 uni0067 -132;\npos uni0055 uni0068 -13;\npos uni0055 uni0069 -13;\npos uni0055 uni006A -127;\npos uni0055 uni006B -13;\npos uni0055 uni006C -13;\npos uni0055 uni006D -19;\npos uni0055 uni006E -19;\npos uni0055 uni006F -13;\npos uni0055 uni0070 -56;\npos uni0055 uni0071 -13;\npos uni0055 uni0072 -51;\npos uni0055 uni0073 -56;\npos uni0055 uni0074 -148;\npos uni0055 uni0075 -13;\npos uni0055 uni0076 -13;\npos uni0055 uni0077 -13;\npos uni0055 uni0078 -105;\npos uni0055 uni0079 -105;\npos uni0055 uni007A -148;\npos uni0055 uni0030 -20;\npos uni0055 uni0031 -13;\npos uni0055 uni0032 -36;\npos uni0055 uni0033 -13;\npos uni0055 uni0034 -148;\npos uni0055 uni0035 -13;\npos uni0055 uni0036 -19;\npos uni0055 uni0037 -72;\npos uni0055 uni0038 -13;\npos uni0055 uni0039 -19;\npos uni0056 uni0041 -180;\npos uni0056 uni0042 -67;\npos uni0056 uni0043 -84;\npos uni0056 uni0044 -78;\npos uni0056 uni0045 -40;\npos uni0056 uni0046 -13;\npos uni0056 uni0047 -57;\npos uni0056 uni0048 -148;\npos uni0056 uni0049 -13;\npos uni0056 uni004A -170;\npos uni0056 uni004B -121;\npos uni0056 uni004C -180;\npos uni0056 uni004D -19;\npos uni0056 uni004E -24;\npos uni0056 uni004F -94;\npos uni0056 uni0050 -30;\npos uni0056 uni0051 -84;\npos uni0056 uni0052 -30;\npos uni0056 uni0053 -143;\npos uni0056 uni0054 -19;\npos uni0056 uni0055 -30;\npos uni0056 uni0056 -30;\npos uni0056 uni0057 -57;\npos uni0056 uni0058 -180;\npos uni0056 uni0059 -24;\npos uni0056 uni005A -127;\npos uni0056 uni0061 -180;\npos uni0056 uni0062 -121;\npos uni0056 uni0063 -180;\npos uni0056 uni0064 -180;\npos uni0056 uni0065 -175;\npos uni0056 uni0066 -180;\npos uni0056 uni0067 -180;\npos uni0056 uni0068 -121;\npos uni0056 uni0069 -67;\npos uni0056 uni006A -180;\npos uni0056 uni006B -138;\npos uni0056 uni006C -180;\npos uni0056 uni006D -148;\npos uni0056 uni006E -100;\npos uni0056 uni006F -165;\npos uni0056 uni0070 -180;\npos uni0056 uni0071 -143;\npos uni0056 uni0072 -180;\npos uni0056 uni0073 -180;\npos uni0056 uni0074 -132;\npos uni0056 uni0075 -165;\npos uni0056 uni0076 -127;\npos uni0056 uni0077 -138;\npos uni0056 uni0078 -180;\npos uni0056 uni0079 -180;\npos uni0056 uni007A -180;\npos uni0056 uni0030 -97;\npos uni0056 uni0031 -47;\npos uni0056 uni0032 -180;\npos uni0056 uni0033 -95;\npos uni0056 uni0034 -121;\npos uni0056 uni0035 -180;\npos uni0056 uni0036 -108;\npos uni0056 uni0037 -41;\npos uni0056 uni0038 -180;\npos uni0056 uni0039 -91;\npos uni0057 uni0041 -180;\npos uni0057 uni0042 -57;\npos uni0057 uni0043 -62;\npos uni0057 uni0044 -73;\npos uni0057 uni0045 -35;\npos uni0057 uni0046 -14;\npos uni0057 uni0047 -35;\npos uni0057 uni0048 -122;\npos uni0057 uni0049 -14;\npos uni0057 uni004A -159;\npos uni0057 uni004B -122;\npos uni0057 uni004C -170;\npos uni0057 uni004D -14;\npos uni0057 uni004E -14;\npos uni0057 uni004F -73;\npos uni0057 uni0050 -19;\npos uni0057 uni0051 -62;\npos uni0057 uni0052 -19;\npos uni0057 uni0053 -116;\npos uni0057 uni0054 -14;\npos uni0057 uni0055 -19;\npos uni0057 uni0056 -19;\npos uni0057 uni0057 -35;\npos uni0057 uni0058 -180;\npos uni0057 uni0059 -14;\npos uni0057 uni005A -127;\npos uni0057 uni0061 -180;\npos uni0057 uni0062 -100;\npos uni0057 uni0063 -159;\npos uni0057 uni0064 -176;\npos uni0057 uni0065 -149;\npos uni0057 uni0066 -143;\npos uni0057 uni0067 -180;\npos uni0057 uni0068 -100;\npos uni0057 uni0069 -57;\npos uni0057 uni006A -180;\npos uni0057 uni006B -116;\npos uni0057 uni006C -180;\npos uni0057 uni006D -122;\npos uni0057 uni006E -73;\npos uni0057 uni006F -138;\npos uni0057 uni0070 -170;\npos uni0057 uni0071 -116;\npos uni0057 uni0072 -170;\npos uni0057 uni0073 -154;\npos uni0057 uni0074 -105;\npos uni0057 uni0075 -138;\npos uni0057 uni0076 -95;\npos uni0057 uni0077 -111;\npos uni0057 uni0078 -159;\npos uni0057 uni0079 -180;\npos uni0057 uni007A -180;\npos uni0057 uni0030 -76;\npos uni0057 uni0031 -31;\npos uni0057 uni0032 -180;\npos uni0057 uni0033 -95;\npos uni0057 uni0034 -95;\npos uni0057 uni0035 -175;\npos uni0057 uni0036 -85;\npos uni0057 uni0037 -41;\npos uni0057 uni0038 -164;\npos uni0057 uni0039 -80;\npos uni0058 uni0041 -18;\npos uni0058 uni0042 -18;\npos uni0058 uni0043 -18;\npos uni0058 uni0044 -13;\npos uni0058 uni0045 -13;\npos uni0058 uni0046 -51;\npos uni0058 uni0047 -35;\npos uni0058 uni0048 -13;\npos uni0058 uni0049 -29;\npos uni0058 uni004A -13;\npos uni0058 uni004B -24;\npos uni0058 uni004C -13;\npos uni0058 uni004D -94;\npos uni0058 uni004E -116;\npos uni0058 uni004F -18;\npos uni0058 uni0050 -153;\npos uni0058 uni0051 -35;\npos uni0058 uni0052 -143;\npos uni0058 uni0053 -13;\npos uni0058 uni0054 -105;\npos uni0058 uni0055 -159;\npos uni0058 uni0056 -153;\npos uni0058 uni0057 -180;\npos uni0058 uni0058 -18;\npos uni0058 uni0059 -121;\npos uni0058 uni005A -45;\npos uni0058 uni0061 -13;\npos uni0058 uni0062 -13;\npos uni0058 uni0063 -13;\npos uni0058 uni0064 -13;\npos uni0058 uni0065 -13;\npos uni0058 uni0066 -24;\npos uni0058 uni0067 -126;\npos uni0058 uni0068 -13;\npos uni0058 uni0069 -13;\npos uni0058 uni006A -159;\npos uni0058 uni006B -13;\npos uni0058 uni006C -13;\npos uni0058 uni006D -18;\npos uni0058 uni006E -18;\npos uni0058 uni006F -13;\npos uni0058 uni0070 -56;\npos uni0058 uni0071 -13;\npos uni0058 uni0072 -62;\npos uni0058 uni0073 -72;\npos uni0058 uni0074 -45;\npos uni0058 uni0075 -13;\npos uni0058 uni0076 -13;\npos uni0058 uni0077 -13;\npos uni0058 uni0078 -99;\npos uni0058 uni0079 -99;\npos uni0058 uni007A -148;\npos uni0058 uni0030 -13;\npos uni0058 uni0031 -13;\npos uni0058 uni0032 -43;\npos uni0058 uni0033 -13;\npos uni0058 uni0034 -66;\npos uni0058 uni0035 -13;\npos uni0058 uni0036 -13;\npos uni0058 uni0037 -45;\npos uni0058 uni0038 -13;\npos uni0058 uni0039 -24;\npos uni0059 uni0041 -180;\npos uni0059 uni0042 -78;\npos uni0059 uni0043 -13;\npos uni0059 uni0044 -51;\npos uni0059 uni0045 -19;\npos uni0059 uni0046 -89;\npos uni0059 uni0047 -46;\npos uni0059 uni0048 -13;\npos uni0059 uni0049 -78;\npos uni0059 uni004A -51;\npos uni0059 uni004B -84;\npos uni0059 uni004C -35;\npos uni0059 uni004D -111;\npos uni0059 uni004E -121;\npos uni0059 uni004F -13;\npos uni0059 uni0050 -127;\npos uni0059 uni0051 -13;\npos uni0059 uni0052 -127;\npos uni0059 uni0053 -13;\npos uni0059 uni0054 -116;\npos uni0059 uni0055 -127;\npos uni0059 uni0056 -127;\npos uni0059 uni0057 -57;\npos uni0059 uni0058 -180;\npos uni0059 uni0059 -121;\npos uni0059 uni005A -170;\npos uni0059 uni0061 -51;\npos uni0059 uni0062 -24;\npos uni0059 uni0063 -35;\npos uni0059 uni0064 -46;\npos uni0059 uni0065 -24;\npos uni0059 uni0066 -13;\npos uni0059 uni0067 -132;\npos uni0059 uni0068 -24;\npos uni0059 uni0069 -24;\npos uni0059 uni006A -180;\npos uni0059 uni006B -30;\npos uni0059 uni006C -180;\npos uni0059 uni006D -35;\npos uni0059 uni006E -35;\npos uni0059 uni006F -19;\npos uni0059 uni0070 -84;\npos uni0059 uni0071 -13;\npos uni0059 uni0072 -111;\npos uni0059 uni0073 -111;\npos uni0059 uni0074 -13;\npos uni0059 uni0075 -24;\npos uni0059 uni0076 -13;\npos uni0059 uni0077 -19;\npos uni0059 uni0078 -67;\npos uni0059 uni0079 -100;\npos uni0059 uni007A -116;\npos uni0059 uni0030 -13;\npos uni0059 uni0031 -32;\npos uni0059 uni0032 -180;\npos uni0059 uni0033 -39;\npos uni0059 uni0034 -13;\npos uni0059 uni0035 -39;\npos uni0059 uni0036 -13;\npos uni0059 uni0037 -13;\npos uni0059 uni0038 -39;\npos uni0059 uni0039 -180;\npos uni005A uni0041 -24;\npos uni005A uni0042 -24;\npos uni005A uni0043 -18;\npos uni005A uni0044 -18;\npos uni005A uni0045 -13;\npos uni005A uni0046 -51;\npos uni005A uni0047 -40;\npos uni005A uni0048 -13;\npos uni005A uni0049 -35;\npos uni005A uni004A -18;\npos uni005A uni004B -29;\npos uni005A uni004C -13;\npos uni005A uni004D -94;\npos uni005A uni004E -121;\npos uni005A uni004F -18;\npos uni005A uni0050 -164;\npos uni005A uni0051 -35;\npos uni005A uni0052 -159;\npos uni005A uni0053 -13;\npos uni005A uni0054 -180;\npos uni005A uni0055 -180;\npos uni005A uni0056 -180;\npos uni005A uni0057 -143;\npos uni005A uni0058 -24;\npos uni005A uni0059 -180;\npos uni005A uni005A -51;\npos uni005A uni0061 -18;\npos uni005A uni0062 -13;\npos uni005A uni0063 -13;\npos uni005A uni0064 -18;\npos uni005A uni0065 -13;\npos uni005A uni0066 -24;\npos uni005A uni0067 -126;\npos uni005A uni0068 -13;\npos uni005A uni0069 -13;\npos uni005A uni006A -148;\npos uni005A uni006B -18;\npos uni005A uni006C -18;\npos uni005A uni006D -18;\npos uni005A uni006E -24;\npos uni005A uni006F -13;\npos uni005A uni0070 -62;\npos uni005A uni0071 -13;\npos uni005A uni0072 -62;\npos uni005A uni0073 -67;\npos uni005A uni0074 -40;\npos uni005A uni0075 -13;\npos uni005A uni0076 -13;\npos uni005A uni0077 -13;\npos uni005A uni0078 -94;\npos uni005A uni0079 -99;\npos uni005A uni007A -148;\npos uni005A uni0030 -13;\npos uni005A uni0031 -13;\npos uni005A uni0032 -47;\npos uni005A uni0033 -13;\npos uni005A uni0034 -60;\npos uni005A uni0035 -13;\npos uni005A uni0036 -13;\npos uni005A uni0037 -40;\npos uni005A uni0038 -13;\npos uni005A uni0039 -27;\npos uni0061 uni0041 -35;\npos uni0061 uni0042 -35;\npos uni0061 uni0043 -13;\npos uni0061 uni0044 -24;\npos uni0061 uni0045 -13;\npos uni0061 uni0046 -62;\npos uni0061 uni0047 -51;\npos uni0061 uni0048 -13;\npos uni0061 uni0049 -45;\npos uni0061 uni004A -24;\npos uni0061 uni004B -40;\npos uni0061 uni004C -13;\npos uni0061 uni004D -99;\npos uni0061 uni004E -132;\npos uni0061 uni004F -18;\npos uni0061 uni0050 -170;\npos uni0061 uni0051 -29;\npos uni0061 uni0052 -164;\npos uni0061 uni0053 -13;\npos uni0061 uni0054 -180;\npos uni0061 uni0055 -180;\npos uni0061 uni0056 -180;\npos uni0061 uni0057 -170;\npos uni0061 uni0058 -35;\npos uni0061 uni0059 -180;\npos uni0061 uni005A -67;\npos uni0061 uni0061 -24;\npos uni0061 uni0062 -13;\npos uni0061 uni0063 -18;\npos uni0061 uni0064 -24;\npos uni0061 uni0065 -13;\npos uni0061 uni0066 -18;\npos uni0061 uni0067 -126;\npos uni0061 uni0068 -13;\npos uni0061 uni0069 -13;\npos uni0061 uni006A -180;\npos uni0061 uni006B -18;\npos uni0061 uni006C -29;\npos uni0061 uni006D -24;\npos uni0061 uni006E -24;\npos uni0061 uni006F -13;\npos uni0061 uni0070 -67;\npos uni0061 uni0071 -13;\npos uni0061 uni0072 -78;\npos uni0061 uni0073 -94;\npos uni0061 uni0074 -175;\npos uni0061 uni0075 -13;\npos uni0061 uni0076 -13;\npos uni0061 uni0077 -13;\npos uni0061 uni0078 -143;\npos uni0061 uni0079 -99;\npos uni0061 uni007A -148;\npos uni0061 uni0030 -13;\npos uni0061 uni0031 -18;\npos uni0061 uni0032 -66;\npos uni0061 uni0033 -18;\npos uni0061 uni0034 -170;\npos uni0061 uni0035 -20;\npos uni0061 uni0036 -13;\npos uni0061 uni0037 -90;\npos uni0061 uni0038 -20;\npos uni0061 uni0039 -37;\npos uni0062 uni0041 -127;\npos uni0062 uni0042 -100;\npos uni0062 uni0043 -13;\npos uni0062 uni0044 -73;\npos uni0062 uni0045 -24;\npos uni0062 uni0046 -105;\npos uni0062 uni0047 -67;\npos uni0062 uni0048 -13;\npos uni0062 uni0049 -100;\npos uni0062 uni004A -67;\npos uni0062 uni004B -105;\npos uni0062 uni004C -56;\npos uni0062 uni004D -127;\npos uni0062 uni004E -143;\npos uni0062 uni004F -13;\npos uni0062 uni0050 -148;\npos uni0062 uni0051 -19;\npos uni0062 uni0052 -148;\npos uni0062 uni0053 -19;\npos uni0062 uni0054 -132;\npos uni0062 uni0055 -154;\npos uni0062 uni0056 -148;\npos uni0062 uni0057 -137;\npos uni0062 uni0058 -127;\npos uni0062 uni0059 -137;\npos uni0062 uni005A -154;\npos uni0062 uni0061 -67;\npos uni0062 uni0062 -24;\npos uni0062 uni0063 -46;\npos uni0062 uni0064 -56;\npos uni0062 uni0065 -35;\npos uni0062 uni0066 -24;\npos uni0062 uni0067 -137;\npos uni0062 uni0068 -29;\npos uni0062 uni0069 -29;\npos uni0062 uni006A -180;\npos uni0062 uni006B -35;\npos uni0062 uni006C -121;\npos uni0062 uni006D -35;\npos uni0062 uni006E -40;\npos uni0062 uni006F -29;\npos uni0062 uni0070 -89;\npos uni0062 uni0071 -19;\npos uni0062 uni0072 -121;\npos uni0062 uni0073 -116;\npos uni0062 uni0074 -13;\npos uni0062 uni0075 -29;\npos uni0062 uni0076 -13;\npos uni0062 uni0077 -19;\npos uni0062 uni0078 -67;\npos uni0062 uni0079 -105;\npos uni0062 uni007A -121;\npos uni0062 uni0030 -13;\npos uni0062 uni0031 -40;\npos uni0062 uni0032 -150;\npos uni0062 uni0033 -63;\npos uni0062 uni0034 -19;\npos uni0062 uni0035 -59;\npos uni0062 uni0036 -13;\npos uni0062 uni0037 -13;\npos uni0062 uni0038 -53;\npos uni0062 uni0039 -129;\npos uni0063 uni0041 -46;\npos uni0063 uni0042 -51;\npos uni0063 uni0043 -19;\npos uni0063 uni0044 -30;\npos uni0063 uni0045 -13;\npos uni0063 uni0046 -73;\npos uni0063 uni0047 -62;\npos uni0063 uni0048 -13;\npos uni0063 uni0049 -57;\npos uni0063 uni004A -35;\npos uni0063 uni004B -51;\npos uni0063 uni004C -19;\npos uni0063 uni004D -111;\npos uni0063 uni004E -138;\npos uni0063 uni004F -19;\npos uni0063 uni0050 -132;\npos uni0063 uni0051 -35;\npos uni0063 uni0052 -127;\npos uni0063 uni0053 -13;\npos uni0063 uni0054 -180;\npos uni0063 uni0055 -121;\npos uni0063 uni0056 -111;\npos uni0063 uni0057 -73;\npos uni0063 uni0058 -51;\npos uni0063 uni0059 -180;\npos uni0063 uni005A -84;\npos uni0063 uni0061 -35;\npos uni0063 uni0062 -19;\npos uni0063 uni0063 -24;\npos uni0063 uni0064 -30;\npos uni0063 uni0065 -19;\npos uni0063 uni0066 -24;\npos uni0063 uni0067 -127;\npos uni0063 uni0068 -19;\npos uni0063 uni0069 -13;\npos uni0063 uni006A -180;\npos uni0063 uni006B -24;\npos uni0063 uni006C -46;\npos uni0063 uni006D -24;\npos uni0063 uni006E -30;\npos uni0063 uni006F -13;\npos uni0063 uni0070 -73;\npos uni0063 uni0071 -13;\npos uni0063 uni0072 -94;\npos uni0063 uni0073 -121;\npos uni0063 uni0074 -73;\npos uni0063 uni0075 -19;\npos uni0063 uni0076 -13;\npos uni0063 uni0077 -19;\npos uni0063 uni0078 -132;\npos uni0063 uni0079 -100;\npos uni0063 uni007A -148;\npos uni0063 uni0030 -13;\npos uni0063 uni0031 -26;\npos uni0063 uni0032 -88;\npos uni0063 uni0033 -27;\npos uni0063 uni0034 -67;\npos uni0063 uni0035 -27;\npos uni0063 uni0036 -13;\npos uni0063 uni0037 -78;\npos uni0063 uni0038 -27;\npos uni0063 uni0039 -49;\npos uni0064 uni0041 -19;\npos uni0064 uni0042 -19;\npos uni0064 uni0043 -95;\npos uni0064 uni0044 -35;\npos uni0064 uni0045 -57;\npos uni0064 uni0046 -52;\npos uni0064 uni0047 -25;\npos uni0064 uni0048 -84;\npos uni0064 uni0049 -19;\npos uni0064 uni004A -25;\npos uni0064 uni004B -14;\npos uni0064 uni004C -57;\npos uni0064 uni004D -62;\npos uni0064 uni004E -62;\npos uni0064 uni004F -89;\npos uni0064 uni0050 -68;\npos uni0064 uni0051 -95;\npos uni0064 uni0052 -62;\npos uni0064 uni0053 -68;\npos uni0064 uni0054 -62;\npos uni0064 uni0055 -62;\npos uni0064 uni0056 -62;\npos uni0064 uni0057 -89;\npos uni0064 uni0058 -25;\npos uni0064 uni0059 -62;\npos uni0064 uni005A -14;\npos uni0064 uni0061 -19;\npos uni0064 uni0062 -19;\npos uni0064 uni0063 -35;\npos uni0064 uni0064 -25;\npos uni0064 uni0065 -41;\npos uni0064 uni0066 -41;\npos uni0064 uni0067 -52;\npos uni0064 uni0068 -14;\npos uni0064 uni0069 -35;\npos uni0064 uni006A -46;\npos uni0064 uni006B -14;\npos uni0064 uni006C -30;\npos uni0064 uni006D -14;\npos uni0064 uni006E -35;\npos uni0064 uni006F -41;\npos uni0064 uni0070 -30;\npos uni0064 uni0071 -95;\npos uni0064 uni0072 -14;\npos uni0064 uni0073 -14;\npos uni0064 uni0074 -176;\npos uni0064 uni0075 -25;\npos uni0064 uni0076 -25;\npos uni0064 uni0077 -25;\npos uni0064 uni0078 -41;\npos uni0064 uni0079 -62;\npos uni0064 uni007A -79;\npos uni0064 uni0030 -65;\npos uni0064 uni0031 -21;\npos uni0064 uni0032 -14;\npos uni0064 uni0033 -38;\npos uni0064 uni0034 -165;\npos uni0064 uni0035 -34;\npos uni0064 uni0036 -56;\npos uni0064 uni0037 -55;\npos uni0064 uni0038 -34;\npos uni0064 uni0039 -14;\npos uni0065 uni0041 -51;\npos uni0065 uni0042 -51;\npos uni0065 uni0043 -13;\npos uni0065 uni0044 -29;\npos uni0065 uni0045 -13;\npos uni0065 uni0046 -72;\npos uni0065 uni0047 -62;\npos uni0065 uni0048 -13;\npos uni0065 uni0049 -56;\npos uni0065 uni004A -35;\npos uni0065 uni004B -56;\npos uni0065 uni004C -18;\npos uni0065 uni004D -110;\npos uni0065 uni004E -137;\npos uni0065 uni004F -18;\npos uni0065 uni0050 -121;\npos uni0065 uni0051 -29;\npos uni0065 uni0052 -116;\npos uni0065 uni0053 -13;\npos uni0065 uni0054 -180;\npos uni0065 uni0055 -110;\npos uni0065 uni0056 -99;\npos uni0065 uni0057 -67;\npos uni0065 uni0058 -51;\npos uni0065 uni0059 -180;\npos uni0065 uni005A -89;\npos uni0065 uni0061 -35;\npos uni0065 uni0062 -18;\npos uni0065 uni0063 -24;\npos uni0065 uni0064 -29;\npos uni0065 uni0065 -18;\npos uni0065 uni0066 -18;\npos uni0065 uni0067 -126;\npos uni0065 uni0068 -18;\npos uni0065 uni0069 -13;\npos uni0065 uni006A -180;\npos uni0065 uni006B -24;\npos uni0065 uni006C -51;\npos uni0065 uni006D -24;\npos uni0065 uni006E -29;\npos uni0065 uni006F -13;\npos uni0065 uni0070 -72;\npos uni0065 uni0071 -13;\npos uni0065 uni0072 -94;\npos uni0065 uni0073 -126;\npos uni0065 uni0074 -72;\npos uni0065 uni0075 -18;\npos uni0065 uni0076 -13;\npos uni0065 uni0077 -18;\npos uni0065 uni0078 -132;\npos uni0065 uni0079 -99;\npos uni0065 uni007A -148;\npos uni0065 uni0030 -13;\npos uni0065 uni0031 -25;\npos uni0065 uni0032 -93;\npos uni0065 uni0033 -27;\npos uni0065 uni0034 -67;\npos uni0065 uni0035 -27;\npos uni0065 uni0036 -13;\npos uni0065 uni0037 -78;\npos uni0065 uni0038 -27;\npos uni0065 uni0039 -54;\npos uni0066 uni0041 -94;\npos uni0066 uni0042 -56;\npos uni0066 uni0043 -19;\npos uni0066 uni0044 -40;\npos uni0066 uni0045 -24;\npos uni0066 uni0046 -24;\npos uni0066 uni0047 -29;\npos uni0066 uni0048 -19;\npos uni0066 uni0049 -13;\npos uni0066 uni004A -46;\npos uni0066 uni004B -73;\npos uni0066 uni004C -29;\npos uni0066 uni004D -13;\npos uni0066 uni004E -13;\npos uni0066 uni004F -19;\npos uni0066 uni0050 -13;\npos uni0066 uni0051 -24;\npos uni0066 uni0052 -13;\npos uni0066 uni0053 -19;\npos uni0066 uni0054 -13;\npos uni0066 uni0055 -13;\npos uni0066 uni0056 -13;\npos uni0066 uni0057 -29;\npos uni0066 uni0058 -94;\npos uni0066 uni0059 -13;\npos uni0066 uni005A -137;\npos uni0066 uni0061 -46;\npos uni0066 uni0062 -24;\npos uni0066 uni0063 -35;\npos uni0066 uni0064 -40;\npos uni0066 uni0065 -29;\npos uni0066 uni0066 -19;\npos uni0066 uni0067 -132;\npos uni0066 uni0068 -24;\npos uni0066 uni0069 -24;\npos uni0066 uni006A -143;\npos uni0066 uni006B -35;\npos uni0066 uni006C -170;\npos uni0066 uni006D -35;\npos uni0066 uni006E -35;\npos uni0066 uni006F -24;\npos uni0066 uni0070 -83;\npos uni0066 uni0071 -19;\npos uni0066 uni0072 -105;\npos uni0066 uni0073 -137;\npos uni0066 uni0074 -121;\npos uni0066 uni0075 -24;\npos uni0066 uni0076 -19;\npos uni0066 uni0077 -24;\npos uni0066 uni0078 -143;\npos uni0066 uni0079 -105;\npos uni0066 uni007A -159;\npos uni0066 uni0030 -19;\npos uni0066 uni0031 -25;\npos uni0066 uni0032 -148;\npos uni0066 uni0033 -38;\npos uni0066 uni0034 -110;\npos uni0066 uni0035 -38;\npos uni0066 uni0036 -19;\npos uni0066 uni0037 -51;\npos uni0066 uni0038 -38;\npos uni0066 uni0039 -74;\npos uni0067 uni0041 -14;\npos uni0067 uni0042 -14;\npos uni0067 uni0043 -52;\npos uni0067 uni0044 -19;\npos uni0067 uni0045 -30;\npos uni0067 uni0046 -46;\npos uni0067 uni0047 -25;\npos uni0067 uni0048 -41;\npos uni0067 uni0049 -19;\npos uni0067 uni004A -14;\npos uni0067 uni004B -14;\npos uni0067 uni004C -25;\npos uni0067 uni004D -95;\npos uni0067 uni004E -111;\npos uni0067 uni004F -52;\npos uni0067 uni0050 -154;\npos uni0067 uni0051 -106;\npos uni0067 uni0052 -160;\npos uni0067 uni0053 -41;\npos uni0067 uni0054 -180;\npos uni0067 uni0055 -180;\npos uni0067 uni0056 -180;\npos uni0067 uni0057 -180;\npos uni0067 uni0058 -14;\npos uni0067 uni0059 -180;\npos uni0067 uni005A -30;\npos uni0067 uni0061 -14;\npos uni0067 uni0062 -14;\npos uni0067 uni0063 -19;\npos uni0067 uni0064 -14;\npos uni0067 uni0065 -25;\npos uni0067 uni0066 -52;\npos uni0067 uni0067 -143;\npos uni0067 uni0068 -14;\npos uni0067 uni0069 -25;\npos uni0067 uni006A -133;\npos uni0067 uni006B -14;\npos uni0067 uni006C -14;\npos uni0067 uni006D -14;\npos uni0067 uni006E -25;\npos uni0067 uni006F -25;\npos uni0067 uni0070 -46;\npos uni0067 uni0071 -35;\npos uni0067 uni0072 -41;\npos uni0067 uni0073 -46;\npos uni0067 uni0074 -180;\npos uni0067 uni0075 -14;\npos uni0067 uni0076 -19;\npos uni0067 uni0077 -19;\npos uni0067 uni0078 -95;\npos uni0067 uni0079 -122;\npos uni0067 uni007A -180;\npos uni0067 uni0030 -38;\npos uni0067 uni0031 -14;\npos uni0067 uni0032 -26;\npos uni0067 uni0033 -19;\npos uni0067 uni0034 -180;\npos uni0067 uni0035 -19;\npos uni0067 uni0036 -31;\npos uni0067 uni0037 -61;\npos uni0067 uni0038 -19;\npos uni0067 uni0039 -14;\npos uni0068 uni0041 -14;\npos uni0068 uni0042 -14;\npos uni0068 uni0043 -51;\npos uni0068 uni0044 -19;\npos uni0068 uni0045 -30;\npos uni0068 uni0046 -46;\npos uni0068 uni0047 -24;\npos uni0068 uni0048 -41;\npos uni0068 uni0049 -19;\npos uni0068 uni004A -14;\npos uni0068 uni004B -14;\npos uni0068 uni004C -24;\npos uni0068 uni004D -95;\npos uni0068 uni004E -111;\npos uni0068 uni004F -51;\npos uni0068 uni0050 -154;\npos uni0068 uni0051 -111;\npos uni0068 uni0052 -159;\npos uni0068 uni0053 -41;\npos uni0068 uni0054 -180;\npos uni0068 uni0055 -180;\npos uni0068 uni0056 -180;\npos uni0068 uni0057 -180;\npos uni0068 uni0058 -14;\npos uni0068 uni0059 -180;\npos uni0068 uni005A -19;\npos uni0068 uni0061 -14;\npos uni0068 uni0062 -14;\npos uni0068 uni0063 -19;\npos uni0068 uni0064 -14;\npos uni0068 uni0065 -24;\npos uni0068 uni0066 -46;\npos uni0068 uni0067 -95;\npos uni0068 uni0068 -14;\npos uni0068 uni0069 -24;\npos uni0068 uni006A -89;\npos uni0068 uni006B -14;\npos uni0068 uni006C -14;\npos uni0068 uni006D -14;\npos uni0068 uni006E -24;\npos uni0068 uni006F -24;\npos uni0068 uni0070 -41;\npos uni0068 uni0071 -35;\npos uni0068 uni0072 -24;\npos uni0068 uni0073 -35;\npos uni0068 uni0074 -180;\npos uni0068 uni0075 -14;\npos uni0068 uni0076 -19;\npos uni0068 uni0077 -19;\npos uni0068 uni0078 -73;\npos uni0068 uni0079 -105;\npos uni0068 uni007A -127;\npos uni0068 uni0030 -38;\npos uni0068 uni0031 -14;\npos uni0068 uni0032 -19;\npos uni0068 uni0033 -19;\npos uni0068 uni0034 -180;\npos uni0068 uni0035 -19;\npos uni0068 uni0036 -31;\npos uni0068 uni0037 -60;\npos uni0068 uni0038 -19;\npos uni0068 uni0039 -14;\npos uni0069 uni0041 -35;\npos uni0069 uni0042 -35;\npos uni0069 uni0043 -19;\npos uni0069 uni0044 -25;\npos uni0069 uni0045 -14;\npos uni0069 uni0046 -62;\npos uni0069 uni0047 -52;\npos uni0069 uni0048 -14;\npos uni0069 uni0049 -46;\npos uni0069 uni004A -25;\npos uni0069 uni004B -41;\npos uni0069 uni004C -14;\npos uni0069 uni004D -100;\npos uni0069 uni004E -133;\npos uni0069 uni004F -19;\npos uni0069 uni0050 -143;\npos uni0069 uni0051 -35;\npos uni0069 uni0052 -143;\npos uni0069 uni0053 -14;\npos uni0069 uni0054 -143;\npos uni0069 uni0055 -143;\npos uni0069 uni0056 -143;\npos uni0069 uni0057 -154;\npos uni0069 uni0058 -35;\npos uni0069 uni0059 -143;\npos uni0069 uni005A -68;\npos uni0069 uni0061 -25;\npos uni0069 uni0062 -14;\npos uni0069 uni0063 -19;\npos uni0069 uni0064 -25;\npos uni0069 uni0065 -14;\npos uni0069 uni0066 -25;\npos uni0069 uni0067 -127;\npos uni0069 uni0068 -14;\npos uni0069 uni0069 -14;\npos uni0069 uni006A -180;\npos uni0069 uni006B -19;\npos uni0069 uni006C -30;\npos uni0069 uni006D -25;\npos uni0069 uni006E -25;\npos uni0069 uni006F -14;\npos uni0069 uni0070 -68;\npos uni0069 uni0071 -14;\npos uni0069 uni0072 -79;\npos uni0069 uni0073 -106;\npos uni0069 uni0074 -180;\npos uni0069 uni0075 -14;\npos uni0069 uni0076 -14;\npos uni0069 uni0077 -14;\npos uni0069 uni0078 -149;\npos uni0069 uni0079 -100;\npos uni0069 uni007A -149;\npos uni0069 uni0030 -14;\npos uni0069 uni0031 -19;\npos uni0069 uni0032 -77;\npos uni0069 uni0033 -19;\npos uni0069 uni0034 -180;\npos uni0069 uni0035 -21;\npos uni0069 uni0036 -14;\npos uni0069 uni0037 -91;\npos uni0069 uni0038 -21;\npos uni0069 uni0039 -38;\npos uni006A uni0041 -14;\npos uni006A uni0042 -14;\npos uni006A uni0043 -41;\npos uni006A uni0044 -14;\npos uni006A uni0045 -19;\npos uni006A uni0046 -46;\npos uni006A uni0047 -30;\npos uni006A uni0048 -30;\npos uni006A uni0049 -24;\npos uni006A uni004A -14;\npos uni006A uni004B -19;\npos uni006A uni004C -14;\npos uni006A uni004D -95;\npos uni006A uni004E -116;\npos uni006A uni004F -41;\npos uni006A uni0050 -159;\npos uni006A uni0051 -78;\npos uni006A uni0052 -159;\npos uni006A uni0053 -30;\npos uni006A uni0054 -180;\npos uni006A uni0055 -180;\npos uni006A uni0056 -180;\npos uni006A uni0057 -180;\npos uni006A uni0058 -19;\npos uni006A uni0059 -180;\npos uni006A uni005A -41;\npos uni006A uni0061 -14;\npos uni006A uni0062 -14;\npos uni006A uni0063 -14;\npos uni006A uni0064 -14;\npos uni006A uni0065 -14;\npos uni006A uni0066 -57;\npos uni006A uni0067 -149;\npos uni006A uni0068 -14;\npos uni006A uni0069 -14;\npos uni006A uni006A -170;\npos uni006A uni006B -14;\npos uni006A uni006C -14;\npos uni006A uni006D -14;\npos uni006A uni006E -19;\npos uni006A uni006F -14;\npos uni006A uni0070 -57;\npos uni006A uni0071 -24;\npos uni006A uni0072 -57;\npos uni006A uni0073 -68;\npos uni006A uni0074 -180;\npos uni006A uni0075 -14;\npos uni006A uni0076 -14;\npos uni006A uni0077 -14;\npos uni006A uni0078 -116;\npos uni006A uni0079 -111;\npos uni006A uni007A -159;\npos uni006A uni0030 -27;\npos uni006A uni0031 -14;\npos uni006A uni0032 -38;\npos uni006A uni0033 -14;\npos uni006A uni0034 -180;\npos uni006A uni0035 -14;\npos uni006A uni0036 -20;\npos uni006A uni0037 -72;\npos uni006A uni0038 -14;\npos uni006A uni0039 -19;\npos uni006B uni0041 -180;\npos uni006B uni0042 -180;\npos uni006B uni0043 -180;\npos uni006B uni0044 -180;\npos uni006B uni0045 -180;\npos uni006B uni0046 -180;\npos uni006B uni0047 -180;\npos uni006B uni0048 -180;\npos uni006B uni0049 -180;\npos uni006B uni004A -180;\npos uni006B uni004B -180;\npos uni006B uni004C -180;\npos uni006B uni004D -180;\npos uni006B uni004E -180;\npos uni006B uni004F -180;\npos uni006B uni0050 -180;\npos uni006B uni0051 -110;\npos uni006B uni0052 -180;\npos uni006B uni0053 -180;\npos uni006B uni0054 -180;\npos uni006B uni0055 -180;\npos uni006B uni0056 -180;\npos uni006B uni0057 -180;\npos uni006B uni0058 -180;\npos uni006B uni0059 -180;\npos uni006B uni005A -180;\npos uni006B uni0061 -180;\npos uni006B uni0062 -180;\npos uni006B uni0063 -180;\npos uni006B uni0064 -180;\npos uni006B uni0065 -180;\npos uni006B uni0066 -40;\npos uni006B uni0067 -13;\npos uni006B uni0068 -180;\npos uni006B uni0069 -180;\npos uni006B uni006A -13;\npos uni006B uni006B -180;\npos uni006B uni006C -180;\npos uni006B uni006D -180;\npos uni006B uni006E -180;\npos uni006B uni006F -180;\npos uni006B uni0070 -13;\npos uni006B uni0071 -159;\npos uni006B uni0072 -180;\npos uni006B uni0073 -45;\npos uni006B uni0074 -180;\npos uni006B uni0075 -180;\npos uni006B uni0076 -180;\npos uni006B uni0077 -180;\npos uni006B uni0078 -18;\npos uni006B uni0079 -18;\npos uni006B uni007A -24;\npos uni006B uni0030 -180;\npos uni006B uni0031 -180;\npos uni006B uni0032 -180;\npos uni006B uni0033 -180;\npos uni006B uni0034 -180;\npos uni006B uni0035 -180;\npos uni006B uni0036 -180;\npos uni006B uni0037 -109;\npos uni006B uni0038 -180;\npos uni006B uni0039 -180;\npos uni006C uni0041 -14;\npos uni006C uni0042 -14;\npos uni006C uni0043 -73;\npos uni006C uni0044 -24;\npos uni006C uni0045 -41;\npos uni006C uni0046 -46;\npos uni006C uni0047 -24;\npos uni006C uni0048 -62;\npos uni006C uni0049 -19;\npos uni006C uni004A -19;\npos uni006C uni004B -14;\npos uni006C uni004C -41;\npos uni006C uni004D -95;\npos uni006C uni004E -111;\npos uni006C uni004F -68;\npos uni006C uni0050 -116;\npos uni006C uni0051 -100;\npos uni006C uni0052 -116;\npos uni006C uni0053 -51;\npos uni006C uni0054 -116;\npos uni006C uni0055 -116;\npos uni006C uni0056 -116;\npos uni006C uni0057 -127;\npos uni006C uni0058 -19;\npos uni006C uni0059 -116;\npos uni006C uni005A -14;\npos uni006C uni0061 -14;\npos uni006C uni0062 -14;\npos uni006C uni0063 -24;\npos uni006C uni0064 -19;\npos uni006C uni0065 -30;\npos uni006C uni0066 -41;\npos uni006C uni0067 -62;\npos uni006C uni0068 -14;\npos uni006C uni0069 -30;\npos uni006C uni006A -62;\npos uni006C uni006B -14;\npos uni006C uni006C -19;\npos uni006C uni006D -14;\npos uni006C uni006E -30;\npos uni006C uni006F -30;\npos uni006C uni0070 -35;\npos uni006C uni0071 -57;\npos uni006C uni0072 -14;\npos uni006C uni0073 -19;\npos uni006C uni0074 -180;\npos uni006C uni0075 -19;\npos uni006C uni0076 -19;\npos uni006C uni0077 -19;\npos uni006C uni0078 -51;\npos uni006C uni0079 -73;\npos uni006C uni007A -95;\npos uni006C uni0030 -52;\npos uni006C uni0031 -19;\npos uni006C uni0032 -14;\npos uni006C uni0033 -24;\npos uni006C uni0034 -180;\npos uni006C uni0035 -26;\npos uni006C uni0036 -38;\npos uni006C uni0037 -54;\npos uni006C uni0038 -26;\npos uni006C uni0039 -14;\npos uni006D uni0041 -25;\npos uni006D uni0042 -25;\npos uni006D uni0043 -14;\npos uni006D uni0044 -19;\npos uni006D uni0045 -14;\npos uni006D uni0046 -52;\npos uni006D uni0047 -41;\npos uni006D uni0048 -14;\npos uni006D uni0049 -35;\npos uni006D uni004A -19;\npos uni006D uni004B -30;\npos uni006D uni004C -14;\npos uni006D uni004D -95;\npos uni006D uni004E -122;\npos uni006D uni004F -19;\npos uni006D uni0050 -165;\npos uni006D uni0051 -30;\npos uni006D uni0052 -160;\npos uni006D uni0053 -14;\npos uni006D uni0054 -180;\npos uni006D uni0055 -180;\npos uni006D uni0056 -180;\npos uni006D uni0057 -180;\npos uni006D uni0058 -25;\npos uni006D uni0059 -180;\npos uni006D uni005A -52;\npos uni006D uni0061 -19;\npos uni006D uni0062 -14;\npos uni006D uni0063 -14;\npos uni006D uni0064 -19;\npos uni006D uni0065 -14;\npos uni006D uni0066 -19;\npos uni006D uni0067 -127;\npos uni006D uni0068 -14;\npos uni006D uni0069 -14;\npos uni006D uni006A -138;\npos uni006D uni006B -19;\npos uni006D uni006C -19;\npos uni006D uni006D -19;\npos uni006D uni006E -25;\npos uni006D uni006F -14;\npos uni006D uni0070 -62;\npos uni006D uni0071 -14;\npos uni006D uni0072 -62;\npos uni006D uni0073 -68;\npos uni006D uni0074 -30;\npos uni006D uni0075 -14;\npos uni006D uni0076 -14;\npos uni006D uni0077 -14;\npos uni006D uni0078 -84;\npos uni006D uni0079 -100;\npos uni006D uni007A -149;\npos uni006D uni0030 -14;\npos uni006D uni0031 -14;\npos uni006D uni0032 -48;\npos uni006D uni0033 -14;\npos uni006D uni0034 -50;\npos uni006D uni0035 -14;\npos uni006D uni0036 -14;\npos uni006D uni0037 -30;\npos uni006D uni0038 -14;\npos uni006D uni0039 -27;\npos uni006E uni0041 -25;\npos uni006E uni0042 -25;\npos uni006E uni0043 -25;\npos uni006E uni0044 -19;\npos uni006E uni0045 -14;\npos uni006E uni0046 -57;\npos uni006E uni0047 -41;\npos uni006E uni0048 -14;\npos uni006E uni0049 -35;\npos uni006E uni004A -19;\npos uni006E uni004B -30;\npos uni006E uni004C -14;\npos uni006E uni004D -100;\npos uni006E uni004E -122;\npos uni006E uni004F -25;\npos uni006E uni0050 -122;\npos uni006E uni0051 -46;\npos uni006E uni0052 -116;\npos uni006E uni0053 -19;\npos uni006E uni0054 -160;\npos uni006E uni0055 -111;\npos uni006E uni0056 -111;\npos uni006E uni0057 -95;\npos uni006E uni0058 -25;\npos uni006E uni0059 -138;\npos uni006E uni005A -52;\npos uni006E uni0061 -19;\npos uni006E uni0062 -14;\npos uni006E uni0063 -14;\npos uni006E uni0064 -19;\npos uni006E uni0065 -14;\npos uni006E uni0066 -35;\npos uni006E uni0067 -133;\npos uni006E uni0068 -14;\npos uni006E uni0069 -14;\npos uni006E uni006A -143;\npos uni006E uni006B -19;\npos uni006E uni006C -19;\npos uni006E uni006D -19;\npos uni006E uni006E -25;\npos uni006E uni006F -14;\npos uni006E uni0070 -62;\npos uni006E uni0071 -14;\npos uni006E uni0072 -62;\npos uni006E uni0073 -68;\npos uni006E uni0074 -100;\npos uni006E uni0075 -14;\npos uni006E uni0076 -14;\npos uni006E uni0077 -14;\npos uni006E uni0078 -116;\npos uni006E uni0079 -100;\npos uni006E uni007A -149;\npos uni006E uni0030 -21;\npos uni006E uni0031 -14;\npos uni006E uni0032 -48;\npos uni006E uni0033 -14;\npos uni006E uni0034 -100;\npos uni006E uni0035 -19;\npos uni006E uni0036 -14;\npos uni006E uni0037 -80;\npos uni006E uni0038 -19;\npos uni006E uni0039 -30;\npos uni006F uni0041 -180;\npos uni006F uni0042 -180;\npos uni006F uni0043 -19;\npos uni006F uni0044 -170;\npos uni006F uni0045 -67;\npos uni006F uni0046 -180;\npos uni006F uni0047 -13;\npos uni006F uni0048 -62;\npos uni006F uni0049 -180;\npos uni006F uni004A -148;\npos uni006F uni004B -180;\npos uni006F uni004C -154;\npos uni006F uni004D -159;\npos uni006F uni004E -180;\npos uni006F uni004F -24;\npos uni006F uni0050 -67;\npos uni006F uni0051 -19;\npos uni006F uni0052 -62;\npos uni006F uni0053 -56;\npos uni006F uni0054 -180;\npos uni006F uni0055 -56;\npos uni006F uni0056 -46;\npos uni006F uni0057 -13;\npos uni006F uni0058 -180;\npos uni006F uni0059 -180;\npos uni006F uni005A -180;\npos uni006F uni0061 -137;\npos uni006F uni0062 -51;\npos uni006F uni0063 -105;\npos uni006F uni0064 -127;\npos uni006F uni0065 -89;\npos uni006F uni0066 -127;\npos uni006F uni0067 -180;\npos uni006F uni0068 -51;\npos uni006F uni0069 -73;\npos uni006F uni006A -180;\npos uni006F uni006B -62;\npos uni006F uni006C -180;\npos uni006F uni006D -62;\npos uni006F uni006E -19;\npos uni006F uni006F -78;\npos uni006F uni0070 -121;\npos uni006F uni0071 -56;\npos uni006F uni0072 -137;\npos uni006F uni0073 -100;\npos uni006F uni0074 -46;\npos uni006F uni0075 -78;\npos uni006F uni0076 -35;\npos uni006F uni0077 -51;\npos uni006F uni0078 -100;\npos uni006F uni0079 -132;\npos uni006F uni007A -127;\npos uni006F uni0030 -27;\npos uni006F uni0031 -72;\npos uni006F uni0032 -180;\npos uni006F uni0033 -160;\npos uni006F uni0034 -35;\npos uni006F uni0035 -143;\npos uni006F uni0036 -34;\npos uni006F uni0037 -48;\npos uni006F uni0038 -116;\npos uni006F uni0039 -87;\npos uni0070 uni0041 -57;\npos uni0070 uni0042 -46;\npos uni0070 uni0043 -14;\npos uni0070 uni0044 -25;\npos uni0070 uni0045 -14;\npos uni0070 uni0046 -68;\npos uni0070 uni0047 -68;\npos uni0070 uni0048 -14;\npos uni0070 uni0049 -52;\npos uni0070 uni004A -30;\npos uni0070 uni004B -52;\npos uni0070 uni004C -19;\npos uni0070 uni004D -106;\npos uni0070 uni004E -133;\npos uni0070 uni004F -19;\npos uni0070 uni0050 -133;\npos uni0070 uni0051 -30;\npos uni0070 uni0052 -127;\npos uni0070 uni0053 -14;\npos uni0070 uni0054 -165;\npos uni0070 uni0055 -122;\npos uni0070 uni0056 -122;\npos uni0070 uni0057 -100;\npos uni0070 uni0058 -57;\npos uni0070 uni0059 -149;\npos uni0070 uni005A -106;\npos uni0070 uni0061 -30;\npos uni0070 uni0062 -14;\npos uni0070 uni0063 -19;\npos uni0070 uni0064 -30;\npos uni0070 uni0065 -19;\npos uni0070 uni0066 -19;\npos uni0070 uni0067 -127;\npos uni0070 uni0068 -19;\npos uni0070 uni0069 -14;\npos uni0070 uni006A -180;\npos uni0070 uni006B -25;\npos uni0070 uni006C -176;\npos uni0070 uni006D -25;\npos uni0070 uni006E -25;\npos uni0070 uni006F -14;\npos uni0070 uni0070 -73;\npos uni0070 uni0071 -14;\npos uni0070 uni0072 -89;\npos uni0070 uni0073 -143;\npos uni0070 uni0074 -41;\npos uni0070 uni0075 -14;\npos uni0070 uni0076 -14;\npos uni0070 uni0077 -14;\npos uni0070 uni0078 -95;\npos uni0070 uni0079 -100;\npos uni0070 uni007A -149;\npos uni0070 uni0030 -14;\npos uni0070 uni0031 -21;\npos uni0070 uni0032 -142;\npos uni0070 uni0033 -26;\npos uni0070 uni0034 -61;\npos uni0070 uni0035 -26;\npos uni0070 uni0036 -14;\npos uni0070 uni0037 -41;\npos uni0070 uni0038 -26;\npos uni0070 uni0039 -67;\npos uni0071 uni0041 -121;\npos uni0071 uni0042 -99;\npos uni0071 uni0043 -13;\npos uni0071 uni0044 -72;\npos uni0071 uni0045 -35;\npos uni0071 uni0046 -116;\npos uni0071 uni0047 -29;\npos uni0071 uni0048 -24;\npos uni0071 uni0049 -105;\npos uni0071 uni004A -78;\npos uni0071 uni004B -105;\npos uni0071 uni004C -62;\npos uni0071 uni004D -132;\npos uni0071 uni004E -148;\npos uni0071 uni004F -13;\npos uni0071 uni0050 -143;\npos uni0071 uni0051 -13;\npos uni0071 uni0052 -137;\npos uni0071 uni0053 -24;\npos uni0071 uni0054 -175;\npos uni0071 uni0055 -132;\npos uni0071 uni0056 -132;\npos uni0071 uni0057 -40;\npos uni0071 uni0058 -121;\npos uni0071 uni0059 -153;\npos uni0071 uni005A -126;\npos uni0071 uni0061 -78;\npos uni0071 uni0062 -35;\npos uni0071 uni0063 -56;\npos uni0071 uni0064 -67;\npos uni0071 uni0065 -45;\npos uni0071 uni0066 -35;\npos uni0071 uni0067 -126;\npos uni0071 uni0068 -35;\npos uni0071 uni0069 -40;\npos uni0071 uni006A -121;\npos uni0071 uni006B -40;\npos uni0071 uni006C -132;\npos uni0071 uni006D -40;\npos uni0071 uni006E -18;\npos uni0071 uni006F -40;\npos uni0071 uni0070 -99;\npos uni0071 uni0071 -29;\npos uni0071 uni0072 -126;\npos uni0071 uni0073 -99;\npos uni0071 uni0074 -13;\npos uni0071 uni0075 -40;\npos uni0071 uni0076 -13;\npos uni0071 uni0077 -24;\npos uni0071 uni0078 -67;\npos uni0071 uni0079 -110;\npos uni0071 uni007A -110;\npos uni0071 uni0030 -18;\npos uni0071 uni0031 -47;\npos uni0071 uni0032 -132;\npos uni0071 uni0033 -70;\npos uni0071 uni0034 -13;\npos uni0071 uni0035 -70;\npos uni0071 uni0036 -20;\npos uni0071 uni0037 -13;\npos uni0071 uni0038 -63;\npos uni0071 uni0039 -127;\npos uni0072 uni0041 -35;\npos uni0072 uni0042 -35;\npos uni0072 uni0043 -19;\npos uni0072 uni0044 -24;\npos uni0072 uni0045 -13;\npos uni0072 uni0046 -62;\npos uni0072 uni0047 -51;\npos uni0072 uni0048 -13;\npos uni0072 uni0049 -46;\npos uni0072 uni004A -24;\npos uni0072 uni004B -40;\npos uni0072 uni004C -13;\npos uni0072 uni004D -100;\npos uni0072 uni004E -132;\npos uni0072 uni004F -19;\npos uni0072 uni0050 -170;\npos uni0072 uni0051 -35;\npos uni0072 uni0052 -164;\npos uni0072 uni0053 -13;\npos uni0072 uni0054 -180;\npos uni0072 uni0055 -180;\npos uni0072 uni0056 -180;\npos uni0072 uni0057 -164;\npos uni0072 uni0058 -35;\npos uni0072 uni0059 -180;\npos uni0072 uni005A -62;\npos uni0072 uni0061 -24;\npos uni0072 uni0062 -13;\npos uni0072 uni0063 -19;\npos uni0072 uni0064 -24;\npos uni0072 uni0065 -13;\npos uni0072 uni0066 -24;\npos uni0072 uni0067 -127;\npos uni0072 uni0068 -13;\npos uni0072 uni0069 -13;\npos uni0072 uni006A -164;\npos uni0072 uni006B -19;\npos uni0072 uni006C -29;\npos uni0072 uni006D -24;\npos uni0072 uni006E -24;\npos uni0072 uni006F -13;\npos uni0072 uni0070 -67;\npos uni0072 uni0071 -13;\npos uni0072 uni0072 -78;\npos uni0072 uni0073 -89;\npos uni0072 uni0074 -137;\npos uni0072 uni0075 -13;\npos uni0072 uni0076 -13;\npos uni0072 uni0077 -13;\npos uni0072 uni0078 -137;\npos uni0072 uni0079 -100;\npos uni0072 uni007A -148;\npos uni0072 uni0030 -13;\npos uni0072 uni0031 -19;\npos uni0072 uni0032 -63;\npos uni0072 uni0033 -19;\npos uni0072 uni0034 -137;\npos uni0072 uni0035 -20;\npos uni0072 uni0036 -13;\npos uni0072 uni0037 -91;\npos uni0072 uni0038 -20;\npos uni0072 uni0039 -38;\npos uni0073 uni0041 -51;\npos uni0073 uni0042 -51;\npos uni0073 uni0043 -13;\npos uni0073 uni0044 -56;\npos uni0073 uni0045 -24;\npos uni0073 uni0046 -83;\npos uni0073 uni0047 -35;\npos uni0073 uni0048 -13;\npos uni0073 uni0049 -56;\npos uni0073 uni004A -51;\npos uni0073 uni004B -51;\npos uni0073 uni004C -56;\npos uni0073 uni004D -127;\npos uni0073 uni004E -148;\npos uni0073 uni004F -13;\npos uni0073 uni0050 -159;\npos uni0073 uni0051 -13;\npos uni0073 uni0052 -154;\npos uni0073 uni0053 -19;\npos uni0073 uni0054 -180;\npos uni0073 uni0055 -148;\npos uni0073 uni0056 -148;\npos uni0073 uni0057 -51;\npos uni0073 uni0058 -51;\npos uni0073 uni0059 -180;\npos uni0073 uni005A -56;\npos uni0073 uni0061 -51;\npos uni0073 uni0062 -24;\npos uni0073 uni0063 -46;\npos uni0073 uni0064 -51;\npos uni0073 uni0065 -35;\npos uni0073 uni0066 -46;\npos uni0073 uni0067 -132;\npos uni0073 uni0068 -29;\npos uni0073 uni0069 -29;\npos uni0073 uni006A -127;\npos uni0073 uni006B -35;\npos uni0073 uni006C -51;\npos uni0073 uni006D -35;\npos uni0073 uni006E -40;\npos uni0073 uni006F -29;\npos uni0073 uni0070 -83;\npos uni0073 uni0071 -19;\npos uni0073 uni0072 -62;\npos uni0073 uni0073 -73;\npos uni0073 uni0074 -13;\npos uni0073 uni0075 -29;\npos uni0073 uni0076 -13;\npos uni0073 uni0077 -19;\npos uni0073 uni0078 -67;\npos uni0073 uni0079 -105;\npos uni0073 uni007A -110;\npos uni0073 uni0030 -13;\npos uni0073 uni0031 -40;\npos uni0073 uni0032 -56;\npos uni0073 uni0033 -51;\npos uni0073 uni0034 -13;\npos uni0073 uni0035 -56;\npos uni0073 uni0036 -13;\npos uni0073 uni0037 -13;\npos uni0073 uni0038 -54;\npos uni0073 uni0039 -51;\npos uni0074 uni0041 -180;\npos uni0074 uni0042 -56;\npos uni0074 uni0043 -56;\npos uni0074 uni0044 -73;\npos uni0074 uni0045 -51;\npos uni0074 uni0046 -51;\npos uni0074 uni0047 -29;\npos uni0074 uni0048 -180;\npos uni0074 uni0049 -19;\npos uni0074 uni004A -154;\npos uni0074 uni004B -127;\npos uni0074 uni004C -180;\npos uni0074 uni004D -19;\npos uni0074 uni004E -13;\npos uni0074 uni004F -67;\npos uni0074 uni0050 -13;\npos uni0074 uni0051 -56;\npos uni0074 uni0052 -13;\npos uni0074 uni0053 -180;\npos uni0074 uni0054 -13;\npos uni0074 uni0055 -13;\npos uni0074 uni0056 -13;\npos uni0074 uni0057 -29;\npos uni0074 uni0058 -180;\npos uni0074 uni0059 -13;\npos uni0074 uni005A -180;\npos uni0074 uni0061 -180;\npos uni0074 uni0062 -94;\npos uni0074 uni0063 -180;\npos uni0074 uni0064 -180;\npos uni0074 uni0065 -180;\npos uni0074 uni0066 -180;\npos uni0074 uni0067 -180;\npos uni0074 uni0068 -94;\npos uni0074 uni0069 -51;\npos uni0074 uni006A -180;\npos uni0074 uni006B -110;\npos uni0074 uni006C -180;\npos uni0074 uni006D -180;\npos uni0074 uni006E -116;\npos uni0074 uni006F -180;\npos uni0074 uni0070 -180;\npos uni0074 uni0071 -180;\npos uni0074 uni0072 -180;\npos uni0074 uni0073 -180;\npos uni0074 uni0074 -180;\npos uni0074 uni0075 -180;\npos uni0074 uni0076 -180;\npos uni0074 uni0077 -180;\npos uni0074 uni0078 -180;\npos uni0074 uni0079 -180;\npos uni0074 uni007A -180;\npos uni0074 uni0030 -73;\npos uni0074 uni0031 -25;\npos uni0074 uni0032 -180;\npos uni0074 uni0033 -180;\npos uni0074 uni0034 -172;\npos uni0074 uni0035 -180;\npos uni0074 uni0036 -87;\npos uni0074 uni0037 -180;\npos uni0074 uni0038 -180;\npos uni0074 uni0039 -74;\npos uni0075 uni0041 -30;\npos uni0075 uni0042 -30;\npos uni0075 uni0043 -25;\npos uni0075 uni0044 -25;\npos uni0075 uni0045 -14;\npos uni0075 uni0046 -57;\npos uni0075 uni0047 -46;\npos uni0075 uni0048 -14;\npos uni0075 uni0049 -41;\npos uni0075 uni004A -25;\npos uni0075 uni004B -35;\npos uni0075 uni004C -14;\npos uni0075 uni004D -100;\npos uni0075 uni004E -127;\npos uni0075 uni004F -25;\npos uni0075 uni0050 -170;\npos uni0075 uni0051 -46;\npos uni0075 uni0052 -165;\npos uni0075 uni0053 -14;\npos uni0075 uni0054 -180;\npos uni0075 uni0055 -180;\npos uni0075 uni0056 -180;\npos uni0075 uni0057 -133;\npos uni0075 uni0058 -30;\npos uni0075 uni0059 -180;\npos uni0075 uni005A -62;\npos uni0075 uni0061 -25;\npos uni0075 uni0062 -14;\npos uni0075 uni0063 -19;\npos uni0075 uni0064 -25;\npos uni0075 uni0065 -14;\npos uni0075 uni0066 -35;\npos uni0075 uni0067 -127;\npos uni0075 uni0068 -14;\npos uni0075 uni0069 -14;\npos uni0075 uni006A -165;\npos uni0075 uni006B -19;\npos uni0075 uni006C -25;\npos uni0075 uni006D -25;\npos uni0075 uni006E -25;\npos uni0075 uni006F -14;\npos uni0075 uni0070 -68;\npos uni0075 uni0071 -14;\npos uni0075 uni0072 -73;\npos uni0075 uni0073 -89;\npos uni0075 uni0074 -127;\npos uni0075 uni0075 -14;\npos uni0075 uni0076 -14;\npos uni0075 uni0077 -14;\npos uni0075 uni0078 -138;\npos uni0075 uni0079 -100;\npos uni0075 uni007A -149;\npos uni0075 uni0030 -21;\npos uni0075 uni0031 -19;\npos uni0075 uni0032 -61;\npos uni0075 uni0033 -19;\npos uni0075 uni0034 -122;\npos uni0075 uni0035 -19;\npos uni0075 uni0036 -14;\npos uni0075 uni0037 -86;\npos uni0075 uni0038 -19;\npos uni0075 uni0039 -33;\npos uni0076 uni0041 -170;\npos uni0076 uni0042 -122;\npos uni0076 uni0043 -14;\npos uni0076 uni0044 -95;\npos uni0076 uni0045 -35;\npos uni0076 uni0046 -116;\npos uni0076 uni0047 -46;\npos uni0076 uni0048 -25;\npos uni0076 uni0049 -116;\npos uni0076 uni004A -84;\npos uni0076 uni004B -127;\npos uni0076 uni004C -79;\npos uni0076 uni004D -133;\npos uni0076 uni004E -170;\npos uni0076 uni004F -14;\npos uni0076 uni0050 -180;\npos uni0076 uni0051 -14;\npos uni0076 uni0052 -180;\npos uni0076 uni0053 -25;\npos uni0076 uni0054 -180;\npos uni0076 uni0055 -180;\npos uni0076 uni0056 -180;\npos uni0076 uni0057 -62;\npos uni0076 uni0058 -170;\npos uni0076 uni0059 -180;\npos uni0076 uni005A -180;\npos uni0076 uni0061 -79;\npos uni0076 uni0062 -35;\npos uni0076 uni0063 -57;\npos uni0076 uni0064 -73;\npos uni0076 uni0065 -46;\npos uni0076 uni0066 -46;\npos uni0076 uni0067 -143;\npos uni0076 uni0068 -35;\npos uni0076 uni0069 -41;\npos uni0076 uni006A -180;\npos uni0076 uni006B -41;\npos uni0076 uni006C -165;\npos uni0076 uni006D -41;\npos uni0076 uni006E -46;\npos uni0076 uni006F -41;\npos uni0076 uni0070 -100;\npos uni0076 uni0071 -30;\npos uni0076 uni0072 -133;\npos uni0076 uni0073 -106;\npos uni0076 uni0074 -14;\npos uni0076 uni0075 -41;\npos uni0076 uni0076 -14;\npos uni0076 uni0077 -25;\npos uni0076 uni0078 -68;\npos uni0076 uni0079 -111;\npos uni0076 uni007A -111;\npos uni0076 uni0030 -19;\npos uni0076 uni0031 -48;\npos uni0076 uni0032 -180;\npos uni0076 uni0033 -86;\npos uni0076 uni0034 -14;\npos uni0076 uni0035 -72;\npos uni0076 uni0036 -21;\npos uni0076 uni0037 -14;\npos uni0076 uni0038 -65;\npos uni0076 uni0039 -173;\npos uni0077 uni0041 -180;\npos uni0077 uni0042 -122;\npos uni0077 uni0043 -14;\npos uni0077 uni0044 -95;\npos uni0077 uni0045 -30;\npos uni0077 uni0046 -116;\npos uni0077 uni0047 -35;\npos uni0077 uni0048 -24;\npos uni0077 uni0049 -116;\npos uni0077 uni004A -84;\npos uni0077 uni004B -127;\npos uni0077 uni004C -78;\npos uni0077 uni004D -132;\npos uni0077 uni004E -165;\npos uni0077 uni004F -14;\npos uni0077 uni0050 -180;\npos uni0077 uni0051 -14;\npos uni0077 uni0052 -180;\npos uni0077 uni0053 -19;\npos uni0077 uni0054 -180;\npos uni0077 uni0055 -180;\npos uni0077 uni0056 -180;\npos uni0077 uni0057 -51;\npos uni0077 uni0058 -180;\npos uni0077 uni0059 -180;\npos uni0077 uni005A -180;\npos uni0077 uni0061 -78;\npos uni0077 uni0062 -30;\npos uni0077 uni0063 -57;\npos uni0077 uni0064 -73;\npos uni0077 uni0065 -46;\npos uni0077 uni0066 -46;\npos uni0077 uni0067 -143;\npos uni0077 uni0068 -30;\npos uni0077 uni0069 -35;\npos uni0077 uni006A -180;\npos uni0077 uni006B -41;\npos uni0077 uni006C -180;\npos uni0077 uni006D -41;\npos uni0077 uni006E -41;\npos uni0077 uni006F -35;\npos uni0077 uni0070 -95;\npos uni0077 uni0071 -24;\npos uni0077 uni0072 -132;\npos uni0077 uni0073 -100;\npos uni0077 uni0074 -14;\npos uni0077 uni0075 -41;\npos uni0077 uni0076 -14;\npos uni0077 uni0077 -24;\npos uni0077 uni0078 -68;\npos uni0077 uni0079 -105;\npos uni0077 uni007A -111;\npos uni0077 uni0030 -14;\npos uni0077 uni0031 -48;\npos uni0077 uni0032 -180;\npos uni0077 uni0033 -86;\npos uni0077 uni0034 -14;\npos uni0077 uni0035 -72;\npos uni0077 uni0036 -20;\npos uni0077 uni0037 -14;\npos uni0077 uni0038 -61;\npos uni0077 uni0039 -180;\npos uni0078 uni0041 -24;\npos uni0078 uni0042 -24;\npos uni0078 uni0043 -24;\npos uni0078 uni0044 -19;\npos uni0078 uni0045 -14;\npos uni0078 uni0046 -51;\npos uni0078 uni0047 -41;\npos uni0078 uni0048 -14;\npos uni0078 uni0049 -35;\npos uni0078 uni004A -19;\npos uni0078 uni004B -30;\npos uni0078 uni004C -14;\npos uni0078 uni004D -95;\npos uni0078 uni004E -122;\npos uni0078 uni004F -24;\npos uni0078 uni0050 -165;\npos uni0078 uni0051 -46;\npos uni0078 uni0052 -159;\npos uni0078 uni0053 -19;\npos uni0078 uni0054 -180;\npos uni0078 uni0055 -154;\npos uni0078 uni0056 -143;\npos uni0078 uni0057 -111;\npos uni0078 uni0058 -24;\npos uni0078 uni0059 -180;\npos uni0078 uni005A -51;\npos uni0078 uni0061 -19;\npos uni0078 uni0062 -14;\npos uni0078 uni0063 -14;\npos uni0078 uni0064 -19;\npos uni0078 uni0065 -14;\npos uni0078 uni0066 -35;\npos uni0078 uni0067 -132;\npos uni0078 uni0068 -14;\npos uni0078 uni0069 -14;\npos uni0078 uni006A -154;\npos uni0078 uni006B -19;\npos uni0078 uni006C -19;\npos uni0078 uni006D -19;\npos uni0078 uni006E -24;\npos uni0078 uni006F -14;\npos uni0078 uni0070 -62;\npos uni0078 uni0071 -14;\npos uni0078 uni0072 -62;\npos uni0078 uni0073 -68;\npos uni0078 uni0074 -180;\npos uni0078 uni0075 -14;\npos uni0078 uni0076 -14;\npos uni0078 uni0077 -14;\npos uni0078 uni0078 -116;\npos uni0078 uni0079 -100;\npos uni0078 uni007A -149;\npos uni0078 uni0030 -20;\npos uni0078 uni0031 -14;\npos uni0078 uni0032 -47;\npos uni0078 uni0033 -14;\npos uni0078 uni0034 -150;\npos uni0078 uni0035 -14;\npos uni0078 uni0036 -14;\npos uni0078 uni0037 -80;\npos uni0078 uni0038 -14;\npos uni0078 uni0039 -27;\npos uni0079 uni0041 -13;\npos uni0079 uni0042 -13;\npos uni0079 uni0043 -51;\npos uni0079 uni0044 -18;\npos uni0079 uni0045 -29;\npos uni0079 uni0046 -45;\npos uni0079 uni0047 -24;\npos uni0079 uni0048 -40;\npos uni0079 uni0049 -18;\npos uni0079 uni004A -13;\npos uni0079 uni004B -13;\npos uni0079 uni004C -24;\npos uni0079 uni004D -94;\npos uni0079 uni004E -110;\npos uni0079 uni004F -51;\npos uni0079 uni0050 -153;\npos uni0079 uni0051 -105;\npos uni0079 uni0052 -159;\npos uni0079 uni0053 -40;\npos uni0079 uni0054 -180;\npos uni0079 uni0055 -180;\npos uni0079 uni0056 -180;\npos uni0079 uni0057 -180;\npos uni0079 uni0058 -13;\npos uni0079 uni0059 -180;\npos uni0079 uni005A -18;\npos uni0079 uni0061 -13;\npos uni0079 uni0062 -13;\npos uni0079 uni0063 -18;\npos uni0079 uni0064 -13;\npos uni0079 uni0065 -18;\npos uni0079 uni0066 -45;\npos uni0079 uni0067 -132;\npos uni0079 uni0068 -13;\npos uni0079 uni0069 -18;\npos uni0079 uni006A -121;\npos uni0079 uni006B -13;\npos uni0079 uni006C -13;\npos uni0079 uni006D -13;\npos uni0079 uni006E -24;\npos uni0079 uni006F -18;\npos uni0079 uni0070 -40;\npos uni0079 uni0071 -35;\npos uni0079 uni0072 -29;\npos uni0079 uni0073 -35;\npos uni0079 uni0074 -180;\npos uni0079 uni0075 -13;\npos uni0079 uni0076 -13;\npos uni0079 uni0077 -18;\npos uni0079 uni0078 -83;\npos uni0079 uni0079 -121;\npos uni0079 uni007A -175;\npos uni0079 uni0030 -37;\npos uni0079 uni0031 -13;\npos uni0079 uni0032 -20;\npos uni0079 uni0033 -13;\npos uni0079 uni0034 -180;\npos uni0079 uni0035 -18;\npos uni0079 uni0036 -27;\npos uni0079 uni0037 -61;\npos uni0079 uni0038 -18;\npos uni0079 uni0039 -13;\npos uni007A uni0041 -40;\npos uni007A uni0042 -40;\npos uni007A uni0043 -24;\npos uni007A uni0044 -24;\npos uni007A uni0045 -13;\npos uni007A uni0046 -62;\npos uni007A uni0047 -57;\npos uni007A uni0048 -13;\npos uni007A uni0049 -46;\npos uni007A uni004A -24;\npos uni007A uni004B -46;\npos uni007A uni004C -13;\npos uni007A uni004D -100;\npos uni007A uni004E -132;\npos uni007A uni004F -24;\npos uni007A uni0050 -170;\npos uni007A uni0051 -40;\npos uni007A uni0052 -165;\npos uni007A uni0053 -13;\npos uni007A uni0054 -180;\npos uni007A uni0055 -175;\npos uni007A uni0056 -175;\npos uni007A uni0057 -159;\npos uni007A uni0058 -40;\npos uni007A uni0059 -180;\npos uni007A uni005A -89;\npos uni007A uni0061 -24;\npos uni007A uni0062 -13;\npos uni007A uni0063 -19;\npos uni007A uni0064 -24;\npos uni007A uni0065 -13;\npos uni007A uni0066 -30;\npos uni007A uni0067 -127;\npos uni007A uni0068 -13;\npos uni007A uni0069 -13;\npos uni007A uni006A -180;\npos uni007A uni006B -19;\npos uni007A uni006C -100;\npos uni007A uni006D -24;\npos uni007A uni006E -24;\npos uni007A uni006F -13;\npos uni007A uni0070 -67;\npos uni007A uni0071 -13;\npos uni007A uni0072 -84;\npos uni007A uni0073 -127;\npos uni007A uni0074 -180;\npos uni007A uni0075 -13;\npos uni007A uni0076 -13;\npos uni007A uni0077 -13;\npos uni007A uni0078 -159;\npos uni007A uni0079 -100;\npos uni007A uni007A -148;\npos uni007A uni0030 -19;\npos uni007A uni0031 -19;\npos uni007A uni0032 -96;\npos uni007A uni0033 -19;\npos uni007A uni0034 -180;\npos uni007A uni0035 -20;\npos uni007A uni0036 -13;\npos uni007A uni0037 -94;\npos uni007A uni0038 -20;\npos uni007A uni0039 -46;\npos uni0030 uni0041 -180;\npos uni0030 uni0042 -58;\npos uni0030 uni0043 -53;\npos uni0030 uni0044 -75;\npos uni0030 uni0045 -37;\npos uni0030 uni0046 -21;\npos uni0030 uni0047 -33;\npos uni0030 uni0048 -94;\npos uni0030 uni0049 -15;\npos uni0030 uni004A -155;\npos uni0030 uni004B -123;\npos uni0030 uni004C -140;\npos uni0030 uni004D -15;\npos uni0030 uni004E -15;\npos uni0030 uni004F -59;\npos uni0030 uni0050 -21;\npos uni0030 uni0051 -52;\npos uni0030 uni0052 -21;\npos uni0030 uni0053 -91;\npos uni0030 uni0054 -15;\npos uni0030 uni0055 -22;\npos uni0030 uni0056 -21;\npos uni0030 uni0057 -29;\npos uni0030 uni0058 -180;\npos uni0030 uni0059 -15;\npos uni0030 uni005A -129;\npos uni0030 uni0061 -155;\npos uni0030 uni0062 -86;\npos uni0030 uni0063 -132;\npos uni0030 uni0064 -148;\npos uni0030 uni0065 -121;\npos uni0030 uni0066 -116;\npos uni0030 uni0067 -180;\npos uni0030 uni0068 -86;\npos uni0030 uni0069 -60;\npos uni0030 uni006A -180;\npos uni0030 uni006B -99;\npos uni0030 uni006C -180;\npos uni0030 uni006D -99;\npos uni0030 uni006E -56;\npos uni0030 uni006F -110;\npos uni0030 uni0070 -156;\npos uni0030 uni0071 -91;\npos uni0030 uni0072 -160;\npos uni0030 uni0073 -140;\npos uni0030 uni0074 -80;\npos uni0030 uni0075 -113;\npos uni0030 uni0076 -72;\npos uni0030 uni0077 -86;\npos uni0030 uni0078 -134;\npos uni0030 uni0079 -169;\npos uni0030 uni007A -164;\npos uni0030 uni0030 -63;\npos uni0030 uni0031 -29;\npos uni0030 uni0032 -180;\npos uni0030 uni0033 -97;\npos uni0030 uni0034 -70;\npos uni0030 uni0035 -144;\npos uni0030 uni0036 -76;\npos uni0030 uni0037 -42;\npos uni0030 uni0038 -138;\npos uni0030 uni0039 -83;\npos uni0031 uni0041 -180;\npos uni0031 uni0042 -135;\npos uni0031 uni0043 -154;\npos uni0031 uni0044 -140;\npos uni0031 uni0045 -100;\npos uni0031 uni0046 -50;\npos uni0031 uni0047 -127;\npos uni0031 uni0048 -180;\npos uni0031 uni0049 -65;\npos uni0031 uni004A -180;\npos uni0031 uni004B -180;\npos uni0031 uni004C -180;\npos uni0031 uni004D -71;\npos uni0031 uni004E -92;\npos uni0031 uni004F -164;\npos uni0031 uni0050 -99;\npos uni0031 uni0051 -153;\npos uni0031 uni0052 -95;\npos uni0031 uni0053 -180;\npos uni0031 uni0054 -75;\npos uni0031 uni0055 -100;\npos uni0031 uni0056 -100;\npos uni0031 uni0057 -127;\npos uni0031 uni0058 -180;\npos uni0031 uni0059 -86;\npos uni0031 uni005A -162;\npos uni0031 uni0061 -180;\npos uni0031 uni0062 -180;\npos uni0031 uni0063 -180;\npos uni0031 uni0064 -180;\npos uni0031 uni0065 -180;\npos uni0031 uni0066 -180;\npos uni0031 uni0067 -180;\npos uni0031 uni0068 -180;\npos uni0031 uni0069 -141;\npos uni0031 uni006A -180;\npos uni0031 uni006B -180;\npos uni0031 uni006C -180;\npos uni0031 uni006D -180;\npos uni0031 uni006E -163;\npos uni0031 uni006F -180;\npos uni0031 uni0070 -180;\npos uni0031 uni0071 -180;\npos uni0031 uni0072 -180;\npos uni0031 uni0073 -180;\npos uni0031 uni0074 -178;\npos uni0031 uni0075 -180;\npos uni0031 uni0076 -178;\npos uni0031 uni0077 -180;\npos uni0031 uni0078 -180;\npos uni0031 uni0079 -180;\npos uni0031 uni007A -180;\npos uni0031 uni0030 -171;\npos uni0031 uni0031 -123;\npos uni0031 uni0032 -180;\npos uni0031 uni0033 -130;\npos uni0031 uni0034 -178;\npos uni0031 uni0035 -180;\npos uni0031 uni0036 -178;\npos uni0031 uni0037 -82;\npos uni0031 uni0038 -180;\npos uni0031 uni0039 -164;\npos uni0032 uni0041 -15;\npos uni0032 uni0042 -15;\npos uni0032 uni0043 -21;\npos uni0032 uni0044 -15;\npos uni0032 uni0045 -15;\npos uni0032 uni0046 -48;\npos uni0032 uni0047 -31;\npos uni0032 uni0048 -15;\npos uni0032 uni0049 -26;\npos uni0032 uni004A -15;\npos uni0032 uni004B -21;\npos uni0032 uni004C -15;\npos uni0032 uni004D -96;\npos uni0032 uni004E -116;\npos uni0032 uni004F -21;\npos uni0032 uni0050 -121;\npos uni0032 uni0051 -37;\npos uni0032 uni0052 -121;\npos uni0032 uni0053 -15;\npos uni0032 uni0054 -110;\npos uni0032 uni0055 -127;\npos uni0032 uni0056 -127;\npos uni0032 uni0057 -155;\npos uni0032 uni0058 -21;\npos uni0032 uni0059 -116;\npos uni0032 uni005A -42;\npos uni0032 uni0061 -15;\npos uni0032 uni0062 -15;\npos uni0032 uni0063 -15;\npos uni0032 uni0064 -15;\npos uni0032 uni0065 -15;\npos uni0032 uni0066 -26;\npos uni0032 uni0067 -129;\npos uni0032 uni0068 -15;\npos uni0032 uni0069 -15;\npos uni0032 uni006A -148;\npos uni0032 uni006B -15;\npos uni0032 uni006C -15;\npos uni0032 uni006D -15;\npos uni0032 uni006E -21;\npos uni0032 uni006F -15;\npos uni0032 uni0070 -58;\npos uni0032 uni0071 -15;\npos uni0032 uni0072 -58;\npos uni0032 uni0073 -71;\npos uni0032 uni0074 -76;\npos uni0032 uni0075 -15;\npos uni0032 uni0076 -15;\npos uni0032 uni0077 -15;\npos uni0032 uni0078 -115;\npos uni0032 uni0079 -102;\npos uni0032 uni007A -150;\npos uni0032 uni0030 -15;\npos uni0032 uni0031 -15;\npos uni0032 uni0032 -42;\npos uni0032 uni0033 -15;\npos uni0032 uni0034 -97;\npos uni0032 uni0035 -15;\npos uni0032 uni0036 -15;\npos uni0032 uni0037 -76;\npos uni0032 uni0038 -15;\npos uni0032 uni0039 -22;\npos uni0033 uni0041 -80;\npos uni0033 uni0042 -75;\npos uni0033 uni0043 -15;\npos uni0033 uni0044 -52;\npos uni0033 uni0045 -26;\npos uni0033 uni0046 -90;\npos uni0033 uni0047 -21;\npos uni0033 uni0048 -15;\npos uni0033 uni0049 -82;\npos uni0033 uni004A -57;\npos uni0033 uni004B -80;\npos uni0033 uni004C -41;\npos uni0033 uni004D -102;\npos uni0033 uni004E -86;\npos uni0033 uni004F -15;\npos uni0033 uni0050 -68;\npos uni0033 uni0051 -15;\npos uni0033 uni0052 -63;\npos uni0033 uni0053 -21;\npos uni0033 uni0054 -108;\npos uni0033 uni0055 -57;\npos uni0033 uni0056 -52;\npos uni0033 uni0057 -21;\npos uni0033 uni0058 -84;\npos uni0033 uni0059 -91;\npos uni0033 uni005A -117;\npos uni0033 uni0061 -57;\npos uni0033 uni0062 -26;\npos uni0033 uni0063 -44;\npos uni0033 uni0064 -52;\npos uni0033 uni0065 -33;\npos uni0033 uni0066 -22;\npos uni0033 uni0067 -139;\npos uni0033 uni0068 -31;\npos uni0033 uni0069 -31;\npos uni0033 uni006A -180;\npos uni0033 uni006B -37;\npos uni0033 uni006C -83;\npos uni0033 uni006D -37;\npos uni0033 uni006E -15;\npos uni0033 uni006F -27;\npos uni0033 uni0070 -91;\npos uni0033 uni0071 -21;\npos uni0033 uni0072 -117;\npos uni0033 uni0073 -102;\npos uni0033 uni0074 -15;\npos uni0033 uni0075 -31;\npos uni0033 uni0076 -15;\npos uni0033 uni0077 -21;\npos uni0033 uni0078 -69;\npos uni0033 uni0079 -107;\npos uni0033 uni007A -112;\npos uni0033 uni0030 -15;\npos uni0033 uni0031 -42;\npos uni0033 uni0032 -124;\npos uni0033 uni0033 -49;\npos uni0033 uni0034 -15;\npos uni0033 uni0035 -49;\npos uni0033 uni0036 -15;\npos uni0033 uni0037 -15;\npos uni0033 uni0038 -49;\npos uni0033 uni0039 -83;\npos uni0034 uni0041 -180;\npos uni0034 uni0042 -116;\npos uni0034 uni0043 -15;\npos uni0034 uni0044 -89;\npos uni0034 uni0045 -31;\npos uni0034 uni0046 -113;\npos uni0034 uni0047 -20;\npos uni0034 uni0048 -21;\npos uni0034 uni0049 -113;\npos uni0034 uni004A -81;\npos uni0034 uni004B -121;\npos uni0034 uni004C -73;\npos uni0034 uni004D -133;\npos uni0034 uni004E -166;\npos uni0034 uni004F -15;\npos uni0034 uni0050 -97;\npos uni0034 uni0051 -15;\npos uni0034 uni0052 -92;\npos uni0034 uni0053 -20;\npos uni0034 uni0054 -157;\npos uni0034 uni0055 -86;\npos uni0034 uni0056 -76;\npos uni0034 uni0057 -25;\npos uni0034 uni0058 -180;\npos uni0034 uni0059 -168;\npos uni0034 uni005A -180;\npos uni0034 uni0061 -75;\npos uni0034 uni0062 -31;\npos uni0034 uni0063 -54;\npos uni0034 uni0064 -70;\npos uni0034 uni0065 -43;\npos uni0034 uni0066 -40;\npos uni0034 uni0067 -144;\npos uni0034 uni0068 -31;\npos uni0034 uni0069 -36;\npos uni0034 uni006A -180;\npos uni0034 uni006B -42;\npos uni0034 uni006C -180;\npos uni0034 uni006D -42;\npos uni0034 uni006E -15;\npos uni0034 uni006F -36;\npos uni0034 uni0070 -96;\npos uni0034 uni0071 -25;\npos uni0034 uni0072 -129;\npos uni0034 uni0073 -101;\npos uni0034 uni0074 -15;\npos uni0034 uni0075 -38;\npos uni0034 uni0076 -15;\npos uni0034 uni0077 -25;\npos uni0034 uni0078 -69;\npos uni0034 uni0079 -106;\npos uni0034 uni007A -112;\npos uni0034 uni0030 -15;\npos uni0034 uni0031 -49;\npos uni0034 uni0032 -180;\npos uni0034 uni0033 -83;\npos uni0034 uni0034 -15;\npos uni0034 uni0035 -69;\npos uni0034 uni0036 -21;\npos uni0034 uni0037 -15;\npos uni0034 uni0038 -62;\npos uni0034 uni0039 -110;\npos uni0035 uni0041 -146;\npos uni0035 uni0042 -103;\npos uni0035 uni0043 -42;\npos uni0035 uni0044 -106;\npos uni0035 uni0045 -72;\npos uni0035 uni0046 -96;\npos uni0035 uni0047 -42;\npos uni0035 uni0048 -63;\npos uni0035 uni0049 -98;\npos uni0035 uni004A -112;\npos uni0035 uni004B -139;\npos uni0035 uni004C -95;\npos uni0035 uni004D -102;\npos uni0035 uni004E -61;\npos uni0035 uni004F -48;\npos uni0035 uni0050 -60;\npos uni0035 uni0051 -42;\npos uni0035 uni0052 -55;\npos uni0035 uni0053 -61;\npos uni0035 uni0054 -79;\npos uni0035 uni0055 -49;\npos uni0035 uni0056 -49;\npos uni0035 uni0057 -42;\npos uni0035 uni0058 -146;\npos uni0035 uni0059 -67;\npos uni0035 uni005A -180;\npos uni0035 uni0061 -112;\npos uni0035 uni0062 -69;\npos uni0035 uni0063 -95;\npos uni0035 uni0064 -106;\npos uni0035 uni0065 -84;\npos uni0035 uni0066 -75;\npos uni0035 uni0067 -180;\npos uni0035 uni0068 -71;\npos uni0035 uni0069 -78;\npos uni0035 uni006A -180;\npos uni0035 uni006B -82;\npos uni0035 uni006C -151;\npos uni0035 uni006D -80;\npos uni0035 uni006E -42;\npos uni0035 uni006F -78;\npos uni0035 uni0070 -137;\npos uni0035 uni0071 -65;\npos uni0035 uni0072 -167;\npos uni0035 uni0073 -129;\npos uni0035 uni0074 -49;\npos uni0035 uni0075 -79;\npos uni0035 uni0076 -49;\npos uni0035 uni0077 -65;\npos uni0035 uni0078 -109;\npos uni0035 uni0079 -148;\npos uni0035 uni007A -145;\npos uni0035 uni0030 -49;\npos uni0035 uni0031 -70;\npos uni0035 uni0032 -180;\npos uni0035 uni0033 -104;\npos uni0035 uni0034 -49;\npos uni0035 uni0035 -104;\npos uni0035 uni0036 -56;\npos uni0035 uni0037 -56;\npos uni0035 uni0038 -104;\npos uni0035 uni0039 -104;\npos uni0036 uni0041 -165;\npos uni0036 uni0042 -127;\npos uni0036 uni0043 -89;\npos uni0036 uni0044 -127;\npos uni0036 uni0045 -94;\npos uni0036 uni0046 -32;\npos uni0036 uni0047 -89;\npos uni0036 uni0048 -96;\npos uni0036 uni0049 -51;\npos uni0036 uni004A -141;\npos uni0036 uni004B -168;\npos uni0036 uni004C -126;\npos uni0036 uni004D -62;\npos uni0036 uni004E -89;\npos uni0036 uni004F -89;\npos uni0036 uni0050 -100;\npos uni0036 uni0051 -89;\npos uni0036 uni0052 -100;\npos uni0036 uni0053 -100;\npos uni0036 uni0054 -62;\npos uni0036 uni0055 -111;\npos uni0036 uni0056 -105;\npos uni0036 uni0057 -89;\npos uni0036 uni0058 -165;\npos uni0036 uni0059 -84;\npos uni0036 uni005A -148;\npos uni0036 uni0061 -141;\npos uni0036 uni0062 -107;\npos uni0036 uni0063 -125;\npos uni0036 uni0064 -135;\npos uni0036 uni0065 -114;\npos uni0036 uni0066 -103;\npos uni0036 uni0067 -180;\npos uni0036 uni0068 -111;\npos uni0036 uni0069 -112;\npos uni0036 uni006A -180;\npos uni0036 uni006B -116;\npos uni0036 uni006C -171;\npos uni0036 uni006D -116;\npos uni0036 uni006E -89;\npos uni0036 uni006F -108;\npos uni0036 uni0070 -172;\npos uni0036 uni0071 -102;\npos uni0036 uni0072 -180;\npos uni0036 uni0073 -176;\npos uni0036 uni0074 -89;\npos uni0036 uni0075 -112;\npos uni0036 uni0076 -89;\npos uni0036 uni0077 -100;\npos uni0036 uni0078 -143;\npos uni0036 uni0079 -180;\npos uni0036 uni007A -180;\npos uni0036 uni0030 -96;\npos uni0036 uni0031 -123;\npos uni0036 uni0032 -180;\npos uni0036 uni0033 -117;\npos uni0036 uni0034 -89;\npos uni0036 uni0035 -130;\npos uni0036 uni0036 -96;\npos uni0036 uni0037 -62;\npos uni0036 uni0038 -130;\npos uni0036 uni0039 -164;\npos uni0037 uni0041 -180;\npos uni0037 uni0042 -180;\npos uni0037 uni0043 -123;\npos uni0037 uni0044 -180;\npos uni0037 uni0045 -152;\npos uni0037 uni0046 -74;\npos uni0037 uni0047 -129;\npos uni0037 uni0048 -141;\npos uni0037 uni0049 -107;\npos uni0037 uni004A -180;\npos uni0037 uni004B -180;\npos uni0037 uni004C -180;\npos uni0037 uni004D -126;\npos uni0037 uni004E -157;\npos uni0037 uni004F -129;\npos uni0037 uni0050 -168;\npos uni0037 uni0051 -123;\npos uni0037 uni0052 -168;\npos uni0037 uni0053 -141;\npos uni0037 uni0054 -130;\npos uni0037 uni0055 -179;\npos uni0037 uni0056 -173;\npos uni0037 uni0057 -134;\npos uni0037 uni0058 -180;\npos uni0037 uni0059 -149;\npos uni0037 uni005A -180;\npos uni0037 uni0061 -180;\npos uni0037 uni0062 -150;\npos uni0037 uni0063 -179;\npos uni0037 uni0064 -180;\npos uni0037 uni0065 -168;\npos uni0037 uni0066 -180;\npos uni0037 uni0067 -180;\npos uni0037 uni0068 -150;\npos uni0037 uni0069 -157;\npos uni0037 uni006A -180;\npos uni0037 uni006B -157;\npos uni0037 uni006C -180;\npos uni0037 uni006D -156;\npos uni0037 uni006E -123;\npos uni0037 uni006F -157;\npos uni0037 uni0070 -180;\npos uni0037 uni0071 -145;\npos uni0037 uni0072 -180;\npos uni0037 uni0073 -180;\npos uni0037 uni0074 -130;\npos uni0037 uni0075 -163;\npos uni0037 uni0076 -129;\npos uni0037 uni0077 -140;\npos uni0037 uni0078 -180;\npos uni0037 uni0079 -180;\npos uni0037 uni007A -180;\npos uni0037 uni0030 -130;\npos uni0037 uni0031 -164;\npos uni0037 uni0032 -180;\npos uni0037 uni0033 -164;\npos uni0037 uni0034 -123;\npos uni0037 uni0035 -180;\npos uni0037 uni0036 -137;\npos uni0037 uni0037 -110;\npos uni0037 uni0038 -180;\npos uni0037 uni0039 -180;\npos uni0038 uni0041 -124;\npos uni0038 uni0042 -102;\npos uni0038 uni0043 -97;\npos uni0038 uni0044 -107;\npos uni0038 uni0045 -67;\npos uni0038 uni0046 -21;\npos uni0038 uni0047 -102;\npos uni0038 uni0048 -97;\npos uni0038 uni0049 -33;\npos uni0038 uni004A -114;\npos uni0038 uni004B -129;\npos uni0038 uni004C -102;\npos uni0038 uni004D -38;\npos uni0038 uni004E -59;\npos uni0038 uni004F -97;\npos uni0038 uni0050 -65;\npos uni0038 uni0051 -97;\npos uni0038 uni0052 -64;\npos uni0038 uni0053 -97;\npos uni0038 uni0054 -44;\npos uni0038 uni0055 -75;\npos uni0038 uni0056 -69;\npos uni0038 uni0057 -114;\npos uni0038 uni0058 -129;\npos uni0038 uni0059 -53;\npos uni0038 uni005A -135;\npos uni0038 uni0061 -114;\npos uni0038 uni0062 -102;\npos uni0038 uni0063 -108;\npos uni0038 uni0064 -113;\npos uni0038 uni0065 -102;\npos uni0038 uni0066 -97;\npos uni0038 uni0067 -180;\npos uni0038 uni0068 -102;\npos uni0038 uni0069 -97;\npos uni0038 uni006A -180;\npos uni0038 uni006B -108;\npos uni0038 uni006C -124;\npos uni0038 uni006D -108;\npos uni0038 uni006E -110;\npos uni0038 uni006F -97;\npos uni0038 uni0070 -156;\npos uni0038 uni0071 -97;\npos uni0038 uni0072 -167;\npos uni0038 uni0073 -180;\npos uni0038 uni0074 -97;\npos uni0038 uni0075 -102;\npos uni0038 uni0076 -97;\npos uni0038 uni0077 -102;\npos uni0038 uni0078 -151;\npos uni0038 uni0079 -180;\npos uni0038 uni007A -180;\npos uni0038 uni0030 -97;\npos uni0038 uni0031 -110;\npos uni0038 uni0032 -158;\npos uni0038 uni0033 -104;\npos uni0038 uni0034 -97;\npos uni0038 uni0035 -110;\npos uni0038 uni0036 -97;\npos uni0038 uni0037 -49;\npos uni0038 uni0038 -110;\npos uni0038 uni0039 -131;\npos uni0039 uni0041 -180;\npos uni0039 uni0042 -58;\npos uni0039 uni0043 -53;\npos uni0039 uni0044 -75;\npos uni0039 uni0045 -37;\npos uni0039 uni0046 -15;\npos uni0039 uni0047 -27;\npos uni0039 uni0048 -94;\npos uni0039 uni0049 -15;\npos uni0039 uni004A -148;\npos uni0039 uni004B -123;\npos uni0039 uni004C -136;\npos uni0039 uni004D -15;\npos uni0039 uni004E -15;\npos uni0039 uni004F -59;\npos uni0039 uni0050 -15;\npos uni0039 uni0051 -52;\npos uni0039 uni0052 -15;\npos uni0039 uni0053 -94;\npos uni0039 uni0054 -15;\npos uni0039 uni0055 -15;\npos uni0039 uni0056 -15;\npos uni0039 uni0057 -27;\npos uni0039 uni0058 -180;\npos uni0039 uni0059 -15;\npos uni0039 uni005A -129;\npos uni0039 uni0061 -148;\npos uni0039 uni0062 -86;\npos uni0039 uni0063 -132;\npos uni0039 uni0064 -143;\npos uni0039 uni0065 -121;\npos uni0039 uni0066 -110;\npos uni0039 uni0067 -180;\npos uni0039 uni0068 -86;\npos uni0039 uni0069 -53;\npos uni0039 uni006A -180;\npos uni0039 uni006B -99;\npos uni0039 uni006C -180;\npos uni0039 uni006D -99;\npos uni0039 uni006E -56;\npos uni0039 uni006F -110;\npos uni0039 uni0070 -156;\npos uni0039 uni0071 -95;\npos uni0039 uni0072 -160;\npos uni0039 uni0073 -140;\npos uni0039 uni0074 -83;\npos uni0039 uni0075 -116;\npos uni0039 uni0076 -72;\npos uni0039 uni0077 -88;\npos uni0039 uni0078 -137;\npos uni0039 uni0079 -169;\npos uni0039 uni007A -164;\npos uni0039 uni0030 -63;\npos uni0039 uni0031 -29;\npos uni0039 uni0032 -180;\npos uni0039 uni0033 -97;\npos uni0039 uni0034 -76;\npos uni0039 uni0035 -144;\npos uni0039 uni0036 -76;\npos uni0039 uni0037 -42;\npos uni0039 uni0038 -138;\npos uni0039 uni0039 -76;\n} kern;",
+  "glyphs": [
+    {
+      "character": "A",
+      "sourceBounds": [
+        25,
+        20,
+        188,
+        151
+      ],
+      "advance": 916,
+      "baseline": 146,
+      "scale": 5.4
+    },
+    {
+      "character": "B",
+      "sourceBounds": [
+        210,
+        15,
+        336,
+        152
+      ],
+      "advance": 716,
+      "baseline": 146,
+      "scale": 5.4
+    },
+    {
+      "character": "C",
+      "sourceBounds": [
+        374,
+        17,
+        479,
+        141
+      ],
+      "advance": 603,
+      "baseline": 146,
+      "scale": 5.4
+    },
+    {
+      "character": "D",
+      "sourceBounds": [
+        495,
+        17,
+        635,
+        151
+      ],
+      "advance": 792,
+      "baseline": 146,
+      "scale": 5.4
+    },
+    {
+      "character": "E",
+      "sourceBounds": [
+        683,
+        14,
+        814,
+        142
+      ],
+      "advance": 743,
+      "baseline": 146,
+      "scale": 5.4
+    },
+    {
+      "character": "F",
+      "sourceBounds": [
+        826,
+        16,
+        983,
+        151
+      ],
+      "advance": 884,
+      "baseline": 146,
+      "scale": 5.4
+    },
+    {
+      "character": "G",
+      "sourceBounds": [
+        1007,
+        17,
+        1151,
+        154
+      ],
+      "advance": 814,
+      "baseline": 146,
+      "scale": 5.4
+    },
+    {
+      "character": "H",
+      "sourceBounds": [
+        1166,
+        14,
+        1341,
+        146
+      ],
+      "advance": 981,
+      "baseline": 146,
+      "scale": 5.4
+    },
+    {
+      "character": "I",
+      "sourceBounds": [
+        1388,
+        19,
+        1502,
+        152
+      ],
+      "advance": 652,
+      "baseline": 146,
+      "scale": 5.4
+    },
+    {
+      "character": "J",
+      "sourceBounds": [
+        33,
+        169,
+        156,
+        290
+      ],
+      "advance": 700,
+      "baseline": 285,
+      "scale": 5.4
+    },
+    {
+      "character": "K",
+      "sourceBounds": [
+        180,
+        156,
+        337,
+        292
+      ],
+      "advance": 884,
+      "baseline": 285,
+      "scale": 5.4
+    },
+    {
+      "character": "L",
+      "sourceBounds": [
+        355,
+        159,
+        518,
+        286
+      ],
+      "advance": 916,
+      "baseline": 285,
+      "scale": 5.4
+    },
+    {
+      "character": "M",
+      "sourceBounds": [
+        536,
+        165,
+        694,
+        288
+      ],
+      "advance": 889,
+      "baseline": 285,
+      "scale": 5.4
+    },
+    {
+      "character": "N",
+      "sourceBounds": [
+        719,
+        164,
+        860,
+        286
+      ],
+      "advance": 797,
+      "baseline": 285,
+      "scale": 5.4
+    },
+    {
+      "character": "O",
+      "sourceBounds": [
+        885,
+        169,
+        998,
+        282
+      ],
+      "advance": 646,
+      "baseline": 285,
+      "scale": 5.4
+    },
+    {
+      "character": "P",
+      "sourceBounds": [
+        1029,
+        164,
+        1160,
+        288
+      ],
+      "advance": 743,
+      "baseline": 285,
+      "scale": 5.4
+    },
+    {
+      "character": "Q",
+      "sourceBounds": [
+        1201,
+        163,
+        1356,
+        302
+      ],
+      "advance": 873,
+      "baseline": 285,
+      "scale": 5.4
+    },
+    {
+      "character": "R",
+      "sourceBounds": [
+        1370,
+        163,
+        1515,
+        287
+      ],
+      "advance": 819,
+      "baseline": 285,
+      "scale": 5.4
+    },
+    {
+      "character": "S",
+      "sourceBounds": [
+        26,
+        304,
+        142,
+        430
+      ],
+      "advance": 662,
+      "baseline": 425,
+      "scale": 5.4
+    },
+    {
+      "character": "T",
+      "sourceBounds": [
+        184,
+        303,
+        332,
+        430
+      ],
+      "advance": 835,
+      "baseline": 425,
+      "scale": 5.4
+    },
+    {
+      "character": "U",
+      "sourceBounds": [
+        353,
+        308,
+        491,
+        430
+      ],
+      "advance": 781,
+      "baseline": 425,
+      "scale": 5.4
+    },
+    {
+      "character": "V",
+      "sourceBounds": [
+        524,
+        309,
+        654,
+        429
+      ],
+      "advance": 738,
+      "baseline": 425,
+      "scale": 5.4
+    },
+    {
+      "character": "W",
+      "sourceBounds": [
+        678,
+        309,
+        865,
+        425
+      ],
+      "advance": 1046,
+      "baseline": 425,
+      "scale": 5.4
+    },
+    {
+      "character": "X",
+      "sourceBounds": [
+        868,
+        305,
+        1039,
+        427
+      ],
+      "advance": 959,
+      "baseline": 425,
+      "scale": 5.4
+    },
+    {
+      "character": "Y",
+      "sourceBounds": [
+        1059,
+        307,
+        1204,
+        434
+      ],
+      "advance": 819,
+      "baseline": 425,
+      "scale": 5.4
+    },
+    {
+      "character": "Z",
+      "sourceBounds": [
+        1225,
+        311,
+        1391,
+        435
+      ],
+      "advance": 932,
+      "baseline": 425,
+      "scale": 5.4
+    },
+    {
+      "character": "a",
+      "sourceBounds": [
+        34,
+        483,
+        130,
+        544
+      ],
+      "advance": 554,
+      "baseline": 540,
+      "scale": 5.4
+    },
+    {
+      "character": "b",
+      "sourceBounds": [
+        160,
+        432,
+        238,
+        547
+      ],
+      "advance": 457,
+      "baseline": 540,
+      "scale": 5.4
+    },
+    {
+      "character": "c",
+      "sourceBounds": [
+        261,
+        478,
+        326,
+        542
+      ],
+      "advance": 387,
+      "baseline": 540,
+      "scale": 5.4
+    },
+    {
+      "character": "d",
+      "sourceBounds": [
+        352,
+        446,
+        446,
+        566
+      ],
+      "advance": 544,
+      "baseline": 540,
+      "scale": 5.4
+    },
+    {
+      "character": "e",
+      "sourceBounds": [
+        470,
+        477,
+        531,
+        538
+      ],
+      "advance": 365,
+      "baseline": 540,
+      "scale": 5.4
+    },
+    {
+      "character": "f",
+      "sourceBounds": [
+        557,
+        447,
+        625,
+        581
+      ],
+      "advance": 403,
+      "baseline": 540,
+      "scale": 5.4
+    },
+    {
+      "character": "g",
+      "sourceBounds": [
+        645,
+        476,
+        754,
+        585
+      ],
+      "advance": 625,
+      "baseline": 540,
+      "scale": 5.4
+    },
+    {
+      "character": "h",
+      "sourceBounds": [
+        781,
+        441,
+        868,
+        556
+      ],
+      "advance": 506,
+      "baseline": 540,
+      "scale": 5.4
+    },
+    {
+      "character": "i",
+      "sourceBounds": [
+        899,
+        458,
+        958,
+        540
+      ],
+      "advance": 355,
+      "baseline": 540,
+      "scale": 5.4
+    },
+    {
+      "character": "j",
+      "sourceBounds": [
+        960,
+        458,
+        1072,
+        581
+      ],
+      "advance": 641,
+      "baseline": 540,
+      "scale": 5.4
+    },
+    {
+      "character": "k",
+      "sourceBounds": [
+        1105,
+        443,
+        1216,
+        580
+      ],
+      "advance": 635,
+      "baseline": 540,
+      "scale": 5.4
+    },
+    {
+      "character": "l",
+      "sourceBounds": [
+        1197,
+        446,
+        1304,
+        563
+      ],
+      "advance": 614,
+      "baseline": 540,
+      "scale": 5.4
+    },
+    {
+      "character": "m",
+      "sourceBounds": [
+        1333,
+        477,
+        1472,
+        558
+      ],
+      "advance": 787,
+      "baseline": 540,
+      "scale": 5.4
+    },
+    {
+      "character": "n",
+      "sourceBounds": [
+        56,
+        584,
+        135,
+        658
+      ],
+      "advance": 463,
+      "baseline": 654,
+      "scale": 5.4
+    },
+    {
+      "character": "o",
+      "sourceBounds": [
+        159,
+        589,
+        252,
+        653
+      ],
+      "advance": 538,
+      "baseline": 654,
+      "scale": 5.4
+    },
+    {
+      "character": "p",
+      "sourceBounds": [
+        267,
+        582,
+        361,
+        689
+      ],
+      "advance": 544,
+      "baseline": 654,
+      "scale": 5.4
+    },
+    {
+      "character": "q",
+      "sourceBounds": [
+        390,
+        585,
+        471,
+        693
+      ],
+      "advance": 473,
+      "baseline": 654,
+      "scale": 5.4
+    },
+    {
+      "character": "r",
+      "sourceBounds": [
+        485,
+        585,
+        568,
+        660
+      ],
+      "advance": 484,
+      "baseline": 654,
+      "scale": 5.4
+    },
+    {
+      "character": "s",
+      "sourceBounds": [
+        589,
+        588,
+        652,
+        673
+      ],
+      "advance": 376,
+      "baseline": 654,
+      "scale": 5.4
+    },
+    {
+      "character": "t",
+      "sourceBounds": [
+        652,
+        566,
+        810,
+        676
+      ],
+      "advance": 889,
+      "baseline": 654,
+      "scale": 5.4
+    },
+    {
+      "character": "u",
+      "sourceBounds": [
+        813,
+        598,
+        897,
+        659
+      ],
+      "advance": 490,
+      "baseline": 654,
+      "scale": 5.4
+    },
+    {
+      "character": "v",
+      "sourceBounds": [
+        932,
+        598,
+        1001,
+        665
+      ],
+      "advance": 409,
+      "baseline": 654,
+      "scale": 5.4
+    },
+    {
+      "character": "w",
+      "sourceBounds": [
+        1023,
+        599,
+        1125,
+        661
+      ],
+      "advance": 587,
+      "baseline": 654,
+      "scale": 5.4
+    },
+    {
+      "character": "x",
+      "sourceBounds": [
+        1145,
+        593,
+        1242,
+        674
+      ],
+      "advance": 560,
+      "baseline": 654,
+      "scale": 5.4
+    },
+    {
+      "character": "y",
+      "sourceBounds": [
+        1259,
+        588,
+        1375,
+        701
+      ],
+      "advance": 662,
+      "baseline": 654,
+      "scale": 5.4
+    },
+    {
+      "character": "z",
+      "sourceBounds": [
+        1382,
+        584,
+        1477,
+        699
+      ],
+      "advance": 549,
+      "baseline": 654,
+      "scale": 5.4
+    },
+    {
+      "character": "0",
+      "sourceBounds": [
+        142,
+        703,
+        229,
+        803
+      ],
+      "advance": 628,
+      "baseline": 802,
+      "scale": 6.8
+    },
+    {
+      "character": "1",
+      "sourceBounds": [
+        278,
+        703,
+        331,
+        804
+      ],
+      "advance": 396,
+      "baseline": 802,
+      "scale": 6.8
+    },
+    {
+      "character": "2",
+      "sourceBounds": [
+        355,
+        705,
+        467,
+        807
+      ],
+      "advance": 798,
+      "baseline": 802,
+      "scale": 6.8
+    },
+    {
+      "character": "3",
+      "sourceBounds": [
+        502,
+        704,
+        584,
+        804
+      ],
+      "advance": 594,
+      "baseline": 802,
+      "scale": 6.8
+    },
+    {
+      "character": "4",
+      "sourceBounds": [
+        625,
+        703,
+        724,
+        806
+      ],
+      "advance": 709,
+      "baseline": 802,
+      "scale": 6.8
+    },
+    {
+      "character": "5",
+      "sourceBounds": [
+        745,
+        702,
+        842,
+        807
+      ],
+      "advance": 696,
+      "baseline": 802,
+      "scale": 6.8
+    },
+    {
+      "character": "6",
+      "sourceBounds": [
+        883,
+        702,
+        972,
+        805
+      ],
+      "advance": 641,
+      "baseline": 802,
+      "scale": 6.8
+    },
+    {
+      "character": "7",
+      "sourceBounds": [
+        1013,
+        705,
+        1107,
+        812
+      ],
+      "advance": 675,
+      "baseline": 802,
+      "scale": 6.8
+    },
+    {
+      "character": "8",
+      "sourceBounds": [
+        1127,
+        703,
+        1214,
+        807
+      ],
+      "advance": 628,
+      "baseline": 802,
+      "scale": 6.8
+    },
+    {
+      "character": "9",
+      "sourceBounds": [
+        1256,
+        706,
+        1338,
+        807
+      ],
+      "advance": 594,
+      "baseline": 802,
+      "scale": 6.8
+    }
+  ]
+}

@@ -9,14 +9,14 @@
           "color": "#ffffff",
           "sizePx": 100,
           "lineHeight": 1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         },
         "story": {
           "color": "#ffffff",
           "sizePx": 100,
           "lineHeight": 1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         }
       },
@@ -41,14 +41,14 @@
           "color": "#ffffff",
           "sizePx": 28,
           "lineHeight": 1.1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         },
         "story": {
           "color": "#ffffff",
           "sizePx": 28,
           "lineHeight": 1.1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         }
       },
@@ -57,14 +57,14 @@
           "color": "#ffffff",
           "sizePx": 22,
           "lineHeight": 1.1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         },
         "story": {
           "color": "#ffffff",
           "sizePx": 22,
           "lineHeight": 1.1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         }
       },
@@ -73,14 +73,14 @@
           "color": "#ffffff",
           "sizePx": 32,
           "lineHeight": 1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         },
         "story": {
           "color": "#ffffff",
           "sizePx": 32,
           "lineHeight": 1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         }
       },
@@ -89,14 +89,14 @@
           "color": "#ffffff",
           "sizePx": 20,
           "lineHeight": 1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         },
         "story": {
           "color": "#ffffff",
           "sizePx": 20,
           "lineHeight": 1,
-          "family": "Inter",
+          "family": "LEMONMILK-Regular",
           "align": "center"
         }
       }
@@ -1250,7 +1250,7 @@
         "leftRailX": 3.5,
         "leftRailY": 53,
         "leftRailSize": 10,
-        "leftRailFamily": "Inter",
+        "leftRailFamily": "LEMONMILK-Regular",
         "leftRailColor": "#ffffff",
         "leftRailRotation": -90,
         "rightRailEnabled": false,
@@ -1258,7 +1258,7 @@
         "rightRailX": 86.8,
         "rightRailY": 36,
         "rightRailSize": 10,
-        "rightRailFamily": "Inter",
+        "rightRailFamily": "LEMONMILK-Regular",
         "rightRailColor": "#ffffff",
         "rightRailRotation": 90,
         "priceScale": 1,
@@ -2089,7 +2089,7 @@
         "leftRailX": 3.5,
         "leftRailY": 53,
         "leftRailSize": 10,
-        "leftRailFamily": "Inter",
+        "leftRailFamily": "LEMONMILK-Regular",
         "leftRailColor": "#ffffff",
         "leftRailRotation": -90,
         "rightRailEnabled": false,
@@ -2097,7 +2097,7 @@
         "rightRailX": 86.8,
         "rightRailY": 36,
         "rightRailSize": 10,
-        "rightRailFamily": "Inter",
+        "rightRailFamily": "LEMONMILK-Regular",
         "rightRailColor": "#ffffff",
         "rightRailRotation": 90,
         "priceScale": 1,
@@ -2926,7 +2926,7 @@
     "leftRailX": 3.5,
     "leftRailY": 53,
     "leftRailSize": 10,
-    "leftRailFamily": "Inter",
+    "leftRailFamily": "LEMONMILK-Regular",
     "leftRailColor": "#ffffff",
     "leftRailRotation": -90,
     "rightRailEnabled": false,
@@ -2934,7 +2934,7 @@
     "rightRailX": 86.8,
     "rightRailY": 36,
     "rightRailSize": 10,
-    "rightRailFamily": "Inter",
+    "rightRailFamily": "LEMONMILK-Regular",
     "rightRailColor": "#ffffff",
     "rightRailRotation": 90,
     "priceScale": 1,

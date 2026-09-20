@@ -405,7 +405,9 @@ export async function createProviderCheckout(
 
   const checkoutId = randomUUID();
   const admin = supabaseAdmin();
-  const foundingOffer = await getFoundingOfferSnapshot(admin, { email: customerEmail });
+  const foundingOffer = (selection.kind === "offer" && selection.offer === "one-flyer") || (selection.kind === "plan" && ["basic", "full"].includes(selection.plan))
+    ? null
+    : await getFoundingOfferSnapshot(admin, { email: customerEmail });
   const pricing = resolveBillingAmount(selection, foundingOffer);
   const { transactionIdentifier, orderIdentifier, payload, hostedPage, merchantResponseUrl } = buildSalePayload(
     selection,
