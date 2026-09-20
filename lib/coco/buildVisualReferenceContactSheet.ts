@@ -5,10 +5,11 @@ import type { VisualReferenceCandidate } from "../../components/coco/referenceLa
 
 function publicAssetPath(imageUrl: string) {
   const clean = imageUrl.split(/[?#]/)[0];
-  if (!clean.startsWith("/samples/optimized/")) {
+  const relative = clean.slice("/samples/optimized/".length);
+  if (!clean.startsWith("/samples/optimized/") || !relative || relative.includes("/") || relative.includes("\\")) {
     throw new Error(`Visual reference must come from /samples/optimized: ${imageUrl}`);
   }
-  return path.join(process.cwd(), "public", clean);
+  return path.join(process.cwd(), "public/samples/optimized", relative);
 }
 
 function labelSvg(id: string, width: number, height: number) {
