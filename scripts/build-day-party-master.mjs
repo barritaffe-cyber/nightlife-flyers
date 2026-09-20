@@ -34,9 +34,9 @@ for(const v of [result.square,result.story]){
    return object;
  });
  v.cocoCssCompiler.ir=doc;
- useOffshoreGlyphs(v);
+ applyOffshoreGlyphs(v);
 }
 await writeFile(cocoCssMasterAdapter.outputPath,JSON.stringify(createPortableCocoProject(result),null,2)+'\n');
 await writeFile(new URL('../lib/template-data/day-party-v2.json',import.meta.url),JSON.stringify({square:result.square,story:result.story},null,2)+'\n');
 console.log(JSON.stringify({square:result.square.cocoCssCompiler.report,story:result.story.cocoCssCompiler.report}));
-import { useOffshoreGlyphs } from './offshore-headline-config.mjs';
+import { useOffshoreGlyphs as applyOffshoreGlyphs } from './offshore-headline-config.mjs';

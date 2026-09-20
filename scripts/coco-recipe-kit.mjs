@@ -19,11 +19,11 @@ export async function loadRecipeAdapter(id) {
   assert(ID_PATTERN.test(id), "Recipe ID must use lowercase kebab-case.");
   const adapterPath = adapterPathFor(id);
   await access(adapterPath);
-  const module = await import(`${pathToFileURL(adapterPath).href}?audit=${Date.now()}`);
-  const adapter = module.cocoCssMasterAdapter;
+  const adapterModule = await import(`${pathToFileURL(adapterPath).href}?audit=${Date.now()}`);
+  const adapter = adapterModule.cocoCssMasterAdapter;
   assert(adapter, `${basename(adapterPath)} must export cocoCssMasterAdapter.`);
   assert(adapter.id === id, `Adapter ID ${adapter.id} does not match ${id}.`);
-  return { adapter, adapterPath, module };
+  return { adapter, adapterPath, module: adapterModule };
 }
 
 export async function auditRecipe(id, options = {}) {

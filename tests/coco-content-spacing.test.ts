@@ -18,7 +18,8 @@ for (const format of ['square', 'story']) test(`Afro Sunset ${format}: six socia
   const r = recipe('afro-sunset'), master = r.formats[format], snapshot = JSON.stringify(master);
   const brief = { date: 'Dec 1 2026', venueName: 'THE LOFT', address: 'DOWNTOWN, MIAMI FL', musicPolicy: 'HIP HOP | AFROBEATS | REGGAE', subtitle: 'CITY NIGHTS' };
   const render = (source: any, count: number) => materialize(r.recipeId, source, { eventName: 'Ladies Night', fieldMappingVersion: 1, eventBrief: { ...brief, socialPlatforms: COCO_SOCIAL_PLATFORMS.slice(0, count) } });
-  let v = render(master, 1), edge = iconBoxes(v)[0].x;
+  let v = render(master, 1);
+  const edge = iconBoxes(v)[0].x;
   const before = box(v, 'motto');
   for (const count of [6, 2, 6, 1, 0, 6]) {
     v = render(JSON.parse(JSON.stringify(v)), count);
