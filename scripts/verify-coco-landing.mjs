@@ -12,7 +12,7 @@ try {
  const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
  await page.goto(`${base}/landing?utm_source=landing-test`,{waitUntil:'networkidle',timeout:120000});
  await expect(page.getByRole('heading',{level:1})).toHaveCount(1);
- await expect(page.getByRole('heading',{name:'Your next flyer. Ready in five.'})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Flyers in Five.'})).toBeVisible();
  for(const [id,price] of [['one-flyer',5],['basic',10],['full',15]])await expect(page.getByTestId(`pricing-${id}`)).toContainText(`$${price}`);
  for(const image of await page.locator('main img').all())await image.evaluate(async el=>{await el.decode();if(!el.naturalWidth)throw Error('missing image')});
  await page.screenshot({path:`${out}/desktop.png`,fullPage:true});
@@ -25,7 +25,7 @@ try {
  await page.setViewportSize({width:390,height:844});await page.goto(`${base}/landing`,{waitUntil:'networkidle'});
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'no page overflow');
  await page.screenshot({path:`${out}/mobile.png`,fullPage:true});
- await page.getByRole('link',{name:'Create with Coco',exact:true}).first().click();
+ await page.getByRole('link',{name:'Tell Coco about your event',exact:true}).first().click();
  await expect(page.getByRole('textbox',{name:'Event name',exact:true})).toBeVisible({timeout:120000});
  await expect(page.getByRole('heading',{name:'App mode available.'})).toHaveCount(0);
  await page.screenshot({path:`${out}/direct-coco.png`});

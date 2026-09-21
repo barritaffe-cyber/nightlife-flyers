@@ -2,7 +2,7 @@ import {chromium} from 'playwright';
 import {expect} from '@playwright/test';
 import assert from 'node:assert/strict';
 import {mkdirSync} from 'node:fs';
-const browser=await chromium.launch({headless:true});const base='http://localhost:3000';
+const browser=await chromium.launch({headless:true});const base=process.env.BASE_URL||'http://localhost:3000';
 const out='/tmp/coco-home-entry';mkdirSync(out,{recursive:true});
 const errors=[];let page;
 try{
@@ -11,12 +11,12 @@ try{
  page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
  await page.goto(base,{waitUntil:'domcontentloaded',timeout:120000});
  assert.equal(new URL(page.url()).pathname,'/');
- await expect(page.getByRole('heading',{level:1})).toContainText('Your next flyer.');
+ await expect(page.getByRole('heading',{level:1})).toHaveAccessibleName('Flyers in Five.');
  await expect(page.getByRole('link',{name:'Browse templates',exact:true})).toBeVisible();
  await expect(page.getByRole('button',{name:'Open saved design',exact:true})).toBeVisible();
  await page.screenshot({path:`${out}/home-desktop.png`});
  console.log('Home ready');
- await page.getByRole('link',{name:'Create with Coco',exact:true}).first().click();
+ await page.getByRole('link',{name:'Tell Coco about your event',exact:true}).first().click();
  await expect(page.getByRole('textbox',{name:'Event name',exact:true})).toBeVisible({timeout:120000});
  await page.goto(base,{waitUntil:'domcontentloaded'});
  console.log('Create flow passed');
@@ -35,7 +35,7 @@ try{
  await page.goto(`${base}/landing?utm_source=fb`,{waitUntil:'domcontentloaded'});
  assert.equal(new URL(page.url()).pathname,'/');
  assert.equal(new URL(page.url()).searchParams.get('utm_source'),'fb');
- await expect(page.getByRole('heading',{level:1})).toContainText('Your next flyer.');
+ await expect(page.getByRole('heading',{level:1})).toHaveAccessibleName('Flyers in Five.');
  await page.setViewportSize({width:390,height:844});
  await page.screenshot({path:`${out}/home-mobile.png`,fullPage:true});
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);

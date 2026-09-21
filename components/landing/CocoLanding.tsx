@@ -5,7 +5,6 @@ import {useRouter} from 'next/navigation';
 import {stageHomeProject} from '../../lib/coco/homeProjectHandoff';
 import Image from 'next/image';
 import {ArrowRight, ArrowUpRight} from 'lucide-react';
-import CocoOrb from '../coco/CocoOrb';
 import LiveFlyerDemo from './LiveFlyerDemo';
 import designCatalog from './designCatalog.json';
 import PricingPlans from '../ui/PricingPlans';
@@ -71,7 +70,7 @@ export default function CocoLanding(){
   const designHref=(id:string)=>`${createHref}&cocoDesign=${encodeURIComponent(`recipe_${id.replaceAll('-','_')}`)}`;
   const searchTerms=query.toLowerCase().replace(/r&b/g,'rnb').split(/\s+/).filter(Boolean);
   const matches=designCatalog.filter(item=>searchTerms.every(term=>item.search.toLowerCase().replace(/r&b/g,'rnb').includes(term))).slice(0,6);
-  const createLink=(label='Create with Coco')=><Link href={createHref} className={styles.primary}>{label}<ArrowRight size={17} aria-hidden/></Link>;
+  const createLink=(label='Tell Coco about your event')=><Link href={createHref} className={styles.primary}>{label}<ArrowRight size={17} aria-hidden/></Link>;
   return <div className={styles.page}>
     <a className={styles.skip} href="#main">Skip to content</a>
     <header className={styles.header}>
@@ -80,19 +79,18 @@ export default function CocoLanding(){
     </header>
     <main id="main">
       <section className={styles.hero} aria-labelledby="coco-hero-title">
-        <div className={styles.heroCopy}><div className={styles.cocoHello}><CocoOrb compact/><span>Meet Coco. Your design assistant.</span></div>
-        <Image className={styles.heroCampaign} src="/generated-flyers/flyers%20in%205%20logo.png" alt="Flyers in 5" width={1536} height={1024} sizes="(max-width:700px) 210px, 250px" priority/>
-        <h1 id="coco-hero-title">Your next flyer.<br/><span>Ready in five.</span></h1>
-        <p className={styles.intro}>Professional nightlife flyers. Effortlessly yours.</p>
+        <div className={styles.heroCopy}><p className={styles.eyebrow}>Nightlife Flyers</p>
+        <h1 id="coco-hero-title"><Image className={styles.heroCampaign} src="/generated-flyers/flyers%20in%205%20logo.png" alt="Flyers in Five." width={1536} height={1024} sizes="(max-width:700px) 260px, 340px" priority/></h1>
+        <p className={styles.intro}>You bring the event.<br/>Coco brings the design.</p>
+        <p className={styles.steps}>Tell Coco about your event. Pick your look. Make it yours.</p>
         <div className={styles.homeActions} aria-label="Start your flyer">
           {createLink()}
           <Link href={createHref.replace('coco=1','browse=1')} className={styles.homeSecondary}>Browse templates <ArrowUpRight size={17} aria-hidden/></Link>
           <button type="button" disabled={!homeReady||opening} onClick={()=>filePicker.current?.click()} className={styles.homeSecondary}>{opening?'Opening your design…':'Open saved design'} <ArrowUpRight size={17} aria-hidden/></button>
           <input ref={filePicker} type="file" accept=".nflyer,.json,application/json,application/vnd.nightlife-flyers.project+json" aria-label="Open previous flyer file" className={styles.fileInput} onChange={e=>{void openSavedDesign(e.target.files?.[0]);e.target.value='';}}/>
-          <p className={styles.savedHint}>Continue with a saved .nflyer project.</p>
           {openError&&<p role="alert" className={styles.openError}>{openError}</p>}
         </div>
-        <p className={styles.priceHint}>New designs every week <span>·</span> 2 sizes <span>·</span> From $10/month</p>
+        <p className={styles.priceHint}>Square + Story. Ready to post. <span>·</span> From $5</p>
         <a href="#walkthrough" className={styles.quietLink}>See how Coco works ↓</a>
         </div>
         <div className={styles.heroShowcase}>
@@ -101,7 +99,8 @@ export default function CocoLanding(){
           <div className={styles.heroControls}><span>{designs[heroIndex].name}<small>Square + Story. Always together.</small></span><div>{designs.map((item,i)=><button key={item.id} aria-label={`Show ${item.name}`} aria-pressed={heroIndex===i} onClick={()=>{setHeroIndex(i);setPaused(true);}}>{String(i+1).padStart(2,'0')}</button>)}<button onClick={()=>setPaused(!paused)} aria-label={paused?'Play featured designs':'Pause featured designs'}>{paused?'▶':'Ⅱ'}</button></div></div>
         </div>
       </section>
-      <div className={styles.benefits}><div><strong>Two formats.</strong><span>One complete flyer.</span></div><div><strong>Every detail, yours.</strong><span>Designed to be edited.</span></div><div><strong>New every week.</strong><span>More ways to stand out.</span></div></div>
+      <div className={styles.benefits}><div><strong>Made for nightlife.</strong><span>Your party, your crowd, your scene.</span></div><div><strong>About five minutes.</strong><span>Coco gets your flyer started.</span></div><div><strong>Fresh looks, regularly.</strong><span>More styles for your next event.</span></div><div><strong>Make it yours.</strong><span>Quick tweaks until it feels right.</span></div></div>
+      <section className={styles.brandStatement} aria-labelledby="nightlife-title"><h2 id="nightlife-title">We know nightlife.</h2><p>For the venues, promoters, DJs, and businesses<br className={styles.desktopBreak}/> that bring the night to life.</p></section>
       <section id="new" className={styles.contentSection} aria-labelledby="new-title">
         <div className={styles.sectionHeading}><div><p className={styles.eyebrow}>The latest from NF</p><h2 id="new-title">Just dropped.</h2></div><p>Three fresh designs. Make one yours.</p></div>
         <div className={styles.newGrid}>{freshDesigns.map(item=><Link href={designHref(item.id)} key={item.id} className={styles.designCard}><div className={styles.cardImage}><Image src={preview(item.id)} alt={`${item.name} flyer`} width={1080} height={1080} sizes="(max-width:700px) 86vw, 350px"/><span className={styles.newBadge}>NEW DESIGN</span><span className={styles.cardAction}>Make it yours <ArrowUpRight size={18}/></span></div><div className={styles.cardCaption}><h3>{item.name}</h3><span>{item.mood}</span></div></Link>)}</div>
@@ -110,12 +109,12 @@ export default function CocoLanding(){
         <div className={styles.sectionHeading}><div><p className={styles.eyebrow}>Set the mood</p><h2 id="vibes-title">Find your vibe.</h2></div><p>From sunlit brunches to the last song.<br/>Start somewhere that feels like you.</p></div>
         <label className={styles.searchLabel} htmlFor="design-search">What are you making?</label><input id="design-search" type="search" className={styles.designSearch} placeholder="Search R&B, Ladies Night, Salsa, Rooftop..." value={query} onChange={e=>setQuery(e.target.value)}/>
         <div className={styles.vibeButtons} role="group" aria-label="Flyer vibes">{vibes.map((item,i)=><button key={item.name} aria-pressed={vibe===i} onClick={()=>{setVibe(i);setQuery('');}}>{item.name}<ArrowUpRight size={14}/></button>)}</div>
-        {query.trim()?<div aria-live="polite"><p className={styles.searchCount}>{matches.length?`${matches.length} designs to explore`:'No matching designs yet. Try a genre or choose one of the vibes above.'}</p><div className={styles.searchResults}>{matches.map(item=><Link key={item.key} href={`${createHref}&cocoDesign=${encodeURIComponent(item.key)}`}><Image src={item.preview} alt={item.name} width={540} height={540} sizes="(max-width:700px) 42vw, 260px"/><h3>{item.name}</h3><span>Use this design ↗</span></Link>)}</div></div>:<div className={styles.vibeResult} aria-live="polite"><Image src={preview(vibes[vibe].id)} alt={`${vibes[vibe].title} ${vibes[vibe].name} design`} width={1080} height={1080} sizes="(max-width:700px) 80vw, 310px"/><div><p className={styles.eyebrow}>{vibes[vibe].name} / Selected for you</p><h3>{vibes[vibe].title}</h3><p>An exceptional starting point.<br/>Personalize every detail with Coco.</p><Link className={styles.primary} href={designHref(vibes[vibe].id)}>Use this design <ArrowRight size={17}/></Link></div></div>}
+        {query.trim()?<div aria-live="polite"><p className={styles.searchCount}>{matches.length?`${matches.length} designs to explore`:'No matching designs yet. Try a genre or choose one of the vibes above.'}</p><div className={styles.searchResults}>{matches.map(item=><Link key={item.key} href={`${createHref}&cocoDesign=${encodeURIComponent(item.key)}`}><Image src={item.preview} alt={item.name} width={540} height={540} sizes="(max-width:700px) 42vw, 260px"/><h3>{item.name}</h3><span>Use this design ↗</span></Link>)}</div></div>:<div className={styles.vibeResult} aria-live="polite"><Image src={preview(vibes[vibe].id)} alt={`${vibes[vibe].title} ${vibes[vibe].name} design`} width={1080} height={1080} sizes="(max-width:700px) 80vw, 310px"/><div><p className={styles.eyebrow}>{vibes[vibe].name} / Selected for you</p><h3>{vibes[vibe].title}</h3><p>Your next event starts here.<br/>Let Coco make it yours.</p><Link className={styles.primary} href={designHref(vibes[vibe].id)}>Use this design <ArrowRight size={17}/></Link></div></div>}
       </section>
       <section id="walkthrough" className={styles.walkthrough} aria-labelledby="walkthrough-title">
-        <div className={styles.sectionIntro}><p className={styles.eyebrow}>See it become yours</p><h2 id="walkthrough-title">Designed by Coco. Made yours by you.</h2><p>Exceptional design. Your finishing touch.</p></div>
+        <div className={styles.sectionIntro}><p className={styles.eyebrow}>See it become yours</p><h2 id="walkthrough-title">Your event. Your flyer.</h2><p>A few quick tweaks. A flyer that feels like you.</p></div>
         <div className={styles.demo}>
-          <div className={styles.demoCopy}><p className={styles.eyebrow}>Your night starts here</p><h3 className={styles.tryTitle}>Same design.<br/>A whole new night.</h3><label className={styles.eventLabel} htmlFor="demo-event">Your event name</label><input id="demo-event" className={styles.eventInput} value={eventName} maxLength={32} onChange={e=>setEventName(e.target.value)} placeholder="Try AFTER DARK"/><p className={styles.demoHint}>Try AFTER DARK. Watch the lettering change.</p><div className={styles.moods} role="group" aria-label="Preview format">{(['square','story'] as const).map(f=><button key={f} aria-pressed={format===f} onClick={()=>setFormat(f)}>{f==='square'?'Square':'Story'}</button>)}</div><Link className={styles.primary} href={`${createHref}&eventName=${encodeURIComponent(eventName.trim())}`}>Create my flyer <ArrowRight size={17}/></Link><p className={styles.demoHint}>Live lettering · Both sizes included</p></div>
+          <div className={styles.demoCopy}><p className={styles.eyebrow}>Your night starts here</p><h3 className={styles.tryTitle}>Same design.<br/>A whole new night.</h3><label className={styles.eventLabel} htmlFor="demo-event">Your event name</label><input id="demo-event" className={styles.eventInput} value={eventName} maxLength={32} onChange={e=>setEventName(e.target.value)} placeholder="Try AFTER DARK"/><p className={styles.demoHint}>Try AFTER DARK. See your event on the flyer.</p><div className={styles.moods} role="group" aria-label="Preview format">{(['square','story'] as const).map(f=><button key={f} aria-pressed={format===f} onClick={()=>setFormat(f)}>{f==='square'?'Square':'Story'}</button>)}</div><Link className={styles.primary} href={`${createHref}&eventName=${encodeURIComponent(eventName.trim())}`}>Create my flyer <ArrowRight size={17}/></Link><p className={styles.demoHint}>Square + Story. Both included.</p></div>
           <figure className={styles.demoPreview} data-format={format}><LiveFlyerDemo name={eventName} format={format}/><figcaption>{format==='story'?'Story · 9:16':'Square · 1:1'}<span>Girl Code Rose</span></figcaption></figure>
         </div>
       </section>
@@ -125,7 +124,7 @@ export default function CocoLanding(){
         <p className={styles.seasonNote}>Concept previews · Designs and release dates to be announced.</p>
       </section>
       <section id="pricing" className={styles.pricing} aria-label="Choose your Coco plan"><PricingPlans embedded/></section>
-      <section className={styles.lastCall}><Image className={styles.campaignLogo} src="/generated-flyers/flyers%20in%205%20logo.png" alt="Flyers in 5" width={1536} height={1024} sizes="150px"/><h2>Your flyer is five minutes away.</h2><p>Bring the idea. Coco brings the design.</p>{createLink()}</section>
+      <section className={styles.lastCall}><Image className={styles.campaignLogo} src="/generated-flyers/flyers%20in%205%20logo.png" alt="Flyers in 5" width={1536} height={1024} sizes="150px"/><h2>Your next night starts here.</h2><p>You bring the event. Coco brings the design.</p>{createLink()}</section>
     </main>
     <PublicSiteFooter/>
   </div>;

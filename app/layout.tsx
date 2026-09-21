@@ -13,8 +13,8 @@ const socialPreviewPath = "/og.jpg";
 const socialPreviewSquarePath = "/og-square.jpg";
 const socialPreviewImage = `${siteUrl}${socialPreviewPath}`;
 const siteDescription =
-  'Nightlife Flyers is an AI flyer maker for nightlife flyers, club flyers, event flyers, DJ flyers, artist promo flyers, and social promo flyers with editable templates, AI backgrounds, subject cutouts, brand assets, and clean exports.';
-const siteTitle = 'Nightlife Flyers | AI Flyer Maker for Club, Event, DJ, and Artist Promo Flyers';
+  'Flyers in Five. You bring the event. Coco brings the design. For venues, promoters, DJs, and the businesses that bring the night to life. Square + Story, ready to post. From $5.';
+const siteTitle = 'Nightlife Flyers — Flyers in Five.';
 const appFeatures = [
   "AI flyer maker for nightlife, club, event, DJ, and artist promo flyers",
   "Editable square post and vertical story formats",

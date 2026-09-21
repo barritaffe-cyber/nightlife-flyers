@@ -10,10 +10,10 @@ try{
  await context.route('**/api/analytics/**',r=>r.fulfill({json:{ok:true}}));
  const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
  await page.goto(`${base}/landing?utm_source=homepage-test`,{waitUntil:'networkidle',timeout:120000});
- await expect(page.getByRole('heading',{level:1})).toHaveText('Your next flyer.Ready in five.');
+ await expect(page.getByRole('heading',{level:1})).toHaveAccessibleName('Flyers in Five.');
  for(const [id,price] of [['basic',10],['full',15],['manager',30],['one-flyer',5]])await expect(page.getByTestId(`pricing-${id}`)).toContainText(`$${price}`);
  await expect(page.getByTestId('pricing-manager').getByRole('link')).toHaveCount(0);
- for(const image of await page.locator('main img').all())await image.evaluate(el=>el.decode());
+ for(const image of await page.locator('main img').all())await image.evaluate(el=>{el.loading='eager';return el.decode();});
  await page.screenshot({path:`${out}/desktop.png`,fullPage:true});
  await page.getByRole('button',{name:'Show We Outside',exact:true}).click();
  await expect(page.getByRole('button',{name:'Show We Outside',exact:true})).toHaveAttribute('aria-pressed','true');
@@ -47,7 +47,7 @@ try{
  await page.locator('#new a').first().click();
  await expect(page.locator('[data-testid="coco-build-event-next"]')).toHaveCount(0);
  await page.waitForFunction(()=>!new URL(location.href).searchParams.has('cocoDesign'),null,{timeout:120000});
- await expect(page.getByRole('heading',{name:'Your next flyer. Ready in five.'})).toHaveCount(0);
+ await expect(page.getByRole('heading',{name:'Flyers in Five.'})).toHaveCount(0);
  await expect(page.getByText('Preparing square canvas.',{exact:true})).toHaveCount(0,{timeout:120000});
  await expect(page.getByText('YCEE',{exact:true}).first()).toBeVisible({timeout:120000});
  await page.screenshot({path:`${out}/opened-ycee.png`,fullPage:false});
